@@ -45,6 +45,27 @@ pid, so a `git` that started a helper or a login shell whose profile started one
 
 ## What was checked
 
+### Antigravity (#538)
+
+`agy --version` uses the existing bounded probe. `agy models` uses the same runner with a 15 s
+timeout and 64 KiB output bound, with concurrent requests coalesced and results cached. Both
+receive the provider's allowlisted environment; proxy and certificate variables are the only
+additions. No API keys, credential files or keychain queries are introduced by Vibe Manager.
+
+Interactive `agy` runs in the existing PTY/terminal host, with argv as an array. Its initial prompt
+is the value of `--prompt-interactive`; native resume is an explicitly validated conversation UUID.
+Neither permission policy, remote control nor automatic approval is enabled by the provider.
+
+Session-only `--settings` supplies an inline status command. It uses `/bin/sh`, `head`, `cat`,
+`plutil`, `grep`, `date` and `printf`, drains stdin and extracts only the validated conversation
+UUID, allowlisted agent state and two boolean flags (confirmation pending/background work).
+Nothing from the state payload is evaluated as code. The existing enabled user status command is
+shell-quoted as a positional parameter and run with the same input and output, as the CLI already
+does. No global or project configuration is written. A malformed/unreadable settings file is not
+modified. The existing activity log's private directory and permissions apply; no new log type
+or socket is introduced. The application reads only the UUID-derived CLI transcript, confirming
+its existence before persisting an identifier; it does not open the CLI's conversation database.
+
 - **No shell with user data.** Arguments are arrays from the provider to `posix_spawn`. The one
   shell command line is the login shell lookup above, whose only parameter is the binary name of a
   provider, single quoted.

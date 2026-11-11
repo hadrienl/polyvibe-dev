@@ -97,6 +97,14 @@ Session metadata is stored in the user's Application Support directory. The form
 backup and privacy decisions are documented in
 [`docs/architecture/0002-session-persistence.md`](docs/architecture/0002-session-persistence.md).
 
+Antigravity CLI (`agy` 1.5.5 or later) is supported alongside Claude Code and Codex. Install and
+sign in through [Antigravity's own CLI](https://antigravity.google/docs/getting-started?tab=cli),
+then select **Antigravity** when creating a session. Models come from `agy models`; leaving the
+model empty keeps the CLI's default. Native resume, activity and basic conversation reading are
+available. Answer its permissions and questions in the terminal; usage totals, grouped tool
+results and Vibe Manager MCP injection are not available in this first integration. See
+[`docs/architecture/0044-antigravity-provider.md`](docs/architecture/0044-antigravity-provider.md).
+
 Coding agents are reached through providers that only describe how to launch a CLI. Detection,
 diagnostics, the registry and the built-in mock agent are documented in
 [`docs/architecture/0003-agent-providers.md`](docs/architecture/0003-agent-providers.md). The

@@ -986,6 +986,8 @@ public final class AppEnvironment {
       CodexAgentProvider.make(
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
         transcriptLocations: transcriptLocations, approvalPreferences: codexApprovals),
+      AntigravityAgentProvider.make(
+        environment: environment, diagnostics: diagnostics, shellEnvironment: shell),
     ]
     if MockAgentProvider.isEnabled(environment: environment) {
       providers.append(MockAgentProvider(environment: environment))
