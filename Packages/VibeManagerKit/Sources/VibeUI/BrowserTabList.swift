@@ -336,7 +336,12 @@ private struct BrowserTabRow: View {
         .padding(.trailing, 6)
       }
     }
-    .background(RoundedRectangle(cornerRadius: 6).fill(background))
+    .background {
+      RoundedRectangle(cornerRadius: 6)
+        .fill(background)
+        // The tab in front stands out, in light as in dark (#536).
+        .strokeBorder(Color.accentColor.opacity(isActive ? 0.55 : 0), lineWidth: 1)
+    }
     .overlay(alignment: dropsAfter == true ? .bottom : .top) {
       if dropsAfter != nil {
         Capsule()
@@ -390,7 +395,7 @@ private struct BrowserTabRow: View {
   }
 
   private var background: Color {
-    if isActive { return Color.accentColor.opacity(0.16) }
+    if isActive { return Color.accentColor.opacity(0.3) }
     if isHovering || isHighlighted { return Color.primary.opacity(0.06) }
     return .clear
   }
