@@ -26,10 +26,15 @@ partial multiline prompt into the terminal. Slash commands use the common ready-
 The model default is left to the CLI. Approval is chosen in Settings › Agents › Antigravity,
 through the same translated Manual / Automatic picker as #543. A namespaced, per-provider
 preference is read again on every launch and native resume; old configurations are Manual.
-The shared preference types retain the Codex aliases, raw values and existing keys from #543.
+One store keeps every agent's mode under its identifier, with #543's `codex.approvalMode.<id>.v1`
+keys and raw values, and one `approvalMode` field of the launch request carries it to Codex and
+Antigravity alike.
 
 Manual sets `agentMode: ""` and `toolPermission: "request-review"` for this process, so a global
-automatic setting cannot override the user's Manual choice. Automatic sets `--mode auto`,
+automatic setting cannot override the user's Manual choice. `--mode` has no value for the default
+mode; `""` is the CLI's explicit Default (what `/config` saves since Auto became the default), not
+an absent value. On 1.5.6, with a global `agentMode: "auto"`, a headless write ran unasked without
+the override and was held for review — refused, headless — with it. Automatic sets `--mode auto`,
 `--sandbox` and `toolPermission: "proceed-in-sandbox"`, keeping native review of commands outside
 the sandbox. `--dangerously-skip-permissions` is never used. Native allow/ask/deny rules still
 apply. The picker explains the personal-account/sandbox requirement; where unavailable the CLI
@@ -50,12 +55,14 @@ The CLI supports a structured status command supplied through session-only `--se
 command appends to the existing per-session activity log and works while the application is
 closed. No hooks, plugins, settings or MCP files are installed globally or in the project.
 
-The status command reads at most 64 KiB and drains the rest. It retains only a validated
+The status command reads at most 4 MiB and drains the rest; one `plutil` conversion and one `awk`
+pass read the fields and the time, two processes per refresh. It retains only a validated
 conversation UUID, an allowlisted agent state, whether a tool confirmation is pending and whether
 a background task/subagent is still running. Account details, prompts, model output and subagent
 names never enter this log. The user's own enabled status command receives the input too and
 keeps its output; padding and stack preference are preserved. Without an enabled custom command,
-the built-in status line stays visible. Scripts are carried inline so moving the app does not
+the built-in status line stays visible. A status line the user turned off stays invisible: the
+reporter runs alone, without the built-in line, and draws nothing. Scripts are carried inline so moving the app does not
 break an existing terminal host's agent.
 
 An observer accepts identity only from that process's status. It never reads the workspace's
@@ -71,7 +78,9 @@ identity/activity reports stop; the application does not guess a different conve
 
 The decoder detects state transitions: repeated idle snapshots do not manufacture unread answers,
 and an initial idle snapshot also settles a previously working adopted process without inventing
-a new answer. Background work keeps the session working. A pending confirmation is signalled as
+a new answer. Working and tool use are one turn. A turn that starts from rest or after an error is
+the user's: what the failure asked is behind it. Idle after a pending confirmation ends the turn,
+since the approval and the rest of the turn can fall between two snapshots. Background work keeps the session working. A pending confirmation is signalled as
 a terminal dialog without inferred choices or external answer keys.
 
 ## Verified discrepancy and conversation format
@@ -125,7 +134,9 @@ native agent's Automatic needs a personal account, which a gateway session is no
 
 Activity, resume capture (recorded under the endpoint with `antigravity` as harness), conversation
 reading and the resume refusal of a conversation another harness wrote are relayed as for the other
-harnesses. MCP tools and instructions are not injected, as for the native agent (#541). `agy` asks
+harnesses. MCP tools and instructions are not injected, as for the native agent (#541): such an
+endpoint is an `AntigravityEndpointAgentProvider`, which does not claim them, so coordination is
+not offered to it. `agy` asks
 4,096 output tokens of a gateway model it does not know: a very long single file write may be cut.
 
 A second Antigravity *account* (ADR 0035's accounts, #478) is not offered: a hidden `--gemini_dir`

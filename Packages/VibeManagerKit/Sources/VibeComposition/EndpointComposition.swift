@@ -85,15 +85,15 @@ final class AgentAccountCatalog {
   private let environment: [String: String]
   private let diagnostics: any DiagnosticLog
   private let transcriptLocations: TranscriptLocationCache
-  private let codexApprovals: (any CodexApprovalPreferences)?
+  private let approvals: (any AgentApprovalPreferences)?
   private let shell: LoginShellEnvironment
 
   init(
     repository: any AgentAccountRepository, homes: AgentHomes, environment: [String: String],
     diagnostics: any DiagnosticLog, transcriptLocations: TranscriptLocationCache,
-    shell: LoginShellEnvironment, codexApprovals: (any CodexApprovalPreferences)? = nil
+    shell: LoginShellEnvironment, approvals: (any AgentApprovalPreferences)? = nil
   ) {
-    self.codexApprovals = codexApprovals
+    self.approvals = approvals
     self.repository = repository
     self.homes = homes
     self.environment = environment
@@ -107,7 +107,7 @@ final class AgentAccountCatalog {
     return accounts.compactMap {
       AgentAccountProviders.make(
         $0, environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
-        transcriptLocations: transcriptLocations, codexApprovals: codexApprovals)
+        transcriptLocations: transcriptLocations, approvalPreferences: approvals)
     }
   }
 

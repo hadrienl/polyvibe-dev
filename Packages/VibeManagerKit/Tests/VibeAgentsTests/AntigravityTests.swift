@@ -92,7 +92,7 @@ struct AntigravityTests {
     for resume in [AgentResumeRequest.none, .identifier(identifier)] {
       for mode in AgentApprovalMode.allCases {
         let request = AgentLaunchRequest(
-          workingDirectoryPath: "/tmp", resume: resume, antigravityApprovalMode: mode)
+          workingDirectoryPath: "/tmp", resume: resume, approvalMode: mode)
         let args = try AntigravityArgumentBuilder().arguments(
           for: request, promptDelivery: .none, descriptor: AntigravityAgentProvider.descriptor)
         let overrides = try settings(in: args)
@@ -148,11 +148,12 @@ struct AntigravityTests {
     for mode in AgentApprovalMode.allCases {
       let original = try await base().launchPlan(
         for: AgentLaunchRequest(
-          workingDirectoryPath: "/tmp", initialPrompt: "--settings", antigravityApprovalMode: mode))
+          workingDirectoryPath: "/tmp", initialPrompt: "--settings", approvalMode: mode))
       // No user settings file is touched: compose the same generated status JSON as the provider.
       let reporting = AntigravitySettings.merging(
         AntigravityStatusCommand.settings(home: folder), into: original)
-      #expect(reporting.arguments.filter { $0 == "--settings" }.count == 2)  // one option, one literal prompt
+      // One option, one literal prompt.
+      #expect(reporting.arguments.filter { $0 == "--settings" }.count == 2)
       #expect(reporting.arguments.suffix(2) == ["--prompt-interactive", "--settings"])
       let merged = try settings(in: reporting.arguments)
       #expect(merged["statusLine"] is [String: Any])
@@ -218,13 +219,34 @@ struct AntigravityTests {
     let decoder = AntigravitySignalDecoder()
     #expect(decoder.signal(for: event("idle")) == .interrupted)
     #expect(decoder.signal(for: event("idle")) == nil)
-    #expect(decoder.signal(for: event("working")) == .promptSubmitted(byUser: false))
+    #expect(decoder.signal(for: event("working")) == .promptSubmitted(byUser: true))
+    #expect(decoder.signal(for: event("tool_use")) == nil)
+    #expect(decoder.signal(for: event("working")) == nil)
     #expect(decoder.signal(for: event("idle", background: true)) == nil)
     #expect(decoder.signal(for: event("idle")) == .turnEnded)
     #expect(decoder.signal(for: event("idle")) == nil)
     #expect(decoder.conversationIdentifier(in: event("idle")) == identifier)
     #expect(decoder.answerKeymap == nil)
     #expect(decoder.approvalAnswerKeys.isEmpty)
+  }
+
+  @Test("An approval followed by the end of the turn between two snapshots ends the turn")
+  func approvalThenIdle() {
+    let decoder = AntigravitySignalDecoder()
+    _ = decoder.signal(for: event("working"))
+    #expect(decoder.signal(for: event("working", pending: true)) != nil)
+    #expect(decoder.signal(for: event("idle")) == .turnEnded)
+  }
+
+  @Test("A prompt after a failed turn is the user's: what the failure asked is behind")
+  func promptAfterFailure() {
+    let decoder = AntigravitySignalDecoder()
+    _ = decoder.signal(for: event("working"))
+    #expect(decoder.signal(for: event("error")) != nil)
+    #expect(decoder.signal(for: event("working")) == .promptSubmitted(byUser: true))
+    // A session first seen mid-turn: nobody just typed.
+    let adopted = AntigravitySignalDecoder()
+    #expect(adopted.signal(for: event("tool_use")) == .promptSubmitted(byUser: false))
   }
 
   @Test("A dialog is announced without fabricated choices and resolves when work resumes")
@@ -264,6 +286,53 @@ struct AntigravityTests {
     #expect(object["pending"] as? Bool == true)
     #expect(object["background"] as? Bool == true)
     #expect(object.count == 4)
+  }
+
+  @Test("The user's own command gets a payload over 64 KiB whole; the time is the log's")
+  func statusCommandLargePayload() async throws {
+    let folder = try scratch()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let log = folder.appendingPathComponent("activity.log")
+    let data = try JSONSerialization.data(withJSONObject: [
+      "conversation_id": identifier, "agent_state": "working", "task_count": 0,
+      "subagents": [["status": "done"], ["status": "idle"]],
+      "large": String(repeating: "x", count: 200_000),
+    ])
+    let result = try await BoundedProcess.run(
+      BoundedProcessRequest(
+        executablePath: "/bin/sh",
+        arguments: ["-c", AntigravityStatusCommand.script, "test", "/usr/bin/wc -c"],
+        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
+        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
+    #expect(result.exitCode == 0)
+    let counted = String(decoding: result.standardOutput, as: UTF8.self)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    #expect(Int(counted) == data.count)
+    let fields = try String(contentsOf: log, encoding: .utf8).split(separator: "\t")
+    let time = try #require(Double(fields[1]))
+    #expect(abs(time - Date().timeIntervalSince1970) < 60)
+    let object = try #require(
+      JSONSerialization.jsonObject(with: Data(fields[2].utf8)) as? [String: Any])
+    #expect(object["agent_state"] as? String == "working")
+    #expect(object["background"] as? Bool == false)
+    #expect(object["pending"] as? Bool == false)
+  }
+
+  @Test("A status line the user turned off stays invisible while the reporter runs")
+  func disabledStatusLine() throws {
+    let folder = try scratch()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let file = folder.appendingPathComponent(".gemini/antigravity-cli/settings.json")
+    try FileManager.default.createDirectory(
+      at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data(#"{"statusLine":{"enabled":false,"command":"printf hidden"}}"#.utf8).write(to: file)
+    let object = try #require(
+      JSONSerialization.jsonObject(
+        with: Data(AntigravityStatusCommand.settings(home: folder).utf8)) as? [String: Any])
+    let status = try #require(object["statusLine"] as? [String: Any])
+    #expect(status["enabled"] as? Bool == true)
+    #expect(status["stack_with_default"] as? Bool == false)
+    #expect((status["command"] as? String)?.contains("printf hidden") == false)
   }
 
   @Test("Status injection preserves padding, stack preference and the enabled user command")
@@ -361,5 +430,52 @@ struct AntigravityTests {
     #expect(
       decoder.entries[0].content == .userPrompt("-é\n</USER_REQUEST> literal", attachments: []))
     #expect(decoder.entries[1].content == .agentText("final"))
+  }
+
+  @Test("An empty request is no prompt, and does not crash the reading")
+  func emptyRequest() {
+    #expect(AntigravityConversationDecoder.request(in: "<USER_REQUEST>\n</USER_REQUEST>") == "")
+    #expect(
+      AntigravityConversationDecoder.request(
+        in: "<USER_REQUEST>\n</USER_REQUEST>\n<ADDITIONAL_METADATA>x</ADDITIONAL_METADATA>") == "")
+    #expect(
+      AntigravityConversationDecoder.request(in: "<USER_REQUEST>\nHi\n</USER_REQUEST>") == "Hi")
+    #expect(AntigravityConversationDecoder.request(in: "plain") == nil)
+    let decoder = AntigravityConversationDecoder()
+    decoder.consume(
+      try! JSONSerialization.data(withJSONObject: [
+        "step_index": 0, "type": "USER_INPUT", "source": "USER_EXPLICIT",
+        "content": "<USER_REQUEST>\n</USER_REQUEST>",
+      ]))
+    #expect(decoder.entries.isEmpty)
+  }
+
+  @Test("A step published again after others is replaced where it was, the latest one at the end")
+  func stepsOutOfOrder() {
+    let decoder = AntigravityConversationDecoder()
+    func line(_ step: Int, _ text: String) {
+      decoder.consume(
+        try! JSONSerialization.data(withJSONObject: [
+          "step_index": step, "type": "PLANNER_RESPONSE", "content": text,
+        ]))
+    }
+    line(0, "a")
+    line(1, "b")
+    line(0, "a2")
+    line(2, "c")
+    line(2, "c2")
+    #expect(
+      decoder.entries.map(\.content) == [.agentText("a2"), .agentText("b"), .agentText("c2")])
+    let long = AntigravityConversationDecoder()
+    for step in 0..<2_000 {
+      for snapshot in 0..<3 {
+        long.consume(
+          try! JSONSerialization.data(withJSONObject: [
+            "step_index": step, "type": "PLANNER_RESPONSE", "content": "s\(snapshot)",
+          ]))
+      }
+    }
+    #expect(long.entries.count == 2_000)
+    #expect(long.entries.last?.content == .agentText("s2"))
   }
 }

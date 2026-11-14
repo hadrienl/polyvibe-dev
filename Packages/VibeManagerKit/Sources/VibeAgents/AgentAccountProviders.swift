@@ -12,7 +12,7 @@ public enum AgentAccountProviders {
     diagnostics: any DiagnosticLog = NullDiagnosticLog(),
     shellEnvironment: (any ShellEnvironmentSource)? = nil,
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
-    codexApprovals: (any CodexApprovalPreferences)? = nil
+    approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) -> (any AgentProvider)? {
     let home = AgentHomeDirectory.home(in: environment)
     guard
@@ -33,7 +33,7 @@ public enum AgentAccountProviders {
         environment: variables, diagnostics: diagnostics, shellEnvironment: shellEnvironment,
         transcriptLocations: transcriptLocations,
         account: descriptor(of: account, like: CodexAgentProvider.descriptor),
-        approvalPreferences: codexApprovals)
+        approvalPreferences: approvalPreferences)
     case .antigravity:
       // agy 1.5 keeps a single sign-in in the keychain whatever its folder: a second account
       // would be the first one under another name.

@@ -25,7 +25,7 @@ public struct CodexArgumentBuilder: CommandLineAgentArgumentBuilder {
       positionals.append(try Self.validatedResumeIdentifier(identifier))
     }
 
-    switch request.codexApprovalMode {
+    switch request.approvalMode {
     case .autoReview:
       arguments.append("--approve-for-me")
     case .manual:

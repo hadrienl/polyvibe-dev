@@ -53,7 +53,7 @@ public struct CodexAgentProvider: AgentProvider {
     authenticationCommandLine: "codex login"
   )
 
-  private let approvalPreferences: (any CodexApprovalPreferences)?
+  private let approvalPreferences: (any AgentApprovalPreferences)?
   private let base: CommandLineAgentProvider
   let catalog: any CodexModelCatalogSource
   private let discovery: any CodexSessionDiscovering
@@ -73,7 +73,7 @@ public struct CodexAgentProvider: AgentProvider {
     appServer: any CodexAppServerConnecting = CodexAppServerProcess(),
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
     effortReader: CodexEffortReader = CodexEffortReader(),
-    approvalPreferences: (any CodexApprovalPreferences)? = nil
+    approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) {
     self.approvalPreferences = approvalPreferences
     self.base = base
@@ -92,7 +92,7 @@ public struct CodexAgentProvider: AgentProvider {
     shellEnvironment: (any ShellEnvironmentSource)? = nil,
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
     account: AgentDescriptor? = nil,
-    approvalPreferences: (any CodexApprovalPreferences)? = nil
+    approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) -> CodexAgentProvider {
     // A `CODEX_HOME` this application cannot resolve is dropped rather than forwarded: the
     // CLI would then write its sessions where nothing watches for them.
@@ -179,8 +179,8 @@ public struct CodexAgentProvider: AgentProvider {
 
   public func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {
     var request = request
-    if request.codexApprovalMode == nil, let approvalPreferences {
-      request.codexApprovalMode = await approvalPreferences.mode(for: descriptor.id)
+    if request.approvalMode == nil, let approvalPreferences {
+      request.approvalMode = await approvalPreferences.mode(for: descriptor.id)
     }
     return try await base.launchPlan(for: request)
   }

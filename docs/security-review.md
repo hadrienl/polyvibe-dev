@@ -71,7 +71,7 @@ account. Such a session is always Manual. The gateway's new Chat Completions rea
 `data:` images only and never fetches a URL a request names.
 
 Session-only `--settings` supplies an inline status command. It uses `/bin/sh`, `head`, `cat`,
-`plutil`, `grep`, `date` and `printf`, drains stdin and extracts only the validated conversation
+`plutil`, `awk` and `printf`, reads at most 4 MiB, drains stdin and extracts only the validated conversation
 UUID, allowlisted agent state and two boolean flags (confirmation pending/background work).
 Nothing from the state payload is evaluated as code. The existing enabled user status command is
 shell-quoted as a positional parameter and run with the same input and output, as the CLI already

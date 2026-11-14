@@ -620,8 +620,8 @@ struct AgentSettingsPage: View {
         Section {
           AgentApprovalModePicker(
             selection: Binding(
-              get: { model.antigravityApprovalMode(for: agent.id) },
-              set: { model.setAntigravityApprovalMode($0, for: agent.id) }))
+              get: { model.approvalMode(for: agent.id) },
+              set: { model.setApprovalMode($0, for: agent.id) }))
           Text(
             "Automatic mode requires a personal Antigravity account and the terminal sandbox.",
             bundle: .module
@@ -638,8 +638,8 @@ struct AgentSettingsPage: View {
         Section {
           AgentApprovalModePicker(
             selection: Binding(
-              get: { model.codexApprovalMode(for: agent.id) },
-              set: { model.setCodexApprovalMode($0, for: agent.id) }))
+              get: { model.approvalMode(for: agent.id) },
+              set: { model.setApprovalMode($0, for: agent.id) }))
         }
       }
       if model.hookTrustingAgents.contains(where: { $0.id == agent.id }) {

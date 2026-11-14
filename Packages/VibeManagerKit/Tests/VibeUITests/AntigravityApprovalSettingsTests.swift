@@ -10,18 +10,17 @@ struct AntigravityApprovalSettingsTests {
   func independentChoice() {
     let agy = AgentProviderID("antigravity")
     let codex = AgentProviderID("codex")
-    let agyPreferences = InMemoryAgentApprovalPreferences()
-    let codexPreferences = InMemoryCodexApprovalPreferences(mode: .autoReview)
+    let preferences = InMemoryAgentApprovalPreferences(mode: .autoReview, provider: codex)
     let model = AppModel(
       repository: StubRepository(sessions: []),
       layout: WorkspaceLayoutController(store: RecordingLayoutStore()),
-      codexApprovalPreferences: codexPreferences, antigravityApprovalPreferences: agyPreferences)
-    #expect(model.antigravityApprovalMode(for: agy) == .manual)
-    model.setAntigravityApprovalMode(.autoReview, for: agy)
-    #expect(agyPreferences.mode(for: agy) == .autoReview)
-    #expect(model.antigravityApprovalMode(for: agy) == .autoReview)
-    model.setAntigravityApprovalMode(.manual, for: agy)
-    #expect(agyPreferences.mode(for: agy) == .manual)
-    #expect(model.codexApprovalMode(for: codex) == .autoReview)
+      approvalPreferences: preferences)
+    #expect(model.approvalMode(for: agy) == .manual)
+    model.setApprovalMode(.autoReview, for: agy)
+    #expect(preferences.mode(for: agy) == .autoReview)
+    #expect(model.approvalMode(for: agy) == .autoReview)
+    model.setApprovalMode(.manual, for: agy)
+    #expect(preferences.mode(for: agy) == .manual)
+    #expect(model.approvalMode(for: codex) == .autoReview)
   }
 }

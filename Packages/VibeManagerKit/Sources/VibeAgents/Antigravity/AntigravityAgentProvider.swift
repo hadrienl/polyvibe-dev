@@ -73,8 +73,8 @@ public struct AntigravityAgentProvider: AgentProvider {
 
   public func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {
     var request = request
-    if request.antigravityApprovalMode == nil, let approvalPreferences {
-      request.antigravityApprovalMode = await approvalPreferences.mode(for: descriptor.id)
+    if request.approvalMode == nil, let approvalPreferences {
+      request.approvalMode = await approvalPreferences.mode(for: descriptor.id)
     }
     return try await base.launchPlan(for: request)
   }
@@ -95,9 +95,12 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
   public func arguments(
     for request: AgentLaunchRequest, promptDelivery: PromptDelivery, descriptor: AgentDescriptor
   ) throws -> [String] {
-    let mode = request.antigravityApprovalMode ?? .manual
-    // Both directions override persisted CLI defaults for this process only. In particular,
-    // leaving out --mode would let a global auto/always-proceed setting defeat Manual.
+    let mode = request.approvalMode ?? .manual
+    // Both directions override persisted CLI defaults for this process only. `--mode` has no
+    // value for the default mode, so Manual sets it in the session's settings instead:
+    // `agentMode: ""` is the explicit Default (`/config` saves it so since Auto became the
+    // default), not an absent value. Verified on 1.5.6: with a global `agentMode: "auto"`, a
+    // write ran unasked without this override and was held for review with it.
     var arguments: [String] = mode == .autoReview ? ["--sandbox", "--mode", "auto"] : []
     arguments += [
       "--settings",

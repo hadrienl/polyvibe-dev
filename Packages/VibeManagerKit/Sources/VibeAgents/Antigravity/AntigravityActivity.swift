@@ -6,18 +6,30 @@ import VibeDomain
 /// is installed. The original status command receives the same input and keeps its output.
 enum AntigravityStatusCommand {
   static let event = "AntigravityStatus"
+  /// Two processes per refresh: `plutil` turns the payload into an XML property list, one
+  /// `awk` pass reads the allowed fields from it and the time. The user's own command gets the
+  /// payload whole, up to 4 MiB.
   static let script = #"""
-    i=$({ head -c 65536; cat >/dev/null; });
-    get() { printf '%s' "$i" | /usr/bin/plutil -extract "$1" raw -o - - 2>/dev/null; };
-    c=$(get conversation_id); s=$(get agent_state); p=$(get tool_confirmation_pending);
-    t=$(get task_count); a=$(printf '%s' "$i" | /usr/bin/plutil -extract subagents json -o - - 2>/dev/null); b=false;
+    u=$1;
+    i=$({ head -c 4194304; cat >/dev/null; });
+    r=$(printf '%s' "$i" | /usr/bin/plutil -convert xml1 -o - - 2>/dev/null | /usr/bin/awk '
+    { sub(/^[ \t]+/, "") }
+    /^<(dict|array)>$/ { if (d == 1) o = k; k = ""; d++; next }
+    /^<\/(dict|array)>$/ { d--; next }
+    /^<key>.*<\/key>$/ { v = $0; gsub(/<\/?key>/, "", v); if (d == 1) k = v; else n = v; next }
+    d == 1 && k != "" { v = $0; if (v == "<true/>") v = "true"; else if (v == "<false/>") v = "false"; else gsub(/<[^>]*>/, "", v); f[k] = v; k = ""; next }
+    d > 1 { if (o == "subagents" && n == "status" && $0 == "<string>running</string>") b = "true"; n = "" }
+    END { srand(); printf "%s|%s|%s|%s|%s|%d", f["conversation_id"], f["agent_state"], f["tool_confirmation_pending"], f["task_count"], (b == "" ? "false" : b), srand() }');
+    set -f; IFS='|'; set -- $r; unset IFS; set +f;
+    c=$1; s=$2; p=$3; t=$4; b=$5; now=$6;
     case "$t" in ''|*[!0-9]*) ;; *) [ "$t" -gt 0 ] && b=true;; esac;
-    printf '%s' "$a" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"running"' && b=true;
-    printf '%s' "$c" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' || c=;
+    [ "$b" = true ] || b=false;
+    case "$c" in [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) ;; *) c=;; esac;
     case "$s" in idle|working|tool_use|reviewing|authenticating|initializing|error) ;; *) s=unknown;; esac;
     [ "$p" = true ] || p=false;
-    [ -n "$VIBE_AGENT_ACTIVITY_LOG" ] && printf 'AntigravityStatus\t%s\t{"conversation_id":"%s","agent_state":"%s","pending":%s,"background":%s}\n' "$(date +%s)" "$c" "$s" "$p" "$b" >>"$VIBE_AGENT_ACTIVITY_LOG";
-    [ -n "$1" ] && printf '%s' "$i" | /bin/sh -c "$1";
+    case "$now" in ''|*[!0-9]*) now=0;; esac;
+    [ -n "$VIBE_AGENT_ACTIVITY_LOG" ] && printf 'AntigravityStatus\t%s\t{"conversation_id":"%s","agent_state":"%s","pending":%s,"background":%s}\n' "$now" "$c" "$s" "$p" "$b" >>"$VIBE_AGENT_ACTIVITY_LOG";
+    [ -n "$u" ] && printf '%s' "$i" | /bin/sh -c "$u";
     exit 0
     """#
 
@@ -33,7 +45,13 @@ enum AntigravityStatusCommand {
     }
     let enabled = status["enabled"] as? Bool != false
     let original = enabled ? (status["command"] as? String ?? "") : ""
-    if original.isEmpty { status["stack_with_default"] = true }
+    if !enabled {
+      // The user turned the status line off. The reporter must run all the same, so it stays on,
+      // alone and drawing nothing: what the user sees is still no status line.
+      status["stack_with_default"] = false
+    } else if original.isEmpty {
+      status["stack_with_default"] = true
+    }
     // The CLI expands a leading tilde before running the user's command. Preserve that here.
     let command =
       original.hasPrefix("~/")
@@ -42,6 +60,7 @@ enum AntigravityStatusCommand {
       ["/bin/sh", "-c", script, "vibe-antigravity", command]
       .map(AgentActivityHookCommand.shellQuoted).joined(separator: " ") + " 2>/dev/null"
     status["type"] = "command"
+    // Required for the reporting, whatever the user chose: see above for a disabled line.
     status["enabled"] = true
     let data = try? JSONSerialization.data(
       withJSONObject: ["statusLine": status], options: [.sortedKeys, .withoutEscapingSlashes])
@@ -94,19 +113,35 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
       guard effective != previous else { return nil }
       let old = previous
       previous = effective
-      switch effective {
-      case "working", "tool_use":
-        return old == "reviewing" ? .questionResolved : .promptSubmitted(byUser: false)
-      case "reviewing":
-        // No invented choices or keys. The user answers the actual dialog in the terminal.
-        return .dialogAnnounced(AgentTerminalPrompt(kind: .other, message: nil))
-      case "idle":
-        if old == "working" || old == "tool_use" { return .turnEnded }
-        return .interrupted
-      case "error": return .turnFailed(AgentTerminalPrompt(kind: .other, message: nil))
-      case "authenticating", "initializing": return .channelConfirmed
-      default: return nil
-      }
+      return Self.signal(from: old, to: effective)
+    }
+  }
+
+  /// What a change of state means. Only snapshots are seen, never who started a turn: a turn
+  /// that starts from rest is the user's — work the agent resumes by itself (background tasks,
+  /// subagents) reports as working all along, never as idle in between.
+  static func signal(from old: String?, to new: String) -> AgentSignal? {
+    let busy: Set<String> = ["working", "tool_use"]
+    switch new {
+    case "working", "tool_use":
+      // Running a tool is the same turn going on.
+      if let old, busy.contains(old) { return nil }
+      if old == "reviewing" { return .questionResolved }
+      // A session adopted, or seen first, mid-turn: nobody typed anything just now.
+      guard let old, ["idle", "error"].contains(old) else { return .promptSubmitted(byUser: false) }
+      return .promptSubmitted(byUser: true)
+    case "reviewing":
+      // No invented choices or keys. The user answers the actual dialog in the terminal.
+      return .dialogAnnounced(AgentTerminalPrompt(kind: .other, message: nil))
+    case "idle":
+      // An approval, and the rest of the turn ran between two snapshots: the turn ended.
+      if let old, busy.contains(old) || old == "reviewing" { return .turnEnded }
+      // A first snapshot at rest settles an adopted process that was working, without an answer
+      // to read; after an error, the failure is behind.
+      return .interrupted
+    case "error": return .turnFailed(AgentTerminalPrompt(kind: .other, message: nil))
+    case "authenticating", "initializing": return .channelConfirmed
+    default: return nil
     }
   }
 }

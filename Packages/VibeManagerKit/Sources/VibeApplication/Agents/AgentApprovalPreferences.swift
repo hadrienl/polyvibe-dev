@@ -1,13 +1,12 @@
 import VibeDomain
 
-/// Independent modes for native agents and accounts. Endpoints keep their own definition.
+/// The approval mode of each native agent and account that offers one, under its identifier.
+/// Endpoints keep their own definition.
 @MainActor
 public protocol AgentApprovalPreferences: AnyObject, Sendable {
   func mode(for provider: AgentProviderID) -> AgentApprovalMode
   func setMode(_ mode: AgentApprovalMode, for provider: AgentProviderID)
 }
-
-public typealias CodexApprovalPreferences = AgentApprovalPreferences
 
 @MainActor
 public final class InMemoryAgentApprovalPreferences: AgentApprovalPreferences {
@@ -27,5 +26,3 @@ public final class InMemoryAgentApprovalPreferences: AgentApprovalPreferences {
     modes[provider] = mode
   }
 }
-
-public typealias InMemoryCodexApprovalPreferences = InMemoryAgentApprovalPreferences

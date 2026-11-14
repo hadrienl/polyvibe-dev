@@ -25,6 +25,12 @@ extension AntigravityAgentProvider: AgentConversationReporting {
 /// arbitrary parallel call or inventing a success state. Unknown step types are left alone.
 public final class AntigravityConversationDecoder: ConversationDecoding {
   public private(set) var entries: [ConversationEntry] = []
+  /// The step the last entries belong to, and how many they are: the CLI publishes the snapshots
+  /// of a step one after the other, so replacing one is replacing the tail.
+  private var tailStep: Int?
+  private var tailCount = 0
+  private var steps: Set<Int> = []
+
   public init() {}
 
   public func consume(_ record: TranscriptRecord) {
@@ -33,9 +39,20 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       let type = object["type"] as? String
     else { return }
     let prefix = "agy:\(step):"
-    // The CLI may publish another snapshot of a step while generating it.
-    let insertion = entries.firstIndex { $0.id.hasPrefix(prefix) } ?? entries.endIndex
-    entries.removeAll { $0.id.hasPrefix(prefix) }
+    // The CLI may publish another snapshot of a step while generating it. The latest one replaces
+    // the step's entries where they were: at the end, almost always, in constant time; anywhere
+    // else, by a search, for a step published again later.
+    let insertion: Int
+    if tailStep == step {
+      entries.removeLast(tailCount)
+      insertion = entries.endIndex
+    } else if steps.contains(step) {
+      insertion = entries.firstIndex { $0.id.hasPrefix(prefix) } ?? entries.endIndex
+      entries.removeAll { $0.id.hasPrefix(prefix) }
+    } else {
+      insertion = entries.endIndex
+    }
+    steps.insert(step)
     var additions: [ConversationEntry] = []
     let date = (object["created_at"] as? String).flatMap(TranscriptDates.parse)
     func append(_ suffix: String, _ content: ConversationEntry.Content) {
@@ -45,18 +62,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     let text = ToolOutput.bounded(rawText).text
     switch type {
     case "USER_INPUT":
-      guard object["source"] as? String == "USER_EXPLICIT" else { return }
-      // The export adds time/settings metadata around the actual request. Do not show those
-      // implementation details as if the user had typed them. Use the last close marker so a
-      // literal </USER_REQUEST> inside the prompt is preserved.
-      let prompt: String
-      if rawText.hasPrefix("<USER_REQUEST>\n"),
-        let end = rawText.range(of: "\n</USER_REQUEST>", options: .backwards)
-      {
-        prompt = String(rawText[rawText.index(rawText.startIndex, offsetBy: 15)..<end.lowerBound])
-      } else {
-        prompt = text
-      }
+      guard object["source"] as? String == "USER_EXPLICIT" else { break }
+      let prompt = Self.request(in: rawText) ?? text
       if !prompt.isEmpty {
         append("user", .userPrompt(ToolOutput.bounded(prompt).text, attachments: []))
       }
@@ -80,6 +87,27 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       if !text.isEmpty { append("information", .notice(.information(text))) }
     default: break
     }
-    entries.insert(contentsOf: additions, at: min(insertion, entries.count))
+    let at = min(insertion, entries.count)
+    entries.insert(contentsOf: additions, at: at)
+    if at + additions.count == entries.count {
+      tailStep = step
+      tailCount = additions.count
+    } else {
+      tailStep = nil
+      tailCount = 0
+    }
+  }
+
+  /// What the user typed, without the time and settings metadata the export adds around it; `nil`
+  /// when the text is not wrapped. The last close marker ends it, so a literal `</USER_REQUEST>`
+  /// inside the prompt is kept. An empty request — attachments alone — is an empty prompt.
+  static func request(in text: String) -> String? {
+    let open = "<USER_REQUEST>\n"
+    guard text.hasPrefix(open) else { return nil }
+    let body = text.dropFirst(open.count)
+    if let end = body.range(of: "\n</USER_REQUEST>", options: .backwards) {
+      return String(body[..<end.lowerBound])
+    }
+    return body.hasPrefix("</USER_REQUEST>") ? "" : nil
   }
 }

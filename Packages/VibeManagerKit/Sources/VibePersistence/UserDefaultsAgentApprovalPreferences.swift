@@ -5,11 +5,9 @@ import VibeDomain
 @MainActor
 public final class UserDefaultsAgentApprovalPreferences: AgentApprovalPreferences {
   private let defaults: UserDefaults
-  private let namespace: String
 
-  public init(suiteName: String? = nil, namespace: String = "codex") {
+  public init(suiteName: String? = nil) {
     defaults = suiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
-    self.namespace = namespace
   }
 
   public func mode(for provider: AgentProviderID) -> AgentApprovalMode {
@@ -20,9 +18,9 @@ public final class UserDefaultsAgentApprovalPreferences: AgentApprovalPreference
     defaults.set(mode.rawValue, forKey: key(provider))
   }
 
+  /// The `codex.` prefix is #543's, when Codex alone had a mode: kept, so that the choices already
+  /// saved are still read. Identifiers are unique across agents, so one scheme serves them all.
   private func key(_ provider: AgentProviderID) -> String {
-    "\(namespace).approvalMode.\(provider.rawValue).v1"
+    "codex.approvalMode.\(provider.rawValue).v1"
   }
 }
-
-public typealias UserDefaultsCodexApprovalPreferences = UserDefaultsAgentApprovalPreferences

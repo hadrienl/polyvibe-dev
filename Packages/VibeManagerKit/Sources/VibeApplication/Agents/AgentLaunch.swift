@@ -17,10 +17,10 @@ public struct AgentLaunchRequest: Hashable, Sendable {
   public var harnessID: String?
   /// The reasoning effort to start the agent with (#411); `nil` leaves the agent's own default.
   public var effort: String?
-  /// An endpoint overrides the native Codex agent’s preference with its own mode.
-  public var codexApprovalMode: CodexApprovalMode?
-  /// Antigravity's mode, resolved again at every launch, native resumes included.
-  public var antigravityApprovalMode: AgentApprovalMode?
+  /// How the agent handles requests that need approval, mapped to its CLI's own policy (Codex,
+  /// Antigravity). `nil`: the provider reads the user's preference for it at every launch,
+  /// native resumes included. An endpoint sets its own.
+  public var approvalMode: AgentApprovalMode?
 
   public init(
     workingDirectoryPath: String,
@@ -30,11 +30,9 @@ public struct AgentLaunchRequest: Hashable, Sendable {
     resume: AgentResumeRequest = .none,
     additionalEnvironment: [String: String] = [:],
     harnessID: String? = nil,
-    codexApprovalMode: CodexApprovalMode? = nil,
-    antigravityApprovalMode: AgentApprovalMode? = nil
+    approvalMode: AgentApprovalMode? = nil
   ) {
-    self.codexApprovalMode = codexApprovalMode
-    self.antigravityApprovalMode = antigravityApprovalMode
+    self.approvalMode = approvalMode
     self.harnessID = harnessID
     self.effort = effort
     self.workingDirectoryPath = workingDirectoryPath

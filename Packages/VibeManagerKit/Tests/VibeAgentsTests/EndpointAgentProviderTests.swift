@@ -120,7 +120,8 @@ struct EndpointAgentProviderTests {
   }
 
   @MainActor
-  @Test("Prepared for Antigravity: agy's model gateway, a token of its own, Manual, nothing inherited")
+  @Test(
+    "Prepared for Antigravity: agy's model gateway, a token of its own, Manual, nothing inherited")
   func preparesAntigravity() async throws {
     let gateway = RecordingGateway()
     let endpoint = Self.endpoint(harness: .antigravity, authentication: .none)
@@ -128,8 +129,16 @@ struct EndpointAgentProviderTests {
       EndpointAgentProvider.make(
         endpoint: endpoint, claudeCode: Self.claude(), codex: Self.codex(),
         antigravity: Self.antigravity(), gateway: gateway, secrets: InMemoryEndpointSecretStore())
-        as? EndpointAgentProvider)
-    #expect(provider.harnessKind == .antigravity)
+        as? AntigravityEndpointAgentProvider)
+    #expect(provider.base.harnessKind == .antigravity)
+    // agy is given neither the Vibe Manager tools nor their instructions yet (#541): coordination,
+    // offered to the agents that take both, is not offered to it.
+    #expect(!CoordinationPolicy.canCoordinate(with: provider))
+    #expect(
+      CoordinationPolicy.canCoordinate(
+        with: EndpointAgentProvider.make(
+          endpoint: Self.endpoint(harness: .claudeCode), claudeCode: Self.claude(),
+          codex: Self.codex(), gateway: gateway, secrets: InMemoryEndpointSecretStore())))
     var plan = try await provider.launchPlan(
       for: AgentLaunchRequest(
         workingDirectoryPath: "/tmp", modelID: "qwen3-coder:30b", initialPrompt: "Fix it"))
