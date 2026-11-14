@@ -162,11 +162,14 @@ public final class AppEnvironment {
     let loginShell = LoginShellEnvironment(
       inherited: configuration.environment, probe: SystemProcessProbe())
     let codexApprovals = UserDefaultsCodexApprovalPreferences(suiteName: data.defaultsSuite)
+    let antigravityApprovals = UserDefaultsAgentApprovalPreferences(
+      suiteName: data.defaultsSuite, namespace: "antigravity")
     let providers =
       configuration.providers?(diagnostics.log)
       ?? Self.providers(
         environment: configuration.environment, diagnostics: diagnostics.log,
-        transcriptLocations: transcriptLocations, shell: loginShell, codexApprovals: codexApprovals)
+        transcriptLocations: transcriptLocations, shell: loginShell, codexApprovals: codexApprovals,
+        antigravityApprovals: antigravityApprovals)
     // The endpoints (#107): registered beside the command line agents from the start — a session
     // the terminal host kept is adopted as soon as the workspace loads, and must find its agent —
     // their secrets in the keychain, their sessions reaching them through the gateway.
@@ -482,6 +485,7 @@ public final class AppEnvironment {
       requestPreferences: UserDefaultsRequestPreferences(suiteName: data.defaultsSuite),
       agentUpdatePreferences: UserDefaultsAgentUpdatePreferences(suiteName: data.defaultsSuite),
       codexApprovalPreferences: codexApprovals,
+      antigravityApprovalPreferences: antigravityApprovals,
       browser: browser,
       terminals: terminals,
       ticketContext: ReadTicketContext(
@@ -971,7 +975,8 @@ public final class AppEnvironment {
   private static func providers(
     environment: [String: String], diagnostics: any DiagnosticLog,
     transcriptLocations: TranscriptLocationCache, shell: LoginShellEnvironment,
-    codexApprovals: any CodexApprovalPreferences
+    codexApprovals: any CodexApprovalPreferences,
+    antigravityApprovals: any AgentApprovalPreferences
   ) -> [any AgentProvider] {
     if environment["VIBE_ENABLE_MOCK_AGENT"] == "only" {
       return [MockAgentProvider(environment: environment)]
@@ -987,7 +992,8 @@ public final class AppEnvironment {
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
         transcriptLocations: transcriptLocations, approvalPreferences: codexApprovals),
       AntigravityAgentProvider.make(
-        environment: environment, diagnostics: diagnostics, shellEnvironment: shell),
+        environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
+        approvalPreferences: antigravityApprovals),
     ]
     if MockAgentProvider.isEnabled(environment: environment) {
       providers.append(MockAgentProvider(environment: environment))

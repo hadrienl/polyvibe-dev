@@ -135,6 +135,17 @@ public final class AppModel {
     codexApprovalPreferences.setMode(mode, for: provider)
     codexApprovalModes[provider] = mode
   }
+  let antigravityApprovalPreferences: any AgentApprovalPreferences
+  private var antigravityApprovalModes: [AgentProviderID: AgentApprovalMode] = [:]
+
+  public func antigravityApprovalMode(for provider: AgentProviderID) -> AgentApprovalMode {
+    antigravityApprovalModes[provider] ?? antigravityApprovalPreferences.mode(for: provider)
+  }
+
+  public func setAntigravityApprovalMode(_ mode: AgentApprovalMode, for provider: AgentProviderID) {
+    antigravityApprovalPreferences.setMode(mode, for: provider)
+    antigravityApprovalModes[provider] = mode
+  }
   let agentUpdatePreferences: any AgentUpdatePreferences
   /// Requests whose answer is being typed: their buttons wait.
   public internal(set) var answeringRequestIDs: Set<AgentRequestID> = []
@@ -851,6 +862,8 @@ public final class AppModel {
     /// Whether an agent's sessions restart onto its updated CLI on their own (#409).
     agentUpdatePreferences: any AgentUpdatePreferences = InMemoryAgentUpdatePreferences(),
     codexApprovalPreferences: any CodexApprovalPreferences = InMemoryCodexApprovalPreferences(),
+    antigravityApprovalPreferences: any AgentApprovalPreferences =
+      InMemoryAgentApprovalPreferences(),
     /// Every session's web view (#69). A workspace assembled without one offers none.
     browser: BrowserWorkspace? = nil,
     /// Every session's drawer of side terminals (#43). A workspace assembled without one offers
@@ -909,6 +922,7 @@ public final class AppModel {
     self.answerRequest = answerRequest
     self.requestPreferences = requestPreferences
     self.codexApprovalPreferences = codexApprovalPreferences
+    self.antigravityApprovalPreferences = antigravityApprovalPreferences
     self.agentUpdatePreferences = agentUpdatePreferences
     notifiesRequests = requestPreferences.notifiesRequests
     requestNotificationContent = requestPreferences.notificationContent

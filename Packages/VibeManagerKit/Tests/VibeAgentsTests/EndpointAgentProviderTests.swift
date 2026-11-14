@@ -96,6 +96,97 @@ struct EndpointAgentProviderTests {
       authentication: authentication, harness: harness, models: models)
   }
 
+  /// Native Automatic, so a test sees whether an endpoint session takes it.
+  @MainActor
+  private static func antigravity() -> AntigravityAgentProvider {
+    let availability = AgentAvailabilityProbe(
+      descriptor: AntigravityAgentProvider.descriptor,
+      specification: AntigravityAgentProvider.specification,
+      locator: StubLocator(location: .found(path: "/bin/agy", source: .candidateDirectory)),
+      probe: StubProcessProbe(
+        defaultResponse: .success(ProbeResult(exitCode: 0, standardOutput: "1.5.6"))),
+      environment: [:])
+    return AntigravityAgentProvider(
+      base: CommandLineAgentProvider(
+        descriptor: AntigravityAgentProvider.descriptor,
+        specification: AntigravityAgentProvider.specification,
+        argumentBuilder: AntigravityArgumentBuilder(), availabilityProbe: availability,
+        environment: environment),
+      catalog: AntigravityModelCatalog(
+        availability: availability, probe: StubProcessProbe(), environment: [:]),
+      home: URL(fileURLWithPath: "/Users/test", isDirectory: true),
+      approvalPreferences: InMemoryAgentApprovalPreferences(
+        mode: .autoReview, provider: AntigravityAgentProvider.id))
+  }
+
+  @MainActor
+  @Test("Prepared for Antigravity: agy's model gateway, a token of its own, Manual, nothing inherited")
+  func preparesAntigravity() async throws {
+    let gateway = RecordingGateway()
+    let endpoint = Self.endpoint(harness: .antigravity, authentication: .none)
+    let provider = try #require(
+      EndpointAgentProvider.make(
+        endpoint: endpoint, claudeCode: Self.claude(), codex: Self.codex(),
+        antigravity: Self.antigravity(), gateway: gateway, secrets: InMemoryEndpointSecretStore())
+        as? EndpointAgentProvider)
+    #expect(provider.harnessKind == .antigravity)
+    var plan = try await provider.launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp", modelID: "qwen3-coder:30b", initialPrompt: "Fix it"))
+    #expect(plan.providerID == AgentProviderID(endpoint.providerID))
+    #expect(plan.arguments.contains("--model"))
+    #expect(plan.arguments[plan.arguments.firstIndex(of: "--model")! + 1] == "qwen3-coder:30b")
+    // The native agent's Automatic stays the native agent's.
+    #expect(!plan.arguments.contains("--sandbox"))
+    #expect(plan.arguments.contains { $0.contains(#""toolPermission":"request-review""#) })
+    plan = plan.adding(
+      options: [],
+      environment: [
+        "GEMINI_API_KEY": "user-key", "AGY_LLM_GATEWAY_CA_CERT": "/etc/ca.pem",
+        "AGY_ADC_AUTH": "1",
+      ])
+    let session = SessionID()
+    let prepared = try await EndpointAgentProvider(
+      endpoint: endpoint, harness: .antigravity(Self.antigravity()), gateway: gateway,
+      secrets: InMemoryEndpointSecretStore(), makeToken: { "tok7" }
+    ).preparingLaunch(plan, session: session)
+    #expect(prepared.environment["AGY_LLM_GATEWAY_URL"] == "http://127.0.0.1:61234/s/tok7")
+    #expect(prepared.environment["AGY_LLM_GATEWAY_API_KEY"] == "tok7")
+    #expect(prepared.environment["AGY_LLM_GATEWAY_WIRE_PROTOCOL"] == "openai")
+    #expect(prepared.environment["AGY_LLM_GATEWAY_MODELS"] == "qwen3-coder:30b")
+    #expect(prepared.environment["AGY_LLM_GATEWAY_CA_CERT"] == nil)
+    #expect(prepared.environment["GEMINI_API_KEY"] == nil)
+    #expect(prepared.environment["AGY_ADC_AUTH"] == nil)
+    #expect(!prepared.arguments.contains("tok7"))
+    let registered = await gateway.registered
+    #expect(registered.first?.model == "qwen3-coder:30b")
+    #expect(registered.first?.session == session)
+
+    // A conversation agy wrote is resumed by agy, one another harness wrote is not.
+    let resumed = try await provider.launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp", resume: .identifier("8f1c5d0e-2b9a-4c71-9a43-0d8f6f2b1e77"),
+        harnessID: "antigravity"))
+    #expect(resumed.arguments.contains("--conversation"))
+    await #expect(throws: AgentLaunchError.self) {
+      try await provider.launchPlan(
+        for: AgentLaunchRequest(
+          workingDirectoryPath: "/tmp", resume: .identifier("8f1c5d0e-2b9a-4c71-9a43-0d8f6f2b1e77"),
+          harnessID: "claude-code"))
+    }
+  }
+
+  @Test("An Antigravity endpoint without Antigravity registered is left out")
+  func antigravityMissing() {
+    #expect(
+      EndpointAgentProvider.make(
+        endpoint: Self.endpoint(harness: .antigravity), claudeCode: Self.claude(),
+        codex: Self.codex(), gateway: RecordingGateway(), secrets: InMemoryEndpointSecretStore())
+        == nil)
+    #expect(EndpointHarnessChoice.antigravity.resolved(for: .messages) == .antigravity)
+    #expect(EndpointHarness.antigravity.providerID == AntigravityAgentProvider.id.rawValue)
+  }
+
   private func provider(
     _ endpoint: Endpoint, gateway: any EndpointGatewayControlling = RecordingGateway(),
     secrets: InMemoryEndpointSecretStore = InMemoryEndpointSecretStore(),
@@ -103,7 +194,7 @@ struct EndpointAgentProviderTests {
   ) -> any AgentProvider {
     EndpointAgentProvider.make(
       endpoint: endpoint, claudeCode: Self.claude(), codex: Self.codex(found: codexFound),
-      gateway: gateway, secrets: secrets)
+      gateway: gateway, secrets: secrets)!
   }
 
   @Test("Each Codex endpoint applies its own approval mode, including on resume")

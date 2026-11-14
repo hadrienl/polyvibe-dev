@@ -22,21 +22,25 @@ public struct AntigravityAgentProvider: AgentProvider {
 
   private let base: CommandLineAgentProvider
   private let catalog: AntigravityModelCatalog
+  private let approvalPreferences: (any AgentApprovalPreferences)?
   let home: URL
 
   public init(
     base: CommandLineAgentProvider, catalog: AntigravityModelCatalog,
-    home: URL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+    home: URL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true),
+    approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) {
     self.base = base
     self.catalog = catalog
     self.home = home
+    self.approvalPreferences = approvalPreferences
   }
 
   public static func make(
     environment: [String: String] = ProcessInfo.processInfo.environment,
     diagnostics: any DiagnosticLog = NullDiagnosticLog(),
-    shellEnvironment: (any ShellEnvironmentSource)? = nil
+    shellEnvironment: (any ShellEnvironmentSource)? = nil,
+    approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) -> Self {
     let probe = SystemProcessProbe()
     let locator = FileSystemExecutableLocator(environment: environment, probe: probe)
@@ -56,7 +60,7 @@ public struct AntigravityAgentProvider: AgentProvider {
         availability: availability, probe: probe,
         environment: AgentEnvironmentPolicy.environment(
           base: environment, additionalKeys: specification.additionalEnvironmentKeys)),
-      home: home)
+      home: home, approvalPreferences: approvalPreferences)
   }
 
   public var descriptor: AgentDescriptor { Self.descriptor }
@@ -68,7 +72,11 @@ public struct AntigravityAgentProvider: AgentProvider {
   public func models() async -> [AgentModel] { await catalog.models() }
 
   public func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {
-    try await base.launchPlan(for: request)
+    var request = request
+    if request.antigravityApprovalMode == nil, let approvalPreferences {
+      request.antigravityApprovalMode = await approvalPreferences.mode(for: descriptor.id)
+    }
+    return try await base.launchPlan(for: request)
   }
 
   /// 1.5.5's status line reports an `antigravity/brain` path, but the CLI actually writes under
@@ -87,7 +95,17 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
   public func arguments(
     for request: AgentLaunchRequest, promptDelivery: PromptDelivery, descriptor: AgentDescriptor
   ) throws -> [String] {
-    var arguments: [String] = []
+    let mode = request.antigravityApprovalMode ?? .manual
+    // Both directions override persisted CLI defaults for this process only. In particular,
+    // leaving out --mode would let a global auto/always-proceed setting defeat Manual.
+    var arguments: [String] = mode == .autoReview ? ["--sandbox", "--mode", "auto"] : []
+    arguments += [
+      "--settings",
+      AntigravitySettings.json([
+        "agentMode": mode == .autoReview ? "auto" : "",
+        "toolPermission": mode == .autoReview ? "proceed-in-sandbox" : "request-review",
+      ]),
+    ]
     if case .identifier(let identifier) = request.resume {
       guard let uuid = UUID(uuidString: identifier.trimmingCharacters(in: .whitespacesAndNewlines))
       else { throw AgentLaunchError.missingResumeIdentifier }
@@ -109,6 +127,51 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
         byteCount: prompt.utf8.count, limit: AgentPromptLimits.argumentByteLimit)
     }
     return arguments
+  }
+}
+
+/// `agy` accepts one settings override. Keep permission policy and activity in the same JSON
+/// object: repeating --settings lets the CLI keep only the last value. Parse known option values
+/// as values, so a literal prompt equal to "--settings" cannot be mistaken for an option.
+enum AntigravitySettings {
+  static func json(_ object: [String: Any]) -> String {
+    let data = try? JSONSerialization.data(
+      withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
+    return data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+  }
+
+  static func merging(_ settings: String, into plan: AgentLaunchPlan) -> AgentLaunchPlan {
+    var arguments = plan.arguments
+    var index = 0
+    var settingsIndex: Int?
+    while index < arguments.count {
+      let option = arguments[index]
+      if option == "--settings", index + 1 < arguments.count {
+        settingsIndex = index + 1
+        break
+      }
+      index +=
+        ["--model", "--mode", "--conversation", "--prompt-interactive", "--effort"].contains(option)
+        ? 2 : 1
+    }
+    var merged: [String: Any] = [:]
+    if let settingsIndex {
+      merged = object(arguments[settingsIndex])
+    }
+    merged.merge(object(settings)) { _, added in added }
+    if let settingsIndex {
+      arguments[settingsIndex] = json(merged)
+    } else {
+      arguments += ["--settings", json(merged)]
+    }
+    return AgentLaunchPlan(
+      providerID: plan.providerID, executablePath: plan.executablePath, arguments: arguments,
+      environment: plan.environment, workingDirectoryPath: plan.workingDirectoryPath,
+      promptDelivery: plan.promptDelivery, version: plan.version)
+  }
+
+  private static func object(_ text: String) -> [String: Any] {
+    (try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any] ?? [:]
   }
 }
 

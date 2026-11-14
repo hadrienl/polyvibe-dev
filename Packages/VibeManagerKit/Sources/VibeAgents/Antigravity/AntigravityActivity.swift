@@ -51,8 +51,8 @@ enum AntigravityStatusCommand {
 
 extension AntigravityAgentProvider: AgentActivityReporting {
   public func reportingActivity(_ plan: AgentLaunchPlan, to log: URL) -> AgentLaunchPlan {
-    plan.reportingActivity(
-      options: ["--settings", AntigravityStatusCommand.settings(home: home)], to: log)
+    AntigravitySettings.merging(AntigravityStatusCommand.settings(home: home), into: plan)
+      .reportingActivity(options: [], to: log)
   }
 
   public func activityDecoder() -> any AgentSignalDecoding { AntigravitySignalDecoder() }
@@ -137,12 +137,18 @@ public actor AntigravityLaunchObserver: AgentLaunchObserver {
   private let capture: ClaudeCodeSessionIdentifierCapture
   private var named: String?
 
-  init(sessionID: SessionID, repository: any SessionRepository, home: URL) {
+  /// `recording`: under the endpoint's identifier, with `agy` as its harness, when an endpoint's
+  /// session runs it.
+  init(
+    sessionID: SessionID, repository: any SessionRepository, home: URL,
+    recording: AgentResumeRecording = AgentResumeRecording(
+      providerID: AntigravityAgentProvider.id.rawValue)
+  ) {
     capture = ClaudeCodeSessionIdentifierCapture(
       sessionID: sessionID,
       record: RecordAgentResumeIdentifier(
-        repository: repository, providerID: AntigravityAgentProvider.id.rawValue, launchedAt: Date()
-      ),
+        repository: repository, providerID: recording.providerID, launchedAt: Date(),
+        harnessID: recording.harnessID),
       transcripts: AntigravityTranscriptWatcher(home: home))
   }
 
@@ -169,6 +175,15 @@ extension AntigravityAgentProvider: AgentLaunchObserverProviding {
   public func launchObserver(for sessionID: SessionID, repository: any SessionRepository)
     -> any AgentLaunchObserver
   {
-    AntigravityLaunchObserver(sessionID: sessionID, repository: repository, home: home)
+    launchObserver(
+      for: sessionID, repository: repository,
+      recording: AgentResumeRecording(providerID: Self.id.rawValue))
+  }
+
+  public func launchObserver(
+    for sessionID: SessionID, repository: any SessionRepository, recording: AgentResumeRecording
+  ) -> any AgentLaunchObserver {
+    AntigravityLaunchObserver(
+      sessionID: sessionID, repository: repository, home: home, recording: recording)
   }
 }

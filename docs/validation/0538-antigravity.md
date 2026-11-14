@@ -20,7 +20,7 @@
 | Tool-result grouping, diffs, subagent conversations, attachments and command discovery | PARTIAL | Text/information view only; no inferred result attribution; follow-up #541 |
 | MCP injection, coordinator/browser tools, supplemental instructions | MISSING | CLI has separate MCP/hook config files; no verified per-process injection path, follow-up #541 |
 | Usage and costs | MISSING | `reportsUsage: false`; semantics/deduplication not established, follow-up #541 |
-| Documentation, version floor, security review and translations | IMPLEMENTED | ADR 0044, README, security review; no new localized UI strings; translation checker passes |
+| Documentation, version floor, security review and translations | IMPLEMENTED | ADR 0045, README, security review; no new localized UI strings; translation checker passes |
 | Build available for user testing | IMPLEMENTED | Universal macOS Release build, Developer ID signature verified recursively; isolated launcher and own recipe identity |
 | Entire repository CI green | PARTIAL | Checks and builds below; unrelated UI/browser test failures remain, so this is not marked merge-ready |
 

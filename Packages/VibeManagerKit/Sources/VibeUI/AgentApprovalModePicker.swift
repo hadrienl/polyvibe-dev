@@ -1,14 +1,14 @@
 import SwiftUI
 import VibeDomain
 
-/// Shared by the native Codex agent and endpoints that use its harness.
-struct CodexApprovalModePicker: View {
-  @Binding var selection: CodexApprovalMode
+/// Shared by native agents and endpoints that offer their CLI's automatic permission review.
+struct AgentApprovalModePicker: View {
+  @Binding var selection: AgentApprovalMode
 
   var body: some View {
     Picker(selection: $selection) {
-      Text("Manual", bundle: .module).tag(CodexApprovalMode.manual)
-      Text("Automatic", bundle: .module).tag(CodexApprovalMode.autoReview)
+      Text("Manual", bundle: .module).tag(AgentApprovalMode.manual)
+      Text("Automatic", bundle: .module).tag(AgentApprovalMode.autoReview)
     } label: {
       Text("Approval mode", bundle: .module)
     }

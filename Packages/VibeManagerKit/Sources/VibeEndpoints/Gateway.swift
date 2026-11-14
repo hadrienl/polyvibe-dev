@@ -77,7 +77,7 @@ public protocol GatewayObserving: Sendable {
 /// alone; it must also come back in the harness's own authentication header, so a URL seen in a
 /// process list is not enough to use it.
 ///
-/// Claude Code asks `messages`, Codex asks `responses`. When the endpoint speaks the same protocol,
+/// Claude Code asks `messages`, Codex asks `responses`, Antigravity `chat/completions`. When the endpoint speaks the same protocol,
 /// the request goes through as it came, with the endpoint's model and credentials; otherwise it is
 /// read into the canonical shape, written in the endpoint's protocol, and the answer comes back the
 /// same way.
@@ -117,7 +117,9 @@ public final class Gateway: GatewayRequestHandling {
     }
     let token = String(parts[1])
     let operation = parts[3...].joined(separator: "/")
-    let harness: HarnessProtocol = operation.hasPrefix("responses") ? .responses : .messages
+    let harness: HarnessProtocol =
+      operation.hasPrefix("responses")
+      ? .responses : operation.hasPrefix(ChatCompletionsClient.path) ? .chatCompletions : .messages
     guard Self.presented(token, in: request.headers), let route = await routes.route(for: token)
     else {
       let failure = EndpointFailure(
@@ -127,7 +129,7 @@ public final class Gateway: GatewayRequestHandling {
       return
     }
     switch (request.method, operation) {
-    case ("POST", "messages"), ("POST", "responses"):
+    case ("POST", "messages"), ("POST", "responses"), ("POST", ChatCompletionsClient.path):
       await converse(request, harness: harness, route: route, token: token, writer: writer)
     case ("POST", "messages/count_tokens"):
       await countTokens(request, writer: writer)
@@ -174,6 +176,9 @@ public final class Gateway: GatewayRequestHandling {
     case .responses:
       status = ResponsesServer.status(for: failure)
       body = ResponsesServer.errorBody(failure).data()
+    case .chatCompletions:
+      status = ChatCompletionsServer.status(for: failure)
+      body = ChatCompletionsServer.errorBody(failure).data()
     }
     var headers = ["content-type": "application/json", "content-length": String(body.count)]
     if let wait = failure.retryAfter {
@@ -213,7 +218,7 @@ public final class Gateway: GatewayRequestHandling {
       return
     }
     switch (harness, route.endpoint.wireProtocol) {
-    case (.messages, .messages), (.responses, .responses):
+    case (.messages, .messages), (.responses, .responses), (.chatCompletions, .chatCompletions):
       fields["model"] = .string(route.model)
       fields = EndpointSide.merging(route.endpoint.defaultParameters, into: fields)
       await passThrough(
@@ -257,6 +262,9 @@ public final class Gateway: GatewayRequestHandling {
         if let value = harnessHeaders[name] { headers[name] = value }
       }
       operation = ResponsesClient.path
+    case .chatCompletions:
+      if let value = harnessHeaders["accept"] { headers["accept"] = value }
+      operation = ChatCompletionsClient.path
     }
     let request = EndpointHTTPRequest(
       url: route.endpoint.url(for: operation, secret: route.secret), headers: headers,
@@ -270,7 +278,8 @@ public final class Gateway: GatewayRequestHandling {
         for try await chunk in response.body { await writer.write(chunk) }
       } catch {
         // Cut after part of the answer went through. Claude Code retries on an error event; Codex
-        // retries a stream that ends without its completion, which closing now gives it.
+        // retries a stream that ends without its completion, which closing now gives it, and a
+        // Chat Completions stream that never says `[DONE]` is as incomplete.
         guard harness == .messages else { return }
         let failure = error as? EndpointFailure ?? UnexpectedFailure.wrap(error)
         await writer.write(
@@ -453,6 +462,7 @@ protocol HarnessStreamEncoding: Sendable {
 
 extension AnthropicMessagesStreamEncoder: HarnessStreamEncoding {}
 extension ResponsesStreamEncoder: HarnessStreamEncoding {}
+extension ChatCompletionsStreamEncoder: HarnessStreamEncoding {}
 
 protocol EndpointStreamDecoding: Sendable {
   mutating func consume(_ event: ServerSentEvent) throws -> [CanonicalStreamEvent]
@@ -588,6 +598,15 @@ struct HarnessSide: Sendable {
         var encoder = ResponsesStreamEncoder(id: id, model: model, customTools: custom)
         return encoder.response(answer)
       }
+    case .chatCompletions:
+      var request = try ChatCompletionsServer.decodeRequest(body)
+      request.model = model
+      self.request = request
+      let id = "chatcmpl-" + identifier
+      fallbackID = id
+      let created = Int(Date().timeIntervalSince1970)
+      makeEncoder = { ChatCompletionsStreamEncoder(id: id, model: model, created: created) }
+      whole = { ChatCompletionsServer.encodeResponse($0, created: created) }
     }
   }
 }

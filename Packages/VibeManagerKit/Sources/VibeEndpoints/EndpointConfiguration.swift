@@ -103,6 +103,8 @@ public enum HarnessProtocol: String, Hashable, Codable, Sendable {
   case messages
   /// Codex: the OpenAI Responses protocol.
   case responses
+  /// Antigravity: OpenAI Chat Completions, through its enterprise model gateway (#538).
+  case chatCompletions
 }
 
 /// What one session token of the gateway leads to.

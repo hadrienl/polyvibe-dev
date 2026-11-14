@@ -19,6 +19,8 @@ public struct AgentLaunchRequest: Hashable, Sendable {
   public var effort: String?
   /// An endpoint overrides the native Codex agent’s preference with its own mode.
   public var codexApprovalMode: CodexApprovalMode?
+  /// Antigravity's mode, resolved again at every launch, native resumes included.
+  public var antigravityApprovalMode: AgentApprovalMode?
 
   public init(
     workingDirectoryPath: String,
@@ -28,9 +30,11 @@ public struct AgentLaunchRequest: Hashable, Sendable {
     resume: AgentResumeRequest = .none,
     additionalEnvironment: [String: String] = [:],
     harnessID: String? = nil,
-    codexApprovalMode: CodexApprovalMode? = nil
+    codexApprovalMode: CodexApprovalMode? = nil,
+    antigravityApprovalMode: AgentApprovalMode? = nil
   ) {
     self.codexApprovalMode = codexApprovalMode
+    self.antigravityApprovalMode = antigravityApprovalMode
     self.harnessID = harnessID
     self.effort = effort
     self.workingDirectoryPath = workingDirectoryPath

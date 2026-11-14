@@ -151,8 +151,9 @@ public final class EndpointCatalog {
         gatewayDirectory: gatewayDirectory))
   }
 
-  /// The providers of `endpoints`, driven by the Claude Code and Codex of `providers`. None when
-  /// neither is there: the mock agents of the tests drive no endpoint.
+  /// The providers of `endpoints`, driven by the Claude Code, Codex or Antigravity of `providers`.
+  /// None when Claude Code or Codex is missing: the mock agents of the tests drive no endpoint.
+  /// An endpoint Antigravity drives is left out when Antigravity is not registered.
   static func providers(
     for endpoints: [Endpoint], among providers: [any AgentProvider],
     gateway: any EndpointGatewayControlling, secrets: any EndpointSecretStore,
@@ -161,10 +162,11 @@ public final class EndpointCatalog {
     guard let claudeCode = providers.lazy.compactMap({ $0 as? ClaudeCodeAgentProvider }).first,
       let codex = providers.lazy.compactMap({ $0 as? CodexAgentProvider }).first
     else { return [] }
-    return endpoints.map {
+    let antigravity = providers.lazy.compactMap { $0 as? AntigravityAgentProvider }.first
+    return endpoints.compactMap {
       EndpointAgentProvider.make(
-        endpoint: $0, claudeCode: claudeCode, codex: codex, gateway: gateway, secrets: secrets,
-        gatewayDirectory: gatewayDirectory)
+        endpoint: $0, claudeCode: claudeCode, codex: codex, antigravity: antigravity,
+        gateway: gateway, secrets: secrets, gatewayDirectory: gatewayDirectory)
     }
   }
 

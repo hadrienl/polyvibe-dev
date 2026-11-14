@@ -34,6 +34,10 @@ public enum AgentAccountProviders {
         transcriptLocations: transcriptLocations,
         account: descriptor(of: account, like: CodexAgentProvider.descriptor),
         approvalPreferences: codexApprovals)
+    case .antigravity:
+      // agy 1.5 keeps a single sign-in in the keychain whatever its folder: a second account
+      // would be the first one under another name.
+      return nil
     }
   }
 

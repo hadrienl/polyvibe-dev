@@ -32,6 +32,8 @@ public struct AgentAccount: Identifiable, Hashable, Codable, Sendable {
     switch harness {
     case .claudeCode: return ".claude"
     case .codex: return ".codex"
+    // Not offered for an account: agy 1.5 keeps one sign-in in the keychain for every folder.
+    case .antigravity: return ".gemini"
     }
   }
 

@@ -4,7 +4,7 @@ import VibeDomain
 
 /// An endpoint the user declared, as an agent among the others (#107).
 ///
-/// Its sessions run Claude Code or Codex — the harness — pointed at the gateway, which translates
+/// Its sessions run Claude Code, Codex or Antigravity — the harness — pointed at the gateway, which translates
 /// between the harness's protocol and the endpoint's. So a session on an endpoint is a real session
 /// of that CLI: its terminal, its transcript, its hooks, its prompts and its resume are the CLI's,
 /// and every feature built on them works unchanged. This type only says so: it relays each of those
@@ -17,6 +17,7 @@ public struct EndpointAgentProvider: AgentProvider {
   public enum Harness: Sendable {
     case claudeCode(ClaudeCodeAgentProvider)
     case codex(CodexAgentProvider)
+    case antigravity(AntigravityAgentProvider)
   }
 
   public let endpoint: Endpoint
@@ -45,16 +46,23 @@ public struct EndpointAgentProvider: AgentProvider {
   }
 
   /// The provider for `endpoint`, with the harness its settings resolve to. A Codex harness gets
-  /// the type that also relays Codex's approval of hooks.
+  /// the type that also relays Codex's approval of hooks. `nil` for an Antigravity endpoint when
+  /// no Antigravity provider is registered.
   public static func make(
     endpoint: Endpoint,
     claudeCode: ClaudeCodeAgentProvider,
     codex: CodexAgentProvider,
+    antigravity: AntigravityAgentProvider? = nil,
     gateway: any EndpointGatewayControlling,
     secrets: any EndpointSecretStore,
     gatewayDirectory: URL? = nil
-  ) -> any AgentProvider {
+  ) -> (any AgentProvider)? {
     switch endpoint.harness.resolved(for: endpoint.wireProtocol) {
+    case .antigravity:
+      guard let antigravity else { return nil }
+      return EndpointAgentProvider(
+        endpoint: endpoint, harness: .antigravity(antigravity), gateway: gateway, secrets: secrets,
+        gatewayDirectory: gatewayDirectory)
     case .claudeCode:
       return EndpointAgentProvider(
         endpoint: endpoint, harness: .claudeCode(claudeCode), gateway: gateway, secrets: secrets,
@@ -78,6 +86,7 @@ public struct EndpointAgentProvider: AgentProvider {
     switch harness {
     case .claudeCode(let provider): return provider
     case .codex(let provider): return provider
+    case .antigravity(let provider): return provider
     }
   }
 
@@ -85,6 +94,7 @@ public struct EndpointAgentProvider: AgentProvider {
     switch harness {
     case .claudeCode: return .claudeCode
     case .codex: return .codex
+    case .antigravity: return .antigravity
     }
   }
 
@@ -192,7 +202,13 @@ public struct EndpointAgentProvider: AgentProvider {
     }
     var harnessRequest = request
     harnessRequest.modelID = Self.harnessModelName(model)
-    if harnessKind == .codex { harnessRequest.codexApprovalMode = endpoint.codexApprovalMode }
+    switch harnessKind {
+    case .codex: harnessRequest.codexApprovalMode = endpoint.codexApprovalMode
+    // Antigravity's Automatic mode needs a personal account, which a gateway session is not:
+    // Manual, never the native agent's preference.
+    case .antigravity: harnessRequest.antigravityApprovalMode = .manual
+    case .claudeCode: break
+    }
     let plan = try await harnessProvider.launchPlan(for: harnessRequest)
     return AgentLaunchPlan(
       providerID: descriptor.id, executablePath: plan.executablePath, arguments: plan.arguments,
@@ -288,6 +304,24 @@ extension EndpointAgentProvider: AgentLaunchPreparing {
         ]
       }
       return plan.adding(options: options, environment: [Self.tokenVariable: token])
+    case .antigravity:
+      // agy's enterprise model gateway, in Chat Completions: it asks `<URL>/v1/chat/completions`
+      // with the key as a bearer token, and needs no Google sign-in. Plain HTTP is accepted for a
+      // gateway on this Mac only, which this one is. Whatever else would choose the session's
+      // model or credentials — the user's own gateway, a Gemini key, ADC — is taken out.
+      let inherited = plan.environment.keys.filter {
+        $0.hasPrefix("AGY_LLM_GATEWAY_") || $0.hasPrefix("GOOGLE_GEMINI_")
+      }
+      return plan.removingEnvironment(
+        inherited + ["GEMINI_API_KEY", "GOOGLE_API_KEY", "AGY_ADC_AUTH"]
+      ).adding(
+        options: [],
+        environment: [
+          "AGY_LLM_GATEWAY_URL": root.absoluteString,
+          "AGY_LLM_GATEWAY_API_KEY": token,
+          "AGY_LLM_GATEWAY_WIRE_PROTOCOL": "openai",
+          "AGY_LLM_GATEWAY_MODELS": harnessName,
+        ])
     }
   }
 
@@ -381,6 +415,8 @@ extension EndpointAgentProvider: AgentLaunchObserverProviding {
     case .codex(let provider):
       return CodexLaunchObserver(
         sessionID: sessionID, repository: repository, provider: provider, recording: recording)
+    case .antigravity(let provider):
+      return provider.launchObserver(for: sessionID, repository: repository, recording: recording)
     }
   }
 }
@@ -390,6 +426,7 @@ extension EndpointAgentProvider: AgentActivityReporting {
     switch harness {
     case .claudeCode(let provider): return provider.reportingActivity(plan, to: log)
     case .codex(let provider): return provider.reportingActivity(plan, to: log)
+    case .antigravity(let provider): return provider.reportingActivity(plan, to: log)
     }
   }
 
@@ -397,6 +434,7 @@ extension EndpointAgentProvider: AgentActivityReporting {
     switch harness {
     case .claudeCode(let provider): return provider.activityDecoder()
     case .codex(let provider): return provider.activityDecoder()
+    case .antigravity(let provider): return provider.activityDecoder()
     }
   }
 
@@ -410,6 +448,9 @@ extension EndpointAgentProvider: AgentActivityReporting {
     case .codex(let provider):
       return provider.activityDecoder(
         workingDirectoryPath: workingDirectoryPath, environment: environment)
+    case .antigravity(let provider):
+      return provider.activityDecoder(
+        workingDirectoryPath: workingDirectoryPath, environment: environment)
     }
   }
 }
@@ -421,6 +462,8 @@ extension EndpointAgentProvider: AgentToolServing {
     switch harness {
     case .claudeCode(let provider): return provider.providingTools(servers, to: plan)
     case .codex(let provider): return provider.providingTools(servers, to: plan)
+    // Not wired for Antigravity yet (#541): the plan as it is.
+    case .antigravity: return plan
     }
   }
 }
@@ -430,6 +473,7 @@ extension EndpointAgentProvider: AgentInstructing {
     switch harness {
     case .claudeCode(let provider): return provider.instructing(instructions, to: plan)
     case .codex(let provider): return provider.instructing(instructions, to: plan)
+    case .antigravity: return plan
     }
   }
 }
@@ -439,6 +483,7 @@ extension EndpointAgentProvider: AgentConversationReporting {
     switch harness {
     case .claudeCode(let provider): return provider
     case .codex(let provider): return provider
+    case .antigravity(let provider): return provider
     }
   }
 

@@ -1,4 +1,4 @@
-# 0044 — Antigravity CLI
+# 0045 — Antigravity CLI
 
 - Status: proposed, implemented for local testing
 - Date: 2026-11-11
@@ -23,7 +23,21 @@ The process directory is the workspace. `--prompt-interactive <text>` is an opti
 leading dash is literal; `--prompt` would instead choose noninteractive mode. Arguments never
 pass through a shell. The shared limits reject NUL and prompts above 16 KiB, without typing a
 partial multiline prompt into the terminal. Slash commands use the common ready-to-type path.
-Normal launches do not override the CLI's mode, sandbox, model default or permission policy.
+The model default is left to the CLI. Approval is chosen in Settings › Agents › Antigravity,
+through the same translated Manual / Automatic picker as #543. A namespaced, per-provider
+preference is read again on every launch and native resume; old configurations are Manual.
+The shared preference types retain the Codex aliases, raw values and existing keys from #543.
+
+Manual sets `agentMode: ""` and `toolPermission: "request-review"` for this process, so a global
+automatic setting cannot override the user's Manual choice. Automatic sets `--mode auto`,
+`--sandbox` and `toolPermission: "proceed-in-sandbox"`, keeping native review of commands outside
+the sandbox. `--dangerously-skip-permissions` is never used. Native allow/ask/deny rules still
+apply. The picker explains the personal-account/sandbox requirement; where unavailable the CLI
+falls back to its default mode, as documented by its vendor.
+
+Approval and activity are merged into one `--settings` JSON object. The option parser skips
+prompt values (including a literal `--settings`) rather than treating user text as options.
+No global configuration is changed. The user's existing status command is preserved as before.
 
 `agy models` is bounded to 15 seconds by the shared process probe. A catalog actor coalesces
 concurrent requests, caches success for five minutes and failure for fifteen seconds, and reads
@@ -88,13 +102,51 @@ Palette answering, multiple/asynchronous questions, usage deduplication, subagen
 MCP injection and custom CLI configuration roots require separate verification before being
 enabled. They must not be inferred from the success of a launch/resume smoke test.
 
+## Endpoints driven by Antigravity
+
+An endpoint (ADR 0035) can be driven by `agy`: Settings › Endpoints › Driven by › Antigravity. It
+is never the automatic choice. `agy` 1.5.6 reaches an "enterprise model gateway" through
+`AGY_LLM_GATEWAY_URL`, `AGY_LLM_GATEWAY_API_KEY`, `AGY_LLM_GATEWAY_WIRE_PROTOCOL` and
+`AGY_LLM_GATEWAY_MODELS`, without any Google sign-in. With the `openai` wire it sends a streamed
+`POST <URL>/v1/chat/completions`, the key as a bearer token, `stream_options.include_usage`, a
+system message first, `function` tools, assistant `tool_calls` and `tool` results; plain HTTP is
+accepted for a gateway on the same machine only. The other wire, `genai`
+(`v1beta/models/<model>:streamGenerateContent`), is not used.
+
+So the gateway gains a third harness protocol, Chat Completions (`ChatCompletionsServer`), the
+mirror of the Chat Completions client it already had: read into the canonical request, answered as
+`chat.completion.chunk` objects, the finish reason, the usage in a last chunk and `[DONE]`; a cut
+stream ends with an `error` object and no `[DONE]`. A Chat Completions endpoint is passed through
+untouched but for its model and credentials. The session's URL is `…/s/<token>`, the token is its
+API key, and the endpoint model is the only one listed. Whatever else would choose the model or the
+credentials — the user's own gateway variables, `GEMINI_API_KEY`, `GOOGLE_GEMINI_*`,
+`AGY_ADC_AUTH` — is removed from the session's environment. Approval is Manual, explicitly: the
+native agent's Automatic needs a personal account, which a gateway session is not.
+
+Activity, resume capture (recorded under the endpoint with `antigravity` as harness), conversation
+reading and the resume refusal of a conversation another harness wrote are relayed as for the other
+harnesses. MCP tools and instructions are not injected, as for the native agent (#541). `agy` asks
+4,096 output tokens of a gateway model it does not know: a very long single file write may be cut.
+
+A second Antigravity *account* (ADR 0035's accounts, #478) is not offered: a hidden `--gemini_dir`
+moves the configuration and the conversations, but 1.5.6 keeps one sign-in in the keychain for
+every folder, so the second account would be the first one under another name.
+
 ## Local verification
 
 Experiments on the installed CLI established version, tab-separated models, interactive startup,
 folder-trust prompt, exact native resume with retained context, literal multiline startup prompt,
 bracketed paste, structured status reporting and transcript location/shape. A shell-like prompt
 containing `$(touch …)` stayed literal and created no file. The normal permission policy remained
-in force throughout. Build and test results are recorded with the ticket/build handoff.
+in force throughout the original recipe. A subsequent 1.5.5 experiment verified that native Auto
+created a synthetic workspace file with the sandbox active, while Manual showed the file-creation
+approval and left that file absent. That edit dialog did not set `tool_confirmation_pending` in
+the status payload: detailed dialog reporting remains part of #541. Build and test results are
+recorded with the ticket/build handoff.
+
+On 1.5.6, `agy -p` against the real gateway (Chat Completions harness) in front of a scripted
+Messages endpoint read a workspace file through `read_file`, sent the tool result back in a second
+turn, and printed the endpoint's final answer.
 
 References: [CLI options](https://antigravity.google/docs/cli/reference),
 [resume](https://antigravity.google/docs/cli/commands/resume),

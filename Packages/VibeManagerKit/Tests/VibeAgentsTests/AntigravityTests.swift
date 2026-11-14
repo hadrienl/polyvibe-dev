@@ -48,7 +48,7 @@ struct AntigravityTests {
     let prompt = "-é\n\"quoted\" $(touch /tmp/never) | cat"
     let plan = try await provider.launchPlan(
       for: AgentLaunchRequest(workingDirectoryPath: "/tmp/project", initialPrompt: prompt))
-    #expect(plan.arguments == ["--prompt-interactive", prompt])
+    #expect(plan.arguments.suffix(2) == ["--prompt-interactive", prompt])
     #expect(plan.environment["GEMINI_API_KEY"] == nil)
     #expect(probe.invocations.allSatisfy { $0.arguments == ["--version"] })
   }
@@ -60,7 +60,7 @@ struct AntigravityTests {
       resume: .identifier(identifier.uppercased()))
     let args = try AntigravityArgumentBuilder().arguments(
       for: request, promptDelivery: .none, descriptor: AntigravityAgentProvider.descriptor)
-    #expect(args == ["--conversation", identifier, "--model", "new-model"])
+    #expect(args.suffix(4) == ["--conversation", identifier, "--model", "new-model"])
     #expect(!args.contains("--continue"))
   }
 
@@ -79,6 +79,96 @@ struct AntigravityTests {
       try await base(location: .notFound).launchPlan(
         for: AgentLaunchRequest(workingDirectoryPath: "/tmp"))
     }
+  }
+
+  private func settings(in arguments: [String]) throws -> [String: Any] {
+    let index = try #require(arguments.firstIndex(of: "--settings"))
+    return try #require(
+      JSONSerialization.jsonObject(with: Data(arguments[index + 1].utf8)) as? [String: Any])
+  }
+
+  @Test("Manual overrides a global automatic policy; auto selects native review and the sandbox")
+  func approvalArguments() throws {
+    for resume in [AgentResumeRequest.none, .identifier(identifier)] {
+      for mode in AgentApprovalMode.allCases {
+        let request = AgentLaunchRequest(
+          workingDirectoryPath: "/tmp", resume: resume, antigravityApprovalMode: mode)
+        let args = try AntigravityArgumentBuilder().arguments(
+          for: request, promptDelivery: .none, descriptor: AntigravityAgentProvider.descriptor)
+        let overrides = try settings(in: args)
+        #expect(overrides["agentMode"] as? String == (mode == .manual ? "" : "auto"))
+        #expect(
+          overrides["toolPermission"] as? String
+            == (mode == .manual ? "request-review" : "proceed-in-sandbox"))
+        #expect(args.contains("--sandbox") == (mode == .autoReview))
+        #expect(!args.contains("--dangerously-skip-permissions"))
+        #expect(!args.contains("--prompt-interactive"))
+        if mode == .autoReview {
+          #expect(args.prefix(3) == ["--sandbox", "--mode", "auto"])
+        }
+      }
+    }
+    let defaultArgs = try AntigravityArgumentBuilder().arguments(
+      for: AgentLaunchRequest(workingDirectoryPath: "/tmp"), promptDelivery: .none,
+      descriptor: AntigravityAgentProvider.descriptor)
+    #expect(try settings(in: defaultArgs)["toolPermission"] as? String == "request-review")
+  }
+
+  @MainActor
+  @Test("The provider reads its current preference at each launch and native resume")
+  func approvalPreference() async throws {
+    let preferences = InMemoryAgentApprovalPreferences()
+    let availability = AgentAvailabilityProbe(
+      descriptor: AntigravityAgentProvider.descriptor,
+      specification: AntigravityAgentProvider.specification,
+      locator: StubLocator(location: .found(path: "/bin/agy", source: .candidateDirectory)),
+      probe: StubProcessProbe(), environment: [:])
+    let provider = AntigravityAgentProvider(
+      base: base(),
+      catalog: AntigravityModelCatalog(
+        availability: availability, probe: StubProcessProbe(), environment: [:]),
+      approvalPreferences: preferences)
+    let request = AgentLaunchRequest(workingDirectoryPath: "/tmp", resume: .identifier(identifier))
+    let manual = try await provider.launchPlan(for: request)
+    #expect(try settings(in: manual.arguments)["agentMode"] as? String == "")
+    preferences.setMode(.autoReview, for: AntigravityAgentProvider.id)
+    let automatic = try await provider.launchPlan(for: request)
+    #expect(automatic.arguments.contains("--sandbox"))
+    preferences.setMode(.manual, for: AntigravityAgentProvider.id)
+    let backToManual = try await provider.launchPlan(for: request)
+    #expect(!backToManual.arguments.contains("--sandbox"))
+    #expect(
+      try settings(in: backToManual.arguments)["toolPermission"] as? String == "request-review")
+  }
+
+  @Test("Activity shares one settings object with policy, including a prompt named --settings")
+  func activityKeepsApprovalMode() async throws {
+    let folder = try scratch()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    for mode in AgentApprovalMode.allCases {
+      let original = try await base().launchPlan(
+        for: AgentLaunchRequest(
+          workingDirectoryPath: "/tmp", initialPrompt: "--settings", antigravityApprovalMode: mode))
+      // No user settings file is touched: compose the same generated status JSON as the provider.
+      let reporting = AntigravitySettings.merging(
+        AntigravityStatusCommand.settings(home: folder), into: original)
+      #expect(reporting.arguments.filter { $0 == "--settings" }.count == 2)  // one option, one literal prompt
+      #expect(reporting.arguments.suffix(2) == ["--prompt-interactive", "--settings"])
+      let merged = try settings(in: reporting.arguments)
+      #expect(merged["statusLine"] is [String: Any])
+      #expect(
+        merged["toolPermission"] as? String
+          == (mode == .manual ? "request-review" : "proceed-in-sandbox"))
+      #expect(merged["agentMode"] as? String == (mode == .manual ? "" : "auto"))
+    }
+    let withoutOverrides = AgentLaunchPlan(
+      providerID: AntigravityAgentProvider.id, executablePath: "/bin/agy",
+      arguments: ["--prompt-interactive", "--settings"], environment: [:],
+      workingDirectoryPath: "/tmp", promptDelivery: .argument)
+    let added = AntigravitySettings.merging(#"{"agentMode":"auto"}"#, into: withoutOverrides)
+    #expect(added.arguments.prefix(2) == ["--prompt-interactive", "--settings"])
+    #expect(added.arguments[2] == "--settings")
+    #expect(added.arguments[3] == #"{"agentMode":"auto"}"#)
   }
 
   @Test("The account catalog ignores noise, duplicates and malformed rows")
