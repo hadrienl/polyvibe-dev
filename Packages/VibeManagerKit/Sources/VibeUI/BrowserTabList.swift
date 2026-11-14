@@ -735,6 +735,12 @@ struct BrowserTabListPopover<Content: View>: NSViewRepresentable {
       if popover?.isShown == true { popover?.close() }
     }
 
+    /// The popover's window takes the keyboard: SwiftUI lights a row under the pointer, and shows
+    /// its pin, only in the key window — the session's stayed key, and no row lit any more.
+    func popoverDidShow(_ notification: Notification) {
+      host?.view.window?.makeKey()
+    }
+
     /// Closed by a click outside, Escape, or `close()`: the button no longer shows it open. After
     /// this update, never during it.
     func popoverDidClose(_ notification: Notification) {
