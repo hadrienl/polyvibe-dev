@@ -215154,7 +215154,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Téléphone Android : installez adb (Android Studio, ou brew install --cask android-platform-tools)."
+            "value" : "Téléphone Android : installez adb (Android Studio, ou brew install --cask android-platform-tools)."
           }
         },
         "hi" : {
@@ -215256,7 +215256,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Téléphone Android : activez le débogage USB dans les options pour les développeurs."
+            "value" : "Téléphone Android : activez le débogage USB dans les options pour les développeurs."
           }
         },
         "hi" : {
