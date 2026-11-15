@@ -40,19 +40,33 @@ public enum DeviceCatalog {
     public let unavailablePhones: [UnavailablePhone]
     /// Whether adb was found: without it, no phone can be listed.
     public let hasADB: Bool
+    /// A shared simulator probe is still running; a later listing can contain more simulators.
+    public let isDiscoveringSimulators: Bool
   }
 
   public static func running() async -> [Device] {
     await listing().devices
   }
 
-  /// A picker can load simulators separately so a slow `simctl` never holds up phones.
+  /// Resolve only the requested device family: opening a phone never probes simulators.
+  public static func device(id: String) async -> Device? {
+    if isPhone(id) { return await phones().devices.first { $0.id == id } }
+    if id.hasPrefix(androidPrefix) { return emulators().map(\.device).first { $0.id == id } }
+    return await simulators().first { $0.id == id }
+  }
+
+  private static let simulatorDiscovery = SimulatorDiscovery { await probeSimulators() }
+
+  /// Uses the last simulator snapshot, refreshed in the background. On a cold cache only,
+  /// allow up to 200 ms for simctl, independently of adb. A picker may load simulators separately.
   public static func listing(includeSimulators: Bool = true) async -> Listing {
-    async let simulators = includeSimulators ? simulators() : []
+    async let simulators = includeSimulators ? simulatorDiscovery.snapshot() : nil
     let phones = await self.phones()
+    let snapshot = await simulators
     return Listing(
-      devices: await simulators + emulators().map(\.device) + phones.devices,
-      unavailablePhones: phones.unavailable, hasADB: phones.hasADB)
+      devices: (snapshot?.devices ?? []) + emulators().map(\.device) + phones.devices,
+      unavailablePhones: phones.unavailable, hasADB: phones.hasADB,
+      isDiscoveringSimulators: snapshot?.isRefreshing ?? false)
   }
 
   public static func isPhone(_ id: String) -> Bool {
@@ -91,9 +105,13 @@ public enum DeviceCatalog {
 
   /// Booted iOS simulators. Independent of adb: either discovery may take longer than the other.
   public static func simulators() async -> [Device] {
+    await probeSimulators() ?? []
+  }
+
+  private static func probeSimulators() async -> [Device]? {
     let request = simctl(["list", "devices", "booted", "-j"], timeout: .seconds(20))
     guard let result = try? await BoundedProcess.run(request), result.exitCode == 0 else {
-      return []
+      return nil
     }
     return simulators(listedIn: result.standardOutput)
   }

@@ -33,11 +33,14 @@ extension BrowserWorkspace: BrowserToolRunning {
         let list = JSONValue.array(
           listing.devices.map { ["id": .string($0.id), "name": .string($0.name)] }
         ).jsonText
-        return .text(([list] + Self.phoneNotes(listing)).joined(separator: "\n"))
+        let pending =
+          listing.isDiscoveringSimulators
+          ? ["Simulator discovery is still running; call devices_list again for the updated list."]
+          : []
+        return .text(([list] + Self.phoneNotes(listing) + pending).joined(separator: "\n"))
       case "device_open":
         let id = arguments["device"]?.stringValue ?? ""
-        let devices = await DeviceCatalog.running()
-        guard let device = devices.first(where: { $0.id == id }),
+        guard let device = await DeviceCatalog.device(id: id),
           let url = DeviceCatalog.url(of: id)
         else {
           throw BrowserToolFailure("\(id) is not running: see devices_list, or boot it first.")
