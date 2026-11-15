@@ -102,14 +102,18 @@ public struct RemoteSession: Codable, Hashable, Sendable, Identifiable {
   public var rank: Int
   /// Whether its agent ever ran: a closed one is restarted, one never started is started.
   public var hasStarted: Bool
+  /// Whether its agent runs a prompt opening on `!` as a shell command (#188), for the Run button
+  /// of a code block (#548). `nil` from a Mac that does not say: the button is shown.
+  public var hasShellMode: Bool?
 
   public init(
     id: String, name: String, folderPath: String, folderName: String, agentName: String,
     status: RemoteTaskStatus, activity: RemoteActivity, appearance: RemoteAppearance,
     coordinatorID: String? = nil, isCoordinator: Bool = false, waitingFor: RemoteWait? = nil,
-    updatedAt: Date, rank: Int = 0, hasStarted: Bool = true
+    updatedAt: Date, rank: Int = 0, hasStarted: Bool = true, hasShellMode: Bool? = nil
   ) {
     self.hasStarted = hasStarted
+    self.hasShellMode = hasShellMode
     self.id = id
     self.name = name
     self.folderPath = folderPath

@@ -208,3 +208,18 @@ func frameQueueFailure() async {
   for await event in events { seen.append(event) }
   #expect(seen == ["hello", "failed"])
 }
+
+@Test("A session says whether its agent has a shell mode; a Mac that does not say leaves it unknown")
+func sessionShellMode() throws {
+  let session = RemoteSession(
+    id: "s", name: "Refacto", folderPath: "/p", folderName: "p", agentName: "Claude Code",
+    status: .doing, activity: .idle, appearance: RemoteAppearance(symbol: "star", color: "#fff"),
+    updatedAt: Date(timeIntervalSince1970: 0), hasShellMode: false)
+  let data = try JSONEncoder().encode(session)
+  #expect(try JSONDecoder().decode(RemoteSession.self, from: data).hasShellMode == false)
+  var older = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+  older["hasShellMode"] = nil
+  let decoded = try JSONDecoder().decode(
+    RemoteSession.self, from: JSONSerialization.data(withJSONObject: older))
+  #expect(decoded.hasShellMode == nil)
+}

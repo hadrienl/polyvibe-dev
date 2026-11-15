@@ -113,7 +113,6 @@ public struct ConversationView: View {
     .environment(\.conversationAppearance, appearance)
     .environment(\.conversationIsLive, isActive)
     .environment(\.readAloud, model.readAloud)
-    .environment(\.shellCommandRunner, model)
     // The models loaded while the conversation is read, the dictation's first (#357): their
     // first load compiles them for this Mac, which takes minutes. One at a time.
     .task {
@@ -531,6 +530,9 @@ struct BlockView: View {
         AgentTextView(
           text: text, id: entry.id, readAloud: model.readAloud, date: entry.date)
           .environment(\.selectionBlock, selectionBlock)
+          // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
+          // written for the user to run (#548).
+          .environment(\.shellCommandRunner, model)
       case .reasoning(let text):
         ReasoningRow(id: entry.id, text: text, model: model)
           .environment(\.selectionBlock, selectionBlock)

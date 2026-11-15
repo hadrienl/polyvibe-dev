@@ -1376,7 +1376,7 @@ public final class ConversationModel {
   /// agent has a shell mode, and would take the command as if typed.
   public var canRunShellCommand: Bool {
     guard let shell = promptFormat.shellEntry, composerState == .ready, !isSubmitting,
-      terminalPanel == nil
+      !isSendingNow, terminalPanel == nil
     else { return false }
     return !isAgentWorking || shell.queuesWhileWorking
   }
@@ -1391,7 +1391,11 @@ public final class ConversationModel {
     attachments = []
     draft = prompt
     let sent = await send()
-    if draft == prompt || sent { draft = kept }
+    // What is in the field now — typed while the command was on its way, or the command itself
+    // changed before it could go — follows the draft put aside; the command untouched and unsent
+    // goes, never left in the field in its place.
+    let typed = draft == prompt ? "" : draft
+    draft = [kept, typed].filter { !$0.isEmpty }.joined(separator: " ")
     attachments = keptAttachments + attachments
     return sent
   }

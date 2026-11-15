@@ -22,7 +22,7 @@ public enum RemoteMarkdown {
       prose = []
     }
 
-    for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+    for line in text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline) {
       if let open = fence {
         if let close = Self.fence(line), close.marker == open.marker, close.length >= open.length,
           close.info.isEmpty
