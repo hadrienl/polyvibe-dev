@@ -2,10 +2,11 @@ import Darwin
 import Foundation
 import VibeProcess
 
-/// The simulators and emulators running on this Mac (#480), which a tab or the phone can show.
+/// The simulators and emulators running on this Mac (#480), and the iPhones plugged into it
+/// (#527), which a tab or the phone can show.
 public enum DeviceCatalog {
   public struct Device: Sendable, Hashable {
-    /// A simulator's UDID, or `android-<gRPC port>`.
+    /// A simulator's UDID, `android-<gRPC port>`, or `ios-<UDID>` for an iPhone plugged in.
     public let id: String
     public let name: String
     /// What an emulator started with `-grpc-use-token` asks of its clients.
@@ -22,12 +23,21 @@ public enum DeviceCatalog {
     URL(string: "vibe-device://\(id)")
   }
 
-  public static func running() async -> [Device] {
-    await simulators() + emulators().map(\.device)
+  /// - Parameter folder: where the bridges are, to list the iPhones plugged in; none without it.
+  public static func running(bridgesIn folder: URL? = nil) async -> [Device] {
+    let plugged = if let folder { await iPhones(bridgesIn: folder) } else { [Device]() }
+    return await simulators() + emulators().map(\.device) + plugged
+  }
+
+  /// The folder of the application's executable, where the bridges are.
+  public static var applicationBridges: URL? {
+    Bundle.main.executableURL?.deletingLastPathComponent()
   }
 
   /// Shuts a simulator down, or ends an emulator as closing its window would.
   public static func stop(_ id: String) async {
+    // An iPhone is not stopped from the Mac.
+    if id.hasPrefix(iPhonePrefix) { return }
     if id.hasPrefix(androidPrefix) {
       if let emulator = emulators().first(where: { $0.device.id == id }) {
         kill(emulator.processIdentifier, SIGTERM)
@@ -45,6 +55,28 @@ public enum DeviceCatalog {
   }
 
   static let androidPrefix = "android-"
+  static let iPhonePrefix = "ios-"
+
+  // MARK: - iPhones
+
+  /// The iPhones usbmuxd sees by USB, from `device-bridge --list`: a line `UDID<tab>name` each.
+  private static func iPhones(bridgesIn folder: URL) async -> [Device] {
+    let request = BoundedProcessRequest(
+      executablePath: folder.appendingPathComponent("device-bridge").path, arguments: ["--list"],
+      environment: environment, timeout: .seconds(10), outputByteLimit: 1 << 20)
+    guard let result = try? await BoundedProcess.run(request), result.exitCode == 0 else {
+      return []
+    }
+    return iPhones(listedIn: String(decoding: result.standardOutput, as: UTF8.self))
+  }
+
+  static func iPhones(listedIn text: String) -> [Device] {
+    text.split(whereSeparator: \.isNewline).compactMap { line in
+      let parts = line.split(separator: "\t", maxSplits: 1)
+      guard parts.count == 2 else { return nil }
+      return Device(id: iPhonePrefix + parts[0], name: String(parts[1]))
+    }
+  }
 
   // MARK: - Simulators
 

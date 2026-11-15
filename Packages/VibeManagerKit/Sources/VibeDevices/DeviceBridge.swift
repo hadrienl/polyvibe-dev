@@ -2,7 +2,7 @@ import Foundation
 import VibeProcess
 
 /// The bridge to one device (#480): `sim-bridge` for a simulator, `emu-bridge` for an emulator,
-/// next to the executable. It writes the screen as H.264 frames, each a `u32` big-endian length
+/// `device-bridge` for an iPhone plugged in (#527), next to the executable. It writes the screen as H.264 frames, each a `u32` big-endian length
 /// then the frame, and reads touches (`d|m|u x y`) and key frame requests (`k`), a line each.
 public final class DeviceBridge: Sendable {
   private let process: StreamingProcess
@@ -18,6 +18,9 @@ public final class DeviceBridge: Sendable {
       if let token = DeviceCatalog.emulators().first(where: { $0.device.id == id })?.device.token {
         environment["EMU_TOKEN"] = token
       }
+    } else if id.hasPrefix(DeviceCatalog.iPhonePrefix) {
+      executable = "device-bridge"
+      argument = String(id.dropFirst(DeviceCatalog.iPhonePrefix.count))
     } else {
       executable = "sim-bridge"
       argument = id

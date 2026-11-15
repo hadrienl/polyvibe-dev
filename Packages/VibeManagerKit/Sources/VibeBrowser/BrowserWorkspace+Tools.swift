@@ -29,14 +29,14 @@ extension BrowserWorkspace: BrowserToolRunning {
       case "tab_open":
         return try await openTab(arguments, browser: browser, tool: tool)
       case "devices_list":
-        let devices = await DeviceCatalog.running()
+        let devices = await DeviceCatalog.running(bridgesIn: DeviceCatalog.applicationBridges)
         return .text(
           JSONValue.array(
             devices.map { ["id": .string($0.id), "name": .string($0.name)] }
           ).jsonText)
       case "device_open":
         let id = arguments["device"]?.stringValue ?? ""
-        let devices = await DeviceCatalog.running()
+        let devices = await DeviceCatalog.running(bridgesIn: DeviceCatalog.applicationBridges)
         guard let device = devices.first(where: { $0.id == id }),
           let url = DeviceCatalog.url(of: id)
         else {

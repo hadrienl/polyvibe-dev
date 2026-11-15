@@ -41,6 +41,7 @@ INFOPLIST_KEY_NSLocalNetworkUsageDescription = Vibe Manager reaches the model se
 // The composer's dictation (#340), and a page of the web view that asks for the microphone (#315):
 // without this key, WebKit does not even give pages `navigator.mediaDevices`.
 INFOPLIST_KEY_NSMicrophoneUsageDescription = Vibe Manager uses the microphone when you dictate a message, transcribed on this Mac, and when a page in the web view asks you for it.
+INFOPLIST_KEY_NSCameraUsageDescription = Vibe Manager shows the screen of an iPhone plugged into this Mac in the web view, which macOS counts as a camera.
 // The hardened runtime of a release refuses the microphone without its entitlement, and only it is
 // granted (ADR 0021).
 CODE_SIGN_ENTITLEMENTS = App/VibeManagerApp/VibeManager.entitlements

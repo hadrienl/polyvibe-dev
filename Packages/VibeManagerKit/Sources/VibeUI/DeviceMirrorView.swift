@@ -165,7 +165,9 @@ struct DeviceMirrorPicker: View {
     .padding(6)
     .frame(minWidth: 200, alignment: .leading)
     .task {
-      devices = await DeviceCatalog.running().map { ($0.id, $0.name) }
+      devices = await DeviceCatalog.running(bridgesIn: DeviceCatalog.applicationBridges).map {
+        ($0.id, $0.name)
+      }
     }
   }
 
