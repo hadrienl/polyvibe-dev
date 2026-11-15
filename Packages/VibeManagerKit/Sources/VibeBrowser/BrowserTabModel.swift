@@ -228,12 +228,15 @@ public final class BrowserTabModel: NSObject, Identifiable {
   }
 
   /// A three-finger tap on a link, and the menu of one, open a tab behind this one or the external
-  /// browser (#186).
+  /// browser (#186); the middle button, a tab in front (#536).
   private func connectLinks(of webView: SessionWebView) {
     configuration.attachHoveredLink(to: webView)
     webView.onUserInput = { [weak self] in self?.userDidInteract() }
     webView.openInBackgroundTab = { [weak self] url in
       self?.openInNewTab?(url, false, false)
+    }
+    webView.openInFrontTab = { [weak self] url in
+      self?.openInNewTab?(url, false, true)
     }
     webView.openExternally = { url in
       guard LinkRouting.isPage(url) else { return }

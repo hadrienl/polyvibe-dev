@@ -17,11 +17,41 @@ struct BrowserLinkGestureTests {
       modifiers: modifiers, button: button, isLink: isLink, isAgentDriven: isAgentDriven)
   }
 
-  @Test("⌘-click opens in front, ⇧⌘-click behind, the middle button behind")
+  @Test("⌘-click and the middle button open in front, ⇧⌘-click behind")
   func gestures() {
     #expect(decide([.command]) == .newTab(activate: true))
     #expect(decide([.command, .shift]) == .newTab(activate: false))
-    #expect(decide([], button: .middle) == .newTab(activate: false))
+    #expect(decide([], button: .middle) == .newTab(activate: true))
+  }
+
+  /// A press or release of the middle button, as the mouse sends it.
+  private func middle(_ type: CGEventType) throws -> NSEvent {
+    let event = try #require(
+      CGEvent(
+        mouseEventSource: nil, mouseType: type, mouseCursorPosition: .zero, mouseButton: .center))
+    return try #require(NSEvent(cgEvent: event))
+  }
+
+  @Test("The middle button on a link opens it in a tab in front; elsewhere, nothing opens")
+  func middleButtonOnALink() throws {
+    let view = SessionWebView(frame: .zero)
+    var opened: [URL] = []
+    view.openInFrontTab = { opened.append($0) }
+    let link = try #require(URL(string: "https://example.com/docs"))
+    let otherDown = try middle(.otherMouseDown)
+    let otherUp = try middle(.otherMouseUp)
+    #expect(otherDown.buttonNumber == 2)
+
+    view.hoveredLink = link
+    view.otherMouseDown(with: otherDown)
+    view.otherMouseUp(with: otherUp)
+    #expect(opened == [link])
+
+    // Let go away from the link: nothing opens.
+    view.otherMouseDown(with: otherDown)
+    view.hoveredLink = nil
+    view.otherMouseUp(with: otherUp)
+    #expect(opened == [link])
   }
 
   @Test("A plain click, what is not a link, and what an agent does stay in the tab")

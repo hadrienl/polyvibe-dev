@@ -2,8 +2,8 @@ import AppKit
 import VibeApplication
 import WebKit
 
-/// How the user opens a link of a page in a new tab (#186): ⌘-click in front — the list of tabs
-/// would hide one opened behind (#536) — ⇧⌘-click and the middle button in the background. What an
+/// How the user opens a link of a page in a new tab (#186): ⌘-click and the middle button in front
+/// — the list of tabs would hide one opened behind (#536) — ⇧⌘-click in the background. What an
 /// agent does is never read this way.
 enum BrowserLinkGesture {
   enum Decision: Equatable {
@@ -31,7 +31,7 @@ enum BrowserLinkGesture {
     modifiers: NSEvent.ModifierFlags, button: Button, isLink: Bool, isAgentDriven: Bool
   ) -> Decision {
     guard isLink, !isAgentDriven else { return .sameTab }
-    if button == .middle { return .newTab(activate: false) }
+    if button == .middle { return .newTab(activate: true) }
     guard modifiers.contains(.command) else { return .sameTab }
     return .newTab(activate: !modifiers.contains(.shift))
   }
@@ -109,6 +109,9 @@ final class SessionWebView: WKWebView {
   /// leaves the view and when another page commits, which no pointer event would say.
   var hoveredLink: URL?
   var openInBackgroundTab: ((URL) -> Void)?
+  var openInFrontTab: ((URL) -> Void)?
+  /// The link the middle button went down on: opened when it comes up over the same link.
+  private var middlePressedLink: URL?
   var openExternally: ((URL) -> Void)?
   /// Told when the user clicks in the page or types into it — never of a click the page's script
   /// or an agent dispatches, which are not AppKit events (#241).
@@ -170,8 +173,17 @@ final class SessionWebView: WKWebView {
     super.mouseDown(with: event)
   }
 
+  /// The middle button on a link opens it in a new tab, in front (#536): WebKit followed no link on
+  /// it. The page never sees the press, so that a link is not opened twice.
   override func otherMouseDown(with event: NSEvent) {
     notePress(at: event.timestamp, modifiers: event.modifierFlags)
+    if event.buttonNumber == 2, let link = openableHoveredLink, LinkRouting.isPage(link),
+      openInFrontTab != nil
+    {
+      middlePressedLink = link
+      return
+    }
+    middlePressedLink = nil
     super.otherMouseDown(with: event)
   }
 
@@ -187,6 +199,11 @@ final class SessionWebView: WKWebView {
 
   override func otherMouseUp(with event: NSEvent) {
     lastPress?.time = event.timestamp
+    if event.buttonNumber == 2, let link = middlePressedLink {
+      middlePressedLink = nil
+      if openableHoveredLink == link { openInFrontTab?(link) }
+      return
+    }
     super.otherMouseUp(with: event)
   }
 

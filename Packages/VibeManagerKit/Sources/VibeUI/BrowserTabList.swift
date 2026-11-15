@@ -187,6 +187,10 @@ struct BrowserTabList: View {
       hasKeyboard = true
       browser.markTabsSeen()
     }
+    // A tab opened behind while the list is open is seen as it comes in.
+    .onChange(of: browser.unseenTabIDs) { _, unseen in
+      if !unseen.isEmpty { browser.markTabsSeen() }
+    }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(Text("Web tabs", bundle: .module))
   }
@@ -373,7 +377,10 @@ private struct BrowserTabRow: View {
     .accessibilityElement(children: .ignore)
     .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
     .accessibilityLabel(BrowserTabTitle.accessibilityLabel(of: tab, in: browser))
-    .accessibilityValue(tab.isPinned ? Text("Pinned Tab", bundle: .module) : Text(verbatim: ""))
+    .accessibilityValue(
+      tab.isPinned || tab.isPinnedTicket
+        ? Text("Pinned Tab", bundle: .module) : Text(verbatim: "")
+    )
     .accessibilityAction { activate() }
     .accessibilityActions {
       if !tab.isPinnedTicket {
@@ -707,6 +714,13 @@ private struct PointerHoverTracker: NSViewRepresentable {
         NSTrackingArea(
           rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
           owner: self))
+      // Under a pointer that did not move: when the list opens, or scrolls.
+      if let window {
+        let isInside = visibleRect.contains(
+          convert(window.mouseLocationOutsideOfEventStream, from: nil))
+        // After the layout that asked for it, never during it.
+        Task { @MainActor [weak self] in self?.changed?(isInside) }
+      }
     }
 
     override func mouseEntered(with event: NSEvent) { changed?(true) }
@@ -760,17 +774,16 @@ struct BrowserTabListPopover<Content: View>: NSViewRepresentable {
     private weak var pending: NSView?
     var didClose: (() -> Void)?
 
+    /// A new list at each opening, left as it is while open: it follows the session's tabs on its
+    /// own, appears afresh — seen, keyboard, highlight — and never shows another session's tabs.
     func show(_ content: AnyView, from view: NSView) {
-      if let host {
-        host.rootView = content
-      } else {
-        let host = NSHostingController(rootView: content)
-        // The popover follows the list's size: it shrinks when tabs are closed.
-        host.sizingOptions = .preferredContentSize
-        self.host = host
-      }
       let popover = popover ?? makePopover()
       guard !popover.isShown else { return }
+      let host = NSHostingController(rootView: content)
+      // The popover follows the list's size: it shrinks when tabs are closed.
+      host.sizingOptions = .preferredContentSize
+      self.host = host
+      popover.contentViewController = host
       guard view.window != nil else {
         pending = view
         return
@@ -805,7 +818,6 @@ struct BrowserTabListPopover<Content: View>: NSViewRepresentable {
       let popover = NSPopover()
       popover.behavior = .transient
       popover.animates = true
-      popover.contentViewController = host
       popover.delegate = self
       self.popover = popover
       return popover
