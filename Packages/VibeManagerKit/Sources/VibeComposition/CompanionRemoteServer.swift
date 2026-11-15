@@ -231,7 +231,8 @@ final class CompanionRemoteServer {
           iconID: session.appearance.iconID?.sha256),
         coordinatorID: coordinatorID, isCoordinator: isCoordinator,
         waitingFor: state?.requests.first.map(wait(of:)), updatedAt: session.updatedAt,
-        rank: session.rank, hasStarted: session.hasEverStarted)
+        rank: session.rank, hasStarted: session.hasEverStarted,
+        hasShellMode: appModel.conversations.hasShellMode(session))
     }
   }
 

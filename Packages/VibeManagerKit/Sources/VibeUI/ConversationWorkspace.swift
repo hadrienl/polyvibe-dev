@@ -113,6 +113,13 @@ public final class ConversationWorkspace {
     readableAgents = readable
   }
 
+  /// Whether the session's agent runs a prompt opening on `!` as a shell command (#188), as its
+  /// conversation's composer reads it: for the phone's Run button (#548).
+  public func hasShellMode(_ session: WorkSession) -> Bool {
+    session.conversationAgents.last.flatMap { readableAgents[$0.providerID] }?.format.shellEntry
+      != nil
+  }
+
   /// Whether the session has a conversation the view can show.
   public func canShowConversation(_ session: WorkSession) -> Bool {
     session.conversationAgents.contains { readableAgents[$0.providerID] != nil }

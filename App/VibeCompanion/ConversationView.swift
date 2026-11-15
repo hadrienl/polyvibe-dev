@@ -114,11 +114,13 @@ struct ConversationView: View {
     .onDisappear { if channel.conversation?.sessionID == sessionID { channel.show(nil) } }
   }
 
-  /// Whether a command the agent wrote for the user can be run from its block (#548): not for a
-  /// session whose agent does not run, nor while it waits on a request — the Mac would take the
-  /// command for the answer.
+  /// Whether a command the agent wrote for the user can be run from its block (#548): not for an
+  /// agent without a shell mode — the command would go as a message —, nor for a session whose
+  /// agent does not run, nor while it waits on a request — the Mac would take the command for the
+  /// answer.
   private var canRun: Bool {
-    guard let session, conversation?.request == nil else { return false }
+    guard let session, session.hasShellMode != false, conversation?.request == nil
+    else { return false }
     return session.activity != .stopped && session.activity != .needsAttention
   }
 
