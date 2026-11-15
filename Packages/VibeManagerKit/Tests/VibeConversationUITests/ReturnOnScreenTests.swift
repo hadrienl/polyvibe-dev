@@ -108,6 +108,9 @@ struct ReturnOnScreenTests {
     let agent = Agent()
     agent.readsBeforeText = 4
     let model = model(agent: agent)
+    // The text shows after four readings, however long they take: a runner frozen past the
+    // limit would write Return before it (CI, 2026-11-15).
+    model.promptReturn.inputWaitLimit = .seconds(3600)
     model.draft = "Bonjour ça va ?"
     #expect(await model.send())
     #expect(agent.textShownAtReturn == [true])
