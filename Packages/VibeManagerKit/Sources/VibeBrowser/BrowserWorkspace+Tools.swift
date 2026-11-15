@@ -304,8 +304,6 @@ extension BrowserWorkspace: BrowserToolRunning {
     }
   }
 
-  /// The address an action is decided on: the document's own, or — for a page without an origin
-  /// of its own, as a blank page a site opened — the web origin the page says it has.
   /// For devices_list: why a phone the user may expect is not in the list (#526).
   static func phoneNotes(_ listing: DeviceCatalog.Listing) -> [String] {
     guard listing.hasADB else {
@@ -322,6 +320,8 @@ extension BrowserWorkspace: BrowserToolRunning {
     }
   }
 
+  /// The address an action is decided on: the document's own, or — for a page without an origin
+  /// of its own, as a blank page a site opened — the web origin the page says it has.
   static func policyURL(committed: URL, reportedOrigin: String?) -> URL {
     guard BrowserOrigin(url: committed) == nil, let reportedOrigin,
       let url = URL(string: reportedOrigin), let origin = BrowserOrigin(url: url),

@@ -11,16 +11,21 @@
 #import <libkern/OSByteOrder.h>
 #import <netinet/tcp.h>
 #import <pthread.h>
+#import <stdatomic.h>
 #import <sys/socket.h>
 #import <unistd.h>
 
 static const char *scrcpyVersion = "5.0.1";
-static const char *devicePath = "/data/local/tmp/vibe-scrcpy-server.jar";
+// Its own for each bridge: the server deletes its file once started, under another one's feet.
+static char devicePath[64];
 static const char *serial;
 static int video = -1, control = -1;
 static pthread_mutex_t controlling = PTHREAD_MUTEX_INITIALIZER;
-// The size of the picture now, which the server counts touches in.
-static volatile int width = 0, height = 0;
+// The size of the picture now, which the server counts touches in: width << 32 | height, read
+// whole, both changing at once on a rotation.
+static _Atomic uint64_t pictureSize = 0;
+// When a key frame was asked and has not come yet, in nanoseconds; 0 if none is awaited.
+static _Atomic uint64_t resetAskedAt = 0;
 
 static void writeAll(int fd, const void *bytes, size_t count) {
   const uint8_t *cursor = bytes;
@@ -121,11 +126,14 @@ static void push(const char *path) {
   close(fd);
 }
 
-/// Reads what `fd` sends until it ends, then leaves: the server or one of its sockets has gone.
+/// Passes what `fd` sends on to stderr until it ends, then leaves: the server or one of its sockets
+/// has gone. The server's errors are written there.
 static void *drain(void *argument) {
   int fd = (int)(intptr_t)argument;
-  uint8_t ignored[4096];
-  while (read(fd, ignored, sizeof ignored) > 0) {
+  uint8_t bytes[4096];
+  ssize_t count;
+  while ((count = read(fd, bytes, sizeof bytes)) > 0) {
+    if (write(2, bytes, (size_t)count) < 0) break;
   }
   exit(0);
 }
@@ -221,8 +229,7 @@ static void readVideo(void) {
     if (!readAll(video, header, 12)) exit(0);
     if (header[0] & 0x80) {
       // A session: the picture's size, again after each rotation.
-      width = (int)OSReadBigInt32(header, 4);
-      height = (int)OSReadBigInt32(header, 8);
+      pictureSize = (uint64_t)OSReadBigInt32(header, 4) << 32 | OSReadBigInt32(header, 8);
       continue;
     }
     bool isConfig = header[0] & 0x40, isKey = header[0] & 0x20;
@@ -235,6 +242,7 @@ static void readVideo(void) {
     @autoreleasepool {
       NSData *pictures = avcc(buffer, size);
       if (!isConfig) emit(isKey, pictures);
+      if (isKey && !isConfig) resetAskedAt = 0;
     }
   }
 }
@@ -248,7 +256,8 @@ static void sendControl(const uint8_t *message, size_t size) {
 }
 
 static void touch(char phase, double x, double y) {
-  int shownWidth = width, shownHeight = height;
+  uint64_t size = pictureSize;
+  int shownWidth = (int)(size >> 32), shownHeight = (int)(size & 0xffffffff);
   if (!shownWidth) return;
   // INJECT_TOUCH_EVENT: action, pointer, position in the picture now, pressure, no buttons.
   uint8_t message[32] = {2, phase == 'd' ? 0 : phase == 'u' ? 1 : 2};
@@ -265,10 +274,15 @@ static void *readTouches(void *unused) {
   char line[64];
   while (fgets(line, sizeof line, stdin)) {
     if (line[0] == 'k') {
-      // RESET_VIDEO, once the capture has begun: before, it ends the server (5.0.1). The first
-      // frame is a key frame anyway.
-      const uint8_t resetVideo = 17;
-      if (width) sendControl(&resetVideo, 1);
+      // RESET_VIDEO restarts the capture: only once it has begun — before, it ends the server
+      // (5.0.1), and the first frame is a key frame anyway — and not again while a restart is
+      // under way, unless it has taken more than 3 s.
+      uint64_t now = clock_gettime_nsec_np(CLOCK_UPTIME_RAW), asked = resetAskedAt;
+      if (pictureSize && (asked == 0 || now - asked > 3000000000ull)) {
+        resetAskedAt = now;
+        const uint8_t resetVideo = 17;
+        sendControl(&resetVideo, 1);
+      }
       continue;
     }
     char phase;
@@ -285,8 +299,9 @@ int main(int argc, char **argv) {
   @autoreleasepool {
     if (argc < 3) return 2;
     serial = argv[1];
-    push(argv[2]);
     uint32_t scid = arc4random() & 0x7fffffff;
+    snprintf(devicePath, sizeof devicePath, "/data/local/tmp/vibe-scrcpy-%08x.jar", scid);
+    push(argv[2]);
     char command[1024];
     snprintf(command, sizeof command,
              "shell:CLASSPATH=%s app_process / com.genymobile.scrcpy.Server %s scid=%08x "
