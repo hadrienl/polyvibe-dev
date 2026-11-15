@@ -88,8 +88,10 @@ readonly agent_entitlements="$(codesign -d --entitlements - --xml "$agent" 2>/de
 # get-task-allow comes with the development signature of every local build, not from the project.
 [[ "$(codesign -d --entitlements - --xml "$app" 2>/dev/null \
   | plutil -remove 'com\.apple\.security\.get-task-allow' -o - - 2>/dev/null \
-  | plutil -convert json -o - -)" == '{"com.apple.security.device.audio-input":true}' ]] \
-  || fail "the application's entitlements are not the microphone's alone (ADR 0021)"
+  | plutil -convert json -o - - \
+  | python3 -c 'import json, sys; print(sorted(json.load(sys.stdin)))')" \
+  == "['com.apple.security.device.audio-input', 'com.apple.security.device.camera']" ]] \
+  || fail "the application's entitlements are not the microphone's and the camera's alone (ADR 0021, #527)"
 
 rm -rf "$derived_data"
 print "==> $app"
