@@ -365,8 +365,8 @@ private struct BrowserTabRow: View {
         indicator: $dropIndicator,
         move: { [browser] id, target, after in browser.move(id, nextTo: target, after: after) })
     )
-    .onHover { isHovering = $0 }
-    .instantTooltip(Text(verbatim: tab.url.absoluteString))
+    .pointerHover($isHovering)
+    .help(Text(verbatim: tab.url.absoluteString))
     .contextMenu {
       BrowserTabMenu(tab: tab, browser: browser, model: model, close: close)
     }
@@ -416,7 +416,7 @@ private struct BrowserTabRow: View {
     .focused($focus, equals: .pin)
     .opacity(isShown ? 1 : 0)
     .allowsHitTesting(isShown)
-    .instantTooltip(Text(pinTitle))
+    .help(Text(pinTitle))
   }
 
   /// On the tab in front, under the pointer, and with the keyboard on the row.
@@ -434,7 +434,7 @@ private struct BrowserTabRow: View {
     .focused($focus, equals: .close)
     .opacity(isShown ? 1 : 0)
     .allowsHitTesting(isShown)
-    .instantTooltip(Text("Close Tab", bundle: .module))
+    .help(Text("Close Tab", bundle: .module))
   }
 
   private var pinTitle: String {
@@ -667,7 +667,55 @@ private struct BrowserTabListButtonStyle: ButtonStyle {
           RoundedRectangle(cornerRadius: 6)
             .fill(Color.primary.opacity(configuration.isPressed ? 0.1 : isHovering ? 0.06 : 0))
         )
-        .onHover { isHovering = $0 }
+        .pointerHover($isHovering)
+    }
+  }
+}
+
+extension View {
+  /// Whether the pointer is over the view, told by a tracking area of AppKit's own (#536). In the
+  /// list's popover, SwiftUI's `onHover` went off again at once on every move of the pointer: no
+  /// row lit, and the pin never showed. The help of a view under it is a system one, for the same
+  /// reason: the instant tooltip leans on `onHover`.
+  fileprivate func pointerHover(_ isHovering: Binding<Bool>) -> some View {
+    background(PointerHoverTracker(isHovering: isHovering))
+  }
+}
+
+/// Behind the view, the size of it, always there: lets clicks, drags and drops through.
+private struct PointerHoverTracker: NSViewRepresentable {
+  @Binding var isHovering: Bool
+
+  func makeNSView(context: Context) -> TrackerView {
+    TrackerView()
+  }
+
+  func updateNSView(_ view: TrackerView, context: Context) {
+    let isHovering = $isHovering
+    view.changed = { if isHovering.wrappedValue != $0 { isHovering.wrappedValue = $0 } }
+  }
+
+  final class TrackerView: NSView {
+    var changed: ((Bool) -> Void)?
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func updateTrackingAreas() {
+      super.updateTrackingAreas()
+      for area in trackingAreas { removeTrackingArea(area) }
+      addTrackingArea(
+        NSTrackingArea(
+          rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+          owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) { changed?(true) }
+
+    override func mouseExited(with event: NSEvent) { changed?(false) }
+
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      if window == nil { changed?(false) }
     }
   }
 }
@@ -677,7 +725,8 @@ private struct BrowserTabListButtonStyle: ButtonStyle {
 /// it. This one closes at the first click outside it, and goes with its button.
 struct BrowserTabListPopover<Content: View>: NSViewRepresentable {
   @Binding var isPresented: Bool
-  @ViewBuilder let content: () -> Content
+  /// The list, as wide as the button it hangs from.
+  @ViewBuilder let content: (CGFloat) -> Content
 
   func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -692,7 +741,7 @@ struct BrowserTabListPopover<Content: View>: NSViewRepresentable {
     let isPresented = $isPresented
     coordinator.didClose = { isPresented.wrappedValue = false }
     if isPresented.wrappedValue {
-      coordinator.show(AnyView(content()), from: view)
+      coordinator.show(AnyView(content(view.bounds.width)), from: view)
     } else {
       coordinator.close()
     }

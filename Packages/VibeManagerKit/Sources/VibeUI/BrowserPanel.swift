@@ -82,19 +82,18 @@ private struct BrowserTabStrip: View {
   let browser: SessionBrowser
   @State private var isShowingTrace = false
   @State private var isShowingTabs = false
-  @State private var width: CGFloat = 0
 
   var body: some View {
     HStack(spacing: 4) {
       BrowserTabPickerButton(browser: browser, isShowingTabs: $isShowingTabs)
         .background(
-          BrowserTabListPopover(isPresented: $isShowingTabs) {
+          BrowserTabListPopover(isPresented: $isShowingTabs) { width in
             BrowserTabList(
               model: model, workspace: workspace, browser: browser,
               dismiss: { isShowingTabs = false }
             )
-            // As wide as the panel, so that titles read whole.
-            .frame(width: max(width - 12, 280))
+            // As wide as the button, so that titles read whole: known from the first time it opens.
+            .frame(width: max(width, 280))
           }
         )
 
@@ -144,11 +143,6 @@ private struct BrowserTabStrip: View {
     .padding(.leading, 6)
     .frame(height: 36)
     .background(.bar)
-    .onGeometryChange(for: CGFloat.self) {
-      $0.size.width
-    } action: {
-      width = $0
-    }
     // Another session's tabs in the same strip: the list of the previous one goes.
     .onChange(of: browser.sessionID) { isShowingTabs = false }
     .accessibilityElement(children: .contain)
