@@ -76,14 +76,15 @@ public enum BrowserToolCatalog {
     Tool(
       name: "devices_list", actionClass: .read,
       description: """
-        Lists the iOS simulators and Android emulators running on this Mac: the id device_open \
-        takes, and the name. Boot one first (simctl boot, emulator -avd) if none suits.
+        Lists the iOS simulators and Android emulators running on this Mac, and the Android phones \
+        connected to it by adb: the id device_open takes, and the name. Boot one first (simctl \
+        boot, emulator -avd) if none suits. Notes after the list say why a phone cannot be shown.
         """,
       inputSchema: schema([:], namesTab: false)),
     Tool(
       name: "device_open", actionClass: .navigate,
       description: """
-        Shows a running simulator or emulator in a new tab of this session's web view, live and \
+        Shows a running simulator or emulator, or a connected phone, in a new tab of this session's web view, live and \
         touchable by the user, here and on their iPhone. Use it when the user should see or try \
         an app: build, install and launch it yourself, then open its device. If tabs_list already \
         has the vibe-device:// address, use tab_activate instead. page_ tools do not work on it.

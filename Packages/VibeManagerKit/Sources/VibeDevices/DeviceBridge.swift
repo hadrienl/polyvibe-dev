@@ -2,7 +2,7 @@ import Foundation
 import VibeProcess
 
 /// The bridge to one device (#480): `sim-bridge` for a simulator, `emu-bridge` for an emulator,
-/// next to the executable. It writes the screen as H.264 frames, each a `u32` big-endian length
+/// `adb-bridge` for a phone (#526), next to the executable. It writes the screen as H.264 frames, each a `u32` big-endian length
 /// then the frame, and reads touches (`d|m|u x y`) and key frame requests (`k`), a line each.
 public final class DeviceBridge: Sendable {
   private let process: StreamingProcess
@@ -11,19 +11,27 @@ public final class DeviceBridge: Sendable {
   public init(device id: String, bridgesIn folder: URL) throws {
     var environment = DeviceCatalog.environment
     let executable: String
-    let argument: String
-    if id.hasPrefix(DeviceCatalog.androidPrefix) {
+    let arguments: [String]
+    if let serial = DeviceCatalog.serial(ofPhone: id) {
+      executable = "adb-bridge"
+      // The server it runs on the phone, in the bundle's resources.
+      let server = folder.deletingLastPathComponent()
+        .appendingPathComponent("Resources/scrcpy-server")
+      arguments = [serial, server.path]
+      // What the bridge talks to: after a launch, a tab restored may come before any listing.
+      Task.detached { await DeviceCatalog.startADBServer() }
+    } else if id.hasPrefix(DeviceCatalog.androidPrefix) {
       executable = "emu-bridge"
-      argument = String(id.dropFirst(DeviceCatalog.androidPrefix.count))
+      arguments = [String(id.dropFirst(DeviceCatalog.androidPrefix.count))]
       if let token = DeviceCatalog.emulators().first(where: { $0.device.id == id })?.device.token {
         environment["EMU_TOKEN"] = token
       }
     } else {
       executable = "sim-bridge"
-      argument = id
+      arguments = [id]
     }
     process = try StreamingProcess(
-      executablePath: folder.appendingPathComponent(executable).path, arguments: [argument],
+      executablePath: folder.appendingPathComponent(executable).path, arguments: arguments,
       environment: environment)
   }
 

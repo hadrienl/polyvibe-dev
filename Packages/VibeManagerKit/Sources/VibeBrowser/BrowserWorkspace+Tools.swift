@@ -29,11 +29,11 @@ extension BrowserWorkspace: BrowserToolRunning {
       case "tab_open":
         return try await openTab(arguments, browser: browser, tool: tool)
       case "devices_list":
-        let devices = await DeviceCatalog.running()
-        return .text(
-          JSONValue.array(
-            devices.map { ["id": .string($0.id), "name": .string($0.name)] }
-          ).jsonText)
+        let listing = await DeviceCatalog.listing()
+        let list = JSONValue.array(
+          listing.devices.map { ["id": .string($0.id), "name": .string($0.name)] }
+        ).jsonText
+        return .text(([list] + Self.phoneNotes(listing)).joined(separator: "\n"))
       case "device_open":
         let id = arguments["device"]?.stringValue ?? ""
         let devices = await DeviceCatalog.running()
@@ -306,6 +306,22 @@ extension BrowserWorkspace: BrowserToolRunning {
 
   /// The address an action is decided on: the document's own, or — for a page without an origin
   /// of its own, as a blank page a site opened — the web origin the page says it has.
+  /// For devices_list: why a phone the user may expect is not in the list (#526).
+  static func phoneNotes(_ listing: DeviceCatalog.Listing) -> [String] {
+    guard listing.hasADB else {
+      return [
+        "Android phones need adb: install Android Studio, or brew install --cask android-platform-tools."
+      ]
+    }
+    return listing.unavailablePhones.map { phone in
+      switch phone.problem {
+      case .unauthorized:
+        "\(phone.serial) is unauthorized: the user must accept USB debugging on the phone."
+      case .offline: "\(phone.serial) is offline: the user must plug its cable in again."
+      }
+    }
+  }
+
   static func policyURL(committed: URL, reportedOrigin: String?) -> URL {
     guard BrowserOrigin(url: committed) == nil, let reportedOrigin,
       let url = URL(string: reportedOrigin), let origin = BrowserOrigin(url: url),

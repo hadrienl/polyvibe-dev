@@ -38,24 +38,29 @@ struct BrowserPanel: View {
     .accessibilityLabel(Text("Web view", bundle: .module))
   }
 
+  private func stopButton(_ udid: String) -> some View {
+    Button {
+      model.closeWebTab()
+      Task { await DeviceCatalog.stop(udid) }
+    } label: {
+      Image(systemName: "stop.fill")
+        .foregroundStyle(.white)
+        .frame(width: 28, height: 28)
+        .background(.black.opacity(0.55), in: Circle())
+    }
+    .buttonStyle(.plain)
+    .padding(8)
+    .instantTooltip(Text("Stop Simulator", bundle: .module))
+    .accessibilityLabel(Text("Stop Simulator", bundle: .module))
+  }
+
   @ViewBuilder
   private var content: some View {
     if let udid = browser.activeTab?.deviceUDID {
       DeviceMirrorView(udid: udid)
         .overlay(alignment: .topTrailing) {
-          Button {
-            model.closeWebTab()
-            Task { await DeviceCatalog.stop(udid) }
-          } label: {
-            Image(systemName: "stop.fill")
-              .foregroundStyle(.white)
-              .frame(width: 28, height: 28)
-              .background(.black.opacity(0.55), in: Circle())
-          }
-          .buttonStyle(.plain)
-          .padding(8)
-          .instantTooltip(Text("Stop Simulator", bundle: .module))
-          .accessibilityLabel(Text("Stop Simulator", bundle: .module))
+          // A phone is not the Mac's to stop (#526).
+          if DeviceCatalog.canStop(udid) { stopButton(udid) }
         }
     } else if let tab = browser.activeTab {
       ZStack {
