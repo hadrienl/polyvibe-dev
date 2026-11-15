@@ -42,28 +42,37 @@ public struct AgentDialogScreen: Hashable, Sendable {
     /// in.
     public func asks(_ elicitation: AgentElicitation) -> Bool {
       guard elicitation.isConfirmation, let server = elicitation.server, server == self.server,
-        let words = elicitation.message, !Self.spaceless(words).isEmpty
+        let words = elicitation.message
       else { return false }
-      return Self.spaceless(words) == Self.spaceless(message)
-        || Self.isCut(words, drawnAs: message)
+      let spacelessWords = Self.spaceless(words)
+      return !spacelessWords.isEmpty
+        && (spacelessWords == Self.spaceless(message) || Self.isCut(words, drawnAs: message))
     }
 
     private static func spaceless<S: StringProtocol>(_ text: S) -> String {
       String(text.filter { !$0.isWhitespace })
     }
 
+    /// Lines as Claude Code splits them, a `\r\n` ending one as `\n` does.
+    private static func spacelessLines(_ text: String) -> [String] {
+      text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).map {
+        spaceless($0)
+      }
+    }
+
     /// Claude Code 2.1.325 draws each line of the server's words on a line of its own, cut short
     /// with `…` past the terminal's width — `TRUNCATE or UPDAT…` — and of more than four lines,
     /// draws three, then counts the others: `… (+3 more lines)`. Each line drawn must start the
-    /// line it stands for, in the same order, and the count be right.
-    static func isCut(_ words: String, drawnAs drawn: String) -> Bool {
-      let written = words.trimmingCharacters(in: .whitespacesAndNewlines)
-        .split(separator: "\n", omittingEmptySubsequences: false).map { spaceless($0) }
-      var shown = drawn.split(separator: "\n", omittingEmptySubsequences: false)
-        .map { spaceless($0) }
+    /// line it stands for, in the same order, and the count be right: of the words as sent, or
+    /// without the empty lines around them, which the screen does not tell apart.
+    private static func isCut(_ words: String, drawnAs drawn: String) -> Bool {
+      let sent = spacelessLines(words)
+      let written = Array(sent.drop { $0.isEmpty }.reversed().drop { $0.isEmpty }.reversed())
+      var shown = spacelessLines(drawn)
       if let last = shown.last, let left = last.wholeMatch(of: #/…\(\+(\d+)morelines\)/#) {
         shown.removeLast()
-        guard Int(left.1) == written.count - shown.count else { return false }
+        guard let count = Int(left.1), [sent.count, written.count].contains(shown.count + count)
+        else { return false }
       } else {
         guard shown.count == written.count else { return false }
       }

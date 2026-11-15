@@ -1,8 +1,8 @@
 import Foundation
 import Testing
+import VibeApplication
 
 @testable import VibeAgents
-@testable import VibeApplication
 
 /// Screens as Claude Code 2.1.285 and codex-cli 0.159.2 drew them in a pty (#273), their paths
 /// replaced.
@@ -307,16 +307,24 @@ struct AgentDialogScreenTests {
         DialogScreens.confirmationMessage.replacingOccurrences(
           of: "\nRun it on project msrauwqwfahxpgwrhmlb?", with: "")))
     #expect(!asked("Run it on project msrauwqwfahxpgwrhmlb?"))
+    // Lines ended by `\r\n` are lines all the same.
+    #expect(asked(DialogScreens.confirmationMessage.replacingOccurrences(of: "\n", with: "\r\n")))
   }
 
   @Test("Past four lines, the lines left out are counted: the count must be right")
   func confirmationLinesLeftOut() {
     let words = (1...6).map { "Line \($0)" }.joined(separator: "\n")
+    let asked = { (drawn: String, words: String) in
+      AgentDialogScreen.Confirmation(server: "s", message: drawn, isAcceptPointed: true)
+        .asks(AgentElicitation(server: "s", message: words, fieldCount: 0))
+    }
     let drawn = "Line 1\nLine 2\nLine 3\n… (+3 more lines)"
-    let isCut = AgentDialogScreen.Confirmation.isCut
-    #expect(isCut(words, drawn))
-    #expect(!isCut(words, "Line 1\nLine 2\n… (+3 more lines)"))
-    #expect(!isCut(words + "\nLine 7", drawn))
+    #expect(asked(drawn, words))
+    #expect(!asked("Line 1\nLine 2\n… (+3 more lines)", words))
+    #expect(!asked(drawn, words + "\nLine 7"))
+    // A last empty line is counted as Claude Code splits the words, or not: the screen hides it.
+    #expect(asked(drawn, words + "\n"))
+    #expect(asked("Line 1\nLine 2\nLine 3\n… (+4 more lines)", words + "\n"))
   }
 
   @Test("An agent's numbered list, or nothing numbered, is no dialog")
