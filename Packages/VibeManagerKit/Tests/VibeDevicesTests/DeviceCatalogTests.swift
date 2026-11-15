@@ -49,6 +49,12 @@ struct DeviceCatalogTests {
     #expect(DeviceCatalog.simulators(listedIn: Data("not json".utf8)).isEmpty)
   }
 
+  @Test("The iPhones plugged in are those device-bridge lists, a UDID and a name a line")
+  func iPhonesListed() {
+    let devices = DeviceCatalog.iPhones(listedIn: "00008120-001A\tL’iPhone de Camille\n\njunk\n")
+    #expect(devices == [DeviceCatalog.Device(id: "ios-00008120-001A", name: "L’iPhone de Camille")])
+  }
+
   @Test("A bridge's frames are read whole, one after the other, until it ends")
   func frames() throws {
     let folder = FileManager.default.temporaryDirectory

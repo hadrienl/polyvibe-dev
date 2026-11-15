@@ -451,6 +451,12 @@ int main(int argc, char **argv) {
       return 0;
     }
     NSString *udid = @(argv[1]);
+    // The bridges' standard error goes nowhere: the measures of #527 go to a file.
+    if (getenv("TMPDIR")) {
+      NSString *log = [@(getenv("TMPDIR")) stringByAppendingPathComponent:@"device-bridge.log"];
+      freopen(log.fileSystemRepresentation, "a", stderr);
+      setvbuf(stderr, NULL, _IOLBF, 0);
+    }
     for (NSString *serial in devices)
       if ([bare(serial) isEqual:bare(udid)]) usbDeviceID = devices[serial];
     if (!usbDeviceID) {

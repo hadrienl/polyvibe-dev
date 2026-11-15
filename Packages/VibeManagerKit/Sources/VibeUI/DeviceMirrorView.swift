@@ -165,9 +165,10 @@ struct DeviceMirrorPicker: View {
     .padding(6)
     .frame(minWidth: 200, alignment: .leading)
     .task {
-      devices = await DeviceCatalog.running(bridgesIn: DeviceCatalog.applicationBridges).map {
-        ($0.id, $0.name)
-      }
+      guard let folder = DeviceCatalog.applicationBridges else { return }
+      let plugged = await DeviceCatalog.pluggedIn(bridgesIn: folder).map { ($0.id, $0.name) }
+      if !plugged.isEmpty { devices = plugged }
+      devices = await DeviceCatalog.running(bridgesIn: folder).map { ($0.id, $0.name) }
     }
   }
 

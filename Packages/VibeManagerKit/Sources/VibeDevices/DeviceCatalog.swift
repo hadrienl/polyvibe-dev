@@ -25,8 +25,13 @@ public enum DeviceCatalog {
 
   /// - Parameter folder: where the bridges are, to list the iPhones plugged in; none without it.
   public static func running(bridgesIn folder: URL? = nil) async -> [Device] {
-    let plugged = if let folder { await iPhones(bridgesIn: folder) } else { [Device]() }
+    async let plugged = if let folder { await iPhones(bridgesIn: folder) } else { [Device]() }
     return await simulators() + emulators().map(\.device) + plugged
+  }
+
+  /// The iPhones plugged in alone, at once: `simctl` can take twenty seconds on a busy Mac.
+  public static func pluggedIn(bridgesIn folder: URL) async -> [Device] {
+    await iPhones(bridgesIn: folder)
   }
 
   /// The folder of the application's executable, where the bridges are.
