@@ -101,6 +101,7 @@ static int usbmuxConnect(NSNumber *deviceID, uint16_t port) {
     @"PortNumber" : @(CFSwapInt16HostToBig(port))
   });
   if ([reply[@"Number"] intValue] != 0 || !reply) {
+    fprintf(stderr, "device-bridge: usbmuxd refused port %d: %s\n", port, reply.description.UTF8String);
     close(fd);
     return -1;
   }
@@ -155,13 +156,27 @@ static NSString *deviceName(NSNumber *deviceID) {
 // MARK: - WebDriverAgent
 
 static NSNumber *usbDeviceID;
+static NSString *usbSerial;
 static NSString *session;
 static CGSize screenPoints;
 
 // One HTTP request to WebDriverAgent, a connection each; its JSON "value", or nil.
 static id wda(NSString *method, NSString *path, id json) {
   int fd = usbmuxConnect(usbDeviceID, 8100);
-  if (fd < 0) return nil;
+  // Once its screen is captured, the iPhone comes back on USB in another configuration, under
+  // another DeviceID: looked up again by its UDID.
+  if (fd < 0 && usbSerial) {
+    NSNumber *current = usbDevices()[usbSerial];
+    if (current && ![current isEqual:usbDeviceID]) {
+      fprintf(stderr, "device-bridge: the iPhone came back as device %s\n", current.description.UTF8String);
+      usbDeviceID = current;
+      fd = usbmuxConnect(usbDeviceID, 8100);
+    }
+  }
+  if (fd < 0) {
+    fprintf(stderr, "device-bridge: no connection to WebDriverAgent (device %s)\n", usbDeviceID.description.UTF8String);
+    return nil;
+  }
   struct timeval timeout = {.tv_sec = 30};
   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout);
   NSData *body = json ? [NSJSONSerialization dataWithJSONObject:json options:0 error:nil] : [NSData data];
@@ -171,20 +186,47 @@ static id wda(NSString *method, NSString *path, id json) {
                                               method, path, (unsigned long)body.length];
   NSMutableData *request = [[head dataUsingEncoding:NSUTF8StringEncoding] mutableCopy];
   [request appendData:body];
+  // WebDriverAgent keeps the connection open whatever is asked: read up to Content-Length.
   NSMutableData *reply = [NSMutableData data];
+  NSData *separator = [@"\r\n\r\n" dataUsingEncoding:NSUTF8StringEncoding];
+  NSRange split = {NSNotFound, 0};
+  long expected = -1;
   if (sendAll(fd, request.bytes, request.length)) {
     char buffer[16384];
     ssize_t got;
-    while ((got = read(fd, buffer, sizeof buffer)) > 0) [reply appendBytes:buffer length:(size_t)got];
+    while ((got = read(fd, buffer, sizeof buffer)) > 0) {
+      [reply appendBytes:buffer length:(size_t)got];
+      if (split.location == NSNotFound) {
+        split = [reply rangeOfData:separator options:0 range:NSMakeRange(0, reply.length)];
+        if (split.location == NSNotFound) continue;
+        NSString *headers = [[NSString alloc] initWithData:[reply subdataWithRange:NSMakeRange(0, split.location)]
+                                                  encoding:NSUTF8StringEncoding];
+        for (NSString *header in [headers componentsSeparatedByString:@"\r\n"])
+          if ([header.lowercaseString hasPrefix:@"content-length:"])
+            expected = [[header substringFromIndex:15] integerValue];
+      }
+      if (expected >= 0 && (long)(reply.length - NSMaxRange(split)) >= expected) break;
+    }
   }
   close(fd);
-  NSRange split = [reply rangeOfData:[@"\r\n\r\n" dataUsingEncoding:NSUTF8StringEncoding]
-                             options:0
-                               range:NSMakeRange(0, reply.length)];
-  if (split.location == NSNotFound) return nil;
+  if (split.location == NSNotFound) {
+    fprintf(stderr, "device-bridge: %s %s: %lu bytes without headers (%s)\n", method.UTF8String,
+            path.UTF8String, (unsigned long)reply.length, strerror(errno));
+    return nil;
+  }
   NSData *content = [reply subdataWithRange:NSMakeRange(NSMaxRange(split), reply.length - NSMaxRange(split))];
   NSDictionary *parsed = [NSJSONSerialization JSONObjectWithData:content options:0 error:nil];
   return [parsed isKindOfClass:NSDictionary.class] ? parsed[@"value"] : nil;
+}
+
+// The screen in points, which WebDriverAgent's coordinates are in. Asked again until it comes:
+// right after the session, in the application, it once answered 0×0.
+static void measureScreen(void) {
+  NSDictionary *size = wda(@"GET", [NSString stringWithFormat:@"/session/%@/window/size", session], nil);
+  if ([size isKindOfClass:NSDictionary.class])
+    screenPoints = CGSizeMake([size[@"width"] doubleValue], [size[@"height"] doubleValue]);
+  else
+    fprintf(stderr, "device-bridge: no window size: %s\n", [[size description] UTF8String]);
 }
 
 // A session on whatever is in front, which waits for nothing: no quiescence, no idling.
@@ -207,9 +249,8 @@ static bool ensureSession(void) {
   }
   wda(@"POST", [NSString stringWithFormat:@"/session/%@/appium/settings", identifier],
       @{@"settings" : @{@"waitForIdleTimeout" : @0, @"animationCoolOffTimeout" : @0, @"snapshotMaxDepth" : @1}});
-  NSDictionary *size = wda(@"GET", [NSString stringWithFormat:@"/session/%@/window/size", identifier], nil);
-  screenPoints = CGSizeMake([size[@"width"] doubleValue], [size[@"height"] doubleValue]);
   session = identifier;
+  measureScreen();
   fprintf(stderr, "device-bridge: WebDriverAgent session, screen %.0f×%.0f points\n",
           screenPoints.width, screenPoints.height);
   return true;
@@ -224,6 +265,8 @@ static double measuredGesture = 0;
 // A gesture, once the finger is up: a tap, or every move replayed with its timing.
 static void replay(NSArray<NSValue *> *samples) {
   if (!ensureSession()) return;
+  if (screenPoints.width <= 0) measureScreen();
+  if (screenPoints.width <= 0) return;
   Sample first, last;
   [samples.firstObject getValue:&first];
   [samples.lastObject getValue:&last];
@@ -259,7 +302,7 @@ static void replay(NSArray<NSValue *> *samples) {
     }
   }
   [actions addObject:@{@"type" : @"pointerUp", @"button" : @0}];
-  wda(@"POST", [NSString stringWithFormat:@"/session/%@/actions", session], @{
+  id answer = wda(@"POST", [NSString stringWithFormat:@"/session/%@/actions", session], @{
     @"actions" : @[ @{
       @"type" : @"pointer",
       @"id" : @"finger",
@@ -268,6 +311,11 @@ static void replay(NSArray<NSValue *> *samples) {
     } ]
   });
   double done = nowMs();
+  if ([answer isKindOfClass:NSDictionary.class] && answer[@"error"]) {
+    fprintf(stderr, "device-bridge: WebDriverAgent refused: %s\n", [[answer[@"message"] description] UTF8String]);
+    // A session WebDriverAgent lost, after a restart: a new one at the next gesture.
+    if ([answer[@"error"] isEqual:@"invalid session id"]) session = nil;
+  }
   measuredGesture = done;
   fprintf(stderr, "device-bridge: %s of %.0f ms, %.0f points, sent %.0f ms after the finger left, "
                   "WebDriverAgent took %.0f ms\n",
@@ -451,6 +499,18 @@ int main(int argc, char **argv) {
       return 0;
     }
     NSString *udid = @(argv[1]);
+    // device-bridge <UDID> --tap x y: one tap, without the screen, to measure WebDriverAgent alone.
+    if (argc == 5 && !strcmp(argv[2], "--tap")) {
+      for (NSString *serial in devices)
+        if ([bare(serial) isEqual:bare(udid)]) {
+          usbDeviceID = devices[serial];
+          usbSerial = serial;
+        }
+      Sample sample = {atof(argv[3]), atof(argv[4]), nowMs()};
+      NSValue *value = [NSValue valueWithBytes:&sample objCType:@encode(Sample)];
+      replay(@[ value, value ]);
+      return session ? 0 : 1;
+    }
     // The bridges' standard error goes nowhere: the measures of #527 go to a file.
     if (getenv("TMPDIR")) {
       NSString *log = [@(getenv("TMPDIR")) stringByAppendingPathComponent:@"device-bridge.log"];
@@ -458,12 +518,23 @@ int main(int argc, char **argv) {
       setvbuf(stderr, NULL, _IOLBF, 0);
     }
     for (NSString *serial in devices)
-      if ([bare(serial) isEqual:bare(udid)]) usbDeviceID = devices[serial];
+      if ([bare(serial) isEqual:bare(udid)]) {
+        usbDeviceID = devices[serial];
+        usbSerial = serial;
+      }
     if (!usbDeviceID) {
       fprintf(stderr, "device-bridge: %s is not plugged in by USB\n", argv[1]);
       return 4;
     }
     NSString *name = deviceName(usbDeviceID);
+    // DEVICE_BRIDGE_NO_SCREEN=1: the gestures alone, to measure them from a terminal.
+    if (getenv("DEVICE_BRIDGE_NO_SCREEN")) {
+      gestures = dispatch_queue_create("gestures", DISPATCH_QUEUE_SERIAL);
+      dispatch_async(gestures, ^{
+        ensureSession();
+      });
+      readTouches();
+    }
     AVCaptureDevice *device = screen(name);
     if (!device) {
       fprintf(stderr, "device-bridge: no screen for %s; is the iPhone unlocked and trusting this Mac?\n",
