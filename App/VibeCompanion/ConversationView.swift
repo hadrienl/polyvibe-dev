@@ -43,7 +43,7 @@ struct ConversationView: View {
           ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         }
         ForEach(conversation?.entries ?? []) { entry in
-          EntryView(entry: entry)
+          EntryView(entry: entry, run: canRun ? { channel.send($0, to: sessionID) } : nil)
         }
 
       }
@@ -112,6 +112,13 @@ struct ConversationView: View {
     }
     .onAppear { channel.show(sessionID) }
     .onDisappear { if channel.conversation?.sessionID == sessionID { channel.show(nil) } }
+  }
+
+  /// Whether a command the agent wrote for the user can be run from its block (#548): as the
+  /// field, not for a session whose agent does not run.
+  private var canRun: Bool {
+    guard let session else { return false }
+    return session.activity != .stopped
   }
 
   private var subtitle: String {
@@ -350,6 +357,8 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
 private struct EntryView: View {
   let entry: RemoteEntry
+  /// Sends a command written in one of the agent's code blocks (#548); nil when none can be.
+  var run: ((String) -> Void)?
   @Environment(\.conversationPalette) private var palette
 
   var body: some View {
@@ -371,9 +380,18 @@ private struct EntryView: View {
       .frame(maxWidth: .infinity, alignment: .trailing)
       .padding(.leading, 48)
     case .agent(let text):
-      Text(Self.markdown(text))
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .textSelection(.enabled)
+      VStack(alignment: .leading, spacing: 10) {
+        ForEach(Array(RemoteMarkdown.segments(text).enumerated()), id: \.offset) { _, segment in
+          switch segment {
+          case .prose(let prose):
+            Text(Self.markdown(prose))
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .textSelection(.enabled)
+          case .code(let language, let code):
+            CodeBlock(language: language, code: code, run: run)
+          }
+        }
+      }
     case .tool(let symbol, let title, let detail, let running, let failed):
       HStack(spacing: 8) {
         Image(systemName: symbol)
@@ -410,6 +428,49 @@ private struct EntryView: View {
       markdown: text,
       options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
       ?? AttributedString(text)
+  }
+}
+
+/// A code block of the agent's answer (#548), as on the Mac: its language, a Copy button, a Run
+/// button for a command opening on `!`, and the code scrolled rather than wrapped.
+private struct CodeBlock: View {
+  let language: String?
+  let code: String
+  let run: ((String) -> Void)?
+  @Environment(\.conversationPalette) private var palette
+  @State private var copied = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 16) {
+        Text(verbatim: language ?? "")
+        Spacer(minLength: 0)
+        if let run, let prompt = RemoteMarkdown.shellPrompt(in: code) {
+          Button("Run", systemImage: "play") { run(prompt) }
+        }
+        Button(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") {
+          UIPasteboard.general.string = code
+          copied = true
+        }
+      }
+      .font(.caption)
+      .foregroundStyle(palette.secondaryText)
+      .tint(palette.secondaryText)
+      .buttonStyle(.borderless)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      Divider()
+      ScrollView(.horizontal) {
+        Text(verbatim: code)
+          .font(.footnote.monospaced())
+          .foregroundStyle(palette.text)
+          .textSelection(.enabled)
+          .fixedSize()
+          .padding(12)
+      }
+    }
+    .background(palette.raised, in: .rect(cornerRadius: 12))
+    .onChange(of: code) { copied = false }
   }
 }
 

@@ -1372,6 +1372,30 @@ public final class ConversationModel {
     requestComposerFocus()
   }
 
+  /// Whether a command the agent wrote for the user (`ShellCommandBlock`, #548) can be run now: the
+  /// agent has a shell mode, and would take the command as if typed.
+  public var canRunShellCommand: Bool {
+    guard let shell = promptFormat.shellEntry, composerState == .ready, !isSubmitting,
+      terminalPanel == nil
+    else { return false }
+    return !isAgentWorking || shell.queuesWhileWorking
+  }
+
+  /// Runs a command the agent wrote for the user (#548), as if typed in the composer and sent:
+  /// what the user left there is put aside meanwhile, then back. Returns whether it was sent.
+  @discardableResult
+  public func runShellCommand(_ prompt: String) async -> Bool {
+    guard canRunShellCommand else { return false }
+    let kept = draft
+    let keptAttachments = attachments
+    attachments = []
+    draft = prompt
+    let sent = await send()
+    if draft == prompt || sent { draft = kept }
+    attachments = keptAttachments + attachments
+    return sent
+  }
+
   /// Escape in shell mode: the draft becomes a message again, its text kept. Returns whether the
   /// key was used.
   public func leaveShellMode() -> Bool {

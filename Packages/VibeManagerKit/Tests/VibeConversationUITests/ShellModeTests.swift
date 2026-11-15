@@ -181,4 +181,37 @@ struct ShellModeTests {
     #expect(model.echoes.first?.waitsForEnd == true)
     #expect(model.promptHistory.prompts == ["!sleep 60"])
   }
+
+  @Test("A command the agent wrote is run as typed, the draft and its files kept (#548)")
+  func runWritten() async {
+    let (model, terminal) = model()
+    model.draft = "half a thought"
+    model.attach([URL(fileURLWithPath: "/tmp/a.png")])
+    #expect(model.canRunShellCommand)
+    #expect(await model.runShellCommand("! gcloud auth login"))
+    #expect(terminal.written == [Array("!".utf8), Array("gcloud auth login".utf8), [0x0D]])
+    #expect(model.draft == "half a thought")
+    #expect(model.attachments == [URL(fileURLWithPath: "/tmp/a.png")])
+  }
+
+  @Test("A command written is not run while the agent works, nor without a shell mode (#548)")
+  func runWrittenHeld() async {
+    let (model, terminal) = model()
+    model.activity = .working
+    #expect(!model.canRunShellCommand)
+    #expect(!(await model.runShellCommand("!ls")))
+    #expect(terminal.written.isEmpty)
+    model.promptFormat.shellEntry?.queuesWhileWorking = true
+    #expect(model.canRunShellCommand)
+    let (plain, _) = self.model(shell: nil)
+    #expect(!plain.canRunShellCommand)
+  }
+
+  @Test("Only a code block of one line opening on `!` is a command to run (#548)")
+  func shellCommandBlock() {
+    #expect(ShellCommandBlock.prompt(in: "! gcloud auth login\n") == "! gcloud auth login")
+    #expect(ShellCommandBlock.prompt(in: "gcloud auth login") == nil)
+    #expect(ShellCommandBlock.prompt(in: "! a\n! b") == nil)
+    #expect(ShellCommandBlock.prompt(in: "!") == nil)
+  }
 }
