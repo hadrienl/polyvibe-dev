@@ -113,6 +113,7 @@ public struct ConversationView: View {
     .environment(\.conversationAppearance, appearance)
     .environment(\.conversationIsLive, isActive)
     .environment(\.readAloud, model.readAloud)
+    .environment(\.shellCommandRunner, model)
     // The models loaded while the conversation is read, the dictation's first (#357): their
     // first load compiles them for this Mac, which takes minutes. One at a time.
     .task {

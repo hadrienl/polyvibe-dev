@@ -163,13 +163,15 @@ struct MarkdownTableView: View {
 }
 
 /// A block of code: monospaced, coloured by its words, scrolled rather than wrapped unless the
-/// user asked, with its language and a Copy button.
+/// user asked, with its language and a Copy button — and a Run button for a command the agent
+/// wrote for its shell mode (#548).
 struct CodeBlockView: View {
   let language: String?
   let code: String
   var markdown: String?
   @Environment(\.conversationTheme) private var theme
   @Environment(\.conversationAppearance) private var appearance
+  @Environment(\.shellCommandRunner) private var runner
   @State private var copied = false
 
   var body: some View {
@@ -179,6 +181,25 @@ struct CodeBlockView: View {
           .font(theme.interfaceFont(size: appearance.textSize.scaled(11)))
           .foregroundStyle(theme.secondaryText.color)
         Spacer()
+        if let runner, runner.promptFormat.shellEntry != nil,
+          let prompt = ShellCommandBlock.prompt(in: code)
+        {
+          Button {
+            Task { await runner.runShellCommand(prompt) }
+          } label: {
+            Label {
+              Text("Run", bundle: .module)
+            } icon: {
+              Image(systemName: "play")
+            }
+            .font(theme.interfaceFont(size: appearance.textSize.scaled(11)))
+          }
+          .buttonStyle(.plain)
+          .foregroundStyle(theme.secondaryText.color)
+          .disabled(!runner.canRunShellCommand)
+          .instantTooltip(Text("Run the command in the session", bundle: .module))
+          .padding(.trailing, 8)
+        }
         Button {
           NSPasteboard.general.clearContents()
           NSPasteboard.general.setString(code, forType: .string)
@@ -235,4 +256,9 @@ struct CodeBlockView: View {
     case .removed: return theme.removedText
     }
   }
+}
+
+extension EnvironmentValues {
+  /// The conversation that runs a command the agent wrote for the user (#548): none outside one.
+  @Entry var shellCommandRunner: ConversationModel?
 }
