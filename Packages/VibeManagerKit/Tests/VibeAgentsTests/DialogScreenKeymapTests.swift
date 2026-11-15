@@ -1,8 +1,8 @@
 import Foundation
 import Testing
-import VibeApplication
 
 @testable import VibeAgents
+@testable import VibeApplication
 
 /// Screens as Claude Code 2.1.285 and codex-cli 0.159.2 drew them in a pty (#273), their paths
 /// replaced.
@@ -113,6 +113,20 @@ enum DialogScreens {
      ❯ Accept    Decline
 
      Esc to cancel · ↑/↓ to navigate
+    """
+  /// The same form as Claude Code 2.1.325 draws it, 80 columns wide: each line of the server's
+  /// words cut short rather than wrapped.
+  static let claudeCutConfirmation = """
+    ────────────────────────────────────────────────────────────────────────────────
+      MCP server “claude.ai Supabase” requests your input
+
+      This SQL includes destructive operations (DROP, DELETE, TRUNCATE or UPDAT…
+      It may permanently remove data, tables, schemas or other objects.
+      Run it on project msrauwqwfahxpgwrhmlb?
+
+      ❯ Accept    Decline
+
+      Esc to cancel · ↑/↓ to navigate
     """
   static let confirmationMessage = """
     This SQL includes destructive operations (DROP, DELETE, TRUNCATE or UPDATE without WHERE).
@@ -275,6 +289,35 @@ struct AgentDialogScreenTests {
     #expect(DialogScreens.dialog(declining)?.confirmation?.isAcceptPointed == false)
   }
 
+  @Test("A confirmation whose words are cut short, line by line, is still known (2.1.325)")
+  func cutConfirmation() throws {
+    let form = try #require(DialogScreens.dialog(DialogScreens.claudeCutConfirmation)?.confirmation)
+    let asked = { (words: String) in
+      form.asks(AgentElicitation(server: "claude.ai Supabase", message: words, fieldCount: 0))
+    }
+    #expect(asked(DialogScreens.confirmationMessage))
+    // A line that does not start the same way, or one line too many or too few: another form.
+    #expect(
+      !asked(
+        DialogScreens.confirmationMessage.replacingOccurrences(
+          of: "(DROP, DELETE,", with: "(DROP, ALTER,")))
+    #expect(!asked(DialogScreens.confirmationMessage + "\nAre you sure?"))
+    #expect(
+      !asked(
+        DialogScreens.confirmationMessage.replacingOccurrences(
+          of: "\nRun it on project msrauwqwfahxpgwrhmlb?", with: "")))
+    #expect(!asked("Run it on project msrauwqwfahxpgwrhmlb?"))
+  }
+
+  @Test("Past four lines, the lines left out are counted: the count must be right")
+  func confirmationLinesLeftOut() {
+    let words = (1...6).map { "Line \($0)" }.joined(separator: "\n")
+    let drawn = "Line 1\nLine 2\nLine 3\n… (+3 more lines)"
+    #expect(AgentDialogScreen.Confirmation.isCut(words, drawnAs: drawn))
+    #expect(!AgentDialogScreen.Confirmation.isCut(words, drawnAs: "Line 1\nLine 2\n… (+3 more lines)"))
+    #expect(!AgentDialogScreen.Confirmation.isCut(words + "\nLine 7", drawnAs: drawn))
+  }
+
   @Test("An agent's numbered list, or nothing numbered, is no dialog")
   func none() {
     #expect(DialogScreens.dialog(DialogScreens.agentList) == nil)
@@ -305,6 +348,10 @@ struct DialogScreenKeymapTests {
     let screen = DialogScreens.dialog(DialogScreens.claudeConfirmation)
     #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: screen) == [[0x0D]])
     #expect(claude.keystrokes(for: .deny, to: elicitation, screen: screen) == [[0x1B]])
+    // Its words cut short, as 2.1.325 draws them: the same keys.
+    let cut = DialogScreens.dialog(DialogScreens.claudeCutConfirmation)
+    #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: cut) == [[0x0D]])
+    #expect(claude.keystrokes(for: .deny, to: elicitation, screen: cut) == [[0x1B]])
     // Not drawn yet: a key would land in the prompt, and Escape stop the turn.
     #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: nil) == nil)
     #expect(claude.keystrokes(for: .deny, to: elicitation, screen: nil) == nil)
