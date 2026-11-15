@@ -313,9 +313,10 @@ struct AgentDialogScreenTests {
   func confirmationLinesLeftOut() {
     let words = (1...6).map { "Line \($0)" }.joined(separator: "\n")
     let drawn = "Line 1\nLine 2\nLine 3\n… (+3 more lines)"
-    #expect(AgentDialogScreen.Confirmation.isCut(words, drawnAs: drawn))
-    #expect(!AgentDialogScreen.Confirmation.isCut(words, drawnAs: "Line 1\nLine 2\n… (+3 more lines)"))
-    #expect(!AgentDialogScreen.Confirmation.isCut(words + "\nLine 7", drawnAs: drawn))
+    let isCut = AgentDialogScreen.Confirmation.isCut
+    #expect(isCut(words, drawn))
+    #expect(!isCut(words, "Line 1\nLine 2\n… (+3 more lines)"))
+    #expect(!isCut(words + "\nLine 7", drawn))
   }
 
   @Test("An agent's numbered list, or nothing numbered, is no dialog")
