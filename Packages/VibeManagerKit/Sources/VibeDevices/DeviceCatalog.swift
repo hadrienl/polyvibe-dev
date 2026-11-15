@@ -46,8 +46,9 @@ public enum DeviceCatalog {
     await listing().devices
   }
 
-  public static func listing() async -> Listing {
-    async let simulators = simulators()
+  /// A picker can load simulators separately so a slow `simctl` never holds up phones.
+  public static func listing(includeSimulators: Bool = true) async -> Listing {
+    async let simulators = includeSimulators ? simulators() : []
     let phones = await self.phones()
     return Listing(
       devices: await simulators + emulators().map(\.device) + phones.devices,
@@ -88,7 +89,8 @@ public enum DeviceCatalog {
 
   // MARK: - Simulators
 
-  private static func simulators() async -> [Device] {
+  /// Booted iOS simulators. Independent of adb: either discovery may take longer than the other.
+  public static func simulators() async -> [Device] {
     let request = simctl(["list", "devices", "booted", "-j"], timeout: .seconds(20))
     guard let result = try? await BoundedProcess.run(request), result.exitCode == 0 else {
       return []

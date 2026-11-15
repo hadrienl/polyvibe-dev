@@ -148,22 +148,25 @@ struct DeviceMirrorToolbarButton: View {
 struct DeviceMirrorPicker: View {
   let open: (_ udid: String, _ name: String) -> Void
   @State private var listing: DeviceCatalog.Listing?
+  @State private var simulators: [DeviceCatalog.Device] = []
+
+  private var devices: [DeviceCatalog.Device] { simulators + (listing?.devices ?? []) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      if let listing {
-        if listing.devices.isEmpty && listing.unavailablePhones.isEmpty {
+      if listing != nil || !simulators.isEmpty {
+        if devices.isEmpty && (listing?.unavailablePhones.isEmpty ?? true) {
           Text("No simulator or emulator running", bundle: .module).padding(8)
         }
-        ForEach(listing.devices, id: \.id) { device in
+        ForEach(devices, id: \.id) { device in
           Button(device.name) { open(device.id, device.name) }
             .buttonStyle(.borderless)
             .padding(6)
         }
-        ForEach(listing.unavailablePhones, id: \.serial) { phone in
+        ForEach(listing?.unavailablePhones ?? [], id: \.serial) { phone in
           unavailable(phone).foregroundStyle(.secondary).padding(6)
         }
-        if let help = androidHelp(listing) {
+        if let listing, let help = androidHelp(listing) {
           help.font(.caption).foregroundStyle(.secondary).padding(6)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -176,7 +179,14 @@ struct DeviceMirrorPicker: View {
     .task {
       // Again each second while open: a phone shows up, or is authorized, as the user watches.
       while !Task.isCancelled {
-        listing = await DeviceCatalog.listing()
+        listing = await DeviceCatalog.listing(includeSimulators: false)
+        try? await Task.sleep(for: .seconds(1))
+      }
+    }
+    .task {
+      // simctl can take tens of seconds; it must not delay adb or its next refresh.
+      while !Task.isCancelled {
+        simulators = await DeviceCatalog.simulators()
         try? await Task.sleep(for: .seconds(1))
       }
     }
