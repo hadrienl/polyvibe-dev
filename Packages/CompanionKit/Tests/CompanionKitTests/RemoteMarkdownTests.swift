@@ -23,6 +23,10 @@ func markdownOpenAndNestedFences() {
       .code(language: "md", code: "```\ninner\n```")
     ])
   #expect(RemoteMarkdown.segments("~~~\na\n~~~") == [.code(language: nil, code: "a")])
+  #expect(
+    RemoteMarkdown.segments("Run:\r\n```\r\n! ls\r\n```") == [
+      .prose("Run:"), .code(language: nil, code: "! ls"),
+    ])
 }
 
 @Test("Text without a block is one stretch of prose; inline code stays in it")

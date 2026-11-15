@@ -43,7 +43,7 @@ struct ConversationView: View {
           ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         }
         ForEach(conversation?.entries ?? []) { entry in
-          EntryView(entry: entry, run: canRun ? { channel.send($0, to: sessionID) } : nil)
+          EntryView(entry: entry, runsIn: canRun ? sessionID : nil)
         }
 
       }
@@ -114,11 +114,12 @@ struct ConversationView: View {
     .onDisappear { if channel.conversation?.sessionID == sessionID { channel.show(nil) } }
   }
 
-  /// Whether a command the agent wrote for the user can be run from its block (#548): as the
-  /// field, not for a session whose agent does not run.
+  /// Whether a command the agent wrote for the user can be run from its block (#548): not for a
+  /// session whose agent does not run, nor while it waits on a request — the Mac would take the
+  /// command for the answer.
   private var canRun: Bool {
-    guard let session else { return false }
-    return session.activity != .stopped
+    guard let session, conversation?.request == nil else { return false }
+    return session.activity != .stopped && session.activity != .needsAttention
   }
 
   private var subtitle: String {
@@ -357,8 +358,9 @@ private struct CameraPicker: UIViewControllerRepresentable {
 
 private struct EntryView: View {
   let entry: RemoteEntry
-  /// Sends a command written in one of the agent's code blocks (#548); nil when none can be.
-  var run: ((String) -> Void)?
+  /// The session a command written in one of the agent's code blocks is run in (#548); nil when
+  /// none can be. A value, not a closure, so that an entry left unchanged is not drawn again.
+  var runsIn: String?
   @Environment(\.conversationPalette) private var palette
 
   var body: some View {
@@ -388,7 +390,7 @@ private struct EntryView: View {
               .frame(maxWidth: .infinity, alignment: .leading)
               .textSelection(.enabled)
           case .code(let language, let code):
-            CodeBlock(language: language, code: code, run: run)
+            CodeBlock(language: language, code: code, runsIn: runsIn)
           }
         }
       }
@@ -436,17 +438,28 @@ private struct EntryView: View {
 private struct CodeBlock: View {
   let language: String?
   let code: String
-  let run: ((String) -> Void)?
+  let runsIn: String?
+  @Environment(RemoteChannel.self) private var channel
   @Environment(\.conversationPalette) private var palette
   @State private var copied = false
+  /// Run tapped a moment ago: a second tap would run the command twice.
+  @State private var ran = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 16) {
         Text(verbatim: language ?? "")
         Spacer(minLength: 0)
-        if let run, let prompt = RemoteMarkdown.shellPrompt(in: code) {
-          Button("Run", systemImage: "play") { run(prompt) }
+        if let runsIn, let prompt = RemoteMarkdown.shellPrompt(in: code) {
+          Button("Run", systemImage: ran ? "checkmark" : "play") {
+            channel.send(prompt, to: runsIn)
+            ran = true
+            Task {
+              try? await Task.sleep(for: .seconds(2))
+              ran = false
+            }
+          }
+          .disabled(ran)
         }
         Button(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc") {
           UIPasteboard.general.string = code
