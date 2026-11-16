@@ -394,7 +394,7 @@ final class SegmentTextView: NSTextView {
       // synchronously enumerates applications and loads their icons on the main thread.
       menu = NSMenu()
       for item in LinkMenuItems.items(for: url, links: links) { menu.addItem(item) }
-      if selectedRange().length > 0 {
+      if selection?.hasSelection ?? (selectedRange().length > 0) {
         menu.addItem(.separator())
         let copy = NSMenuItem(
           title: String(localized: "Copy", bundle: .module),

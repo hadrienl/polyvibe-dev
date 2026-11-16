@@ -94,6 +94,36 @@ struct ConversationLinkMenuTests {
     #expect(copy.target === view)
     #expect(selectedMenu.items.allSatisfy { $0.submenu == nil })
   }
+
+  @Test("A link's menu copies the conversation selection held in another segment")
+  func copiesSelectionInAnotherSegment() throws {
+    let (view, window) = makeProse()
+    defer { window.close() }
+    let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 100))
+    window.contentView = container
+    container.addSubview(view)
+    let other = SegmentTextView()
+    other.frame = NSRect(x: 0, y: 50, width: 400, height: 40)
+    other.show(NSAttributedString(string: "selected text"))
+    container.addSubview(other)
+    let selection = ConversationSelection()
+    view.selection = selection
+    other.selection = selection
+    other.setSelectedRange(NSRange(location: 0, length: 8))
+    selection.selectedWithin(other)
+    #expect(view.selectedRange().length == 0)
+    #expect(selection.hasSelection)
+    let pasteboard = NSPasteboard(name: NSPasteboard.Name("vibe.tests.\(UUID().uuidString)"))
+    defer { pasteboard.releaseGlobally() }
+    view.pasteboard = pasteboard
+
+    let menu = try #require(
+      view.menu(for: rightClick(at: point(ofCharacter: 5, in: view), in: view)))
+    let copy = try #require(menu.items.first { $0.action == #selector(NSText.copy(_:)) })
+    #expect(view.validateUserInterfaceItem(copy))
+    _ = copy.target?.perform(copy.action, with: copy)
+    #expect(pasteboard.string(forType: .string) == "selected")
+  }
 }
 
 @Suite("Bare addresses in a message are links (#186)")
