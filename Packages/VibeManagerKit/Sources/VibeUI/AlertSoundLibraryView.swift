@@ -697,6 +697,20 @@ struct NewAlertSoundCard: View {
 
 // MARK: - Settings › Notifications
 
+/// The rhythm the trackpad plays with the alert sound (#555), turned off apart from the sound.
+struct AlertSoundRhythmToggle: View {
+  @Bindable var sounds: AlertSoundLibraryModel
+
+  var body: some View {
+    Toggle(isOn: $sounds.playsRhythm) {
+      Text("Accompany the sound with a rhythm on the trackpad", bundle: .module)
+      Text("Felt with a finger resting on the trackpad.", bundle: .module)
+    }
+    .disabled(sounds.inUse == .none)
+    .accessibilityIdentifier("alert-sound-rhythm")
+  }
+}
+
 /// The alert sound, in Settings › Notifications: built as the avatar's row above it — the sound's
 /// shape, a menu of the sounds, ▶ to hear it, and the way to the page that makes them.
 struct AlertSoundInUseRow: View {

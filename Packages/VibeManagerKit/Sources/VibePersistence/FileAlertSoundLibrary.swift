@@ -195,10 +195,11 @@ public actor FileAlertSoundLibrary: AlertSoundLibrary {
 }
 
 /// The choice of the alert sound, kept across launches. A key never written, or a value written by
-/// a later version, reads as the system's default.
+/// a later version, reads as the system's default; the rhythm (#555) is on until turned off.
 @MainActor
 public final class UserDefaultsAlertSoundPreferences: AlertSoundPreferences {
   static let key = "requests.alertSound.v1"
+  static let rhythmKey = "requests.alertSoundRhythm.v1"
   private let defaults: UserDefaults
 
   public init(suiteName: String? = nil) {
@@ -210,5 +211,10 @@ public final class UserDefaultsAlertSoundPreferences: AlertSoundPreferences {
       defaults.string(forKey: Self.key).flatMap(AlertSoundChoice.init(rawValue:)) ?? .systemDefault
     }
     set { defaults.set(newValue.rawValue, forKey: Self.key) }
+  }
+
+  public var playsRhythm: Bool {
+    get { defaults.object(forKey: Self.rhythmKey) as? Bool ?? true }
+    set { defaults.set(newValue, forKey: Self.rhythmKey) }
   }
 }

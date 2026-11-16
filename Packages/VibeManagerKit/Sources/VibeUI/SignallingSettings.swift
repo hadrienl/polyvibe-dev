@@ -19,6 +19,7 @@ struct SignallingSettings: View {
       if let sounds = model.alertSounds {
         Section {
           AlertSoundInUseRow(sounds: sounds) { model.settingsPage = .alertSounds }
+          AlertSoundRhythmToggle(sounds: sounds)
         } header: {
           Text("Sound", bundle: .module, comment: "A section of the Settings window.")
         }

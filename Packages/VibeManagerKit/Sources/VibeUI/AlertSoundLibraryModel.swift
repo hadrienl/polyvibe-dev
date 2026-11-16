@@ -90,6 +90,14 @@ public final class AlertSoundLibraryModel {
   /// The shape of each sound, for the list and the preview, from 0 to 1; and how long it lasts.
   public private(set) var outlines: [AlertSoundChoice: [Float]] = [:]
   public private(set) var durations: [AlertSoundChoice: Double] = [:]
+  /// Whether the trackpad plays the rhythm of the sound with it (#555).
+  public var playsRhythm: Bool {
+    didSet {
+      guard playsRhythm != oldValue else { return }
+      preferences.playsRhythm = playsRhythm
+      if playsRhythm { rhythmPlayer?.prepare() }
+    }
+  }
 
   /// The description of a new sound, in the card.
   public var description = ""
@@ -111,6 +119,15 @@ public final class AlertSoundLibraryModel {
   @ObservationIgnored private let generators: (any AlertSoundGeneratorResolving)?
   @ObservationIgnored private let installer: (any NotificationSoundInstalling)?
   @ObservationIgnored private let player: (any AlertSoundPlaying)?
+  @ObservationIgnored private let rhythmPlayer: (any AlertRhythmPlaying)?
+  /// The file of the alert sound chosen in System Settings, whose rhythm the default plays.
+  @ObservationIgnored private let systemAlertFile: @Sendable () -> URL?
+  /// The rhythm of each sound read from its samples, once (#555).
+  @ObservationIgnored private var rhythms: [AlertSoundChoice: AlertSoundRhythm] = [:]
+  /// The rhythm of the alert sound of System Settings, and the file it was read from.
+  @ObservationIgnored private var systemRhythm: (file: URL?, rhythm: AlertSoundRhythm)?
+  /// Grows with each rhythm felt: one read late does not replace a newer one.
+  @ObservationIgnored private var feeling = 0
   @ObservationIgnored private let systemSoundsDirectory: URL?
   @ObservationIgnored private let cacheDirectory: URL
   @ObservationIgnored private let language: String
@@ -145,6 +162,8 @@ public final class AlertSoundLibraryModel {
     decoder: (any AlertSoundDecoding)? = nil,
     generators: (any AlertSoundGeneratorResolving)? = nil,
     installer: (any NotificationSoundInstalling)? = nil, player: (any AlertSoundPlaying)? = nil,
+    rhythmPlayer: (any AlertRhythmPlaying)? = nil,
+    systemAlertFile: @escaping @Sendable () -> URL? = AlertSoundLibraryModel.systemAlertFile,
     systemSoundsDirectory: URL? = URL(fileURLWithPath: "/System/Library/Sounds", isDirectory: true),
     cacheDirectory: URL = FileManager.default.temporaryDirectory.appendingPathComponent(
       "VibeManager-sounds", isDirectory: true),
@@ -161,6 +180,9 @@ public final class AlertSoundLibraryModel {
     self.cacheDirectory = cacheDirectory
     self.language = language
     self.now = now
+    self.rhythmPlayer = rhythmPlayer
+    self.systemAlertFile = systemAlertFile
+    playsRhythm = preferences.playsRhythm
     choice = preferences.alertSound
   }
 
@@ -172,6 +194,8 @@ public final class AlertSoundLibraryModel {
     systemSounds = Self.soundNames(in: systemSoundsDirectory)
     await refresh()
     if selection == nil { selection = .sound(inUse) }
+    if playsRhythm { rhythmPlayer?.prepare() }
+    _ = await rhythm(of: inUse)
   }
 
   /// Reads the library again: after a change, or when the page comes back.
@@ -317,6 +341,7 @@ public final class AlertSoundLibraryModel {
     outlineGenerations[choice, default: 0] += 1
     outlines[choice] = nil
     durations[choice] = nil
+    rhythms[choice] = nil
   }
 
   /// A recipe played, away from the main actor: a few hundred thousand samples.
@@ -334,14 +359,19 @@ public final class AlertSoundLibraryModel {
         samples: await Self.render(sound.recipe), sampleRate: AlertSoundSynthesizer.sampleRate)
     case .custom, .macOS:
       guard let url = await fileURL(of: choice) else { return nil }
-      let decoder = decoder
-      return await Task.detached {
-        if let data = try? Data(contentsOf: url), let wave = AlertSoundWave.decode(data) {
-          return DecodedAlertSound(samples: wave.samples, sampleRate: wave.sampleRate)
-        }
-        return try? decoder?.decode(url, maximumDuration: 60)
-      }.value
+      return await decode(url)
     }
+  }
+
+  /// A sound file read away from the main actor: a WAV of ours, or whatever the system reads.
+  private func decode(_ url: URL) async -> DecodedAlertSound? {
+    let decoder = decoder
+    return await Task.detached {
+      if let data = try? Data(contentsOf: url), let wave = AlertSoundWave.decode(data) {
+        return DecodedAlertSound(samples: wave.samples, sampleRate: wave.sampleRate)
+      }
+      return try? decoder?.decode(url, maximumDuration: 60)
+    }.value
   }
 
   // MARK: - Playing
@@ -353,10 +383,14 @@ public final class AlertSoundLibraryModel {
       return
     case .systemDefault:
       player?.playSystemAlert()
+      feel(choice)
     default:
+      // Felt once heard: a shipped sound is made the first time it plays, and a sound gone is
+      // neither heard nor felt.
       Task {
         guard let url = await fileURL(of: choice) else { return }
         player?.play(url)
+        feel(choice)
       }
     }
   }
@@ -379,6 +413,7 @@ public final class AlertSoundLibraryModel {
       // Another version asked for meanwhile is the one heard.
       guard written, versionPreview == url else { return }
       player?.play(url)
+      if playsRhythm { rhythmPlayer?.play(AlertSoundRhythm(recipe: recipe)) }
     }
   }
 
@@ -389,6 +424,91 @@ public final class AlertSoundLibraryModel {
     if let lastAlert, time.timeIntervalSince(lastAlert) < Self.alertInterval { return }
     lastAlert = time
     play(inUse)
+  }
+
+  /// macOS plays the alert sound of a notification just delivered: the trackpad plays its rhythm
+  /// (#555). Several at once, or with an alert played here, are felt once.
+  public func feelAlert() {
+    // Turned off, it does not count as an alert: the sounds keep their second.
+    guard playsRhythm, rhythmPlayer != nil, notificationSound != .none else { return }
+    let time = now()
+    if let lastAlert, time.timeIntervalSince(lastAlert) < Self.alertInterval { return }
+    lastAlert = time
+    // The rhythm of what the notification plays: the system's default until the sound in use is
+    // copied where the notifications find it.
+    feel(notificationSound == .systemDefault ? .systemDefault : inUse)
+  }
+
+  // MARK: - Rhythm
+
+  /// Plays the rhythm of a sound on the trackpad, unless the user turned it off. Known already,
+  /// it starts with the sound; otherwise as soon as it is read — unless another was felt since.
+  private func feel(_ choice: AlertSoundChoice) {
+    guard playsRhythm, let rhythmPlayer, choice != .none else { return }
+    feeling += 1
+    let turn = feeling
+    if let rhythm = knownRhythm(of: choice) {
+      rhythmPlayer.play(rhythm)
+      return
+    }
+    Task {
+      guard let rhythm = await rhythm(of: choice), playsRhythm, feeling == turn else { return }
+      rhythmPlayer.play(rhythm)
+    }
+  }
+
+  /// The rhythm of a sound without reading it: a recipe's, made each time — a composed sound
+  /// changes —, or one read before.
+  private func knownRhythm(of choice: AlertSoundChoice) -> AlertSoundRhythm? {
+    if let recipe = recipe(of: choice) { return AlertSoundRhythm(recipe: recipe) }
+    if choice == .systemDefault {
+      // Read again once the user picks another alert sound in System Settings.
+      guard let systemRhythm, systemRhythm.file == systemAlertFile() else { return nil }
+      return systemRhythm.rhythm
+    }
+    return rhythms[choice]
+  }
+
+  /// The rhythm of a sound: from its recipe when it has one, from its samples otherwise, a single
+  /// tap when it cannot be read — the default too, until the user has picked an alert sound in
+  /// System Settings; `nil` for none.
+  func rhythm(of choice: AlertSoundChoice) async -> AlertSoundRhythm? {
+    if choice == .none { return nil }
+    if let rhythm = knownRhythm(of: choice) { return rhythm }
+    if choice == .systemDefault {
+      let file = systemAlertFile()
+      var sound: DecodedAlertSound?
+      if let file { sound = await decode(file) }
+      let rhythm = await Self.rhythm(of: sound)
+      systemRhythm = (file, rhythm)
+      return rhythm
+    }
+    let generation = outlineGenerations[choice, default: 0]
+    let rhythm = await Self.rhythm(of: await decoded(choice))
+    // Changed while it was read: the rhythm of what it was is not kept.
+    if outlineGenerations[choice, default: 0] == generation { rhythms[choice] = rhythm }
+    return rhythm
+  }
+
+  private static func rhythm(of sound: DecodedAlertSound?) async -> AlertSoundRhythm {
+    await Task.detached(priority: .userInitiated) {
+      sound.map { AlertSoundRhythm(samples: $0.samples, sampleRate: $0.sampleRate) } ?? .single
+    }.value
+  }
+
+  private func recipe(of choice: AlertSoundChoice) -> AlertSoundRecipe? {
+    switch choice {
+    case .bundled(let key): BundledAlertSound(rawValue: key)?.recipe
+    case .custom(let id): entry(id)?.recipe
+    default: nil
+    }
+  }
+
+  /// The alert sound of System Settings, which `NSSound.beep()` and the notifications play.
+  nonisolated public static func systemAlertFile() -> URL? {
+    UserDefaults.standard.string(forKey: "com.apple.sound.beep.sound").map {
+      URL(fileURLWithPath: $0)
+    }
   }
 
   /// The sound a notification carries: the one in use, once copied where the notifications find
@@ -445,6 +565,7 @@ public final class AlertSoundLibraryModel {
     self.choice = choice
     preferences.alertSound = choice
     installInUse(clearing: true)
+    Task { _ = await rhythm(of: choice) }
     announce(
       LocalizedStringResource(
         "\(AlertSoundPresentation.name(of: choice, in: self)) is the alert sound.",

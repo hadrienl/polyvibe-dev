@@ -227,4 +227,14 @@ struct UserDefaultsAlertSoundPreferencesTests {
     UserDefaults(suiteName: suite)?.set("hologram:x", forKey: "requests.alertSound.v1")
     #expect(UserDefaultsAlertSoundPreferences(suiteName: suite).alertSound == .systemDefault)
   }
+
+  @Test("The rhythm on the trackpad is on until turned off (#555)")
+  func rhythm() throws {
+    let suite = "AlertSoundPreferencesTests-\(UUID().uuidString)"
+    defer { UserDefaults().removePersistentDomain(forName: suite) }
+    let preferences = UserDefaultsAlertSoundPreferences(suiteName: suite)
+    #expect(preferences.playsRhythm)
+    preferences.playsRhythm = false
+    #expect(!UserDefaultsAlertSoundPreferences(suiteName: suite).playsRhythm)
+  }
 }
