@@ -74,6 +74,26 @@ struct ConversationLinkMenuTests {
     let elsewhere = view.menu(for: rightClick(at: point(ofCharacter: 1, in: view), in: view))
     #expect(elsewhere?.items.contains { $0.title == LinkMenuAction.openInNewTab.title } != true)
   }
+
+  @Test("A link menu contains only our actions, without the native Open With submenu")
+  func linkMenuDoesNotBuildNativeItems() throws {
+    let (view, window) = makeProse()
+    defer { window.close() }
+    view.markdown = "see [here](https://example.com/a)"
+    let event = rightClick(at: point(ofCharacter: 5, in: view), in: view)
+    let menu = try #require(view.menu(for: event))
+    #expect(menu.items.count == 3)
+    #expect(menu.items[0] is ClosureMenuItem)
+    #expect(menu.items[1].isSeparatorItem)
+    #expect(menu.items[2].action == NSSelectorFromString("copyMessage:"))
+    #expect(menu.items.allSatisfy { $0.submenu == nil })
+
+    view.setSelectedRange(NSRange(location: 4, length: 4))
+    let selectedMenu = try #require(view.menu(for: event))
+    let copy = try #require(selectedMenu.items.first { $0.action == #selector(NSText.copy(_:)) })
+    #expect(copy.target === view)
+    #expect(selectedMenu.items.allSatisfy { $0.submenu == nil })
+  }
 }
 
 @Suite("Bare addresses in a message are links (#186)")

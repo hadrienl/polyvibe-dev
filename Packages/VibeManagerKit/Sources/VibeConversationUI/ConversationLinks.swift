@@ -74,11 +74,6 @@ enum LinkMenuItems {
     }
   }
 
-  /// The items a text view adds by itself over a link — Open Link, Copy Link — which ours replace.
-  static func isTextViewLinkItem(_ item: NSMenuItem) -> Bool {
-    guard !(item is ClosureMenuItem), let action = item.action else { return false }
-    return NSStringFromSelector(action).localizedCaseInsensitiveContains("link")
-  }
 }
 
 /// A menu item that runs a closure.

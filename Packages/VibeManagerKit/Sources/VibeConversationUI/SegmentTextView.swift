@@ -387,15 +387,23 @@ final class SegmentTextView: NSTextView {
   // MARK: Menu
 
   override func menu(for event: NSEvent) -> NSMenu? {
-    let menu = super.menu(for: event) ?? NSMenu()
-    if let url = link(at: convert(event.locationInWindow, from: nil)) {
-      // A link's actions, the same everywhere (#186), in place of the text view's own.
-      for item in menu.items where LinkMenuItems.isTextViewLinkItem(item) {
-        menu.removeItem(item)
+    let menu: NSMenu
+    let link = link(at: convert(event.locationInWindow, from: nil))
+    if let url = link {
+      // Do not build NSTextView's link menu just to discard it: its Open With submenu
+      // synchronously enumerates applications and loads their icons on the main thread.
+      menu = NSMenu()
+      for item in LinkMenuItems.items(for: url, links: links) { menu.addItem(item) }
+      if selectedRange().length > 0 {
+        menu.addItem(.separator())
+        let copy = NSMenuItem(
+          title: String(localized: "Copy", bundle: .module),
+          action: #selector(copy(_:)), keyEquivalent: "")
+        copy.target = self
+        menu.addItem(copy)
       }
-      let items = LinkMenuItems.items(for: url, links: links)
-      for (index, item) in items.enumerated() { menu.insertItem(item, at: index) }
-      if menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
+    } else {
+      menu = super.menu(for: event) ?? NSMenu()
     }
     guard let markdown else { return menu }
     let item = NSMenuItem(
@@ -404,7 +412,8 @@ final class SegmentTextView: NSTextView {
     item.target = self
     item.representedObject = markdown
     let copyIndex = menu.items.firstIndex { $0.action == #selector(copy(_:)) }
-    menu.insertItem(item, at: copyIndex.map { $0 + 1 } ?? 0)
+    if link != nil, copyIndex == nil, !menu.items.isEmpty { menu.addItem(.separator()) }
+    menu.insertItem(item, at: copyIndex.map { $0 + 1 } ?? (link == nil ? 0 : menu.items.count))
     return menu
   }
 
