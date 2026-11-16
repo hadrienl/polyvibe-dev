@@ -29,15 +29,18 @@ extension BrowserWorkspace: BrowserToolRunning {
       case "tab_open":
         return try await openTab(arguments, browser: browser, tool: tool)
       case "devices_list":
-        let devices = await DeviceCatalog.running()
-        return .text(
-          JSONValue.array(
-            devices.map { ["id": .string($0.id), "name": .string($0.name)] }
-          ).jsonText)
+        let listing = await DeviceCatalog.listing()
+        let list = JSONValue.array(
+          listing.devices.map { ["id": .string($0.id), "name": .string($0.name)] }
+        ).jsonText
+        let pending =
+          listing.isDiscoveringSimulators
+          ? ["Simulator discovery is still running; call devices_list again for the updated list."]
+          : []
+        return .text(([list] + Self.phoneNotes(listing) + pending).joined(separator: "\n"))
       case "device_open":
         let id = arguments["device"]?.stringValue ?? ""
-        let devices = await DeviceCatalog.running()
-        guard let device = devices.first(where: { $0.id == id }),
+        guard let device = await DeviceCatalog.device(id: id),
           let url = DeviceCatalog.url(of: id)
         else {
           throw BrowserToolFailure("\(id) is not running: see devices_list, or boot it first.")
@@ -301,6 +304,22 @@ extension BrowserWorkspace: BrowserToolRunning {
         tool, in: browser, tab: tab, target: Self.trace(description, value), decision: decision,
         succeeded: false)
       throw BrowserToolFailure(Self.describe(error))
+    }
+  }
+
+  /// For devices_list: why a phone the user may expect is not in the list (#526).
+  static func phoneNotes(_ listing: DeviceCatalog.Listing) -> [String] {
+    guard listing.hasADB else {
+      return [
+        "Android phones need adb: install Android Studio, or brew install --cask android-platform-tools."
+      ]
+    }
+    return listing.unavailablePhones.map { phone in
+      switch phone.problem {
+      case .unauthorized:
+        "\(phone.serial) is unauthorized: the user must accept USB debugging on the phone."
+      case .offline: "\(phone.serial) is offline: the user must plug its cable in again."
+      }
     }
   }
 

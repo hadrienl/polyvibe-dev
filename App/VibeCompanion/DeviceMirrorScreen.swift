@@ -24,7 +24,13 @@ struct DeviceListScreen: View {
     .navigationTitle("Simulators")
     .navigationBarTitleDisplayMode(.inline)
     .refreshable { await load() }
-    .task { await load() }
+    .task {
+      // The Mac returns phones immediately and refreshes slow simulator discovery separately.
+      while !Task.isCancelled {
+        await load()
+        try? await Task.sleep(for: .seconds(1))
+      }
+    }
   }
 
   private func load() async {

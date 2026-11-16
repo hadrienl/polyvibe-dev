@@ -215732,6 +215732,414 @@
           }
         }
       }
+    },
+    "%@ — accept USB debugging on the phone" : {
+      "comment" : "In the device picker of the web view, an Android phone adb lists as unauthorized; the argument is its serial number.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — اقبل تصحيح أخطاء USB على الهاتف"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ – USB-Debugging auf dem Telefon zulassen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — acepta la depuración USB en el teléfono"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — acceptez le débogage USB sur le téléphone"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — फ़ोन पर USB डीबगिंग की अनुमति दें"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — accetta il debug USB sul telefono"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — スマートフォンで USB デバッグを許可してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 휴대폰에서 USB 디버깅을 허용하세요"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — sta USB-foutopsporing toe op de telefoon"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — zaakceptuj debugowanie USB na telefonie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — aceite a depuração USB no celular"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — разрешите отладку по USB на телефоне"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — telefonda USB hata ayıklamaya izin verin"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — дозвольте налагодження USB на телефоні"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 请在手机上允许 USB 调试"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 請在手機上允許 USB 偵錯"
+          }
+        }
+      }
+    },
+    "%@ — offline, plug the cable in again" : {
+      "comment" : "In the device picker of the web view, an Android phone adb lists as offline; the argument is its serial number.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — غير متصل، أعد توصيل الكابل"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ – offline, Kabel erneut anschließen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — sin conexión, vuelve a conectar el cable"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — hors ligne, rebranchez le câble"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — ऑफ़लाइन, केबल फिर से लगाएँ"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — offline, ricollega il cavo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — オフラインです。ケーブルを挿し直してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 오프라인, 케이블을 다시 연결하세요"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — offline, sluit de kabel opnieuw aan"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — offline, podłącz kabel ponownie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — offline, reconecte o cabo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — не в сети, переподключите кабель"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — çevrimdışı, kabloyu yeniden takın"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — не в мережі, перепідключіть кабель"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 离线，请重新插上数据线"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ — 離線，請重新插上傳輸線"
+          }
+        }
+      }
+    },
+    "Android phone: install adb (Android Studio, or brew install --cask android-platform-tools)." : {
+      "comment" : "At the foot of the device picker of the web view, when adb, which Android phones are shown through, is not installed. The command is not translated.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هاتف Android: ثبّت adb (Android Studio، أو brew install --cask android-platform-tools)."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android-Telefon: adb installieren (Android Studio oder brew install --cask android-platform-tools)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teléfono Android: instala adb (Android Studio, o brew install --cask android-platform-tools)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléphone Android : installez adb (Android Studio, ou brew install --cask android-platform-tools)."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android फ़ोन: adb इंस्टॉल करें (Android Studio, या brew install --cask android-platform-tools)।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefono Android: installa adb (Android Studio, oppure brew install --cask android-platform-tools)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android スマートフォン：adb をインストールしてください（Android Studio、または brew install --cask android-platform-tools）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 휴대폰: adb를 설치하세요(Android Studio 또는 brew install --cask android-platform-tools)."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android-telefoon: installeer adb (Android Studio, of brew install --cask android-platform-tools)."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefon z Androidem: zainstaluj adb (Android Studio lub brew install --cask android-platform-tools)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celular Android: instale o adb (Android Studio, ou brew install --cask android-platform-tools)."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Телефон Android: установите adb (Android Studio или brew install --cask android-platform-tools)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android telefon: adb'yi yükleyin (Android Studio veya brew install --cask android-platform-tools)."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Телефон Android: установіть adb (Android Studio або brew install --cask android-platform-tools)."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 手机：请安装 adb（Android Studio，或 brew install --cask android-platform-tools）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 手機：請安裝 adb（Android Studio，或 brew install --cask android-platform-tools）。"
+          }
+        }
+      }
+    },
+    "Android phone: turn on USB debugging in Developer options." : {
+      "comment" : "At the foot of the device picker of the web view, when adb is installed but lists no phone. Developer options is the name of the Android settings screen.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "هاتف Android: فعّل تصحيح أخطاء USB في خيارات المطوّرين."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android-Telefon: USB-Debugging in den Entwickleroptionen aktivieren."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Teléfono Android: activa la depuración USB en Opciones para desarrolladores."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Téléphone Android : activez le débogage USB dans les options pour les développeurs."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android फ़ोन: डेवलपर विकल्पों में USB डीबगिंग चालू करें।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefono Android: attiva il debug USB in Opzioni sviluppatore."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android スマートフォン：開発者向けオプションで USB デバッグをオンにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 휴대폰: 개발자 옵션에서 USB 디버깅을 켜세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android-telefoon: zet USB-foutopsporing aan in Ontwikkelaarsopties."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telefon z Androidem: włącz debugowanie USB w Opcjach programisty."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Celular Android: ative a depuração USB nas Opções do desenvolvedor."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Телефон Android: включите отладку по USB в разделе «Для разработчиков»."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android telefon: Geliştirici seçeneklerinde USB hata ayıklamayı açın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Телефон Android: увімкніть налагодження USB у розділі «Параметри розробника»."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 手机：请在开发者选项中开启 USB 调试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 手機：請在開發人員選項中開啟 USB 偵錯。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

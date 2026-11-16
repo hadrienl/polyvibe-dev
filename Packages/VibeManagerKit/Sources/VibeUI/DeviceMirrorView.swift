@@ -147,26 +147,71 @@ struct DeviceMirrorToolbarButton: View {
 
 struct DeviceMirrorPicker: View {
   let open: (_ udid: String, _ name: String) -> Void
-  @State private var devices: [(udid: String, name: String)]?
+  @State private var listing: DeviceCatalog.Listing?
+  @State private var simulators: [DeviceCatalog.Device] = []
+
+  private var devices: [DeviceCatalog.Device] { simulators + (listing?.devices ?? []) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      if let devices {
-        if devices.isEmpty { Text("No simulator or emulator running", bundle: .module).padding(8) }
-        ForEach(devices, id: \.udid) { device in
-          Button(device.name) { open(device.udid, device.name) }
+      if listing != nil || !simulators.isEmpty {
+        if devices.isEmpty && (listing?.unavailablePhones.isEmpty ?? true) {
+          Text("No simulator or emulator running", bundle: .module).padding(8)
+        }
+        ForEach(devices, id: \.id) { device in
+          Button(device.name) { open(device.id, device.name) }
             .buttonStyle(.borderless)
             .padding(6)
+        }
+        ForEach(listing?.unavailablePhones ?? [], id: \.serial) { phone in
+          unavailable(phone).foregroundStyle(.secondary).padding(6)
+        }
+        if let listing, let help = androidHelp(listing) {
+          help.font(.caption).foregroundStyle(.secondary).padding(6)
+            .fixedSize(horizontal: false, vertical: true)
         }
       } else {
         ProgressView().padding(8)
       }
     }
     .padding(6)
-    .frame(minWidth: 200, alignment: .leading)
+    .frame(minWidth: 200, maxWidth: 320, alignment: .leading)
     .task {
-      devices = await DeviceCatalog.running().map { ($0.id, $0.name) }
+      // Again each second while open: a phone shows up, or is authorized, as the user watches.
+      while !Task.isCancelled {
+        listing = await DeviceCatalog.listing(includeSimulators: false)
+        try? await Task.sleep(for: .seconds(1))
+      }
+    }
+    .task {
+      // simctl can take tens of seconds; it must not delay adb or its next refresh.
+      while !Task.isCancelled {
+        simulators = await DeviceCatalog.simulators()
+        try? await Task.sleep(for: .seconds(1))
+      }
     }
   }
 
+  private func unavailable(_ phone: DeviceCatalog.UnavailablePhone) -> Text {
+    switch phone.problem {
+    case .unauthorized:
+      Text("\(phone.serial) — accept USB debugging on the phone", bundle: .module)
+    case .offline:
+      Text("\(phone.serial) — offline, plug the cable in again", bundle: .module)
+    }
+  }
+
+  /// What a user with an Android phone needs to see it here, while none is listed.
+  private func androidHelp(_ listing: DeviceCatalog.Listing) -> Text? {
+    if !listing.hasADB {
+      return Text(
+        "Android phone: install adb (Android Studio, or brew install --cask android-platform-tools).",
+        bundle: .module)
+    }
+    let hasPhone =
+      !listing.unavailablePhones.isEmpty
+      || listing.devices.contains { DeviceCatalog.isPhone($0.id) }
+    return hasPhone
+      ? nil : Text("Android phone: turn on USB debugging in Developer options.", bundle: .module)
+  }
 }

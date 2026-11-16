@@ -33,6 +33,59 @@ struct DeviceCatalogTests {
     #expect(emulators.first?.processIdentifier == alive)
   }
 
+  @Test("The phones of adb devices -l, by model, the emulators left out, the others unavailable")
+  func phones() {
+    let listed = DeviceCatalog.phones(
+      listedIn: """
+        List of devices attached
+        R5CT1234ABC            device usb:1-1 product:shiba model:Pixel_8 device:shiba transport_id:1
+        emulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64 transport_id:2
+        192.168.1.5:5555       device product:a54x model:SM_A546B device:a54x transport_id:3
+        NOAUTH                 unauthorized usb:1-2 transport_id:4
+        GONE                   offline transport_id:5
+        BOOT                   bootloader transport_id:6
+
+        """)
+    #expect(listed.devices.map(\.name) == ["Pixel 8", "SM A546B"])
+    #expect(
+      listed.devices.map { DeviceCatalog.serial(ofPhone: $0.id) } == [
+        "R5CT1234ABC", "192.168.1.5:5555",
+      ])
+    #expect(
+      listed.unavailable == [
+        .init(serial: "NOAUTH", problem: .unauthorized), .init(serial: "GONE", problem: .offline),
+      ])
+  }
+
+  @Test("A phone's id fits the host of a URL, whatever its serial, and leads back to it")
+  func phoneID() throws {
+    for serial in ["R5CT1234ABC", "192.168.1.5:5555", "adb-XYZ._adb-tls-connect._tcp"] {
+      let id = DeviceCatalog.phoneID(of: serial)
+      let url = try #require(DeviceCatalog.url(of: id))
+      #expect(url.host == id)
+      #expect(DeviceCatalog.serial(ofPhone: id) == serial)
+      #expect(DeviceCatalog.isPhone(id) && !DeviceCatalog.canStop(id))
+    }
+    #expect(DeviceCatalog.serial(ofPhone: "adb-zz") == nil)
+    #expect(DeviceCatalog.serial(ofPhone: "android-8554") == nil)
+    #expect(DeviceCatalog.canStop("android-8554") && DeviceCatalog.canStop("B6A3C2D1"))
+  }
+
+  @Test("adb is the SDK's first, then Android Studio's, then Homebrew's")
+  func adb() {
+    let home = URL(fileURLWithPath: "/Users/someone")
+    let studio = "/Users/someone/Library/Android/sdk/platform-tools/adb"
+    func found(_ environment: [String: String], _ installed: Set<String>) -> String? {
+      DeviceCatalog.adb(environment: environment, home: home, isExecutable: installed.contains)
+    }
+    #expect(
+      found(["ANDROID_HOME": "/sdk"], ["/sdk/platform-tools/adb", studio])
+        == "/sdk/platform-tools/adb")
+    #expect(found(["ANDROID_HOME": "/sdk"], [studio, "/opt/homebrew/bin/adb"]) == studio)
+    #expect(found([:], ["/usr/local/bin/adb"]) == "/usr/local/bin/adb")
+    #expect(found([:], []) == nil)
+  }
+
   @Test("The simulators booted, from simctl's JSON, sorted by name")
   func simulators() {
     let json = Data(
