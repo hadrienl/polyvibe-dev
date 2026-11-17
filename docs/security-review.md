@@ -47,8 +47,9 @@ pid, so a `git` that started a helper or a login shell whose profile started one
 
 Local Markdown links ending in `.command` offer a Run button. After the user confirms the
 script's displayed path, the conversation sends `! open -- '<path>'` through the existing agent
-shell mode. The path is single quoted, with embedded quotes escaped; newlines and NUL are
-rejected. Only relative paths and local `file:` URLs qualify, never a remote host or web URL.
+shell mode. The path is single quoted, with embedded quotes escaped; all terminal control
+characters and line breaks are rejected. Only relative paths and local `file:` URLs qualify,
+never a remote host or web URL.
 The session resolves relative paths in its working directory and retains its usual shell-command
 history. This intentionally executes a user-confirmed script; unlike ordinary URL links and
 attachment previews, it does not claim the file is safe to open as a document. The application

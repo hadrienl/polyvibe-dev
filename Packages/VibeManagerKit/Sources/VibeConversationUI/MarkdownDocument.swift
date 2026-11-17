@@ -15,6 +15,8 @@ public struct InlineRun: Hashable, Sendable {
   public var link: URL?
   /// A local launcher, rendered as an explicit command action rather than a URL.
   public var commandPath: String?
+  /// Identifies a source link within its paragraph, including its styled runs.
+  var commandLinkID: Int?
 
   public init(text: String) {
     self.text = text
@@ -128,6 +130,7 @@ public enum MarkdownDocument {
       if let link = markup as? Markdown.Link {
         run.link = safeLink(link.destination)
         run.commandPath = commandPath(link.destination)
+        run.commandLinkID = run.commandPath == nil ? nil : runs.count
       }
       for child in markup.children { collect(child, style: run, into: &runs) }
     }
@@ -177,6 +180,18 @@ public enum MarkdownDocument {
     }
   }()
 
+  /// Coalesce emphasis/code fragments of one link, while keeping separate source links apart.
+  static func commandRuns(in runs: [InlineRun]) -> [InlineRun] {
+    runs.reduce(into: [InlineRun]()) { result, run in
+      guard run.commandPath != nil else { return }
+      if let last = result.last, let id = run.commandLinkID, last.commandLinkID == id {
+        result[result.count - 1].text += run.text
+      } else {
+        result.append(run)
+      }
+    }
+  }
+
   static func commandPath(_ destination: String?) -> String? {
     guard let destination, let url = URL(string: destination),
       url.scheme == nil || url.isFileURL,
@@ -184,7 +199,8 @@ public enum MarkdownDocument {
       url.query == nil, url.fragment == nil
     else { return nil }
     let path = url.path
-    guard path.hasSuffix(".command"), !path.contains(where: { $0.isNewline || $0 == "\0" })
+    guard path.hasSuffix(".command"), PathInsertion.isWritablePath(path),
+      !path.contains(where: \.isNewline)
     else { return nil }
     return path
   }

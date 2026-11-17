@@ -56,24 +56,6 @@ struct MarkdownBlocksView: View {
   }
 }
 
-private func commandRuns(in blocks: [MarkdownBlock]) -> [InlineRun] {
-  blocks.flatMap { block -> [InlineRun] in
-    switch block {
-    case .heading(_, let runs), .paragraph(let runs):
-      return runs.filter { $0.commandPath != nil }.reduce(into: [InlineRun]()) { result, run in
-        if let last = result.last, last.commandPath == run.commandPath {
-          result[result.count - 1].text += run.text
-        } else {
-          result.append(run)
-        }
-      }
-    case .list(_, _, let items): return items.flatMap { commandRuns(in: $0.blocks) }
-    case .quote(let blocks): return commandRuns(in: blocks)
-    default: return []
-    }
-  }
-}
-
 /// Launch through the session's shell so relative paths use its working directory.
 private struct CommandLinkButton: View {
   let run: InlineRun
@@ -146,10 +128,8 @@ struct MarkdownBlockView: View {
   var body: some View {
     switch block {
     case .heading(_, let runs), .paragraph(let runs):
-      if !runs.allSatisfy({ $0.commandPath != nil }) {
-        SegmentView(content: .prose([block], secondary: secondary), markdown: markdown)
-      }
-      ForEach(Array(commandRuns(in: [block]).enumerated()), id: \.offset) { _, run in
+      SegmentView(content: .prose([block], secondary: secondary), markdown: markdown)
+      ForEach(Array(MarkdownDocument.commandRuns(in: runs).enumerated()), id: \.offset) { _, run in
         CommandLinkButton(run: run)
       }
     case .list(let ordered, let start, let items):
