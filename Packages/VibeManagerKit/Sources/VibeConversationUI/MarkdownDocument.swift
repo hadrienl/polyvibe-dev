@@ -13,6 +13,8 @@ public struct InlineRun: Hashable, Sendable {
   /// Only `http`, `https` and `mailto` survive: a transcript holds what a web page or a server
   /// made the agent write, and a link to anything else must not be one click away (ADR 0025).
   public var link: URL?
+  /// A local launcher, rendered as an explicit command action rather than a URL.
+  public var commandPath: String?
 
   public init(text: String) {
     self.text = text
@@ -123,7 +125,10 @@ public enum MarkdownDocument {
       if markup is Emphasis { run.isItalic = true }
       if markup is Strong { run.isBold = true }
       if markup is Strikethrough { run.isStrikethrough = true }
-      if let link = markup as? Markdown.Link { run.link = safeLink(link.destination) }
+      if let link = markup as? Markdown.Link {
+        run.link = safeLink(link.destination)
+        run.commandPath = commandPath(link.destination)
+      }
       for child in markup.children { collect(child, style: run, into: &runs) }
     }
   }
@@ -171,6 +176,18 @@ public enum MarkdownDocument {
       preconditionFailure("The link detector could not be made: \(error)")
     }
   }()
+
+  static func commandPath(_ destination: String?) -> String? {
+    guard let destination, let url = URL(string: destination),
+      url.scheme == nil || url.isFileURL,
+      url.host == nil || url.host == "" || url.host == "localhost",
+      url.query == nil, url.fragment == nil
+    else { return nil }
+    let path = url.path
+    guard path.hasSuffix(".command"), !path.contains(where: { $0.isNewline || $0 == "\0" })
+    else { return nil }
+    return path
+  }
 
   static func safeLink(_ destination: String?) -> URL? {
     guard let destination, let url = URL(string: destination),

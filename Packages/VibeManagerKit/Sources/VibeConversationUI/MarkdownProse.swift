@@ -17,7 +17,8 @@ enum MarkdownProse {
 
   static func isProse(_ block: MarkdownBlock) -> Bool {
     switch block {
-    case .heading, .paragraph: return true
+    case .heading(_, let runs), .paragraph(let runs):
+      return !runs.contains { $0.commandPath != nil }
     case .list(_, _, let items): return items.allSatisfy { $0.blocks.allSatisfy(isProse) }
     case .quote(let blocks): return blocks.allSatisfy(isProse)
     case .code, .table, .rule: return false

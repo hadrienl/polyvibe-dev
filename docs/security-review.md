@@ -43,6 +43,17 @@ asks for another bound. It is registered with `ChildProcessGroupGuard` while it 
 passes every descriptor the application has not marked close-on-exec, and only ever signals the one
 pid, so a `git` that started a helper or a login shell whose profile started one left it running.
 
+## Conversation command launchers
+
+Local Markdown links ending in `.command` offer a Run button. After the user confirms the
+script's displayed path, the conversation sends `! open -- '<path>'` through the existing agent
+shell mode. The path is single quoted, with embedded quotes escaped; newlines and NUL are
+rejected. Only relative paths and local `file:` URLs qualify, never a remote host or web URL.
+The session resolves relative paths in its working directory and retains its usual shell-command
+history. This intentionally executes a user-confirmed script; unlike ordinary URL links and
+attachment previews, it does not claim the file is safe to open as a document. The application
+does not spawn another process directly, and macOS owns the lifetime of the launched script.
+
 ## What was checked
 
 - **No shell with user data.** Arguments are arrays from the provider to `posix_spawn`. The one

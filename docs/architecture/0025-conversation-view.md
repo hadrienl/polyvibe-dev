@@ -188,6 +188,12 @@ from the moment it is sent, then as the transcript completes it; its output fold
 A failure is shown only when an exit code says so. Codex's behaviour during a turn was not
 measured: the composer holds the command until the turn ends.
 
+Markdown links naming a local `.command` file offer an explicit Run button. The button shows
+its path in a confirmation, then sends a shell-quoted `open --` command through the session's
+shell mode; relative paths resolve there. It is disabled while that mode cannot accept a command.
+This action is separate from opening attachments or following URLs: local files do not become
+ordinary clickable URL links, and remote script destinations are not accepted.
+
 ### Conversation by default, switched per session
 
 The Settings choose how sessions open (conversation by default); each session keeps what the user

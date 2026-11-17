@@ -93,6 +93,30 @@ struct ConversationThemeTests {
 
 @Suite("Markdown, parsed into blocks")
 struct MarkdownDocumentTests {
+  @Test("Local command links retain their destination without becoming URL links")
+  func commandLinks() {
+    let blocks = MarkdownDocument.blocks(
+      from: "[Lancer la build](<.build/Test/Lancer la build.command>)")
+    guard case .paragraph(let runs) = blocks.first else {
+      Issue.record("Expected a paragraph")
+      return
+    }
+    #expect(runs.first?.commandPath == ".build/Test/Lancer la build.command")
+    #expect(runs.first?.link == nil)
+    #expect(!MarkdownProse.isProse(blocks[0]))
+    #expect(
+      MarkdownProse.segments(
+        MarkdownDocument.blocks(
+          from: "Before\n\n[Run](./test.command)\n\nAfter")
+      ).count == 3)
+    #expect(MarkdownDocument.commandPath("file:///tmp/test.command") == "/tmp/test.command")
+    #expect(MarkdownDocument.commandPath("https://example.com/test.command") == nil)
+    #expect(MarkdownDocument.commandPath("file://remote/tmp/test.command") == nil)
+    #expect(MarkdownDocument.commandPath("javascript:run.command") == nil)
+    #expect(MarkdownDocument.commandPath("/tmp/test.sh") == nil)
+    #expect(MarkdownDocument.commandPath("/tmp/test%0A.command") == nil)
+  }
+
   @Test("Headings, lists and task lists, quotes, code, tables, rules")
   func blocks() {
     let blocks = MarkdownDocument.blocks(
