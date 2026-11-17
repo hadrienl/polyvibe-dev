@@ -347,6 +347,28 @@ struct ConversationSelectionTests {
     #expect(second.last.selectedRange().length > 0)
   }
 
+  @Test("Launcher labels copy identically on screen and from the transcript")
+  func commandLinkSelection() throws {
+    let harness = Harness(messages: 0)
+    let selection = ConversationSelection()
+    let text = "Before.\n\n[Lancer la build](./test.command)\n\nAfter."
+    harness.window.contentView = NSHostingView(
+      rootView: MarkdownView(text: text)
+        .environment(\.selectionBlock, "launcher")
+        .environment(\.conversationSelection, selection)
+        .frame(width: 400, height: 500, alignment: .top))
+    harness.window.layoutIfNeeded()
+    let shown = selection.shown.map(\.view)
+    let expected = MarkdownBlocksView.contents(MarkdownDocument.blocks(from: text)).map {
+      SegmentView.text(of: $0, theme: .systemLight, size: 14, spacing: 8).string
+    }
+    #expect(shown.map(\.string) == expected)
+    let first = try #require(shown.first)
+    selection.selectAll(in: first)
+    #expect(selection.copy(to: harness.pasteboard))
+    #expect(harness.pasteboard.string(forType: .string)?.contains("Lancer la build") == true)
+  }
+
   @Test(
     "Paragraph, code and table of answers drawn by SwiftUI are one selection, message to message")
   func swiftUI() throws {

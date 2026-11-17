@@ -56,6 +56,36 @@ struct MarkdownBlocksView: View {
   }
 }
 
+/// Launch through the session's shell so relative paths use its working directory.
+private struct CommandLinkButton: View {
+  let run: InlineRun
+  @Environment(\.shellCommandRunner) private var runner
+  @State private var confirming = false
+
+  var body: some View {
+    if let path = run.commandPath {
+      Button {
+        confirming = true
+      } label: {
+        Label(run.text, systemImage: "play.fill")
+      }
+      .buttonStyle(.bordered)
+      .disabled(runner?.canRunShellCommand != true)
+      .help(path)
+      .confirmationDialog(Text("Run", bundle: .module), isPresented: $confirming) {
+        Button {
+          let quoted = path.replacingOccurrences(of: "'", with: "'\"'\"'")
+          Task { await runner?.runShellCommand("! open -- '" + quoted + "'") }
+        } label: {
+          Text("Run", bundle: .module)
+        }
+      } message: {
+        Text(verbatim: path)
+      }
+    }
+  }
+}
+
 extension MarkdownBlocksView {
   /// The segments the blocks are drawn by, in reading order, as `MarkdownBlocksView` and
   /// `MarkdownBlockView` lay them out: what a copy takes of a message no longer on screen (#381).
@@ -97,8 +127,11 @@ struct MarkdownBlockView: View {
 
   var body: some View {
     switch block {
-    case .heading, .paragraph:
+    case .heading(_, let runs), .paragraph(let runs):
       SegmentView(content: .prose([block], secondary: secondary), markdown: markdown)
+      ForEach(Array(MarkdownDocument.commandRuns(in: runs).enumerated()), id: \.offset) { _, run in
+        CommandLinkButton(run: run)
+      }
     case .list(let ordered, let start, let items):
       VStack(alignment: .leading, spacing: 4) {
         ForEach(Array(items.enumerated()), id: \.offset) { index, item in

@@ -93,6 +93,56 @@ struct ConversationThemeTests {
 
 @Suite("Markdown, parsed into blocks")
 struct MarkdownDocumentTests {
+  @Test("Local command links retain their destination without becoming URL links")
+  func commandLinks() {
+    let blocks = MarkdownDocument.blocks(
+      from: "[Lancer la build](<.build/Test/Lancer la build.command>)")
+    guard case .paragraph(let runs) = blocks.first else {
+      Issue.record("Expected a paragraph")
+      return
+    }
+    #expect(runs.first?.commandPath == ".build/Test/Lancer la build.command")
+    #expect(runs.first?.link == nil)
+    #expect(!MarkdownProse.isProse(blocks[0]))
+    #expect(
+      MarkdownProse.segments(
+        MarkdownDocument.blocks(
+          from: "Before\n\n[Run](./test.command)\n\nAfter")
+      ).count == 3)
+    #expect(MarkdownDocument.commandPath("file:///tmp/test.command") == "/tmp/test.command")
+    #expect(MarkdownDocument.commandPath("https://example.com/test.command") == nil)
+    #expect(MarkdownDocument.commandPath("file://remote/tmp/test.command") == nil)
+    #expect(MarkdownDocument.commandPath("javascript:run.command") == nil)
+    #expect(MarkdownDocument.commandPath("/tmp/test.sh") == nil)
+    #expect(MarkdownDocument.commandPath("/tmp/test%0A.command") == nil)
+  }
+
+  @Test("Separate launch links stay separate while styled labels remain one action")
+  func commandLinkBoundaries() throws {
+    for separator in [" ou ", ""] {
+      let blocks = MarkdownDocument.blocks(
+        from: "[**Lancer** la `build`](./test.command)" + separator
+          + "[Relancer](./test.command)")
+      guard case .paragraph(let runs) = blocks.first else {
+        Issue.record("Expected a paragraph")
+        return
+      }
+      let actions = MarkdownDocument.commandRuns(in: runs)
+      #expect(actions.map(\.text) == ["Lancer la build", "Relancer"])
+      #expect(actions.map(\.commandPath) == ["./test.command", "./test.command"])
+    }
+  }
+
+  @Test("Launcher paths cannot be changed by prompt sanitization")
+  func commandControlCharacters() {
+    for control in ["%00", "%09", "%0A", "%0D", "%1B", "%7F", "%C2%85"] {
+      #expect(MarkdownDocument.commandPath("/tmp/test" + control + ".command") == nil)
+    }
+    #expect(
+      MarkdownDocument.commandPath("/tmp/L%27%C3%A9t%C3%A9%20$(echo%20test).command")
+        == "/tmp/L'été $(echo test).command")
+  }
+
   @Test("Headings, lists and task lists, quotes, code, tables, rules")
   func blocks() {
     let blocks = MarkdownDocument.blocks(
