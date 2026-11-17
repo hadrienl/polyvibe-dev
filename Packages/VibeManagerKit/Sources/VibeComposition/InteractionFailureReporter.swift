@@ -8,16 +8,18 @@ import VibeProcess
 actor InteractionFailureReporter {
   private let directory: URL
   private let environment: [String: String]
+  private let retryDelay: Duration
   private var draining = false
   private var needsDrain = false
   private let run: @Sendable (BoundedProcessRequest) async throws -> BoundedProcessResult
 
   init(
-    directory: URL, environment: [String: String],
+    directory: URL, environment: [String: String], retryDelay: Duration = .seconds(60),
     run: @escaping @Sendable (BoundedProcessRequest) async throws -> BoundedProcessResult = {
       try await BoundedProcess.run($0)
     }
   ) {
+    self.retryDelay = retryDelay
     self.run = run
     self.directory = directory
     var environment = environment
@@ -56,7 +58,7 @@ actor InteractionFailureReporter {
 
   private struct Report: Codable {
     let title: String
-    let body: String
+    var body: String
     var issueURL: String?
   }
 
@@ -82,6 +84,9 @@ actor InteractionFailureReporter {
           report.issueURL == nil
         else { continue }
         do {
+          // Re-sanitize pending reports written by older app versions before any upload.
+          report.body = Self.redact(report.body)
+          try JSONEncoder().encode(report).write(to: file, options: .atomic)
           let fingerprint = file.deletingPathExtension().lastPathComponent
           let found = try await gh([
             "issue", "list", "--repo", "hadrienl/vibe-manager", "--state", "all", "--search",
@@ -119,22 +124,33 @@ actor InteractionFailureReporter {
       }
       if needsDrain { continue }
       guard pending else { return }
-      do { try await Task.sleep(for: .seconds(60)) } catch { return }
+      do { try await Task.sleep(for: retryDelay) } catch { return }
     }
+  }
+
+  /// Shared by new reports and the durable outbox, so upgrades also protect queued text.
+  nonisolated static func redact(_ text: String) -> String {
+    var scrubbed = text.replacingOccurrences(of: "\\\"", with: "\"")
+    let patterns = [
+      #"(?i)(\bbearer\s+)[^\s"'\\,}<>]+"#,
+      #"(?i)((?:proxy-)?authorization["']?\s*:\s*["']?(?:basic|bearer)\s+)[^\s"'\\,}<>]+"#,
+      #"(?i)(\b(?:AWS_(?:ACCESS_KEY_ID|SECRET_ACCESS_KEY|SESSION_TOKEN|SECURITY_TOKEN)|(?:[A-Z0-9]+_)*(?:API[_-]?KEY|ACCESS[_-]?TOKEN|AUTH[_-]?TOKEN|PASSWORD|SECRET|CLIENT[_-]?SECRET))["']?\s*[:=]\s*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'\\,}<>]+)"#,
+      #"(?i)(--(?:password|api-key|token|secret|client-secret)[\s=]+)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s"'\\,}<>]+)"#,
+    ]
+    for pattern in patterns {
+      scrubbed = scrubbed.replacingOccurrences(
+        of: pattern, with: "$1[REDACTED]", options: .regularExpression)
+    }
+    return scrubbed.replacingOccurrences(
+      of:
+        #"\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+|(?:AKIA|ASIA)[A-Z0-9]{16})\b"#,
+      with: "[REDACTED]", options: .regularExpression)
   }
 
   nonisolated static func body(_ failure: AnswerAgentRequest.Failure, fingerprint: String) -> String
   {
     func block(_ text: String) -> String {
-      // Keep the layout as text; mask common credential forms before sending it outside the Mac.
-      let scrubbed = text.replacingOccurrences(of: "\\\"", with: "\"").replacingOccurrences(
-        of:
-          #"(?i)(bearer\s+|(?:api[_-]?key|access[_-]?token|password|secret)["']?\s*[:=]\s*["']?)[^\s\"\\,}]+"#,
-        with: "$1[REDACTED]", options: .regularExpression
-      )
-      .replacingOccurrences(
-        of: #"\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b"#,
-        with: "[REDACTED]", options: .regularExpression)
+      let scrubbed = redact(text)
       return "<pre>"
         + scrubbed.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(
           of: "<", with: "&lt;"

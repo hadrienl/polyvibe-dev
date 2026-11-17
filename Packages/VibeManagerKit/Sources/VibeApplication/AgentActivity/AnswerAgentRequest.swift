@@ -144,6 +144,7 @@ public struct AnswerAgentRequest: Sendable {
     else {
       return await tracker.isFirstRequest(id) ? .notOnScreen : .requestGone
     }
+    var finalScreen = text
     for (index, step) in steps.enumerated() {
       if index > 0 {
         await settle(id.sessionID)
@@ -158,11 +159,16 @@ public struct AnswerAgentRequest: Sendable {
           return .interrupted
         }
       }
+      // Earlier answers may already have advanced to a review. Only leaving the
+      // dialog that awaits the final key proves the whole interaction completed.
+      if confirmsDelivery, index == steps.count - 1 {
+        finalScreen = await screen(id.sessionID)
+      }
       guard await write(id.sessionID, step) else { return .terminalUnavailable }
       written.append(step)
     }
     if confirmsDelivery {
-      let original = text.flatMap(AgentDialogScreen.init(screen:))
+      let original = finalScreen.flatMap(AgentDialogScreen.init(screen:))
       let start = ContinuousClock.now
       var changedReadings = 0
       while await tracker.isFirstRequest(id) {
@@ -171,7 +177,7 @@ public struct AnswerAgentRequest: Sendable {
           let dialog = AgentDialogScreen(screen: current)
           let changed =
             original == nil
-            ? current != text
+            ? finalScreen.map { current != $0 } ?? false
             : (dialog?.options != original?.options
               || dialog?.confirmation?.server != original?.confirmation?.server
               || dialog?.confirmation?.message != original?.confirmation?.message

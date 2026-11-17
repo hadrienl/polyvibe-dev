@@ -179,6 +179,32 @@ private struct Fixture {
 
 @Suite("Answering a request from the palette", .timeLimit(.minutes(2)))
 struct AnswerAgentRequestTests {
+  @Test(
+    "Ignoring the final key keeps a progressed review pending; accepting it completes it",
+    arguments: [false, true])
+  func finalReview(acceptsSubmit: Bool) async {
+    let live = LiveScreen("❯ 1. Yes\n  2. No")
+    let fixture = Fixture(live: live)
+    let (id, request) = await fixture.asking("review")
+    let review = "❯ 1. Submit answers\n  2. Cancel"
+    await fixture.terminals.setOnWrite { id in
+      let count = await fixture.terminals.written[id]?.count ?? 0
+      await live.show(count == 1 || !acceptsSubmit ? review : "Working…")
+    }
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text }, confirmsDelivery: true,
+      failed: { await failures.append($0) })
+    #expect(await answer(.deny, to: request) == (acceptsSubmit ? .sent : .interrupted))
+    #expect(await fixture.tracker.isFirstRequest(request) == !acceptsSubmit)
+    #expect(await fixture.terminals.written[id] == [[51], [13]])
+    let reports = await failures.values
+    #expect(reports.count == (acceptsSubmit ? 0 : 1))
+    if !acceptsSubmit { #expect(reports.first?.after == review) }
+  }
+
   @Test("Keys ignored by the CLI keep the request pending and report both screens")
   func ignoredAnswer() async {
     let text = "❯ 1. Yes\n  2. No"
