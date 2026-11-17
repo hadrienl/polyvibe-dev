@@ -139,7 +139,7 @@ struct MarkdownDocumentTests {
       #expect(MarkdownDocument.commandPath("/tmp/test" + control + ".command") == nil)
     }
     #expect(
-      MarkdownDocument.commandPath("/tmp/L'été%20$(echo%20test).command")
+      MarkdownDocument.commandPath("/tmp/L%27%C3%A9t%C3%A9%20$(echo%20test).command")
         == "/tmp/L'été $(echo test).command")
   }
 
