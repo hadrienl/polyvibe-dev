@@ -251,8 +251,10 @@ enum AntigravityTools {
       default: status = .other
       }
       let cleaned = AntigravityTools.cleaned(object["content"] as? String ?? "")
-      text = cleaned.text
-      omittedByteCount = cleaned.omitted
+      // Kept as long as the transcript is read: no more than an output can show.
+      let bounded = ToolOutput.bounded(cleaned.text)
+      text = bounded.text
+      omittedByteCount = cleaned.omitted + bounded.omittedByteCount
       error = (object["error"] as? String).flatMap { $0.isEmpty ? nil : $0 }
     }
 
@@ -287,7 +289,9 @@ enum AntigravityTools {
     }
     text = text.replacingOccurrences(of: "\r\n", with: "\n")
     var omitted = 0
-    if let marker = text.range(of: #"\n?<truncated (\d+) bytes>\n?"#, options: .regularExpression) {
+    if let marker = text.range(
+      of: #"\n?<truncated (\d+) bytes>\n{0,2}"#, options: .regularExpression)
+    {
       let digits = text[marker].filter(\.isNumber)
       omitted = Int(digits) ?? 0
       text.replaceSubrange(marker, with: "\n…\n")

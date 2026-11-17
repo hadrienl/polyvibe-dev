@@ -22,6 +22,12 @@ extension AntigravityAgentProvider: AgentConversationReporting {
   public func subagentTranscripts(beside root: URL, agentIDs: Set<String>)
     -> [SubagentTranscriptInfo]
   {
+    Self.subagentTranscripts(beside: root, agentIDs: agentIDs)
+  }
+
+  static func subagentTranscripts(beside root: URL, agentIDs: Set<String>)
+    -> [SubagentTranscriptInfo]
+  {
     // `brain/<conversation>/.system_generated/logs/transcript.jsonl`
     let brain = root.deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
@@ -147,7 +153,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       let calls = ((object["tool_calls"] as? [[String: Any]]) ?? []).prefix(100)
         .compactMap(AntigravityTools.Call.init)
       return .response(
-        text: ToolOutput.bounded(content).text, thinking: object["thinking"] as? String,
+        text: ToolOutput.bounded(content).text,
+        thinking: (object["thinking"] as? String).map { ToolOutput.bounded($0).text },
         calls: calls)
     case "GENERIC": return .result(AntigravityTools.Result(object))
     case "SYSTEM_MESSAGE": return .message(AntigravityTools.Message(content))
@@ -168,16 +175,27 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     return nil
   }
 
+  /// How many calls of a response come before a prompt of the user taking the place of a result.
+  private func answerable(_ response: Int) -> Int {
+    let count = steps[response]?.kind.calls?.count ?? 0
+    for offset in 0..<count {
+      if case .prompt(.some) = steps[response + 1 + offset]?.kind { return offset }
+    }
+    return count
+  }
+
   private func results(of response: Int) -> ClosedRange<Int> {
     let count = max(1, steps[response]?.kind.calls?.count ?? 0)
     return response + 1...response + count
   }
 
-  /// Whether the steps after a response are its results, one per call in order.
+  /// Whether the steps after a response are its results, one per call in order. A prompt of the
+  /// user among them ends them: the calls left had no result when the user spoke again.
   private func isLinked(_ response: Int) -> Bool {
     guard let calls = steps[response]?.kind.calls else { return false }
     for (offset, call) in calls.enumerated() {
       guard let step = steps[response + 1 + offset] else { continue }
+      if case .prompt(.some) = step.kind { return true }
       guard case .result(let result) = step.kind else { return false }
       if call.name == "run_command", !result.isFailure,
         AntigravityTools.commandExit(result.text) == nil,
@@ -208,6 +226,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       if !text.isEmpty { append("text", .agentText(text)) }
       let linked = isLinked(index)
       openResponses.remove(index)
+      // A snapshot of the response may hold fewer calls than the last one.
+      background = background.filter { !$0.key.hasPrefix(prefix) }
       for (offset, call) in calls.enumerated() {
         let id = "tool:\(offset)"
         guard linked else {
@@ -218,7 +238,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       }
     case .result(let result):
       guard response(covering: index).map(isLinked) != true else { break }
-      let text = result.isFailure ? result.failure : result.text
+      let text = (result.isFailure ? result.failure : result.text)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
       if !text.isEmpty {
         append("information", .notice(.information(AntigravityTools.shorteningTasks(text))))
       }
@@ -233,8 +254,9 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     -> ToolCall
   {
     var tool = AntigravityTools.toolCall(call, id: id)
-    background[id] = nil
-    guard let step = steps[response + 1 + offset], case .result(let result) = step.kind else {
+    guard offset < answerable(response), let step = steps[response + 1 + offset],
+      case .result(let result) = step.kind
+    else {
       openResponses.insert(response)
       tool.state = lastPrompt > response ? .interrupted : .running
       if tool.kind == .subagent { tool.subagent?.startedAt = steps[response]?.date }
