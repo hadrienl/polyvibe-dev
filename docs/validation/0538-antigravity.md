@@ -52,14 +52,28 @@
   its own identity. The automation adapter then failed to bind that identity despite listing it
   running. Full create/restart/adopt interactions through the app's UI remain manual recipe steps.
 
+## Recipe accepted — 2026-11-17
+
+The user validated the local recipe on the signed Release build `6e2bb47d`, rebased on
+`main` at `3b13e4bf`. This build is arm64, excludes the iPhone companion, uses its own bundle
+identity and isolated recipe data, and passed `codesign --verify --deep --strict`.
+The initial stalled launch was resolved by stopping only the test process and relaunching it;
+the precise original cause was not established. The launcher now detaches from Terminal.
+
+The user confirmed that Antigravity must stay absent from **Add an Account**: a separate
+configuration folder does not isolate the macOS keychain sign-in. No placeholder account or
+redirect is added. The remaining UI adjustment changes the existing account picker from a
+segmented control to a menu; this adjustment was made after the tested build.
+
 ## Verdict
 
-**PARTIAL — ready for local testing, not declared merge-ready.** Core launch/resume/activity and
-basic conversation support are implemented and tested. The user recipe is in
-`/Users/hadrien/Documents/vibe-manager/.build/Antigravity-538/`, with an isolated `.command`
-launcher and `LIRE-MOI.md`. Advanced capabilities are tracked in
-[#541](https://github.com/hadrienl/vibe-manager/issues/541); the existing test failures and full
-manual app lifecycle recipe still require follow-up before considering #538 complete.
+**Local recipe accepted by the user.** Core launch/resume/activity and basic conversation support
+are implemented. Advanced capabilities remain explicitly outside this scope and are tracked in
+[#541](https://github.com/hadrienl/vibe-manager/issues/541).
+
+The earlier test results above are historical. GitHub CI passed for the previous PR head
+`d30a38b9`; checks must run again on the rebased branch and final UI adjustment. User acceptance
+is not a claim that every manual step was independently observed by an automated tool.
 
 Validation follows the `prisme-ai:ticket-validator` skill. No production sessions or CLI credential
 files were modified by the implementation.
