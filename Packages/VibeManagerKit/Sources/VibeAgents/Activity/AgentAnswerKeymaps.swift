@@ -78,7 +78,12 @@ public struct ClaudeCodeAnswerKeymap: AgentAnswerKeymap {
     case (.answers(let answers), .questions(let questions)):
       guard let groups = Self.keystrokeGroups(for: answers, to: questions) else { return false }
       var start = 0
-      for group in groups.dropLast() {
+      for (index, group) in groups.enumerated() {
+        if questions.indices.contains(index), questions[index].showsPreviews,
+          step == start + 1
+        {
+          return true
+        }
         start += group.count
         if start == step { return true }
       }
@@ -97,9 +102,10 @@ public struct ClaudeCodeAnswerKeymap: AgentAnswerKeymap {
     guard case .answers(let answers) = answer, case .questions(let questions) = content else {
       return keystrokes(for: answer, to: content, screen: screen)
     }
-    guard let screen, let tabs = screen.questionTabs, tabs.count == questions.count,
-      let groups = Self.keystrokeGroups(for: answers, to: questions)
+    guard let screen, let groups = Self.keystrokeGroups(for: answers, to: questions)
     else { return nil }
+    let tabs = screen.questionTabs ?? (questions.count == 1 ? [false] : [])
+    guard tabs.count == questions.count else { return nil }
     let shown = tabs.firstIndex(of: false) ?? questions.count
     guard tabs[shown...].allSatisfy({ !$0 }) else { return nil }
     if shown == questions.count {
@@ -110,6 +116,11 @@ public struct ClaudeCodeAnswerKeymap: AgentAnswerKeymap {
     }
     guard Self.isDrawn(questions[shown], on: screen), !Self.hasTickedBox(screen) else {
       return nil
+    }
+    if questions[shown].showsPreviews, case .option(let index) = answers[shown],
+      screen.pointedOption == index + 1
+    {
+      return Array(groups[shown].dropFirst()) + groups.dropFirst(shown + 1).flatMap { $0 }
     }
     return groups[shown...].flatMap { $0 }
   }

@@ -9,6 +9,30 @@ import VibeDomain
 /// terminal of the request's own session, looked up when they are written — the session in front
 /// of the user is never touched.
 public struct AnswerAgentRequest: Sendable {
+  public struct Failure: Sendable {
+    public let requestID: String
+    public let outcome: Outcome
+    public let request: String
+    public let answer: String
+    public let before: String
+    public let after: String
+    public let keys: [[UInt8]]
+    public let writtenKeys: [[UInt8]]
+
+    public init(
+      requestID: String, outcome: Outcome, request: String, answer: String,
+      before: String, after: String, keys: [[UInt8]], writtenKeys: [[UInt8]]
+    ) {
+      self.requestID = requestID
+      self.outcome = outcome
+      self.request = request
+      self.answer = answer
+      self.before = before
+      self.after = after
+      self.keys = keys
+      self.writtenKeys = writtenKeys
+    }
+  }
   public enum Outcome: String, Hashable, Sendable, DiagnosticTokenConvertible {
     case sent
     /// The request is no longer the one on screen: answered, refused or gone meanwhile.
@@ -39,6 +63,8 @@ public struct AnswerAgentRequest: Sendable {
   private let screen: @Sendable (SessionID) async -> String?
   private let sleep: @Sendable (Duration) async throws -> Void
   private let diagnostics: Diagnostics
+  private let confirmsDelivery: Bool
+  private let failed: @Sendable (Failure) async -> Void
 
   /// - Parameters:
   ///   - write: types bytes into the session's running terminal; `false` when none runs.
@@ -50,7 +76,9 @@ public struct AnswerAgentRequest: Sendable {
     lastOutput: @escaping @Sendable (SessionID) async -> ContinuousClock.Instant? = { _ in nil },
     screen: @escaping @Sendable (SessionID) async -> String? = { _ in nil },
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
-    diagnostics: Diagnostics = .disabled
+    diagnostics: Diagnostics = .disabled,
+    confirmsDelivery: Bool = false,
+    failed: @escaping @Sendable (Failure) async -> Void = { _ in }
   ) {
     self.tracker = tracker
     self.write = write
@@ -58,11 +86,27 @@ public struct AnswerAgentRequest: Sendable {
     self.screen = screen
     self.sleep = sleep
     self.diagnostics = diagnostics
+    self.confirmsDelivery = confirmsDelivery
+    self.failed = failed
   }
 
   @discardableResult
   public func callAsFunction(_ answer: AgentAnswer, to id: AgentRequestID) async -> Outcome {
-    let outcome = await give(answer, to: id)
+    let request = await tracker.state(for: id.sessionID)?.requests.first { $0.id == id }
+    let before = await screen(id.sessionID)
+    let keys =
+      await tracker.keystrokes(
+        for: answer, to: id, screen: before.flatMap(AgentDialogScreen.init(screen:))) ?? []
+    var written: [[UInt8]] = []
+    let outcome = await give(answer, to: id, written: &written)
+    if [.notOnScreen, .otherDialog, .interrupted].contains(outcome), let request {
+      await failed(
+        Failure(
+          requestID: String(describing: id), outcome: outcome,
+          request: String(reflecting: request.content), answer: String(reflecting: answer),
+          before: before ?? "<unavailable>", after: await screen(id.sessionID) ?? "<unavailable>",
+          keys: keys, writtenKeys: written))
+    }
     diagnostics.record(
       .session, outcome == .sent ? .info : .notice, "request.answered",
       [
@@ -72,7 +116,9 @@ public struct AnswerAgentRequest: Sendable {
     return outcome
   }
 
-  private func give(_ answer: AgentAnswer, to id: AgentRequestID) async -> Outcome {
+  private func give(_ answer: AgentAnswer, to id: AgentRequestID, written: inout [[UInt8]]) async
+    -> Outcome
+  {
     guard await tracker.offers(answer, to: id) else {
       return await tracker.isFirstRequest(id) ? .notAnswerable : .requestGone
     }
@@ -98,6 +144,7 @@ public struct AnswerAgentRequest: Sendable {
     else {
       return await tracker.isFirstRequest(id) ? .notOnScreen : .requestGone
     }
+    var finalScreen = text
     for (index, step) in steps.enumerated() {
       if index > 0 {
         await settle(id.sessionID)
@@ -112,7 +159,38 @@ public struct AnswerAgentRequest: Sendable {
           return .interrupted
         }
       }
+      // Earlier answers may already have advanced to a review. Only leaving the
+      // dialog that awaits the final key proves the whole interaction completed.
+      if confirmsDelivery, index == steps.count - 1 {
+        finalScreen = await screen(id.sessionID)
+      }
       guard await write(id.sessionID, step) else { return .terminalUnavailable }
+      written.append(step)
+    }
+    if confirmsDelivery {
+      let original = finalScreen.flatMap(AgentDialogScreen.init(screen:))
+      let start = ContinuousClock.now
+      var changedReadings = 0
+      while await tracker.isFirstRequest(id) {
+        await settle(id.sessionID)
+        if let current = await screen(id.sessionID) {
+          let dialog = AgentDialogScreen(screen: current)
+          let changed =
+            original == nil
+            ? finalScreen.map { current != $0 } ?? false
+            : (dialog?.options != original?.options
+              || dialog?.confirmation?.server != original?.confirmation?.server
+              || dialog?.confirmation?.message != original?.confirmation?.message
+              || dialog?.folderTrust?.folder != original?.folderTrust?.folder)
+          changedReadings =
+            changed && !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? changedReadings + 1 : 0
+          if changedReadings >= 2 { break }
+        }
+        guard ContinuousClock.now - start < .seconds(3), !Task.isCancelled else {
+          return .interrupted
+        }
+      }
     }
     await tracker.answerSent(id)
     return .sent
@@ -180,7 +258,14 @@ public struct AnswerAgentRequest: Sendable {
     let start = ContinuousClock.now
     while true {
       let drawn = await screen(id.sessionID).flatMap(AgentDialogScreen.init(screen:))
-      if await tracker.keystrokesLeft(for: answer, to: id, screen: drawn) == keys { return true }
+      let left = await tracker.keystrokesLeft(for: answer, to: id, screen: drawn)
+      if left == keys { return true }
+      // A preview already pointing at the requested choice still accepts its digit again.
+      if keys.count >= 2, keys[1] == TerminalKeys.enter,
+        keys[0].count == 1, (49...57).contains(keys[0][0]), left == Array(keys.dropFirst())
+      {
+        return true
+      }
       guard ContinuousClock.now - start < Self.settleLimit else { return false }
       do {
         try await sleep(Self.quietPeriod)

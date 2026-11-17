@@ -436,6 +436,10 @@ public final class AppEnvironment {
     launcher.commandTyped = { [weak conversations] id, command in
       conversations?.commandTyped(command, in: id)
     }
+    let interactionFailures = InteractionFailureReporter(
+      directory: data.logs.appendingPathComponent("interaction-failures"),
+      environment: configuration.environment)
+    Task { await interactionFailures.start() }
     appModel = AppModel(
       repository: repository,
       recovery: repository,
@@ -479,7 +483,8 @@ public final class AppEnvironment {
         write: { [weak launcher] id, bytes in await launcher?.writeAnswer(bytes, to: id) ?? false },
         lastOutput: { [weak launcher] id in await launcher?.lastOutput(of: id) },
         screen: { [weak launcher] id in await launcher?.screen(of: id) },
-        diagnostics: diagnostics),
+        diagnostics: diagnostics, confirmsDelivery: true,
+        failed: { await interactionFailures.enqueue($0) }),
       requestPreferences: UserDefaultsRequestPreferences(suiteName: data.defaultsSuite),
       agentUpdatePreferences: UserDefaultsAgentUpdatePreferences(suiteName: data.defaultsSuite),
       approvalPreferences: approvals,

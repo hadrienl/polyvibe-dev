@@ -911,7 +911,9 @@ struct TerminalHostProcessTests {
     kill(identity.processIdentifier, SIGTERM)
 
     #expect(await eventually { location.lastStopRequest() != nil })
-    #expect(!FileManager.default.fileExists(atPath: location.socketPath))
+    // The signal handler records the stop before unlinking the socket. Observing
+    // the marker does not mean that the following unlink has already run.
+    #expect(await eventually { !FileManager.default.fileExists(atPath: location.socketPath) })
     #expect((location.lastStopRequest() ?? .distantPast) >= before.addingTimeInterval(-1))
     guard case .running(let agent) = await session.state() else { return }
     #expect(await eventually { !isProcessAlive(agent) })

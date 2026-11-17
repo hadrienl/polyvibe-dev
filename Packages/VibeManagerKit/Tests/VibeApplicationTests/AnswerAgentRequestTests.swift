@@ -179,6 +179,69 @@ private struct Fixture {
 
 @Suite("Answering a request from the palette", .timeLimit(.minutes(2)))
 struct AnswerAgentRequestTests {
+  @Test(
+    "Ignoring the final key keeps a progressed review pending; accepting it completes it",
+    arguments: [false, true])
+  func finalReview(acceptsSubmit: Bool) async {
+    let live = LiveScreen("❯ 1. Yes\n  2. No")
+    let fixture = Fixture(live: live)
+    let (id, request) = await fixture.asking("review")
+    let review = "❯ 1. Submit answers\n  2. Cancel"
+    await fixture.terminals.setOnWrite { id in
+      let count = await fixture.terminals.written[id]?.count ?? 0
+      await live.show(count == 1 || !acceptsSubmit ? review : "Working…")
+    }
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text }, confirmsDelivery: true,
+      failed: { await failures.append($0) })
+    #expect(await answer(.deny, to: request) == (acceptsSubmit ? .sent : .interrupted))
+    #expect(await fixture.tracker.isFirstRequest(request) == !acceptsSubmit)
+    #expect(await fixture.terminals.written[id] == [[51], [13]])
+    let reports = await failures.values
+    #expect(reports.count == (acceptsSubmit ? 0 : 1))
+    if !acceptsSubmit { #expect(reports.first?.after == review) }
+  }
+
+  @Test("Keys ignored by the CLI keep the request pending and report both screens")
+  func ignoredAnswer() async {
+    let text = "❯ 1. Yes\n  2. No"
+    let fixture = Fixture(screen: text, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in text }, confirmsDelivery: true,
+      failed: { await failures.append($0) })
+    #expect(await answer(.allowOnce, to: request) == .interrupted)
+    #expect(await fixture.tracker.isFirstRequest(request))
+    #expect(await fixture.terminals.written[id] == [[49]])
+    let reports = await failures.values
+    #expect(reports.count == 1)
+    #expect(reports.first?.before == text)
+    #expect(reports.first?.after == text)
+    #expect(reports.first?.writtenKeys == [[49]])
+  }
+
+  @Test("A confirmed dialog closing completes the request without a failure report")
+  func confirmedAnswer() async {
+    let live = LiveScreen("❯ 1. Yes\n  2. No")
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (_, request) = await fixture.asking("touch a")
+    await fixture.terminals.setOnWrite { _ in await live.show("Working…") }
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text }, confirmsDelivery: true,
+      failed: { await failures.append($0) })
+    #expect(await answer(.allowOnce, to: request) == .sent)
+    #expect(await failures.values.isEmpty)
+  }
+
   @Test("A permission is exposed only when its actual dialog appears, without writing an answer")
   func watchPendingPermission() async {
     let live = LiveScreen("working")
@@ -363,4 +426,9 @@ struct AnswerAgentRequestTests {
     await relaunched.processAdopted(id, decoder: PermissionDecoder())
     #expect(await relaunched.state(for: id)?.requests.map(\.reference.subject) == ["touch a"])
   }
+}
+
+private actor RecordedInteractionFailures {
+  var values: [AnswerAgentRequest.Failure] = []
+  func append(_ value: AnswerAgentRequest.Failure) { values.append(value) }
 }
