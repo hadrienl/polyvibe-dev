@@ -340,6 +340,52 @@ struct DialogScreenKeymapTests {
   let claude = ClaudeCodeAnswerKeymap()
   let codex = CodexAnswerKeymap()
 
+  @Test(
+    "The tall preview of the Parcourses question remains answerable and Return waits for its highlight"
+  )
+  func tallPreview() throws {
+    let text = """
+      ☐ Liens #120
+      Parcourses Android, ticket #120, PR #125. Laquelle retiens-tu ?
+      ❯ 1. Relais (Recommandé)          ┌────────────────────────────────────┐
+        2. Garder singleTask           │ RELAIS (ma recommandation)         │
+      """ + "\n"
+      + Array(
+        repeating: "                                │ Preview line                       │",
+        count: 24
+      ).joined(separator: "\n") + """
+
+                                        └────────────────────────────────────┘
+                                        Notes: press n to add notes
+        ──────────────────────────────────────────────────────────────────────
+          Chat about this
+        Enter to select · ↑/↓ to navigate · n to add notes · Esc to cancel
+        """
+    let question = AgentQuestion(
+      header: "Liens #120", text: "Laquelle retiens-tu ?",
+      options: [
+        .init(label: "Relais (Recommandé)", preview: "RELAIS"),
+        .init(label: "Garder singleTask", preview: "SINGLETASK"),
+      ],
+      allowsFreeText: false)
+    let content = AgentRequestContent.questions([question])
+    let answer = AgentAnswer.answers([.option(1)])
+    let before = try #require(AgentDialogScreen(screen: text))
+    #expect(before.pointedOption == 1)
+    #expect(claude.keystrokes(for: answer, to: content, screen: before) == [[50], [13]])
+    #expect(claude.rereadsScreen(beforeStep: 1, of: answer, to: content))
+    #expect(claude.keystrokesLeft(for: answer, to: content, screen: before) != [[13]])
+    let moved = text.replacingOccurrences(of: "❯ 1.", with: "  1.")
+      .replacingOccurrences(of: "  2. Garder", with: "❯ 2. Garder")
+    let after = try #require(AgentDialogScreen(screen: moved))
+    #expect(claude.keystrokesLeft(for: answer, to: content, screen: after) == [[13]])
+    #expect(
+      AgentDialogScreen(screen: text + "\n────────────────────\n❯\n────────────────────") == nil)
+    #expect(
+      AgentDialogScreen(
+        screen: text.replacingOccurrences(of: "Notes: press n to add notes", with: "")) == nil)
+  }
+
   private func permission(
     _ tool: AgentToolPermission.Tool = .shell, purpose: String? = nil,
     always: AgentAlwaysAllow? = AgentAlwaysAllow(rules: [.commandPrefix], scope: .session)

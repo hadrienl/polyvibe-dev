@@ -168,6 +168,10 @@ extension AppModel {
     answeringRequestIDs.insert(id)
     let outcome = await answerRequest(answer, to: id)
     answeringRequestIDs.remove(id)
+    if [.notOnScreen, .otherDialog, .interrupted].contains(outcome) {
+      setPresentation(.terminal, of: id.sessionID)
+      openSession(for: id)
+    }
     requestOutcome = RequestOutcome(
       id: UUID(), sessionName: name, answer: answer, outcome: outcome)
     Announcer.announce(Self.announcement(of: answer, outcome: outcome, sessionName: name))

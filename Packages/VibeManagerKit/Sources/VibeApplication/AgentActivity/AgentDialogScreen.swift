@@ -101,6 +101,8 @@ public struct AgentDialogScreen: Hashable, Sendable {
   }
 
   public let options: [Option]
+  /// The option Return would take, when read from a live screen.
+  public let pointedOption: Int?
   /// The tabs Claude Code draws above several questions, each one's box ticked once it has an
   /// answer: `←  ☒ Color  ☐ Pets  ✔ Submit  →` reads `[true, false]`.
   public let questionTabs: [Bool]?
@@ -111,9 +113,10 @@ public struct AgentDialogScreen: Hashable, Sendable {
 
   public init(
     options: [Option], questionTabs: [Bool]? = nil, confirmation: Confirmation? = nil,
-    folderTrust: FolderTrust? = nil
+    folderTrust: FolderTrust? = nil, pointedOption: Int? = nil
   ) {
     self.options = options
+    self.pointedOption = pointedOption
     self.questionTabs = questionTabs
     self.confirmation = confirmation
     self.folderTrust = folderTrust
@@ -146,7 +149,9 @@ public struct AgentDialogScreen: Hashable, Sendable {
       for line in lines[(option.line + 1)...] {
         let indent = line.prefix { $0 == " " }.count
         let rest = line.trimmingCharacters(in: .whitespaces)
-        guard indent > option.indent, !rest.isEmpty, Self.optionLine(line) == nil else { break }
+        guard indent > option.indent, !rest.isEmpty, !rest.hasPrefix("│"), !rest.hasPrefix("└"),
+          Self.optionLine(line) == nil
+        else { break }
         words.append(rest)
       }
       return words
@@ -168,13 +173,33 @@ public struct AgentDialogScreen: Hashable, Sendable {
         run = []
       }
     }
-    guard let last = run.last, lastContent - last.line <= Self.bottomDistance,
+    // A preview can be taller than the option list. Its boxed panel ends above the
+    // Notes footer; measuring from the last option rejects these real dialogs.
+    let previewFooter = lines.lastIndex { $0.contains("Notes: press n to add notes") }
+    let hasPreview =
+      previewFooter.map { footer in
+        guard let first = run.first, let last = run.last,
+          let closing = lines[..<footer].lastIndex(where: { $0.contains("└") && $0.contains("┘") }),
+          closing > last.line, lastContent - footer <= Self.bottomDistance,
+          lines[first.line...last.line].contains(where: { $0.contains("┌") && $0.contains("┐") }),
+          lines[(closing + 1)..<footer].allSatisfy({
+            $0.trimmingCharacters(in: .whitespaces).isEmpty
+          })
+        else { return false }
+        return !lines[(footer + 1)...].contains {
+          let line = $0.trimmingCharacters(in: .whitespaces)
+          return line.hasPrefix("❯") || line.hasPrefix("›")
+        }
+      } ?? false
+    guard let last = run.last,
+      lastContent - last.line <= Self.bottomDistance || hasPreview,
       run.filter(\.isPointed).count == 1
     else {
       let confirmation = Self.confirmation(in: lines, lastContent: lastContent)
       let folderTrust = Self.folderTrust(in: lines, lastContent: lastContent)
       guard confirmation != nil || folderTrust != nil else { return nil }
       self.options = []
+      self.pointedOption = nil
       self.questionTabs = nil
       self.confirmation = confirmation
       self.folderTrust = folderTrust
@@ -187,6 +212,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
       options.append(Option(number: option.number, label: label, shortcut: shortcut))
     }
     self.options = options
+    self.pointedOption = run.first(where: \.isPointed)?.number
     self.questionTabs = run.first.flatMap { Self.questionTabs(above: $0.line, in: lines) }
     self.confirmation = nil
     self.folderTrust = nil
