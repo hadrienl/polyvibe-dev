@@ -176,7 +176,7 @@ struct RequestsSettingsTests {
     let model = await workspace()
     let (window, host) = window(model, page: .requests)
     defer { window.close() }
-    await settle(window, "the page of the alerts") { Self.switches(in: host.view).count == 4 }
+    await settle(window, "the page of the alerts") { Self.switches(in: host.view).count == 5 }
     let sidebar = Self.descendants(of: host.view).compactMap { $0 as? NSOutlineView }
       .compactMap(\.enclosingScrollView).map(\.frame.width)
     #expect(sidebar.first.map { $0 >= SettingsSplitView.sidebarWidth - 1 } == true, "\(sidebar)")
@@ -193,7 +193,7 @@ struct RequestsSettingsTests {
     window.contentViewController = host
     window.setContentSize(NSSize(width: SettingsSplitView.standardWidth, height: 700))
     defer { window.close() }
-    await settle(window, "the alerts") { Self.switches(in: host.view).count == 4 }
+    await settle(window, "the alerts") { Self.switches(in: host.view).count == 5 }
     model.settingsPage = .avatars
     // As wide as the page needs, or as the screen allows: the screen of CI is narrower.
     let wide = min(
@@ -216,7 +216,7 @@ struct RequestsSettingsTests {
     window.isReleasedWhenClosed = false
     window.contentViewController = host
     defer { window.close() }
-    await settle(window, "the alerts") { Self.switches(in: host.view).count == 4 }
+    await settle(window, "the alerts") { Self.switches(in: host.view).count == 5 }
     let bar = { window.frame.height - window.contentLayoutRect.height }
     let alerts = bar()
     model.settingsPage = .avatars
@@ -241,7 +241,7 @@ struct RequestsSettingsTests {
     let model = await workspace()
     let (window, host) = window(model, page: .requests)
     defer { window.close() }
-    await settle(window, "the page of the alerts") { Self.switches(in: host.view).count == 4 }
+    await settle(window, "the page of the alerts") { Self.switches(in: host.view).count == 5 }
     model.settingsPage = .avatars
     // The page of the avatars: its list beside the sidebar's, and no switch of the alerts.
     await settle(window, "the page of the avatars") {
@@ -250,7 +250,7 @@ struct RequestsSettingsTests {
     }
     model.settingsPage = .requests
     await settle(window, "the page of the alerts again") {
-      Self.switches(in: host.view).count == 4
+      Self.switches(in: host.view).count == 5
     }
   }
 
@@ -287,14 +287,14 @@ struct RequestsSettingsTests {
     #expect(settings.notificationsAreReplaced)
     let (window, host) = window(model, page: .requests)
     defer { window.close() }
-    // From the top: the floating panel, the notifications, the Dock badge, the palette.
-    await settle(window, "the switches of the page") { Self.switches(in: host.view).count == 4 }
-    #expect(Self.switches(in: host.view).map(\.isEnabled) == [true, false, true, true])
+    // From the top: the floating panel, the notifications, the rhythm, the Dock badge, the palette.
+    await settle(window, "the switches of the page") { Self.switches(in: host.view).count == 5 }
+    #expect(Self.switches(in: host.view).map(\.isEnabled) == [true, false, true, true, true])
 
     model.floatingPanel?.isEnabled = false
     #expect(!settings.notificationsAreReplaced)
     await settle(window, "the notifications back") {
-      Self.switches(in: host.view).map(\.isEnabled) == [true, true, true, true]
+      Self.switches(in: host.view).map(\.isEnabled) == [true, true, true, true, true]
     }
   }
 
@@ -314,7 +314,7 @@ struct RequestsSettingsTests {
         case .avatars, .alertSounds:
           // The sidebar's list, and the avatars' or the sounds'.
           Self.descendants(of: view).filter { $0 is NSTableView }.count == 2
-        default: Self.switches(in: view).count == 4
+        default: Self.switches(in: view).count == 5
         }
       }
       let bounds = view.bounds.insetBy(dx: -0.5, dy: -0.5)
