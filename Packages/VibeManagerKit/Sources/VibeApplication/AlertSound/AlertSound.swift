@@ -179,15 +179,19 @@ public enum AlertSoundRules {
 @MainActor
 public protocol AlertSoundPreferences: AnyObject {
   var alertSound: AlertSoundChoice { get set }
+  /// Whether the trackpad plays the sound's rhythm with it (#555). On until the user turns it off.
+  var playsRhythm: Bool { get set }
 }
 
 /// Kept for this run only.
 @MainActor
 public final class InMemoryAlertSoundPreferences: AlertSoundPreferences {
   public var alertSound: AlertSoundChoice
+  public var playsRhythm: Bool
 
-  public init(alertSound: AlertSoundChoice = .systemDefault) {
+  public init(alertSound: AlertSoundChoice = .systemDefault, playsRhythm: Bool = true) {
     self.alertSound = alertSound
+    self.playsRhythm = playsRhythm
   }
 }
 

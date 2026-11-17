@@ -94,7 +94,9 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
         Self.sessionKey: notification.id.sessionID.rawValue.uuidString,
         Self.requestKey: notification.id.key,
       ]
-      deliver(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+      deliver(
+        UNNotificationRequest(identifier: identifier, content: content, trigger: nil),
+        feels: content.sound != nil)
     }
   }
 
@@ -112,7 +114,9 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
       content.sound = alertSound
       content.threadIdentifier = session
       content.userInfo = [Self.sessionKey: session, Self.outcomeKey: true]
-      deliver(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
+      deliver(
+        UNNotificationRequest(identifier: identifier, content: content, trigger: nil),
+        feels: content.sound != nil)
     }
   }
 
@@ -198,8 +202,12 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
   /// the delivered ones first, for a few seconds at most.
   private func deliverSoundOnly(_ request: UNNotificationRequest) {
     let identifier = request.identifier
-    center.add(request) { [weak self] _ in
-      Task { @MainActor in await self?.withdrawOnceDelivered(identifier) }
+    center.add(request) { [weak self] error in
+      let added = error == nil
+      Task { @MainActor in
+        if added { await self?.feelIfSounding() }
+        await self?.withdrawOnceDelivered(identifier)
+      }
     }
   }
 
@@ -246,12 +254,34 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
   }
 
   /// Adds it, with a handler: the center is not `Sendable` in every SDK the application is built
-  /// with, and is only called here, on the main actor.
-  private func deliver(_ request: UNNotificationRequest) {
+  /// with, and is only called here, on the main actor. One that `feels` carries the alert sound:
+  /// the trackpad plays its rhythm once it is added.
+  private func deliver(_ request: UNNotificationRequest, feels: Bool = false) {
     let identifier = request.identifier
-    center.add(request) { [weak self] _ in
-      Task { @MainActor in self?.withdrawIfUnwanted(identifier) }
+    center.add(request) { [weak self] error in
+      let added = error == nil
+      Task { @MainActor in
+        guard let self else { return }
+        self.withdrawIfUnwanted(identifier)
+        if feels, added, self.wanted.contains(identifier) { await self.feelIfSounding() }
+      }
     }
+  }
+
+  /// macOS plays the sound of a notification just added, unless the user turned the sounds of
+  /// the application's notifications off in System Settings: the trackpad plays its rhythm (#555).
+  /// A Focus keeps the sound quiet without the application knowing: the rhythm still plays.
+  private func feelIfSounding() async {
+    let soundsOn = await setting { $0.soundSetting == .enabled }
+    guard Self.feels(soundsOn: soundsOn, inFront: NSApp?.isActive == true) else { return }
+    model?.alertSounds?.feelAlert()
+  }
+
+  /// Whether macOS plays the sound of a notification just added: not when the user turned the
+  /// sounds of the application's notifications off, nor in front — `willPresent` presents
+  /// nothing there, the application having come to the front meanwhile.
+  nonisolated static func feels(soundsOn: Bool, inFront: Bool) -> Bool {
+    soundsOn && !inFront
   }
 
   /// Taken away while it was being added: it must not stay.
@@ -305,12 +335,18 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
     }
   }
 
-  /// Only the status leaves the handler: the settings themselves are not `Sendable` in every SDK
-  /// the application is built with.
   private func authorizationStatus() async -> UNAuthorizationStatus {
+    await setting { $0.authorizationStatus }
+  }
+
+  /// One of the notification settings: only it leaves the handler, the settings themselves not
+  /// being `Sendable` in every SDK the application is built with.
+  private func setting<Value: Sendable>(
+    _ read: @escaping @Sendable (UNNotificationSettings) -> Value
+  ) async -> Value {
     await withCheckedContinuation { continuation in
       center.getNotificationSettings { settings in
-        continuation.resume(returning: settings.authorizationStatus)
+        continuation.resume(returning: read(settings))
       }
     }
   }

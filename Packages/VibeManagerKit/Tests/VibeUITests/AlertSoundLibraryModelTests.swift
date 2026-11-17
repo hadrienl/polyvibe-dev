@@ -17,6 +17,15 @@ final class RecordingSoundPlayer: AlertSoundPlaying {
   var count: Int { played.count + systemAlerts }
 }
 
+/// The rhythms the trackpad would play (#555), recorded.
+final class RecordingRhythmPlayer: AlertRhythmPlaying {
+  private(set) var played: [AlertSoundRhythm] = []
+  private(set) var prepared = 0
+
+  func prepare() { prepared += 1 }
+  func play(_ rhythm: AlertSoundRhythm) { played.append(rhythm) }
+}
+
 /// Where the notifications would find the sound, recorded.
 private final class RecordingInstaller: NotificationSoundInstalling, @unchecked Sendable {
   private let lock = NSLock()
@@ -113,13 +122,15 @@ struct AlertSoundLibraryModelTests {
     preferences: InMemoryAlertSoundPreferences = .init(),
     generator: (any AlertSoundGenerating)? = nil,
     installer: (any NotificationSoundInstalling)? = nil,
-    player: RecordingSoundPlayer = RecordingSoundPlayer(), clock: Clock = Clock()
+    player: RecordingSoundPlayer = RecordingSoundPlayer(), clock: Clock = Clock(),
+    rhythm: RecordingRhythmPlayer? = nil, systemAlertFile: URL? = nil
   ) throws -> AlertSoundLibraryModel {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     let model = AlertSoundLibraryModel(
       library: library, preferences: preferences,
       generators: generator.map { FixedGenerators(generator: $0) }, installer: installer,
-      player: player, systemSoundsDirectory: try systemFolder(),
+      player: player, rhythmPlayer: rhythm, systemAlertFile: { systemAlertFile },
+      systemSoundsDirectory: try systemFolder(),
       cacheDirectory: folder.appendingPathComponent("Cache", isDirectory: true), language: "fr",
       now: { clock.now })
     model.announce = { _ in
@@ -193,13 +204,100 @@ struct AlertSoundLibraryModelTests {
     #expect(player.systemAlerts == 2)
   }
 
-  @Test("None plays nothing")
+  @Test("None plays nothing, and is not felt")
   func silent() async throws {
     let player = RecordingSoundPlayer()
-    let sounds = try model(preferences: .init(alertSound: .none), player: player)
+    let rhythm = RecordingRhythmPlayer()
+    let sounds = try model(preferences: .init(alertSound: .none), player: player, rhythm: rhythm)
     await sounds.load()
     sounds.playAlert()
+    sounds.feelAlert()
     #expect(player.count == 0)
+    #expect(rhythm.played.isEmpty)
+  }
+
+  @Test("An alert is felt with its sound: a shipped sound's rhythm is its recipe's (#555)")
+  func rhythm() async throws {
+    let player = RecordingSoundPlayer()
+    let rhythm = RecordingRhythmPlayer()
+    let sounds = try model(
+      preferences: .init(alertSound: .bundled("signal")), player: player, rhythm: rhythm)
+    await sounds.load()
+    #expect(rhythm.prepared == 1)
+    sounds.playAlert()
+    while rhythm.played.isEmpty { await Task.yield() }
+    #expect(rhythm.played == [AlertSoundRhythm(recipe: BundledAlertSound.signal.recipe)])
+    #expect(player.played.count == 1)
+  }
+
+  @Test(
+    "The rhythm of a notification never silences the next alert, on or off (#555)",
+    arguments: [true, false])
+  func feltKeepsSecond(playsRhythm: Bool) async throws {
+    let player = RecordingSoundPlayer()
+    let sounds = try model(
+      preferences: .init(playsRhythm: playsRhythm), player: player,
+      rhythm: RecordingRhythmPlayer())
+    await sounds.load()
+    sounds.feelAlert()
+    sounds.playAlert()
+    #expect(player.systemAlerts == 1)
+  }
+
+  @Test("Turned off, the sound plays without its rhythm; turned on again, kept (#555)")
+  func rhythmOff() async throws {
+    let player = RecordingSoundPlayer()
+    let rhythm = RecordingRhythmPlayer()
+    let preferences = InMemoryAlertSoundPreferences(playsRhythm: false)
+    let sounds = try model(preferences: preferences, player: player, rhythm: rhythm)
+    await sounds.load()
+    sounds.playAlert()
+    #expect(player.systemAlerts == 1)
+    #expect(rhythm.played.isEmpty)
+    #expect(rhythm.prepared == 0)
+    sounds.playsRhythm = true
+    #expect(preferences.playsRhythm)
+    #expect(rhythm.prepared == 1)
+  }
+
+  @Test("A notification's sound is felt once with an alert of the same second (#555)")
+  func feltOnce() async throws {
+    let rhythm = RecordingRhythmPlayer()
+    let clock = Clock()
+    let sounds = try model(clock: clock, rhythm: rhythm)
+    await sounds.load()
+    sounds.playAlert()
+    sounds.feelAlert()
+    #expect(rhythm.played == [.single])
+    clock.advance(1.5)
+    sounds.feelAlert()
+    #expect(rhythm.played.count == 2)
+  }
+
+  @Test("The default is felt with the rhythm of the system's alert sound (#555)")
+  func systemRhythm() async throws {
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let file = folder.appendingPathComponent("Beep.wav")
+    var samples = [Float](repeating: 0, count: 13_230)
+    for start in [0, 6_615] {
+      for index in start..<start + 900 { samples[index] = index.isMultiple(of: 2) ? 0.8 : -0.8 }
+    }
+    try AlertSoundWave.encode(samples).write(to: file)
+    let rhythm = RecordingRhythmPlayer()
+    let sounds = try model(rhythm: rhythm, systemAlertFile: file)
+    await sounds.load()
+    sounds.playAlert()
+    #expect(rhythm.played.first?.taps.count == 2)
+  }
+
+  @Test("Selecting a sound lets it be felt (#555)")
+  func selectFelt() async throws {
+    let rhythm = RecordingRhythmPlayer()
+    let sounds = try model(rhythm: rhythm)
+    await sounds.load()
+    sounds.select(.sound(.bundled("chime")))
+    while rhythm.played.isEmpty { await Task.yield() }
+    #expect(rhythm.played == [AlertSoundRhythm(recipe: BundledAlertSound.chime.recipe)])
   }
 
   @Test("Selecting a sound plays it; a shipped one is played from its cache")

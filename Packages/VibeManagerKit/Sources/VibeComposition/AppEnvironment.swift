@@ -578,6 +578,8 @@ public final class AppEnvironment {
       generators: AgentAlertSoundGenerators(agents: registry),
       installer: Self.bundleName().map { NotificationSoundFolder(applicationName: $0) },
       player: SystemAlertSoundPlayer(),
+      // The trackpad too (#555): a test never taps the developer's.
+      rhythmPlayer: Self.bundleName().map { _ in TrackpadRhythmPlayer() },
       cacheDirectory: dataFolder.appendingPathComponent("Sounds/Shipped", isDirectory: true))
     appModel.alertSounds = alertSounds
     Task { await alertSounds.load() }
