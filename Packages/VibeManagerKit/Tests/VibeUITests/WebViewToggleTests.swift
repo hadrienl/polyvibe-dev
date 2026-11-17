@@ -211,6 +211,7 @@ struct WebViewToggleTests {
     try await waitUntil("every program told the column's size", in: workspace) {
       let sizes = viewports(in: workspace)
       return sizes[0] != nil && sizes.allSatisfy { $0 == sizes[0] }
+        && hidden.allSatisfy { $0.frame.size == shown.frame.size }
     }
     let settled = viewports(in: workspace)[0]
     let hiddenSizes = hidden.map(\.frame.size)
@@ -229,9 +230,12 @@ struct WebViewToggleTests {
     #expect(hidden.map(\.frame.size) == hiddenSizes, "\(workspace.state)")
 
     // Then the column stays put: each hidden terminal takes its size, once.
+    // Equal character-grid viewports do not prove deferred pixel frames settled yet:
+    // two different frame sizes can report the same rows and columns.
     try await waitUntil("every program told the narrower column's size", in: workspace) {
       let sizes = viewports(in: workspace)
       return sizes[0] != settled && sizes.allSatisfy { $0 == sizes[0] }
+        && hidden.allSatisfy { $0.frame.size == shown.frame.size }
     }
     #expect(hidden.allSatisfy { $0.frame.size == shown.frame.size }, "\(workspace.state)")
 
