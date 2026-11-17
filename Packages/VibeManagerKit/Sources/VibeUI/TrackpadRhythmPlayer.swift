@@ -22,10 +22,13 @@ protocol HapticTapping: Sendable {
   var isFallback: Bool { get }
   /// Whether a trackpad took it.
   func tap() -> Bool
+  /// Whether the trackpads changed since it was loaded: one plugged in, or unplugged.
+  func isOutdated() -> Bool
 }
 
 extension HapticTapping {
   var isFallback: Bool { false }
+  func isOutdated() -> Bool { false }
 }
 
 /// The trackpad of the Mac, and any Magic Trackpad: through MultitouchSupport, whose taps are all
@@ -35,7 +38,8 @@ public final class TrackpadRhythmPlayer: AlertRhythmPlaying {
   private let runner: RhythmRunner
 
   public convenience init() {
-    self.init(runner: RhythmRunner(load: TrackpadRhythmPlayer.loadTapper))
+    self.init(
+      runner: RhythmRunner(load: TrackpadRhythmPlayer.loadTapper, fallback: { FeedbackTapper() }))
   }
 
   init(runner: RhythmRunner) {
@@ -85,6 +89,8 @@ final class RhythmRunner: @unchecked Sendable {
   static let retryInterval: Double = 30
 
   private let load: @Sendable () -> any HapticTapping
+  /// What plays when the trackpads open but refuse their taps.
+  private let fallback: @Sendable () -> any HapticTapping
   /// In the tests, a clock that moves; otherwise a wait a newer rhythm cuts short.
   private let sleep: (@Sendable (Double) -> Void)?
   private let now: @Sendable () -> Double
@@ -97,20 +103,26 @@ final class RhythmRunner: @unchecked Sendable {
 
   init(
     load: @escaping @Sendable () -> any HapticTapping,
+    fallback: @escaping @Sendable () -> any HapticTapping,
     sleep: (@Sendable (Double) -> Void)? = nil,
     now: @escaping @Sendable () -> Double = { ProcessInfo.processInfo.systemUptime }
   ) {
     self.load = load
+    self.fallback = fallback
     self.sleep = sleep
     self.now = now
   }
 
-  /// The tapper loaded, or loaded now: the fallback is kept only `retryInterval` seconds.
+  /// The tapper loaded, or loaded now: the fallback is kept only `retryInterval` seconds, the
+  /// trackpads until they change.
   func tapper() -> any HapticTapping {
     loading.withLock {
       let time = now()
-      if let loaded, !loaded.tapper.isFallback || time - loaded.at < Self.retryInterval {
-        return loaded.tapper
+      if let loaded {
+        let expired =
+          loaded.tapper.isFallback
+          ? time - loaded.at >= Self.retryInterval : loaded.tapper.isOutdated()
+        if !expired { return loaded.tapper }
       }
       // The one before is let go first: a trackpad may open for one owner at a time.
       loaded = nil
@@ -120,9 +132,22 @@ final class RhythmRunner: @unchecked Sendable {
     }
   }
 
-  /// Forgets a tapper that failed: a trackpad unplugged, another plugged in.
-  private func forget() {
+  /// Lets go of a tapper that failed — a trackpad unplugged, another plugged in — and loads the
+  /// trackpads again.
+  private func reload() -> any HapticTapping {
     loading.withLock { loaded = nil }
+    return tapper()
+  }
+
+  /// The trackpads open but refuse their taps: the fallback plays until they are looked for
+  /// again, `retryInterval` seconds later.
+  private func degrade() -> any HapticTapping {
+    loading.withLock {
+      loaded = nil
+      let standIn = self.fallback()
+      loaded = (standIn, now())
+      return standIn
+    }
   }
 
   /// Starts a rhythm: the one playing stops.
@@ -155,12 +180,14 @@ final class RhythmRunner: @unchecked Sendable {
   }
 
   func run(_ rhythm: AlertSoundRhythm, generation: Int) {
+    // From the sound's start: loading the trackpads takes time the rhythm must not lag by.
+    let start = now()
     var tapper: (any HapticTapping)? = tapper()
     var reloaded = false
-    let taps = rhythm.spaced(by: tapper?.minimumGap ?? 0).taps
-    let start = now()
     var previous: (planned: Double, at: Double)?
-    for planned in taps {
+    for planned in rhythm.taps {
+      // Too close for the tapper playing — the fallback loses them —, left out.
+      if let previous, planned - previous.planned < tapper?.minimumGap ?? 0 { continue }
       guard isCurrent(generation) else { return }
       let current = now()
       var wait = start + planned - current
@@ -173,9 +200,12 @@ final class RhythmRunner: @unchecked Sendable {
         reloaded = true
         // Let go before the trackpads are opened again.
         tapper = nil
-        forget()
-        tapper = self.tapper()
-        _ = tapper?.tap()
+        tapper = reload()
+        if tapper?.tap() == false {
+          tapper = nil
+          tapper = degrade()
+          _ = tapper?.tap()
+        }
       }
       previous = (planned, now())
     }
@@ -211,6 +241,8 @@ final class MultitouchTapper: HapticTapping, @unchecked Sendable {
   static let actuation: Int32 = 6
 
   let minimumGap = AlertSoundRhythm.mergeInterval
+  /// The trackpads there were when it was loaded, opened or not.
+  private let devices: Set<UInt64>
   private let actuate: Actuate
   private let close: Close?
   private let actuators: [CFTypeRef]
@@ -219,7 +251,8 @@ final class MultitouchTapper: HapticTapping, @unchecked Sendable {
 
   var count: Int { actuators.count }
 
-  private init(actuate: Actuate, close: Close?, actuators: [CFTypeRef]) {
+  private init(devices: Set<UInt64>, actuate: Actuate, close: Close?, actuators: [CFTypeRef]) {
+    self.devices = devices
     self.actuate = actuate
     self.close = close
     self.actuators = actuators
@@ -240,13 +273,21 @@ final class MultitouchTapper: HapticTapping, @unchecked Sendable {
     let create = unsafeBitCast(createSymbol, to: Create.self)
     let open = unsafeBitCast(openSymbol, to: Open.self)
     let close = dlsym(handle, "MTActuatorClose").map { unsafeBitCast($0, to: Close.self) }
-    let actuators = deviceIDs().compactMap { id -> CFTypeRef? in
+    let devices = deviceIDs()
+    let actuators = devices.compactMap { id -> CFTypeRef? in
       guard let actuator = create(id)?.takeRetainedValue() else { return nil }
       return open(actuator) == 0 ? actuator : nil
     }
     guard !actuators.isEmpty else { return nil }
     return MultitouchTapper(
-      actuate: unsafeBitCast(actuateSymbol, to: Actuate.self), close: close, actuators: actuators)
+      devices: Set(devices), actuate: unsafeBitCast(actuateSymbol, to: Actuate.self),
+      close: close, actuators: actuators)
+  }
+
+  /// A look at the registry, a few milliseconds, at the start of each rhythm: a Magic Trackpad
+  /// plugged in after launch is felt from its first alert.
+  func isOutdated() -> Bool {
+    Set(Self.deviceIDs()) != devices
   }
 
   /// The multitouch devices that say they can actuate, by their identifier: a Magic Mouse is a

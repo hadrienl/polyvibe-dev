@@ -47,12 +47,6 @@ struct AlertSoundRhythmTests {
     #expect(many.taps.count == AlertSoundRhythm.maximumTaps)
   }
 
-  @Test("Spaced for a trackpad that loses close taps")
-  func spaced() {
-    let rhythm = AlertSoundRhythm(taps: [0, 0.15, 0.3, 0.5, 1])
-    #expect(rhythm.spaced(by: 0.4).taps == [0, 0.5, 1])
-  }
-
   @Test("Samples tap at each attack")
   func attacks() throws {
     let rhythm = AlertSoundRhythm(samples: clicks(at: [0.1, 0.4, 0.8]), sampleRate: Self.rate)

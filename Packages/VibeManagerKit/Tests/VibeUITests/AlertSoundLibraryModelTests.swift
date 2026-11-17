@@ -230,11 +230,14 @@ struct AlertSoundLibraryModelTests {
     #expect(player.played.count == 1)
   }
 
-  @Test("Turned off, the rhythm of a notification does not silence the next alert (#555)")
-  func offKeepsSecond() async throws {
+  @Test(
+    "The rhythm of a notification never silences the next alert, on or off (#555)",
+    arguments: [true, false])
+  func feltKeepsSecond(playsRhythm: Bool) async throws {
     let player = RecordingSoundPlayer()
     let sounds = try model(
-      preferences: .init(playsRhythm: false), player: player, rhythm: RecordingRhythmPlayer())
+      preferences: .init(playsRhythm: playsRhythm), player: player,
+      rhythm: RecordingRhythmPlayer())
     await sounds.load()
     sounds.feelAlert()
     sounds.playAlert()

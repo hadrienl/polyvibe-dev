@@ -95,7 +95,9 @@ public final class AlertSoundLibraryModel {
     didSet {
       guard playsRhythm != oldValue else { return }
       preferences.playsRhythm = playsRhythm
-      if playsRhythm { rhythmPlayer?.prepare() }
+      guard playsRhythm, let rhythmPlayer else { return }
+      rhythmPlayer.prepare()
+      Task { _ = await rhythm(of: inUse) }
     }
   }
 
@@ -138,6 +140,9 @@ public final class AlertSoundLibraryModel {
   @ObservationIgnored private var versionPreview: URL?
   /// When an alert last sounded: several at once sound once.
   @ObservationIgnored private var lastAlert: Date?
+  /// When an alert was last felt, heard here or from a notification: several at once are felt
+  /// once. Apart from `lastAlert`: the rhythm never changes what is heard.
+  @ObservationIgnored private var lastFelt: Date?
   /// The composition under way: the tests wait for it rather than for a length of time.
   @ObservationIgnored private(set) var task: Task<Void, Never>?
   @ObservationIgnored private var currentRun: UUID?
@@ -194,7 +199,8 @@ public final class AlertSoundLibraryModel {
     systemSounds = Self.soundNames(in: systemSoundsDirectory)
     await refresh()
     if selection == nil { selection = .sound(inUse) }
-    if playsRhythm { rhythmPlayer?.prepare() }
+    guard feels else { return }
+    rhythmPlayer?.prepare()
     _ = await rhythm(of: inUse)
   }
 
@@ -333,6 +339,11 @@ public final class AlertSoundLibraryModel {
       guard outlineGenerations[choice, default: 0] == generation else { continue }
       outlines[choice] = AlertSoundWave.outline(of: sound.samples, count: Self.outlineCount)
       durations[choice] = sound.duration
+      // Its rhythm from the samples in hand: felt with the sound from its first selection.
+      if feels, recipe(of: choice) == nil, rhythms[choice] == nil {
+        let rhythm = await Self.rhythm(of: sound)
+        if outlineGenerations[choice, default: 0] == generation { rhythms[choice] = rhythm }
+      }
     }
   }
 
@@ -413,7 +424,7 @@ public final class AlertSoundLibraryModel {
       // Another version asked for meanwhile is the one heard.
       guard written, versionPreview == url else { return }
       player?.play(url)
-      if playsRhythm { rhythmPlayer?.play(AlertSoundRhythm(recipe: recipe)) }
+      feel(AlertSoundRhythm(recipe: recipe))
     }
   }
 
@@ -423,17 +434,17 @@ public final class AlertSoundLibraryModel {
     let time = now()
     if let lastAlert, time.timeIntervalSince(lastAlert) < Self.alertInterval { return }
     lastAlert = time
+    lastFelt = time
     play(inUse)
   }
 
   /// macOS plays the alert sound of a notification just delivered: the trackpad plays its rhythm
   /// (#555). Several at once, or with an alert played here, are felt once.
   public func feelAlert() {
-    // Turned off, it does not count as an alert: the sounds keep their second.
-    guard playsRhythm, rhythmPlayer != nil, notificationSound != .none else { return }
+    guard feels, notificationSound != .none else { return }
     let time = now()
-    if let lastAlert, time.timeIntervalSince(lastAlert) < Self.alertInterval { return }
-    lastAlert = time
+    if let lastFelt, time.timeIntervalSince(lastFelt) < Self.alertInterval { return }
+    lastFelt = time
     // The rhythm of what the notification plays: the system's default until the sound in use is
     // copied where the notifications find it.
     feel(notificationSound == .systemDefault ? .systemDefault : inUse)
@@ -444,18 +455,29 @@ public final class AlertSoundLibraryModel {
   /// Plays the rhythm of a sound on the trackpad, unless the user turned it off. Known already,
   /// it starts with the sound; otherwise as soon as it is read — unless another was felt since.
   private func feel(_ choice: AlertSoundChoice) {
-    guard playsRhythm, let rhythmPlayer, choice != .none else { return }
-    feeling += 1
-    let turn = feeling
+    guard feels, choice != .none else { return }
     if let rhythm = knownRhythm(of: choice) {
-      rhythmPlayer.play(rhythm)
+      feel(rhythm)
       return
     }
+    feeling += 1
+    let turn = feeling
     Task {
-      guard let rhythm = await rhythm(of: choice), playsRhythm, feeling == turn else { return }
-      rhythmPlayer.play(rhythm)
+      guard let rhythm = await rhythm(of: choice), feeling == turn else { return }
+      feel(rhythm)
     }
   }
+
+  /// Plays `rhythm` in place of any other: one still being read is dropped.
+  private func feel(_ rhythm: AlertSoundRhythm) {
+    guard feels, let rhythmPlayer else { return }
+    feeling += 1
+    rhythmPlayer.play(rhythm)
+  }
+
+  /// Whether the trackpad plays the rhythms: turned on, and a trackpad there is — none in the
+  /// tests, where nothing is read for it either.
+  private var feels: Bool { playsRhythm && rhythmPlayer != nil }
 
   /// The rhythm of a sound without reading it: a recipe's, made each time — a composed sound
   /// changes —, or one read before.
@@ -565,7 +587,7 @@ public final class AlertSoundLibraryModel {
     self.choice = choice
     preferences.alertSound = choice
     installInUse(clearing: true)
-    Task { _ = await rhythm(of: choice) }
+    if feels { Task { _ = await rhythm(of: choice) } }
     announce(
       LocalizedStringResource(
         "\(AlertSoundPresentation.name(of: choice, in: self)) is the alert sound.",

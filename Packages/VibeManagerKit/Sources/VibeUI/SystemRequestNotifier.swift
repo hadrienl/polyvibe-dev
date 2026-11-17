@@ -272,7 +272,7 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
   /// the application's notifications off in System Settings: the trackpad plays its rhythm (#555).
   /// A Focus keeps the sound quiet without the application knowing: the rhythm still plays.
   private func feelIfSounding() async {
-    let soundsOn = await soundsAreOn()
+    let soundsOn = await setting { $0.soundSetting == .enabled }
     guard Self.feels(soundsOn: soundsOn, inFront: NSApp?.isActive == true) else { return }
     model?.alertSounds?.feelAlert()
   }
@@ -282,16 +282,6 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
   /// nothing there, the application having come to the front meanwhile.
   nonisolated static func feels(soundsOn: Bool, inFront: Bool) -> Bool {
     soundsOn && !inFront
-  }
-
-  /// Only the setting leaves the handler: the settings themselves are not `Sendable` in every
-  /// SDK the application is built with.
-  private func soundsAreOn() async -> Bool {
-    await withCheckedContinuation { continuation in
-      center.getNotificationSettings { settings in
-        continuation.resume(returning: settings.soundSetting == .enabled)
-      }
-    }
   }
 
   /// Taken away while it was being added: it must not stay.
@@ -345,12 +335,18 @@ public final class SystemRequestNotifier: NSObject, RequestNotifying {
     }
   }
 
-  /// Only the status leaves the handler: the settings themselves are not `Sendable` in every SDK
-  /// the application is built with.
   private func authorizationStatus() async -> UNAuthorizationStatus {
+    await setting { $0.authorizationStatus }
+  }
+
+  /// One of the notification settings: only it leaves the handler, the settings themselves not
+  /// being `Sendable` in every SDK the application is built with.
+  private func setting<Value: Sendable>(
+    _ read: @escaping @Sendable (UNNotificationSettings) -> Value
+  ) async -> Value {
     await withCheckedContinuation { continuation in
       center.getNotificationSettings { settings in
-        continuation.resume(returning: settings.authorizationStatus)
+        continuation.resume(returning: read(settings))
       }
     }
   }

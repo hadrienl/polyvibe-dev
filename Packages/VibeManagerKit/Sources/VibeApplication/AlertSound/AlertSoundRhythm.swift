@@ -26,12 +26,6 @@ public struct AlertSoundRhythm: Hashable, Sendable {
     self.taps = kept.isEmpty ? [0] : kept
   }
 
-  /// The same rhythm, with no two taps closer than `gap`: what a trackpad that loses the taps too
-  /// close together still plays.
-  public func spaced(by gap: Double) -> AlertSoundRhythm {
-    AlertSoundRhythm(taps: taps, minimumGap: gap)
-  }
-
   // MARK: - From a recipe
 
   /// A tap at the start of every note of a voice that is heard. The echo adds none: it repeats
