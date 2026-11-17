@@ -4,7 +4,7 @@ import VibeDomain
 
 /// An endpoint the user declared, as an agent among the others (#107).
 ///
-/// Its sessions run Claude Code or Codex — the harness — pointed at the gateway, which translates
+/// Its sessions run Claude Code, Codex or Antigravity — the harness — pointed at the gateway, which translates
 /// between the harness's protocol and the endpoint's. So a session on an endpoint is a real session
 /// of that CLI: its terminal, its transcript, its hooks, its prompts and its resume are the CLI's,
 /// and every feature built on them works unchanged. This type only says so: it relays each of those
@@ -17,6 +17,7 @@ public struct EndpointAgentProvider: AgentProvider {
   public enum Harness: Sendable {
     case claudeCode(ClaudeCodeAgentProvider)
     case codex(CodexAgentProvider)
+    case antigravity(AntigravityAgentProvider)
   }
 
   public let endpoint: Endpoint
@@ -45,16 +46,25 @@ public struct EndpointAgentProvider: AgentProvider {
   }
 
   /// The provider for `endpoint`, with the harness its settings resolve to. A Codex harness gets
-  /// the type that also relays Codex's approval of hooks.
+  /// the type that also relays Codex's approval of hooks; an Antigravity one, the type that does
+  /// not claim tools or instructions it cannot give. `nil` for an Antigravity endpoint when
+  /// no Antigravity provider is registered.
   public static func make(
     endpoint: Endpoint,
     claudeCode: ClaudeCodeAgentProvider,
     codex: CodexAgentProvider,
+    antigravity: AntigravityAgentProvider? = nil,
     gateway: any EndpointGatewayControlling,
     secrets: any EndpointSecretStore,
     gatewayDirectory: URL? = nil
-  ) -> any AgentProvider {
+  ) -> (any AgentProvider)? {
     switch endpoint.harness.resolved(for: endpoint.wireProtocol) {
+    case .antigravity:
+      guard let antigravity else { return nil }
+      return AntigravityEndpointAgentProvider(
+        base: EndpointAgentProvider(
+          endpoint: endpoint, harness: .antigravity(antigravity), gateway: gateway,
+          secrets: secrets, gatewayDirectory: gatewayDirectory))
     case .claudeCode:
       return EndpointAgentProvider(
         endpoint: endpoint, harness: .claudeCode(claudeCode), gateway: gateway, secrets: secrets,
@@ -78,6 +88,7 @@ public struct EndpointAgentProvider: AgentProvider {
     switch harness {
     case .claudeCode(let provider): return provider
     case .codex(let provider): return provider
+    case .antigravity(let provider): return provider
     }
   }
 
@@ -85,6 +96,7 @@ public struct EndpointAgentProvider: AgentProvider {
     switch harness {
     case .claudeCode: return .claudeCode
     case .codex: return .codex
+    case .antigravity: return .antigravity
     }
   }
 
@@ -192,7 +204,13 @@ public struct EndpointAgentProvider: AgentProvider {
     }
     var harnessRequest = request
     harnessRequest.modelID = Self.harnessModelName(model)
-    if harnessKind == .codex { harnessRequest.codexApprovalMode = endpoint.codexApprovalMode }
+    switch harnessKind {
+    case .codex: harnessRequest.approvalMode = endpoint.codexApprovalMode
+    // Antigravity's Automatic mode needs a personal account, which a gateway session is not:
+    // Manual, never the native agent's preference.
+    case .antigravity: harnessRequest.approvalMode = .manual
+    case .claudeCode: harnessRequest.approvalMode = nil
+    }
     let plan = try await harnessProvider.launchPlan(for: harnessRequest)
     return AgentLaunchPlan(
       providerID: descriptor.id, executablePath: plan.executablePath, arguments: plan.arguments,
@@ -288,6 +306,24 @@ extension EndpointAgentProvider: AgentLaunchPreparing {
         ]
       }
       return plan.adding(options: options, environment: [Self.tokenVariable: token])
+    case .antigravity:
+      // agy's enterprise model gateway, in Chat Completions: it asks `<URL>/v1/chat/completions`
+      // with the key as a bearer token, and needs no Google sign-in. Plain HTTP is accepted for a
+      // gateway on this Mac only, which this one is. Whatever else would choose the session's
+      // model or credentials — the user's own gateway, a Gemini key, ADC — is taken out.
+      let inherited = plan.environment.keys.filter {
+        $0.hasPrefix("AGY_LLM_GATEWAY_") || $0.hasPrefix("GOOGLE_GEMINI_")
+      }
+      return plan.removingEnvironment(
+        inherited + ["GEMINI_API_KEY", "GOOGLE_API_KEY", "AGY_ADC_AUTH"]
+      ).adding(
+        options: [],
+        environment: [
+          "AGY_LLM_GATEWAY_URL": root.absoluteString,
+          "AGY_LLM_GATEWAY_API_KEY": token,
+          "AGY_LLM_GATEWAY_WIRE_PROTOCOL": "openai",
+          "AGY_LLM_GATEWAY_MODELS": harnessName,
+        ])
     }
   }
 
@@ -381,6 +417,8 @@ extension EndpointAgentProvider: AgentLaunchObserverProviding {
     case .codex(let provider):
       return CodexLaunchObserver(
         sessionID: sessionID, repository: repository, provider: provider, recording: recording)
+    case .antigravity(let provider):
+      return provider.launchObserver(for: sessionID, repository: repository, recording: recording)
     }
   }
 }
@@ -390,6 +428,7 @@ extension EndpointAgentProvider: AgentActivityReporting {
     switch harness {
     case .claudeCode(let provider): return provider.reportingActivity(plan, to: log)
     case .codex(let provider): return provider.reportingActivity(plan, to: log)
+    case .antigravity(let provider): return provider.reportingActivity(plan, to: log)
     }
   }
 
@@ -397,6 +436,7 @@ extension EndpointAgentProvider: AgentActivityReporting {
     switch harness {
     case .claudeCode(let provider): return provider.activityDecoder()
     case .codex(let provider): return provider.activityDecoder()
+    case .antigravity(let provider): return provider.activityDecoder()
     }
   }
 
@@ -410,6 +450,9 @@ extension EndpointAgentProvider: AgentActivityReporting {
     case .codex(let provider):
       return provider.activityDecoder(
         workingDirectoryPath: workingDirectoryPath, environment: environment)
+    case .antigravity(let provider):
+      return provider.activityDecoder(
+        workingDirectoryPath: workingDirectoryPath, environment: environment)
     }
   }
 }
@@ -421,6 +464,9 @@ extension EndpointAgentProvider: AgentToolServing {
     switch harness {
     case .claudeCode(let provider): return provider.providingTools(servers, to: plan)
     case .codex(let provider): return provider.providingTools(servers, to: plan)
+    // Never reached: an Antigravity endpoint is an `AntigravityEndpointAgentProvider`, which does
+    // not offer tools (#541).
+    case .antigravity: return plan
     }
   }
 }
@@ -430,6 +476,8 @@ extension EndpointAgentProvider: AgentInstructing {
     switch harness {
     case .claudeCode(let provider): return provider.instructing(instructions, to: plan)
     case .codex(let provider): return provider.instructing(instructions, to: plan)
+    // Never reached, as above.
+    case .antigravity: return plan
     }
   }
 }
@@ -439,6 +487,7 @@ extension EndpointAgentProvider: AgentConversationReporting {
     switch harness {
     case .claudeCode(let provider): return provider
     case .codex(let provider): return provider
+    case .antigravity(let provider): return provider
     }
   }
 
@@ -542,6 +591,82 @@ extension CodexEndpointAgentProvider: AgentLaunchPreparing, AgentLaunchObserverP
     -> AgentLaunchPlan
   {
     base.providingTools(servers, to: plan)
+  }
+
+  public func conversationFiles(
+    for conversation: SessionAgentConfiguration, in session: WorkSession,
+    hint: AgentActivityEvent?
+  ) -> [URL] {
+    base.conversationFiles(for: conversation, in: session, hint: hint)
+  }
+
+  public func conversationDecoder(for file: URL) -> any ConversationDecoding {
+    base.conversationDecoder(for: file)
+  }
+
+  public var promptFormat: AgentPromptFormat { base.promptFormat }
+
+  public func subagentTranscripts(beside root: URL, agentIDs: Set<String>)
+    -> [SubagentTranscriptInfo]
+  {
+    base.subagentTranscripts(beside: root, agentIDs: agentIDs)
+  }
+
+  public func subagentDecoder(for file: URL, root: URL) -> any ConversationDecoding {
+    base.subagentDecoder(for: file, root: root)
+  }
+
+  public func firstPrompt(ofSubagent file: URL) -> String? {
+    base.firstPrompt(ofSubagent: file)
+  }
+}
+
+/// An endpoint Antigravity drives: everything above but the Vibe Manager tools and instructions,
+/// which `agy` is not given yet (#541). Not claiming them keeps coordination, which is offered to
+/// the agents that conform, from being offered to a session that could not coordinate.
+public struct AntigravityEndpointAgentProvider: AgentProvider {
+  let base: EndpointAgentProvider
+
+  init(base: EndpointAgentProvider) {
+    self.base = base
+  }
+
+  public var endpoint: Endpoint { base.endpoint }
+  public var descriptor: AgentDescriptor { base.descriptor }
+  public func availability(forceRefresh: Bool) async -> AgentAvailability {
+    await base.availability(forceRefresh: forceRefresh)
+  }
+  public func models() async -> [AgentModel] { await base.models() }
+  public func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {
+    try await base.launchPlan(for: request)
+  }
+}
+
+extension AntigravityEndpointAgentProvider: AgentLaunchPreparing, AgentLaunchObserverProviding,
+  AgentActivityReporting, AgentConversationReporting
+{
+  public func preparingLaunch(_ plan: AgentLaunchPlan, session: SessionID) async throws
+    -> AgentLaunchPlan
+  {
+    try await base.preparingLaunch(plan, session: session)
+  }
+
+  public func launchObserver(for sessionID: SessionID, repository: any SessionRepository)
+    -> any AgentLaunchObserver
+  {
+    base.launchObserver(for: sessionID, repository: repository)
+  }
+
+  public func reportingActivity(_ plan: AgentLaunchPlan, to log: URL) -> AgentLaunchPlan {
+    base.reportingActivity(plan, to: log)
+  }
+
+  public func activityDecoder() -> any AgentSignalDecoding { base.activityDecoder() }
+
+  public func activityDecoder(workingDirectoryPath: String?, environment: [String: String])
+    -> any AgentSignalDecoding
+  {
+    base.activityDecoder(workingDirectoryPath: workingDirectoryPath, environment: environment)
   }
 
   public func conversationFiles(

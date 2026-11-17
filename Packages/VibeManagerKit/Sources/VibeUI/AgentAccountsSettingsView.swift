@@ -26,7 +26,7 @@ struct NewAgentAccountPage: View {
         } label: {
           Text("Agent", bundle: .module)
         }
-        .pickerStyle(.segmented)
+        .pickerStyle(.menu)
         .onChange(of: harness) { _, new in
           name = new == .claudeCode ? "Claude 2" : "Codex 2"
           directory = new == .claudeCode ? "~/.claude-2" : "~/.codex-2"

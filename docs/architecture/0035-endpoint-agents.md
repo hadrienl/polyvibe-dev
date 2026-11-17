@@ -25,6 +25,9 @@ only the Anthropic Messages API. A translation is needed for every other protoco
 
 ### A session on an endpoint is a session of Claude Code or Codex
 
+Antigravity was added as a third harness in #538, through the Chat Completions protocol: see ADR
+0045.
+
 An endpoint the user declares is registered among the agents as `endpoint.<uuid>`
 (`EndpointAgentProvider`). Its sessions run the harness its settings name — Claude Code or Codex,
 "automatic" choosing the one that needs no translation — pointed at a local gateway. The provider

@@ -85,15 +85,15 @@ final class AgentAccountCatalog {
   private let environment: [String: String]
   private let diagnostics: any DiagnosticLog
   private let transcriptLocations: TranscriptLocationCache
-  private let codexApprovals: (any CodexApprovalPreferences)?
+  private let approvals: (any AgentApprovalPreferences)?
   private let shell: LoginShellEnvironment
 
   init(
     repository: any AgentAccountRepository, homes: AgentHomes, environment: [String: String],
     diagnostics: any DiagnosticLog, transcriptLocations: TranscriptLocationCache,
-    shell: LoginShellEnvironment, codexApprovals: (any CodexApprovalPreferences)? = nil
+    shell: LoginShellEnvironment, approvals: (any AgentApprovalPreferences)? = nil
   ) {
-    self.codexApprovals = codexApprovals
+    self.approvals = approvals
     self.repository = repository
     self.homes = homes
     self.environment = environment
@@ -107,7 +107,7 @@ final class AgentAccountCatalog {
     return accounts.compactMap {
       AgentAccountProviders.make(
         $0, environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
-        transcriptLocations: transcriptLocations, codexApprovals: codexApprovals)
+        transcriptLocations: transcriptLocations, approvalPreferences: approvals)
     }
   }
 
@@ -151,8 +151,9 @@ public final class EndpointCatalog {
         gatewayDirectory: gatewayDirectory))
   }
 
-  /// The providers of `endpoints`, driven by the Claude Code and Codex of `providers`. None when
-  /// neither is there: the mock agents of the tests drive no endpoint.
+  /// The providers of `endpoints`, driven by the Claude Code, Codex or Antigravity of `providers`.
+  /// None when Claude Code or Codex is missing: the mock agents of the tests drive no endpoint.
+  /// An endpoint Antigravity drives is left out when Antigravity is not registered.
   static func providers(
     for endpoints: [Endpoint], among providers: [any AgentProvider],
     gateway: any EndpointGatewayControlling, secrets: any EndpointSecretStore,
@@ -161,10 +162,11 @@ public final class EndpointCatalog {
     guard let claudeCode = providers.lazy.compactMap({ $0 as? ClaudeCodeAgentProvider }).first,
       let codex = providers.lazy.compactMap({ $0 as? CodexAgentProvider }).first
     else { return [] }
-    return endpoints.map {
+    let antigravity = providers.lazy.compactMap { $0 as? AntigravityAgentProvider }.first
+    return endpoints.compactMap {
       EndpointAgentProvider.make(
-        endpoint: $0, claudeCode: claudeCode, codex: codex, gateway: gateway, secrets: secrets,
-        gatewayDirectory: gatewayDirectory)
+        endpoint: $0, claudeCode: claudeCode, codex: codex, antigravity: antigravity,
+        gateway: gateway, secrets: secrets, gatewayDirectory: gatewayDirectory)
     }
   }
 

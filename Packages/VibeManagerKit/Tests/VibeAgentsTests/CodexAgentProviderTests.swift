@@ -13,7 +13,7 @@ struct CodexAgentProviderTests {
     location: ExecutableLocation = .found(
       path: CodexAgentProviderTests.path, source: .candidateDirectory),
     probe: StubProcessProbe,
-    preferences: (any CodexApprovalPreferences)? = nil
+    preferences: (any AgentApprovalPreferences)? = nil
   ) -> CodexAgentProvider {
     let environment = ["PATH": "/usr/bin", "HOME": "/Users/test"]
     return CodexAgentProvider(
@@ -42,7 +42,7 @@ struct CodexAgentProviderTests {
   @MainActor
   @Test("A saved mode is read at every launch and an endpoint can override it")
   func approvalPreference() async throws {
-    let preferences = InMemoryCodexApprovalPreferences(mode: .autoReview)
+    let preferences = InMemoryAgentApprovalPreferences(mode: .autoReview)
     let agent = provider(probe: StubProcessProbe(), preferences: preferences)
     let request = AgentLaunchRequest(workingDirectoryPath: "/tmp")
     let auto = try await agent.launchPlan(for: request)
@@ -52,7 +52,7 @@ struct CodexAgentProviderTests {
     #expect(!manual.arguments.contains("--approve-for-me"))
     #expect(manual.arguments.contains("approvals_reviewer=\"user\""))
     var overridden = request
-    overridden.codexApprovalMode = .autoReview
+    overridden.approvalMode = .autoReview
     let endpoint = try await agent.launchPlan(for: overridden)
     #expect(endpoint.arguments.contains("--approve-for-me"))
   }

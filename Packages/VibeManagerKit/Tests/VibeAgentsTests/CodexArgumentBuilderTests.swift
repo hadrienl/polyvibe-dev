@@ -36,7 +36,7 @@ struct CodexArgumentBuilderTests {
     for mode in CodexApprovalMode.allCases {
       let request = AgentLaunchRequest(
         workingDirectoryPath: "/tmp", initialPrompt: "--untrusted-prompt", resume: resume,
-        codexApprovalMode: mode)
+        approvalMode: mode)
       let args = try builder.arguments(
         for: request, promptDelivery: .argument, descriptor: descriptor)
       let separator = try #require(args.firstIndex(of: "--"))

@@ -228,11 +228,16 @@ public enum EndpointHarnessChoice: String, Hashable, Codable, Sendable, CaseIter
   case automatic
   case claudeCode
   case codex
+  /// Antigravity's `agy`, through its enterprise model gateway in Chat Completions (#538).
+  /// Never the automatic choice: the CLI is not the protocol's natural speaker, as Claude Code is
+  /// for Messages and Codex for Responses.
+  case antigravity
 
   public func resolved(for wire: EndpointWireKind) -> EndpointHarness {
     switch self {
     case .claudeCode: return .claudeCode
     case .codex: return .codex
+    case .antigravity: return .antigravity
     case .automatic: return wire == .responses ? .codex : .claudeCode
     }
   }
@@ -241,12 +246,14 @@ public enum EndpointHarnessChoice: String, Hashable, Codable, Sendable, CaseIter
 public enum EndpointHarness: String, Hashable, Codable, Sendable {
   case claudeCode
   case codex
+  case antigravity
 
   /// The agent identifier of the harness, as recorded on a conversation.
   public var providerID: String {
     switch self {
     case .claudeCode: return "claude-code"
     case .codex: return "codex"
+    case .antigravity: return "antigravity"
     }
   }
 }

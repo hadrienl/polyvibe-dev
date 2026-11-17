@@ -330,6 +330,7 @@ struct EndpointsSettingsView: View {
           .tag(EndpointHarnessChoice.automatic)
           Text(verbatim: "Claude Code").tag(EndpointHarnessChoice.claudeCode)
           Text(verbatim: "Codex").tag(EndpointHarnessChoice.codex)
+          Text(verbatim: "Antigravity").tag(EndpointHarnessChoice.antigravity)
         } label: {
           Text("Driven by", bundle: .module)
         }
@@ -344,7 +345,7 @@ struct EndpointsSettingsView: View {
           bundle: .module)
       }
       if binding.wrappedValue.harness.resolved(for: binding.wrappedValue.wireProtocol) == .codex {
-        CodexApprovalModePicker(selection: binding.codexApprovalMode)
+        AgentApprovalModePicker(selection: binding.codexApprovalMode)
       }
     } header: {
       Text("Agent", bundle: .module)

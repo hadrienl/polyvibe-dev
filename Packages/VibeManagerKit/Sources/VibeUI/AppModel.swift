@@ -124,16 +124,18 @@ public final class AppModel {
   /// from the palette.
   let answerRequest: AnswerAgentRequest?
   let requestPreferences: any RequestPreferences
-  let codexApprovalPreferences: any CodexApprovalPreferences
-  private var codexApprovalModes: [AgentProviderID: CodexApprovalMode] = [:]
+  /// The approval mode of each agent that offers one — Codex, its accounts, Antigravity —, under
+  /// its own identifier: one store for all.
+  let approvalPreferences: any AgentApprovalPreferences
+  private var approvalModes: [AgentProviderID: AgentApprovalMode] = [:]
 
-  public func codexApprovalMode(for provider: AgentProviderID) -> CodexApprovalMode {
-    codexApprovalModes[provider] ?? codexApprovalPreferences.mode(for: provider)
+  public func approvalMode(for provider: AgentProviderID) -> AgentApprovalMode {
+    approvalModes[provider] ?? approvalPreferences.mode(for: provider)
   }
 
-  public func setCodexApprovalMode(_ mode: CodexApprovalMode, for provider: AgentProviderID) {
-    codexApprovalPreferences.setMode(mode, for: provider)
-    codexApprovalModes[provider] = mode
+  public func setApprovalMode(_ mode: AgentApprovalMode, for provider: AgentProviderID) {
+    approvalPreferences.setMode(mode, for: provider)
+    approvalModes[provider] = mode
   }
   let agentUpdatePreferences: any AgentUpdatePreferences
   /// Requests whose answer is being typed: their buttons wait.
@@ -850,7 +852,7 @@ public final class AppModel {
     requestPreferences: any RequestPreferences = InMemoryRequestPreferences(),
     /// Whether an agent's sessions restart onto its updated CLI on their own (#409).
     agentUpdatePreferences: any AgentUpdatePreferences = InMemoryAgentUpdatePreferences(),
-    codexApprovalPreferences: any CodexApprovalPreferences = InMemoryCodexApprovalPreferences(),
+    approvalPreferences: any AgentApprovalPreferences = InMemoryAgentApprovalPreferences(),
     /// Every session's web view (#69). A workspace assembled without one offers none.
     browser: BrowserWorkspace? = nil,
     /// Every session's drawer of side terminals (#43). A workspace assembled without one offers
@@ -908,7 +910,7 @@ public final class AppModel {
     self.hookConsents = hookConsents
     self.answerRequest = answerRequest
     self.requestPreferences = requestPreferences
-    self.codexApprovalPreferences = codexApprovalPreferences
+    self.approvalPreferences = approvalPreferences
     self.agentUpdatePreferences = agentUpdatePreferences
     notifiesRequests = requestPreferences.notifiesRequests
     requestNotificationContent = requestPreferences.notificationContent

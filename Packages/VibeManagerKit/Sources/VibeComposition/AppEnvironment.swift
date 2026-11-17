@@ -161,12 +161,13 @@ public final class AppEnvironment {
     // One shell for every agent and account.
     let loginShell = LoginShellEnvironment(
       inherited: configuration.environment, probe: SystemProcessProbe())
-    let codexApprovals = UserDefaultsCodexApprovalPreferences(suiteName: data.defaultsSuite)
+    // One store for every agent that offers an approval mode, under each one's identifier.
+    let approvals = UserDefaultsAgentApprovalPreferences(suiteName: data.defaultsSuite)
     let providers =
       configuration.providers?(diagnostics.log)
       ?? Self.providers(
         environment: configuration.environment, diagnostics: diagnostics.log,
-        transcriptLocations: transcriptLocations, shell: loginShell, codexApprovals: codexApprovals)
+        transcriptLocations: transcriptLocations, shell: loginShell, approvals: approvals)
     // The endpoints (#107): registered beside the command line agents from the start — a session
     // the terminal host kept is adopted as soon as the workspace loads, and must find its agent —
     // their secrets in the keychain, their sessions reaching them through the gateway.
@@ -183,7 +184,7 @@ public final class AppEnvironment {
     let agentAccounts = AgentAccountCatalog(
       repository: FileAgentAccountRepository(storeURL: accountsURL),
       homes: agentHomes, environment: configuration.environment, diagnostics: diagnostics.log,
-      transcriptLocations: transcriptLocations, shell: loginShell, codexApprovals: codexApprovals)
+      transcriptLocations: transcriptLocations, shell: loginShell, approvals: approvals)
     let registry = AgentProviderRegistry(
       providers: providers,
       accounts: agentAccounts.providers(
@@ -481,7 +482,7 @@ public final class AppEnvironment {
         diagnostics: diagnostics),
       requestPreferences: UserDefaultsRequestPreferences(suiteName: data.defaultsSuite),
       agentUpdatePreferences: UserDefaultsAgentUpdatePreferences(suiteName: data.defaultsSuite),
-      codexApprovalPreferences: codexApprovals,
+      approvalPreferences: approvals,
       browser: browser,
       terminals: terminals,
       ticketContext: ReadTicketContext(
@@ -971,7 +972,7 @@ public final class AppEnvironment {
   private static func providers(
     environment: [String: String], diagnostics: any DiagnosticLog,
     transcriptLocations: TranscriptLocationCache, shell: LoginShellEnvironment,
-    codexApprovals: any CodexApprovalPreferences
+    approvals: any AgentApprovalPreferences
   ) -> [any AgentProvider] {
     if environment["VIBE_ENABLE_MOCK_AGENT"] == "only" {
       return [MockAgentProvider(environment: environment)]
@@ -985,7 +986,10 @@ public final class AppEnvironment {
         transcriptLocations: transcriptLocations),
       CodexAgentProvider.make(
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
-        transcriptLocations: transcriptLocations, approvalPreferences: codexApprovals),
+        transcriptLocations: transcriptLocations, approvalPreferences: approvals),
+      AntigravityAgentProvider.make(
+        environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
+        approvalPreferences: approvals),
     ]
     if MockAgentProvider.isEnabled(environment: environment) {
       providers.append(MockAgentProvider(environment: environment))

@@ -45,6 +45,41 @@ pid, so a `git` that started a helper or a login shell whose profile started one
 
 ## What was checked
 
+### Antigravity (#538)
+
+`agy --version` uses the existing bounded probe. `agy models` uses the same runner with a 15 s
+timeout and 64 KiB output bound, with concurrent requests coalesced and results cached. Both
+receive the provider's allowlisted environment; proxy and certificate variables are the only
+additions. No API keys, credential files or keychain queries are introduced by Vibe Manager.
+
+Interactive `agy` runs in the existing PTY/terminal host, with argv as an array. Its initial prompt
+is the value of `--prompt-interactive`; native resume is an explicitly validated conversation UUID.
+Remote control and permission bypass are never enabled. The user's Manual / Automatic preference
+is read for each launch and resume. Manual explicitly overrides global automatic defaults with
+`agentMode: ""` and `toolPermission: "request-review"`. Automatic uses native `--mode auto`,
+`--sandbox` and `toolPermission: "proceed-in-sandbox"`; commands outside the sandbox still go
+through the CLI's own review. Existing allow/ask/deny rules apply in either mode. Settings are
+merged with the activity override into one JSON object, never interpolated through a shell and
+never written into the user's CLI configuration. No `--dangerously-skip-permissions` is used.
+
+An endpoint driven by `agy` gets the gateway's loopback URL (`…/s/<token>`) and the session's
+random token in `AGY_LLM_GATEWAY_URL` / `AGY_LLM_GATEWAY_API_KEY`, in the process environment like
+Codex's `VIBE_ENDPOINT_TOKEN`, never on the command line; the endpoint's own key stays in the
+keychain, read by the gateway. Inherited `AGY_LLM_GATEWAY_*`, `GOOGLE_GEMINI_*`, `GEMINI_API_KEY`,
+`GOOGLE_API_KEY` and `AGY_ADC_AUTH` are removed so the session cannot reach another model or
+account. Such a session is always Manual. The gateway's new Chat Completions reader accepts inline
+`data:` images only and never fetches a URL a request names.
+
+Session-only `--settings` supplies an inline status command. It uses `/bin/sh`, `head`, `cat`,
+`plutil`, `awk` and `printf`, reads at most 4 MiB, drains stdin and extracts only the validated conversation
+UUID, allowlisted agent state and two boolean flags (confirmation pending/background work).
+Nothing from the state payload is evaluated as code. The existing enabled user status command is
+shell-quoted as a positional parameter and run with the same input and output, as the CLI already
+does. No global or project configuration is written. A malformed/unreadable settings file is not
+modified. The existing activity log's private directory and permissions apply; no new log type
+or socket is introduced. The application reads only the UUID-derived CLI transcript, confirming
+its existence before persisting an identifier; it does not open the CLI's conversation database.
+
 - **No shell with user data.** Arguments are arrays from the provider to `posix_spawn`. The one
   shell command line is the login shell lookup above, whose only parameter is the binary name of a
   provider, single quoted.

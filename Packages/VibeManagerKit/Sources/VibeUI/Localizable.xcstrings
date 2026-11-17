@@ -1,6 +1,107 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Automatic mode requires a personal Antigravity account and the terminal sandbox." : {
+      "comment" : "Availability of Antigravity native automatic permission review.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتطلب الوضع التلقائي حساب Antigravity شخصيًا وبيئة عزل الطرفية."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der automatische Modus erfordert ein persönliches Antigravity-Konto und die Terminal-Sandbox."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El modo automático requiere una cuenta personal de Antigravity y el entorno aislado del terminal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le mode automatique nécessite un compte Antigravity personnel et le sandbox du terminal."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऑटोमैटिक मोड के लिए व्यक्तिगत Antigravity खाता और टर्मिनल सैंडबॉक्स आवश्यक हैं।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La modalità automatica richiede un account Antigravity personale e la sandbox del terminale."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動モードには個人用のAntigravityアカウントとターミナルのサンドボックスが必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 모드를 사용하려면 개인 Antigravity 계정과 터미널 샌드박스가 필요합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De automatische modus vereist een persoonlijk Antigravity-account en de terminal-sandbox."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tryb automatyczny wymaga osobistego konta Antigravity i piaskownicy terminala."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O modo automático exige uma conta pessoal do Antigravity e o sandbox do terminal."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для автоматического режима нужны личный аккаунт Antigravity и песочница терминала."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otomatik mod için kişisel bir Antigravity hesabı ve terminal korumalı alanı gerekir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для автоматичного режиму потрібні особистий обліковий запис Antigravity та пісочниця термінала."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动模式需要个人 Antigravity 账号和终端沙盒。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動模式需要個人 Antigravity 帳號和終端沙盒。"
+          }
+        }
+      }
+    },
     "Some earlier conversations left no logs that could be found, so the history is partial." : {
       "comment" : "Added to the history notice of the Switch Agent sheet when some earlier conversations' logs were not found.",
       "localizations" : {

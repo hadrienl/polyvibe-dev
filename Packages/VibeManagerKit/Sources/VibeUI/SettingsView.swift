@@ -616,16 +616,30 @@ struct AgentSettingsPage: View {
         }
       }
       AgentAccountSections(model: model, agent: agent)
+      if agent.id.rawValue == "antigravity" {
+        Section {
+          AgentApprovalModePicker(
+            selection: Binding(
+              get: { model.approvalMode(for: agent.id) },
+              set: { model.setApprovalMode($0, for: agent.id) }))
+          Text(
+            "Automatic mode requires a personal Antigravity account and the terminal sandbox.",
+            bundle: .module
+          )
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        }
+      }
       if agent.id.rawValue == "codex"
         || model.agentAccounts?.accounts.contains(where: {
           $0.providerID == agent.id.rawValue && $0.harness == .codex
         }) == true
       {
         Section {
-          CodexApprovalModePicker(
+          AgentApprovalModePicker(
             selection: Binding(
-              get: { model.codexApprovalMode(for: agent.id) },
-              set: { model.setCodexApprovalMode($0, for: agent.id) }))
+              get: { model.approvalMode(for: agent.id) },
+              set: { model.setApprovalMode($0, for: agent.id) }))
         }
       }
       if model.hookTrustingAgents.contains(where: { $0.id == agent.id }) {
