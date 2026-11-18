@@ -308,9 +308,8 @@ enum AntigravityTools {
     return String(rest)
   }
 
-  /// What a result says of the call it answers, applied to it. `call` is the call as `toolCall`
-  /// read it.
-  static func apply(_ result: Result, to tool: inout ToolCall, date: Date?) {
+  /// What a result says of `call`, applied to `tool`, the call as `toolCall` read it.
+  static func apply(_ result: Result, of call: Call, to tool: inout ToolCall, date: Date?) {
     if result.isFailure {
       tool.state = result.isRefusal ? .refused : .failed(exitCode: nil)
       tool.output = ToolOutput.bounded(shorteningTasks(result.failure), isError: true)
@@ -330,7 +329,7 @@ enum AntigravityTools {
       let (header, body) = headed(result.text)
       tool.output = ToolOutput.bounded(body)
       tool.facts.lineCount = header.flatMap(shownLineCount)
-    case .edit, .create: applyEdit(result.text, to: &tool)
+    case .edit, .create: applyEdit(result.text, of: call, to: &tool)
     case .question:
       tool.parameters = ClaudeCodeConversationDecoder.answering(
         tool.parameters, with: answers(result.text, to: tool.parameters))
@@ -438,22 +437,16 @@ enum AntigravityTools {
   }
 
   /// `Made 1 replacement in <path> starting at line 2 (+1/-1 lines).` numbers the diff and counts
-  /// the lines of every replacement.
-  static func applyEdit(_ text: String, to tool: inout ToolCall) {
-    guard tool.kind == .edit, tool.changes.count == 1,
-      let start = text.range(of: #"starting at line (\d+)"#, options: .regularExpression)
-    else {
-      countLines(of: &tool)
-      return
-    }
-    let line = Int(text[start].filter(\.isNumber)) ?? 0
-    let change = tool.changes[0]
-    if change.hunks.first?.lines.contains(where: { $0.kind == .removed }) == true {
-      let removed = change.hunks[0].lines.filter { $0.kind == .removed }.map(\.text)
-      let added = change.hunks[0].lines.filter { $0.kind == .added }.map(\.text)
+  /// the lines of every replacement. The diff is made again from the call's whole target, not
+  /// from the lines it shows: those past the limit stay counted.
+  static func applyEdit(_ text: String, of call: Call, to tool: inout ToolCall) {
+    if call.name == "edit_file", let target = call.string("Target"),
+      let start = text.range(of: #"starting at line (\d+)"#, options: .regularExpression),
+      let line = Int(text[start].filter(\.isNumber)), line <= lastLine
+    {
       tool.changes = [
         replacement(
-          of: removed.joined(separator: "\n"), by: added.joined(separator: "\n"), in: change.path,
+          of: target, by: call.string("Replacement") ?? "", in: call.string("Path") ?? "",
           at: line)
       ]
     }
@@ -466,6 +459,10 @@ enum AntigravityTools {
       }
     }
   }
+
+  /// Past it, a line or step number is not one a file or a transcript holds: numbering from it
+  /// would overflow.
+  static let lastLine = Int(Int32.max)
 
   static func countLines(of tool: inout ToolCall) {
     guard !tool.changes.isEmpty else { return }

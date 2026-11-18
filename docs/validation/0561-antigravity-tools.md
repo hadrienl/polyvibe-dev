@@ -78,8 +78,34 @@ end is the `SYSTEM_MESSAGE` whose `sender` is that identifier, or `manage_task k
   skips the step number reserved for it (1.5.11: call at step 1, prompt at step 3). Until that
   prompt the call stays shown as running: nothing in the transcript tells the stop apart.
 
+- Two background tasks ending at the same moment write two `SYSTEM_MESSAGE` steps, one
+  `[Message]` each (1.5.11); no step of the pass held more than one.
+- A task stopped by `manage_task kill` may end with `Task id "…" was canceled with result:\nTool
+  execution was canceled`: neither output nor exit code (6 of 6 seen).
+- A sub-agent answers its parent with `send_message`: the parent gets a `SYSTEM_MESSAGE` whose
+  sender is the sub-agent's conversation. Nothing else tells its end ("will send you a message
+  when it has completed its task or requires guidance"); its last message stands. Its own
+  transcript opens on its mission as a `SYSTEM_MESSAGE`, never a prompt of the user.
+
+## Review of the PR
+
+Ten points raised by an independent review, checked against the code and the shapes above:
+
+| Point | Outcome |
+|---|---|
+| Calls without a name dropped before numbering | Fixed: kept in place, not shown (test `namelessCall`) |
+| A response inside an earlier response's results did not untie it | Fixed (test `responseInsideResults`) |
+| `cancelledTask` fails on a trailing newline | Not real: the result is exactly `Task "…" cancelled.` (1.5.10, 1.5.11) |
+| Several `[Message]` in one step | Not real: one step per message, checked live with two tasks ending together |
+| Long edit loses its omitted lines once numbered | Fixed: numbered again from the call's whole target (test `longEdit`) |
+| Any message of a sub-agent ends it | Not changed: it is agy's only signal of a sub-agent's end; the last message stands |
+| A cancelled task drops its partial output and exit code | Not real: the cancel holds neither |
+| Interrupted responses and sibling results read again and again | Fixed: only running calls wait for a prompt; results read again only when the response's link changes (test `renderingCost`) |
+| Sub-agent mission read as a prompt of the user | Not real: it is a `SYSTEM_MESSAGE` |
+| Step or line numbers near `Int.max` overflow | Fixed: such a step is left out, such a line not numbered (test `outOfRangeNumbers`); bounding done once |
+
 ## Tests
 
-`AntigravityToolTests` (14 tests): one synthetic transcript per recorded shape, failures,
+`AntigravityToolTests` (19 tests): one synthetic transcript per recorded shape, failures,
 cancellations, refusals, interruptions and parallel calls included. `AntigravityTests` unchanged
 and passing. Built with `swift build --build-tests -Xswiftc -warnings-as-errors`.

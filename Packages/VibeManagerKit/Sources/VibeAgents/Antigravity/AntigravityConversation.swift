@@ -63,9 +63,13 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
   private var killedRoles: [String: Int] = [:]
   /// The last prompt of the user: a call without a result before it never got one.
   private var lastPrompt = -1
-  /// Responses with a call still waiting for its result.
-  private var openResponses: Set<Int> = []
+  /// Responses with a call still waiting for its result, before any later prompt.
+  private(set) var openResponses: Set<Int> = []
+  /// Responses whose results are shown apart from their calls.
+  private var unlinked: Set<Int> = []
   private var background: [String: Date] = [:]
+  /// Steps rendered so far: what reading the transcript costs.
+  private(set) var renderCount = 0
 
   private struct Step {
     let date: Date?
@@ -102,7 +106,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
 
   public func consume(_ record: TranscriptRecord) {
     let object = record.object
-    guard let index = object["step_index"] as? Int, index >= 0,
+    // A number no transcript reaches is not a step: counting from it would overflow.
+    guard let index = object["step_index"] as? Int, (0...AntigravityTools.lastLine).contains(index),
       let type = object["type"] as? String
     else { return }
     let previous = steps[index]
@@ -114,9 +119,14 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     if let calls = step.kind.calls {
       let count = max(calls.count, previous?.kind.calls?.count ?? 0)
       if count > 0 { dirty.formUnion(index + 1...index + count) }
-    } else if let response = response(covering: index) {
+    }
+    // Any step, a response too, may take the place of an earlier response's result: that
+    // response is read again, and its results with it when they stop or start being its own.
+    if let response = response(covering: index) {
       dirty.insert(response)
-      dirty.formUnion(results(of: response))
+      if isLinked(response) == unlinked.contains(response) {
+        dirty.formUnion(results(of: response))
+      }
     }
     switch step.kind {
     case .prompt(.some) where index > lastPrompt:
@@ -148,10 +158,12 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     switch type {
     case "USER_INPUT":
       guard object["source"] as? String == "USER_EXPLICIT" else { return .prompt(nil) }
-      return .prompt(request(in: content) ?? ToolOutput.bounded(content).text)
+      return .prompt(ToolOutput.bounded(request(in: content) ?? content).text)
     case "PLANNER_RESPONSE":
-      let calls = ((object["tool_calls"] as? [[String: Any]]) ?? []).prefix(100)
-        .compactMap(AntigravityTools.Call.init)
+      // A call without a name keeps its place: the results of the next ones follow it.
+      let calls = ((object["tool_calls"] as? [[String: Any]]) ?? []).prefix(100).map {
+        AntigravityTools.Call($0) ?? AntigravityTools.Call(name: "", arguments: [:])
+      }
       return .response(
         text: ToolOutput.bounded(content).text,
         thinking: (object["thinking"] as? String).map { ToolOutput.bounded($0).text },
@@ -211,6 +223,7 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
 
   private func render(_ index: Int) {
     guard let step = steps[index] else { return }
+    renderCount += 1
     let prefix = "agy:\(index):"
     var additions: [ConversationEntry] = []
     func append(_ suffix: String, _ content: ConversationEntry.Content) {
@@ -218,17 +231,16 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     }
     switch step.kind {
     case .prompt(let prompt?) where !prompt.isEmpty:
-      append("user", .userPrompt(ToolOutput.bounded(prompt).text, attachments: []))
+      append("user", .userPrompt(prompt, attachments: []))
     case .response(let text, let thinking, let calls):
-      if let thinking, !thinking.isEmpty {
-        append("thinking", .reasoning(ToolOutput.bounded(thinking).text))
-      }
+      if let thinking, !thinking.isEmpty { append("thinking", .reasoning(thinking)) }
       if !text.isEmpty { append("text", .agentText(text)) }
       let linked = isLinked(index)
+      if linked { unlinked.remove(index) } else { unlinked.insert(index) }
       openResponses.remove(index)
       // A snapshot of the response may hold fewer calls than the last one.
       background = background.filter { !$0.key.hasPrefix(prefix) }
-      for (offset, call) in calls.enumerated() {
+      for (offset, call) in calls.enumerated() where !call.name.isEmpty {
         let id = "tool:\(offset)"
         guard linked else {
           append(id, .notice(.information(Self.described(call))))
@@ -257,12 +269,17 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     guard offset < answerable(response), let step = steps[response + 1 + offset],
       case .result(let result) = step.kind
     else {
-      openResponses.insert(response)
-      tool.state = lastPrompt > response ? .interrupted : .running
+      // Stopped for good once the user spoke again; until then the next prompt decides.
+      if lastPrompt > response {
+        tool.state = .interrupted
+      } else {
+        tool.state = .running
+        openResponses.insert(response)
+      }
       if tool.kind == .subagent { tool.subagent?.startedAt = steps[response]?.date }
       return tool
     }
-    AntigravityTools.apply(result, to: &tool, date: step.date)
+    AntigravityTools.apply(result, of: call, to: &tool, date: step.date)
     guard !result.isFailure,
       let started = AntigravityTools.task(startedBy: result.text) ?? tool.subagent?.agentID
     else { return tool }

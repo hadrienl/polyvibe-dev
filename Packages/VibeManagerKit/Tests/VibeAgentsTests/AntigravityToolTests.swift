@@ -497,4 +497,89 @@ struct AntigravityToolTests {
     #expect(found.map(\.agentID) == [agent])
     #expect(found.first?.file.standardizedFileURL == file.standardizedFileURL)
   }
+
+  // MARK: - Robustness
+
+  @Test("A call without a name keeps its place: the next call takes its own result")
+  func namelessCall() {
+    let transcript = Transcript()
+    transcript.line([
+      "step_index": 1, "type": "PLANNER_RESPONSE", "status": "DONE", "content": "",
+      "tool_calls": [
+        ["args": ["CommandLine": "\"ls\""]],
+        ["name": "run_command", "args": ["CommandLine": "\"pwd\""]],
+      ],
+    ])
+    transcript.result(2, "Command exited with code 0.\n\nCommand output:\nnotes.txt\r\n")
+    transcript.result(3, "Command exited with code 0.\n\nCommand output:\n/tmp/w\r\n")
+    #expect(transcript.tools.map { $0.parameter(.command) } == ["pwd"])
+    #expect(transcript.tools.first?.output?.text == "/tmp/w")
+    #expect(transcript.decoder.entries.map(\.id) == ["agy:1:tool:1"])
+  }
+
+  @Test("A response written where an earlier response's result belongs unties that response")
+  func responseInsideResults() {
+    let transcript = Transcript()
+    transcript.calls(
+      1, [("run_command", ["CommandLine": "echo a"]), ("run_command", ["CommandLine": "echo b"])])
+    transcript.result(2, "Command exited with code 0.\n\nCommand output:\na\r\n")
+    #expect(transcript.tools.count == 2)
+    transcript.calls(3, [("read_file", ["Path": "/tmp/w/notes.txt"])])
+    #expect(transcript.tools.map(\.kind) == [.read])
+    #expect(
+      transcript.notices == [
+        "run_command\nCommandLine: echo a", "run_command\nCommandLine: echo b",
+        "Command exited with code 0.\n\nCommand output:\na",
+      ])
+  }
+
+  @Test("An edit past the diff's line limit keeps counting the lines it does not show")
+  func longEdit() {
+    let transcript = Transcript()
+    let target = (0..<1_500).map { "old \($0)" }.joined(separator: "\n")
+    let replacement = (0..<1_000).map { "new \($0)" }.joined(separator: "\n")
+    transcript.calls(
+      1, [("edit_file", ["Path": "/tmp/w/big.txt", "Target": target, "Replacement": replacement])])
+    let omitted = 1_500 + 1_000 - DiffHunk.lineLimit
+    #expect(transcript.tools[0].changes.first?.omittedLineCount == omitted)
+    transcript.result(2, "Made 1 replacement in /tmp/w/big.txt starting at line 10.")
+    let change = transcript.tools[0].changes.first
+    #expect(change?.omittedLineCount == omitted)
+    #expect(change?.hunks.first?.lines.first?.oldNumber == 10)
+  }
+
+  @Test("Interrupted calls are read again no more, and results do not re-read their siblings")
+  func renderingCost() {
+    let transcript = Transcript()
+    transcript.calls(1, [("run_command", ["CommandLine": "sleep 9"])])
+    transcript.prompt(3, "Go on")
+    #expect(transcript.tools[0].state == .interrupted)
+    #expect(transcript.decoder.openResponses.isEmpty)
+
+    let wide = Transcript()
+    let count = 100
+    wide.calls(
+      1,
+      (0..<count).map { ("run_command", ["CommandLine": "echo \($0)"]) as (String, [String: Any]) })
+    for offset in 0..<count {
+      wide.result(2 + offset, "Command exited with code 0.\n\nCommand output:\n\(offset)\r\n")
+    }
+    #expect(wide.tools.map { $0.output?.text } == (0..<count).map { "\($0)" })
+    // The response and its results once, then the response again for each result.
+    #expect(wide.decoder.renderCount <= 1 + 3 * count)
+  }
+
+  @Test("A step number no transcript reaches is left out, as are line numbers past any file")
+  func outOfRangeNumbers() {
+    let transcript = Transcript()
+    transcript.calls(Int.max, [("run_command", ["CommandLine": "ls"])])
+    transcript.prompt(Int.max - 1, "Hello")
+    #expect(transcript.decoder.entries.isEmpty)
+    transcript.calls(
+      1, [("edit_file", ["Path": "/tmp/w/a", "Target": "a\nb", "Replacement": "c"])])
+    transcript.result(
+      2, "Made 1 replacement in /tmp/w/a starting at line \(Int.max) (+1/-1 lines).")
+    #expect(transcript.tools[0].state == .succeeded)
+    #expect(transcript.tools[0].changes.first?.hunks.first?.lines.first?.oldNumber == nil)
+  }
 }
