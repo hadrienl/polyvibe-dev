@@ -2,8 +2,11 @@
 
 Rendering of each Antigravity (`agy`) tool in the conversation.
 
-**Verified version: `agy` 1.5.10** (Gemini 3.8 Flash, 2026-11-17). The shapes below are the
-ones recorded on #561, comments 1/6 to 6/6.
+**Verified versions: `agy` 1.5.10** (Gemini 3.8 Flash, 2026-11-17) **and 1.5.11** (2026-11-18).
+The shapes below are the ones recorded on #561, comments 1/6 to 6/6. On 1.5.11 a second pass
+(command with exit code, read, write, edit, append, web search, background task, `manage_task
+kill`, interrupted foreground command) found the same shapes, and its eight calls matched the
+stream's ground truth.
 
 ## Method
 
@@ -58,10 +61,9 @@ end is the `SYSTEM_MESSAGE` whose `sender` is that identifier, or `manage_task k
 
 ## Not verified live
 
-- Whether the prompt after an interrupted foreground command takes the step number reserved for
-  its result. Both cases are handled (a prompt inside the range ends it; one after it marks the
-  call interrupted), but the live check could not run: the account's Antigravity quota ran out
-  during the pass (`Individual quota reached … Resets in 103h`).
+- Parallel calls stopped half way: whether the next prompt takes a free step inside the range is
+  not observed. Both cases are handled (a prompt inside the range ends it; one after it marks the
+  calls left interrupted).
 - Tools only listed internally by the stream's `init` (`view_file`, `list_dir`, `grep_search`,
   `replace_file_content`, `read_url_content`, `browser_*`, `generate_image`…): never called by the
   model in 1.5.10, so not mapped to dedicated views.
@@ -72,7 +74,9 @@ end is the `SYSTEM_MESSAGE` whose `sender` is that identifier, or `manage_task k
   are declared in the binary but refused (`INVALID`).
 - `write_file` requires an absolute path and answers `Created file.` to every success.
 - An MCP call to a missing tool returned the previous call's error message.
-- During an interrupted foreground command no result step is ever written.
+- During an interrupted foreground command no result step is ever written, and the next prompt
+  skips the step number reserved for it (1.5.11: call at step 1, prompt at step 3). Until that
+  prompt the call stays shown as running: nothing in the transcript tells the stop apart.
 
 ## Tests
 

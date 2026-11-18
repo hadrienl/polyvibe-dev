@@ -227,7 +227,8 @@ struct AntigravityToolTests {
     )
     transcript.calls(10, [("run_command", ["CommandLine": "sleep 40"])])
     #expect(transcript.tools[1].state == .running)
-    transcript.prompt(11, "Go on")
+    // agy 1.5.11 never writes the stopped command's step (11): the next prompt takes step 12.
+    transcript.prompt(12, "Go on")
     #expect(transcript.tools[0].state == .refused)
     #expect(transcript.tools[0].output?.isError == true)
     #expect(transcript.tools[1].state == .interrupted)
