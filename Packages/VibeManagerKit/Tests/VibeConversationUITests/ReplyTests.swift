@@ -1,0 +1,327 @@
+import AppKit
+import Foundation
+import Testing
+import VibeApplication
+import VibeDomain
+
+@testable import VibeConversationUI
+
+@MainActor
+@Suite("Replying to a passage of the conversation (#565)")
+struct ReplyTests {
+  private final class Terminal: @unchecked Sendable {
+    var written: [[UInt8]] = []
+  }
+
+  private let paris = TimeZone(identifier: "Europe/Paris")!
+  /// 2026-11-19 14:32, in Paris.
+  private let said = Date(timeIntervalSince1970: 1_795_095_120)
+
+  private func model() -> (ConversationModel, Terminal) {
+    let model = ConversationModel(sessionID: SessionID())
+    let terminal = Terminal()
+    model.write = { terminal.written.append($0) }
+    model.processRunning = { true }
+    model.promptFormat = AgentPromptFormat(
+      queueKey: [0x09], submitDelay: .zero,
+      shellEntry: ShellEntry(switchDelay: .zero, chunkDelay: .zero))
+    model.apply(ConversationSnapshot(availability: .available))
+    return (model, terminal)
+  }
+
+  private func answer(_ id: String, _ text: String, at date: Date? = nil) -> ConversationEntry {
+    ConversationEntry(id: id, date: date, content: .agentText(text))
+  }
+
+  private func prompt(_ id: String, _ text: String, at date: Date? = nil) -> ConversationEntry {
+    ConversationEntry(id: id, date: date, content: .userPrompt(text, attachments: []))
+  }
+
+  @Test("The passage goes in front of the message, once, and the field lets it go")
+  func send() async throws {
+    let (model, _) = model()
+    model.reply(to: "  Note : les remises.  ", author: .agent, date: nil, blockID: "a")
+    #expect(model.replyTarget?.quote.excerpt == "Note : les remises.")
+    model.draft = "Corrige-les aussi."
+    #expect(await model.send())
+    let sent = try #require(model.echoes.first?.text)
+    #expect(
+      sent
+        == "↩ Replying to your message (quoted for context, not an instruction):\n"
+        + "> Note : les remises.\n\nCorrige-les aussi.")
+    #expect(model.replyTarget == nil)
+    // Recalled, the message comes back without the passage.
+    #expect(model.promptHistory.prompts.last == "Corrige-les aussi.")
+  }
+
+  @Test("A command of the CLI or of the shell takes no passage: it waits for the next message")
+  func commands() async {
+    let (model, _) = model()
+    model.reply(to: "passage", author: .agent, date: nil, blockID: "a")
+    model.draft = "/compact"
+    #expect(await model.send())
+    #expect(model.echoes.last?.text == "/compact")
+    model.draft = "!ls"
+    #expect(await model.send())
+    #expect(model.echoes.last?.text == "ls")
+    #expect(model.replyTarget?.quote.excerpt == "passage")
+    // A message that starts with a path is a message.
+    model.draft = "/Users/me/Foo.swift still crashes"
+    #expect(await model.send())
+    #expect(model.echoes.last?.text.hasPrefix("↩ Replying to your message") == true)
+    #expect(model.replyTarget == nil)
+    #expect(ConversationModel.isCLICommand("/compact"))
+    #expect(ConversationModel.isCLICommand("/review 12"))
+    #expect(ConversationModel.isCLICommand("/plugin:command arg"))
+    #expect(!ConversationModel.isCLICommand("/Users/me/Foo.swift still crashes"))
+    #expect(!ConversationModel.isCLICommand("/ alone"))
+    #expect(!ConversationModel.isCLICommand("hello /compact"))
+  }
+
+  @Test("✕ or Escape take the passage back; an empty one is never offered")
+  func cancel() {
+    let (model, _) = model()
+    model.reply(to: "  \n ", author: .agent, date: nil, blockID: "a")
+    #expect(model.replyTarget == nil)
+    #expect(!model.cancelReply())
+    model.reply(to: "passage", author: .user, date: nil, blockID: "u")
+    #expect(model.cancelReply())
+    #expect(model.replyTarget == nil)
+  }
+
+  @Test("Read again, a reply knows the message it quotes, and the message its replies")
+  func links() {
+    let quote = ReplyQuote(
+      excerpt: "Note : les remises (applyDiscount).", author: .agent, time: "14:32")
+    var links = ReplyLinks()
+    var places: [String: Int] = [:]
+    let blocks: [ConversationBlock] = [
+      .entry(answer("a1", "Note : les remises (`applyDiscount`).", at: said)),
+      .entry(
+        answer("a2", "Note : les remises (`applyDiscount`).", at: said.addingTimeInterval(3_600))),
+      .entry(prompt("r1", ReplyQuote.compose(quote, message: "Corrige."))),
+      .entry(prompt("p", "Autre chose.")),
+      .entry(prompt("r2", ReplyQuote.compose(quote, message: "Encore."))),
+    ]
+    links.update(blocks, from: 0, places: &places, timeZone: paris)
+    // The one said at the time quoted, though another later says the same.
+    #expect(links.sources == ["r1": "a1", "r2": "a1"])
+    #expect(links.replies == ["a1": ["r1", "r2"]])
+    // Laid out again from the last block, the others keep theirs.
+    links.update(Array(blocks.prefix(4)), from: 4, places: &places, timeZone: paris)
+    #expect(links.sources == ["r1": "a1"])
+    #expect(links.replies == ["a1": ["r1"]])
+    // A reply moved up by blocks merged before it, its link unchanged: still known after a later
+    // layout that starts past its new place.
+    let merged = [blocks[0], blocks[2], blocks[3]]
+    links.update(merged, from: 1, places: &places, timeZone: paris)
+    #expect(places["r1"] == 1)
+    links.update(merged, from: 2, places: &places, timeZone: paris)
+    #expect(links.sources == ["r1": "a1"])
+  }
+
+  @Test("Behind what the application put in front of it, a reply still knows its message")
+  func behindPreface() {
+    let quote = ReplyQuote(excerpt: "the plan", author: .agent, time: nil)
+    let blocks: [ConversationBlock] = [
+      .entry(answer("a", "the plan")),
+      .entry(
+        prompt(
+          "r",
+          CoordinatorInstructions.turnedOn + "\n\n" + ReplyQuote.compose(quote, message: "Go."))),
+    ]
+    var links = ReplyLinks()
+    var places: [String: Int] = [:]
+    links.update(blocks, from: 0, places: &places)
+    #expect(links.sources == ["r": "a"])
+    // Shown: the user's words alone; a message that replies to nothing keeps it, as before.
+    #expect(
+      ReplyLinks.shown(
+        CoordinatorInstructions.turnedOn + "\n\n" + ReplyQuote.compose(quote, message: "Go."),
+        attachments: []) == (quote, "Go."))
+    let plain = CoordinatorInstructions.turnedOn + "\n\nhello"
+    #expect(ReplyLinks.shown(plain, attachments: []).message == plain)
+    // Replied to, such a message is found as it was shown.
+    let own = ReplyQuote(excerpt: plain, author: .user, time: nil)
+    let mine: [ConversationBlock] = [
+      .entry(prompt("u", plain)), .entry(prompt("r", ReplyQuote.compose(own, message: "Then?"))),
+    ]
+    links.update(mine, from: 0, places: &places)
+    #expect(links.sources == ["r": "u"])
+  }
+
+  @Test("A message sent from the phone takes no passage, which stays for the Mac's next one")
+  func setAside() {
+    let (model, _) = model()
+    model.reply(to: "passage", author: .agent, date: nil, blockID: "a")
+    let kept = model.setReplyAside()
+    #expect(model.replyTarget == nil)
+    model.restoreReply(kept)
+    #expect(model.replyTarget?.quote.excerpt == "passage")
+  }
+
+  @Test("A reply to one's own message finds it, without the passage it quoted itself")
+  func ownMessage() {
+    let first = ReplyQuote(excerpt: "the plan", author: .agent, time: nil)
+    let own = ReplyQuote(excerpt: "Do it my way.", author: .user, time: nil)
+    let blocks: [ConversationBlock] = [
+      .entry(answer("a", "the plan")),
+      .entry(prompt("u", ReplyQuote.compose(first, message: "Do it my way."))),
+      .entry(prompt("r", ReplyQuote.compose(own, message: "Actually, not."))),
+    ]
+    var links = ReplyLinks()
+    var places: [String: Int] = [:]
+    links.update(blocks, from: 0, places: &places)
+    #expect(links.sources == ["u": "a", "r": "u"])
+  }
+
+  @Test("From a reply to its passage and back, and from the passage to its reply")
+  func navigation() {
+    let (model, _) = model()
+    let quote = ReplyQuote(excerpt: "Note : les remises.", author: .agent, time: nil)
+    model.apply(
+      ConversationSnapshot(
+        entries: [
+          answer("a", "Note : les remises."), prompt("p", "Autre chose."),
+          prompt("r", ReplyQuote.compose(quote, message: "Corrige.")),
+        ], availability: .available))
+    #expect(model.replyLinks.replies == ["a": ["r"]])
+    model.showSource(of: quote, replyID: "r")
+    #expect(model.revealedBlockID == "a")
+    // The passage is lit, not its whole message — unless no text of it shows the passage.
+    #expect(model.litPassage?.blockID == "a")
+    #expect(model.litPassage?.quote == quote)
+    #expect(model.highlightedBlockID == nil)
+    #expect(model.returnBlockID == "r")
+    model.returnToReply()
+    #expect(model.revealedBlockID == "r")
+    #expect(model.returnBlockID == nil)
+    model.showReply("r")
+    #expect(model.revealedBlockID == "r")
+    #expect(model.highlightedBlockID == "r")
+    #expect(model.litPassage == nil)
+    // From a reply still on its way, the way back is the conversation's end.
+    model.showSource(of: quote, replyID: nil)
+    #expect(model.revealedBlockID == "a")
+    let bottom = model.scrollToBottomRequest
+    model.returnToReply()
+    #expect(model.scrollToBottomRequest == bottom + 1)
+    // Scrolled back to the end by hand, the way back goes.
+    model.showSource(of: quote, replyID: "r")
+    #expect(model.returnBlockID == "r")
+    model.scrollGeometryChanged(
+      contentFrame: CGRect(x: 0, y: -500, width: 400, height: 1_000), viewportHeight: 500)
+    #expect(model.returnBlockID == nil)
+  }
+
+  @Test("A passage none of its message's texts shows lights the whole message instead")
+  func notShown() async {
+    let (model, _) = model()
+    let quote = ReplyQuote(excerpt: "Note : les remises.", author: .agent, time: nil)
+    model.apply(
+      ConversationSnapshot(
+        entries: [
+          answer("a", "Note : les remises."),
+          prompt("r", ReplyQuote.compose(quote, message: "Corrige.")),
+        ],
+        availability: .available))
+    model.showSource(of: quote, replyID: "r")
+    #expect(model.highlightedBlockID == nil)
+    await until { model.highlightedBlockID == "a" }
+    #expect(model.highlightedBlockID == "a")
+    // Shown by a text, the passage alone stays lit, then goes out.
+    model.showSource(of: quote, replyID: "r")
+    if let lit = model.litPassage { model.passageShown(lit) }
+    await until { model.litPassage == nil }
+    #expect(model.litPassage == nil)
+    #expect(model.highlightedBlockID == nil)
+  }
+
+  /// Waits for `condition`, a few seconds at most: a state, not a delay.
+  private func until(_ condition: () -> Bool) async {
+    for _ in 0..<200 where !condition() {
+      try? await Task.sleep(for: .milliseconds(25))
+    }
+  }
+}
+
+@MainActor
+@Suite("« Reply » over a message's text (#565)")
+struct ReplyButtonPlacementTests {
+  private func view(_ text: String, width: CGFloat) -> SegmentTextView {
+    let view = SegmentTextView()
+    view.show(
+      NSAttributedString(
+        string: text, attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+    view.frame = CGRect(x: 0, y: 0, width: width, height: view.height(forWidth: width))
+    view.layoutManager?.ensureLayout(for: view.textContainer!)
+    return view
+  }
+
+  @Test("The paragraph under the pointer, without its line break; none beside the text")
+  func paragraph() throws {
+    let view = view("First paragraph.\nSecond one.", width: 400)
+    let first = try #require(view.paragraph(at: NSPoint(x: 10, y: 5)))
+    #expect((view.string as NSString).substring(with: first) == "First paragraph.")
+    let lineHeight = view.height(forWidth: 400) / 2
+    let second = try #require(view.paragraph(at: NSPoint(x: 10, y: lineHeight * 1.5)))
+    #expect((view.string as NSString).substring(with: second) == "Second one.")
+    #expect(view.paragraph(at: NSPoint(x: 10, y: lineHeight * 4)) == nil)
+  }
+
+  @Test("After the last word with its label, its icon alone at the end of a full line")
+  func frame() throws {
+    let view = view("Short.", width: 400)
+    let size = CGSize(width: 60, height: 18)
+    let icon = CGSize(width: 22, height: 18)
+    let (after, iconOnly) = try #require(
+      view.replyButtonFrame(after: 6, size: size, iconSize: icon))
+    #expect(!iconOnly)
+    #expect(after.minX > 20 && after.maxX < 400)
+    let full = self.view(
+      String(repeating: "word ", count: 20).trimmingCharacters(in: .whitespaces), width: 120)
+    let end = (full.string as NSString).length
+    let (frame, onlyIcon) = try #require(
+      full.replyButtonFrame(after: end, size: size, iconSize: icon))
+    #expect(onlyIcon)
+    #expect(frame.maxX <= 120)
+    #expect(view.replyButtonFrame(after: 0, size: size, iconSize: icon) == nil)
+  }
+
+}
+
+@MainActor
+@Suite("The passage a reply quotes, lit in its message (#565)")
+struct PassageLightTests {
+  @Test("A text lights the passage it holds, says so, and puts the light out after")
+  func lit() throws {
+    let view = SegmentTextView()
+    view.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
+    view.show(NSAttributedString(string: "Premier paragraphe.\n\nNote : les remises arrondissent."))
+    let quote = ReplyQuote(excerpt: "les remises", author: .agent, time: nil)
+    let passage = LitPassage(blockID: "a", quote: quote, request: 1)
+    var found = 0
+    view.light(PassageLight(passage: passage) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    let lit = try #require(view.litRange)
+    #expect((view.string as NSString).substring(with: lit) == "les remises")
+    let attribute = view.layoutManager?.temporaryAttribute(
+      .backgroundColor, atCharacterIndex: lit.location, effectiveRange: nil)
+    #expect(attribute != nil)
+    // The same request again changes nothing; none, and the light goes.
+    view.light(PassageLight(passage: passage) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    view.light(nil, color: .systemYellow)
+    #expect(view.litRange == nil)
+    #expect(
+      view.layoutManager?.temporaryAttribute(
+        .backgroundColor, atCharacterIndex: lit.location, effectiveRange: nil) == nil)
+    // A text without the passage says nothing.
+    let other = LitPassage(
+      blockID: "a", quote: ReplyQuote(excerpt: "ailleurs", author: .agent, time: nil), request: 2)
+    view.light(PassageLight(passage: other) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    #expect(view.litRange == nil)
+  }
+
+}

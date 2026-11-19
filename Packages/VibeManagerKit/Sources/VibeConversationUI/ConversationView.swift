@@ -200,7 +200,8 @@ public struct ConversationView: View {
               } else {
                 UserPromptView(
                   text: echo.text, attachments: echo.messageAttachments, date: echo.sentAt,
-                  isEcho: true)
+                  isEcho: true, agentName: model.agentName,
+                  showQuote: { model.showSource(of: $0, replyID: nil) })
                 echoStatus(echo)
               }
             }
@@ -282,7 +283,9 @@ public struct ConversationView: View {
         }
       }
       .overlay(alignment: .bottom) {
-        if model.scroll.unseenCount > 0 {
+        if model.returnBlockID != nil {
+          ReturnToReplyButton(model: model).padding(.bottom, 10)
+        } else if model.scroll.unseenCount > 0 {
           Button {
             model.jumpToBottom()
           } label: {
@@ -482,7 +485,8 @@ public struct ConversationView: View {
     guard case .entry(let entry) = block, case .userPrompt(let text, _) = entry.content else {
       return block.id
     }
-    return String(text.prefix(80))
+    // A reply is named by its own words, not by the passage it quotes (#565).
+    return String(ReplyQuote.message(of: text).prefix(80))
   }
 }
 
@@ -524,15 +528,29 @@ struct BlockView: View {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let text, let attachments):
-        UserPromptView(text: text, attachments: attachments, date: entry.date)
-          .environment(\.selectionBlock, selectionBlock)
+        UserPromptView(
+          text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
+          showQuote: isNested ? nil : { model.showSource(of: $0, replyID: entry.id) },
+          reply: replyAction(entry, author: .user),
+          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply
+        )
+        .environment(\.selectionBlock, selectionBlock)
+        .environment(\.replyToPassage, passageReply(entry, author: .user))
+        .environment(\.litPassage, litPassage(entry))
+        .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
       case .agentText(let text):
         AgentTextView(
-          text: text, id: entry.id, readAloud: model.readAloud, date: entry.date)
-          .environment(\.selectionBlock, selectionBlock)
-          // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
-          // written for the user to run (#548).
-          .environment(\.shellCommandRunner, model)
+          text: text, id: entry.id, readAloud: model.readAloud, date: entry.date,
+          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply,
+          reply: replyAction(entry, author: .agent)
+        )
+        .environment(\.selectionBlock, selectionBlock)
+        .environment(\.replyToPassage, passageReply(entry, author: .agent))
+        .environment(\.litPassage, litPassage(entry))
+        .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
+        // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
+        // written for the user to run (#548).
+        .environment(\.shellCommandRunner, model)
       case .reasoning(let text):
         ReasoningRow(id: entry.id, text: text, model: model)
           .environment(\.selectionBlock, selectionBlock)
@@ -546,6 +564,25 @@ struct BlockView: View {
         NoticeRow(notice: notice)
       }
     }
+  }
+
+  /// Replies to a passage of `entry` (#565): none inside a sub-agent's activity.
+  private func replyAction(_ entry: ConversationEntry, author: ReplyQuote.Author)
+    -> ((String) -> Void)?
+  {
+    guard !isNested else { return nil }
+    return { model.reply(to: $0, author: author, date: entry.date, blockID: entry.id) }
+  }
+
+  /// The passage a reply quotes, while it is lit in `entry`.
+  private func litPassage(_ entry: ConversationEntry) -> PassageLight? {
+    guard !isNested, let lit = model.litPassage, lit.blockID == entry.id else { return nil }
+    return PassageLight(passage: lit) { [model] in model.passageShown(lit) }
+  }
+
+  private func passageReply(_ entry: ConversationEntry, author: ReplyQuote.Author) -> PassageReply?
+  {
+    replyAction(entry, author: author).map { PassageReply(id: entry.id, action: $0) }
   }
 }
 
@@ -646,8 +683,7 @@ extension ConversationSelection.Source {
         }
         switch entry.content {
         case .userPrompt(let text, let attachments):
-          let shown = AttachedPaths.displayText(
-            text, joinedCount: attachments.filter(\.isWrittenInText).count)
+          let shown = ReplyLinks.shown(text, attachments: attachments).message
           guard !shown.isEmpty else { return [] }
           let color = appearance.userMessageStyle == .bubbles ? theme.bubbleText : theme.text
           return pieces([.plain(shown, color: color)])
@@ -658,6 +694,18 @@ extension ConversationSelection.Source {
         default:
           return []
         }
+      },
+      reply: { id in
+        guard case .entry(let entry) = model.blocks.first(where: { $0.id == id }) else {
+          return nil
+        }
+        let author: ReplyQuote.Author
+        switch entry.content {
+        case .userPrompt: author = .user
+        case .agentText: author = .agent
+        default: return nil
+        }
+        return { model.reply(to: $0, author: author, date: entry.date, blockID: entry.id) }
       })
   }
 }

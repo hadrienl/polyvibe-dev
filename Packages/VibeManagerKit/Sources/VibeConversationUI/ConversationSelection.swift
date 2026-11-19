@@ -40,6 +40,9 @@ final class ConversationSelection {
     /// The text of a block's segments, in reading order, as its views would show it: none for a
     /// block that holds no selectable text.
     var pieces: (String) -> [SelectionText.Piece]
+    /// Replies to a passage of a block, wherever its views are (#565): `nil` for a block that
+    /// cannot be replied to.
+    var reply: (String) -> ((String) -> Void)? = { _ in nil }
   }
 
   /// A segment on screen: its view, its block and its rank among the block's segments.
@@ -310,7 +313,7 @@ final class ConversationSelection {
 
   /// The blocks numbered in the conversation's order; without a conversation, in the order on
   /// screen.
-  private func blockOrder(_ shown: [Shown]) -> [String: Int] {
+  func blockOrder(_ shown: [Shown]) -> [String: Int] {
     var order: [String: Int] = [:]
     if let source {
       for (index, block) in source.blocks().enumerated() { order[block] = index }
@@ -319,7 +322,7 @@ final class ConversationSelection {
     return order
   }
 
-  private func key(_ place: SelectionPlace, _ order: [String: Int]) -> SelectionKey {
+  func key(_ place: SelectionPlace, _ order: [String: Int]) -> SelectionKey {
     SelectionKey(block: order[place.block] ?? Int.max, segment: place.segment, offset: place.offset)
   }
 

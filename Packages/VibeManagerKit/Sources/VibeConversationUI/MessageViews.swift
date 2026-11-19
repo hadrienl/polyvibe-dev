@@ -10,45 +10,62 @@ struct UserPromptView: View {
   let attachments: [MessageAttachment]
   let date: Date?
   var isEcho = false
+  /// The agent's name, for the passage a reply quotes (#565).
+  var agentName = ""
+  /// Brings the passage this reply quotes into view; `nil` where it cannot be shown.
+  var showQuote: ((ReplyQuote) -> Void)?
+  /// Replies to this message; `nil` where it cannot be replied to — a prompt on its way.
+  var reply: ((String) -> Void)?
+  /// The replies to this message, and what brings one into view.
+  var replies: [String] = []
+  var showReply: ((String) -> Void)?
   @Environment(\.conversationTheme) private var theme
   @Environment(\.conversationAppearance) private var appearance
+  @State private var isHovered = false
 
   private var bubbleRadius: Double { theme.layout.bubbleRadius }
 
   var body: some View {
     let size = appearance.textSize.pointSize
     // Without the paths that became attachments; an echo's text never holds them.
-    let shown = AttachedPaths.displayText(
-      text, joinedCount: attachments.filter(\.isWrittenInText).count)
+    // A reply shows the passage it quotes over the user's own words (#565).
+    let (quote, shown) = ReplyLinks.shown(text, attachments: attachments)
     Group {
       if appearance.userMessageStyle == .bubbles {
         HStack {
           Spacer(minLength: 80)
           VStack(alignment: .trailing, spacing: 6) {
-            if !shown.isEmpty {
-              content(shown, size: size)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(theme.bubble.color)
-                .clipShape(
+            if !shown.isEmpty || quote != nil {
+              VStack(alignment: .leading, spacing: 6) {
+                if let quote { header(quote, color: theme.bubbleText) }
+                if !shown.isEmpty { content(shown, size: size) }
+              }
+              .padding(.horizontal, 14)
+              .padding(.vertical, 10)
+              .background(theme.bubble.color)
+              .clipShape(
+                UnevenRoundedRectangle(
+                  topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
+                  bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius)
+              )
+              .overlay {
+                if let border = theme.bubbleBorder {
                   UnevenRoundedRectangle(
                     topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
-                    bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius)
-                )
-                .overlay {
-                  if let border = theme.bubbleBorder {
-                    UnevenRoundedRectangle(
-                      topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
-                      bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius
-                    ).stroke(border.color, lineWidth: 1.5)
-                  }
+                    bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius
+                  ).stroke(border.color, lineWidth: 1.5)
                 }
-                .modifier(SpokenPrompt(text: shown))
+              }
+              .modifier(SpokenPrompt(text: shown))
             }
             if !attachments.isEmpty {
               AttachmentStrip(attachments: attachments, alignment: .trailing)
             }
-            MessageTime(date: date, tooltipSide: Self.tooltipSide(.bubbles))
+            HStack(spacing: 8) {
+              replyButton
+              repliesButton
+              MessageTime(date: date, tooltipSide: Self.tooltipSide(.bubbles))
+            }
           }
           // Files without text: the heading VoiceOver goes to is the group of them.
           .modifier(EmptyPromptHeading(isEmpty: shown.isEmpty))
@@ -61,13 +78,18 @@ struct UserPromptView: View {
               Text("You", bundle: .module)
                 .font(theme.interfaceFont(size: size * 0.78, weight: .semibold))
                 .foregroundStyle(theme.secondaryText.color)
+              if let quote { header(quote, color: theme.text) }
               if !shown.isEmpty { content(shown, size: size) }
             }
             .modifier(SpokenPrompt(text: shown))
             if !attachments.isEmpty {
               AttachmentStrip(attachments: attachments).padding(.top, 4)
             }
-            MessageTime(date: date, tooltipSide: Self.tooltipSide(.lines))
+            HStack(spacing: 8) {
+              MessageTime(date: date, tooltipSide: Self.tooltipSide(.lines))
+              repliesButton
+              replyButton
+            }
           }
           Spacer(minLength: 0)
         }
@@ -75,12 +97,46 @@ struct UserPromptView: View {
       }
     }
     .opacity(isEcho ? 0.55 : 1)
+    .onHover { isHovered = $0 }
     .contextMenu {
       Button {
         copy(text)
       } label: {
         Text("Copy Message", bundle: .module)
       }
+      if let reply, !shown.isEmpty {
+        Button {
+          reply(shown)
+        } label: {
+          Text("Reply", bundle: .module)
+        }
+      }
+    }
+  }
+
+  /// The passage a reply quotes, on top of its text.
+  private func header(_ quote: ReplyQuote, color: ThemeColor) -> some View {
+    ReplyHeader(quote: quote, agentName: agentName, foreground: color) { showQuote?(quote) }
+      .disabled(showQuote == nil)
+  }
+
+  @ViewBuilder
+  private var repliesButton: some View {
+    if let showReply, !replies.isEmpty {
+      RepliesButton(replies: replies, show: showReply)
+    }
+  }
+
+  /// « Reply », beside the time while the pointer is over the message (#565).
+  @ViewBuilder
+  private var replyButton: some View {
+    if let reply {
+      let shown = ReplyLinks.shown(text, attachments: attachments).message
+      ReplyButton { reply(shown) }
+        .opacity(isHovered && !shown.isEmpty ? 1 : 0)
+        .disabled(!isHovered || shown.isEmpty)
+        // Its menu's « Reply » is VoiceOver's: not a dimmed button on every message.
+        .accessibilityHidden(!isHovered)
     }
   }
 
@@ -142,6 +198,11 @@ struct AgentTextView: View {
   var readAloud: ReadAloudController?
   /// When it was said: shown under it, beside the button (#458).
   var date: Date?
+  /// The replies to it (#565), and what brings one into view.
+  var replies: [String] = []
+  var showReply: ((String) -> Void)?
+  /// Replies to the whole answer, from its menu: the keyboard's and VoiceOver's way (#565).
+  var reply: ((String) -> Void)?
   @Environment(\.openSettings) private var openSettings
 
   var body: some View {
@@ -153,6 +214,13 @@ struct AgentTextView: View {
           } label: {
             Text("Copy Message", bundle: .module)
           }
+          if let reply {
+            Button {
+              reply(text)
+            } label: {
+              Text("Reply", bundle: .module)
+            }
+          }
           if let readAloud {
             let isReading = readAloud.isReading(id ?? text)
             Button {
@@ -163,12 +231,15 @@ struct AgentTextView: View {
             }
           }
         }
-      if readAloud != nil || date != nil {
+      if readAloud != nil || date != nil || !replies.isEmpty {
         HStack(spacing: 8) {
           if let readAloud {
             ReadAloudButton(text: text, id: id ?? text, readAloud: readAloud) { openSettings() }
           }
           MessageTime(date: date, tooltipSide: .trailing)
+          if let showReply, !replies.isEmpty {
+            RepliesButton(replies: replies, show: showReply)
+          }
         }
       }
     }
@@ -210,15 +281,16 @@ private struct ReadAloudButton: View {
         }
       }
       .font(.system(size: 9, weight: .semibold))
-        .foregroundStyle(isReading ? theme.onAccent.color : theme.secondaryText.color)
-        .frame(width: 22, height: 22)
-        .background(isReading ? theme.accent.color : theme.surface.color, in: Circle())
-        .overlay(Circle().stroke(isReading ? Color.clear : theme.border.color))
-        .contentShape(Circle())
+      .foregroundStyle(isReading ? theme.onAccent.color : theme.secondaryText.color)
+      .frame(width: 22, height: 22)
+      .background(isReading ? theme.accent.color : theme.surface.color, in: Circle())
+      .overlay(Circle().stroke(isReading ? Color.clear : theme.border.color))
+      .contentShape(Circle())
     }
     .buttonStyle(.plain)
     .accessibilityLabel(
-      isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
+      isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module)
+    )
     .help(isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
   }
 }

@@ -23,6 +23,9 @@ struct PromptComposer: View {
     let state = model.composerState
     let isShell = state == .ready && model.composerMode == .shell
     VStack(alignment: .leading, spacing: 10) {
+      if let target = model.shownReplyTarget {
+        ReplyQuoteBar(quote: target.quote, agentName: model.agentName) { model.cancelReply() }
+      }
       if !model.attachments.isEmpty {
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 8) {
@@ -132,6 +135,11 @@ struct PromptComposer: View {
               return .handled
             }
             if !Self.isComposingText, model.leaveShellMode() { return .handled }
+            // The passage replied to is taken back before the agent is stopped (#565).
+            // Only the one shown: a hidden one is not dropped by a key that shows nothing.
+            if !Self.isComposingText, model.shownReplyTarget != nil, model.cancelReply() {
+              return .handled
+            }
             guard model.isAgentWorking else { return .ignored }
             Task { await model.interrupt() }
             return .handled
