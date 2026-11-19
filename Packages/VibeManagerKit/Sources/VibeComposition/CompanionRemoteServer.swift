@@ -331,8 +331,10 @@ final class CompanionRemoteServer {
   static func entries(_ entries: some Sequence<ConversationEntry>) -> [RemoteEntry] {
     entries.compactMap { entry in
       let kind: RemoteEntry.Kind
+      var relayed: RemoteRelayed?
       switch entry.content {
       case .userPrompt(let text, let attachments):
+        relayed = RelayedMessage(text, attachments: attachments).map(Self.relayed)
         kind = .user(
           AttachedPaths.displayText(
             text, joinedCount: attachments.filter(\.isWrittenInText).count),
@@ -372,8 +374,18 @@ final class CompanionRemoteServer {
       case .reasoning:
         return nil
       }
-      return RemoteEntry(id: entry.id, kind: kind, date: entry.date)
+      return RemoteEntry(id: entry.id, kind: kind, date: entry.date, relayed: relayed)
     }
+  }
+
+  private static func relayed(_ message: RelayedMessage) -> RemoteRelayed {
+    let coordinator: String? =
+      switch message.sender {
+      case .application: nil
+      case .coordinator(let name): name
+      }
+    return RemoteRelayed(
+      coordinator: coordinator, children: message.children, body: message.body)
   }
 
   static func request(of request: AgentRequest) -> RemoteRequest? {

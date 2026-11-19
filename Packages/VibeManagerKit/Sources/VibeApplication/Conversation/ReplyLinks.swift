@@ -66,7 +66,9 @@ public struct ReplyLinks: Equatable, Sendable {
       let text: String
       switch (entry.content, quote.author) {
       case (.agentText(let said), .agent): text = said
-      case (.userPrompt(let said, let attachments), .user):
+      // Vibe Manager's and a coordinator's messages are not the user's, nor replied to.
+      case (.userPrompt(let said, let attachments), .user)
+      where RelayedMessage(said, attachments: attachments) == nil:
         text = shown(said, attachments: attachments).message
       default: continue
       }

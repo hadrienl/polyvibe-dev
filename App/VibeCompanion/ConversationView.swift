@@ -383,6 +383,15 @@ private struct EntryView: View {
   @Environment(\.conversationPalette) private var palette
 
   var body: some View {
+    if let relayed = entry.relayed {
+      RelayedRow(relayed: relayed)
+    } else {
+      message
+    }
+  }
+
+  @ViewBuilder
+  private var message: some View {
     switch entry.kind {
     case .user(let text, let attachments):
       VStack(alignment: .trailing, spacing: 6) {
@@ -449,6 +458,84 @@ private struct EntryView: View {
       markdown: text,
       options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
       ?? AttributedString(text)
+  }
+}
+
+/// A message Vibe Manager or the session's coordinator sent it, folded under who wrote it — and,
+/// for Vibe Manager's news, the sessions it is about —, as on the Mac. Unfolded, what the agent
+/// read, in English as it read it.
+private struct RelayedRow: View {
+  let relayed: RemoteRelayed
+  @State private var isExpanded = false
+  @Environment(\.conversationPalette) private var palette
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Button {
+        withAnimation(.snappy) { isExpanded.toggle() }
+      } label: {
+        HStack(spacing: 8) {
+          Image(systemName: "chevron.right")
+            .font(.caption2.weight(.semibold))
+            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+          Image(
+            systemName: relayed.coordinator == nil
+              ? "bell" : "point.3.connected.trianglepath.dotted")
+          summary
+            .lineLimit(1)
+            .truncationMode(.tail)
+          Spacer(minLength: 0)
+        }
+        .font(.footnote)
+        .foregroundStyle(palette.secondaryText)
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityValue(isExpanded ? Text("expanded") : Text("collapsed"))
+      if isExpanded {
+        HStack(alignment: .top, spacing: 10) {
+          Capsule().fill(palette.secondaryText.opacity(0.3)).frame(width: 2)
+          VStack(alignment: .leading, spacing: 10) {
+            // Vibe Manager's news is escaped prose; a coordinator's Markdown is kept as written.
+            let body = relayed.coordinator == nil ? Self.bulleted(relayed.body) : relayed.body
+            let segments = RemoteMarkdown.segments(body)
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+              switch segment {
+              case .prose(let prose):
+                Text(EntryView.markdown(prose))
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .textSelection(.enabled)
+              case .code(let language, let code):
+                CodeBlock(language: language, code: code, runsIn: nil)
+              }
+            }
+          }
+          .font(.subheadline)
+          .opacity(0.85)
+        }
+        .padding(.leading, 18)
+      }
+    }
+  }
+
+  /// Who wrote it, and the sessions Vibe Manager's news is about.
+  private var summary: Text {
+    guard let coordinator = relayed.coordinator else {
+      var line = AttributedString("Vibe Manager")
+      line.inlinePresentationIntent = .stronglyEmphasized
+      if !relayed.children.isEmpty {
+        line += AttributedString(" · " + relayed.children.joined(separator: ", "))
+      }
+      return Text(line)
+    }
+    return Text("Coordinator “\(coordinator)”").fontWeight(.semibold)
+  }
+
+  /// Its list marks as bullets: the phone reads Markdown within a line only.
+  static func bulleted(_ body: String) -> String {
+    body.split(separator: "\n", omittingEmptySubsequences: false)
+      .map { $0.hasPrefix("- ") ? "• " + $0.dropFirst(2) : String($0) }
+      .joined(separator: "\n")
   }
 }
 

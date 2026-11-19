@@ -148,12 +148,16 @@ public enum CoordinationPolicy {
   /// The text a coordinator's message to a child is sent as: marked, so that the child — and the
   /// user reading its conversation — knows who wrote it.
   public static func fromCoordinator(_ text: String, coordinatorName: String) -> String {
-    coordinatorMark + coordinatorName + "”] "
+    // A name that would close the mark early is spaced out, so that the mark reads back whole.
+    let name = coordinatorName.replacingOccurrences(of: coordinatorMarkClose, with: "” ]")
+    return coordinatorMark + name + coordinatorMarkClose + " "
       + text.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   /// What a coordinator's message to a child opens with, before the coordinator's name.
   static let coordinatorMark = "[Coordinator “"
+  /// What closes the mark, after the name; a space follows it.
+  static let coordinatorMarkClose = "”]"
 
   public static func standardized(_ path: String) -> String {
     let expanded = (path as NSString).expandingTildeInPath
