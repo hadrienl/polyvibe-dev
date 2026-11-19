@@ -606,7 +606,8 @@ struct BlockRow: View {
   /// with (#567).
   private var bookmarkable: some View {
     BlockView(block: block, model: model)
-      .modifier(BookmarkFlash(isLit: model.flashedBlockID == block.id))
+      // A message's own view lights it already (#565): the others, here.
+      .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
       .onHover { isHovered = $0 }
       .overlay(alignment: .topLeading) {
         BookmarkGutter(
@@ -617,6 +618,15 @@ struct BlockRow: View {
         .padding(.top, firstLineTop)
         .offset(x: -BookmarkGutter.reach)
       }
+  }
+
+  /// Whether its view lights it itself when it is brought up: what the user and the agent wrote.
+  private var isLitByItsView: Bool {
+    guard case .entry(let entry) = block else { return false }
+    switch entry.content {
+    case .userPrompt, .agentText: return true
+    default: return false
+    }
   }
 
   private var linePitch: Double {

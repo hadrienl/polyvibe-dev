@@ -406,24 +406,6 @@ struct BookmarkGutter: View {
   }
 }
 
-/// The light a bookmark brings its message up with, fading out (#567).
-struct BookmarkFlash: ViewModifier {
-  let isLit: Bool
-  @Environment(\.conversationTheme) private var theme
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  func body(content: Content) -> some View {
-    content.background {
-      RoundedRectangle(cornerRadius: 8)
-        .fill(theme.accent.color.opacity(0.14))
-        .padding(.horizontal, -10)
-        .padding(.vertical, -6)
-        .opacity(isLit ? 1 : 0)
-        .animation(isLit || reduceMotion ? nil : .easeOut(duration: 1.2), value: isLit)
-    }
-  }
-}
-
 /// The wheel over the overview scrolls the messages.
 private struct WheelForwarder: NSViewRepresentable {
   let pager: ConversationPager

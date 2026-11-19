@@ -1096,9 +1096,6 @@ public final class ConversationModel {
   @ObservationIgnored var selectedBlockID: () -> String? = { nil }
   /// Where the rows are as they are built: what the overview and the commands start from.
   @ObservationIgnored public let overview = ConversationOverviewTracker()
-  /// The block a bookmark just brought up, lit a moment.
-  public private(set) var flashedBlockID: String?
-  @ObservationIgnored private var flashTask: Task<Void, Never>?
   /// Where the overview asked to go: a block and how far into it, with a counter so that the
   /// same place twice still moves.
   public struct OverviewScroll: Hashable, Sendable {
@@ -1173,17 +1170,19 @@ public final class ConversationModel {
     return blocks.firstIndex { $0.id == id }
   }
 
-  /// Brings a bookmarked block to the top of what is read, and lights it a moment.
+  /// Brings a bookmarked block to the top of what is read, and lights it a moment, as a reply
+  /// lights the message it answers (#565).
   public func revealBookmark(_ blockID: String) {
     scroll.jumpedAway()
     revealedBlockID = blockID
     revealRequest += 1
-    flashedBlockID = blockID
-    flashTask?.cancel()
-    flashTask = Task { [weak self] in
-      try? await Task.sleep(for: .milliseconds(900))
-      guard !Task.isCancelled else { return }
-      self?.flashedBlockID = nil
+    litPassage = nil
+    highlightedBlockID = blockID
+    highlightTask?.cancel()
+    highlightTask = Task { [weak self] in
+      try? await Task.sleep(for: Self.highlightDuration)
+      guard !Task.isCancelled, let self else { return }
+      if self.highlightedBlockID == blockID { self.highlightedBlockID = nil }
     }
   }
 
