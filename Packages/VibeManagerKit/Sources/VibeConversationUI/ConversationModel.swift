@@ -1215,23 +1215,64 @@ public final class ConversationModel {
       blockID: blockID, offset: offset, count: (overviewScroll?.count ?? 0) + 1)
   }
 
-  /// What a bookmark says of its message: the start of its text, or what the tools did.
+  /// What a bookmark says of its message, as the rotor reads it: the start of its text, or what
+  /// the tools did. A message Vibe Manager or a coordinator sent (#568) says who wrote it, as it
+  /// does folded, before its words.
   public static func bookmarkLabel(of block: ConversationBlock) -> String {
+    guard let relayed = relayedMessage(of: block) else { return bookmarkExcerpt(of: block) }
+    // Vibe Manager's summary names the sessions already.
+    let summary = RelayedMessageView.summary(of: relayed)
+    guard case .coordinator = relayed.sender else { return oneLine(summary) }
+    let words = bookmarkExcerpt(of: block)
+    return words.isEmpty ? summary : oneLine(summary + " · " + words)
+  }
+
+  /// The start of a bookmarked message, under who wrote it in its preview: for Vibe Manager's
+  /// news, the sessions it is about, never their identifiers; for a coordinator's message, its
+  /// words as they read; for a reply, the user's words without the passage quoted (#565).
+  public static func bookmarkExcerpt(of block: ConversationBlock) -> String {
+    if let relayed = relayedMessage(of: block) {
+      switch relayed.sender {
+      case .application: return oneLine(relayed.children.joined(separator: ", "))
+      case .coordinator: return oneLine(plainText(ofMarkdown: relayed.body))
+      }
+    }
     let text: String
     switch block {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let prompt, let attachments):
         text = AttachedPaths.displayText(
-          prompt, joinedCount: attachments.filter(\.isWrittenInText).count)
+          ReplyQuote.message(of: prompt),
+          joinedCount: attachments.filter(\.isWrittenInText).count)
       case .agentText(let answer), .reasoning(let answer?): text = answer
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:
       text = ToolBlockView.accessibilityTitle(of: block)
     }
+    return oneLine(text)
+  }
+
+  /// A message Vibe Manager or the session's coordinator sent it.
+  static func relayedMessage(of block: ConversationBlock) -> RelayedMessage? {
+    guard case .entry(let entry) = block, case .userPrompt(let text, let attachments) = entry.content
+    else { return nil }
+    return RelayedMessage(text, attachments: attachments)
+  }
+
+  private static func oneLine(_ text: String) -> String {
     let flat = text.split(whereSeparator: \.isNewline).joined(separator: " ")
     return flat.count > 120 ? String(flat.prefix(119)) + "…" : flat
+  }
+
+  /// A coordinator's Markdown as it reads, without its marks.
+  private static func plainText(ofMarkdown markdown: String) -> String {
+    let options = AttributedString.MarkdownParsingOptions(
+      interpretedSyntax: .inlineOnlyPreservingWhitespace)
+    return (try? AttributedString(markdown: markdown, options: options)).map {
+      String($0.characters)
+    } ?? markdown
   }
 
   /// Whether a sub-agent's block is unfolded, wherever it is shown: on its own, as a line of a

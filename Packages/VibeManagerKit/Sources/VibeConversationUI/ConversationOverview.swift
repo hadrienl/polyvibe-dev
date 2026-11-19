@@ -122,11 +122,13 @@ struct ConversationOverview: View {
   let metrics: ConversationOverviewLayout.Metrics
   /// Hands the wheel's scrolls over to the messages.
   let pager: ConversationPager
+  /// The width of the messages left of the overview, which a bookmark's preview lies over.
+  let room: Double
+  @Environment(\.conversationAppearance) private var appearance
 
   @State private var box = OverviewLayoutBox()
   @State private var dragGrab: Double?
   @State private var hovered: Hover?
-  @State private var previewSize = CGSize(width: 260, height: 44)
 
   private var layout: ConversationOverviewLayout { box.layout }
 
@@ -168,13 +170,16 @@ struct ConversationOverview: View {
         }
       }
       // Left of the overview, level with the line, over the messages.
-      .overlay(alignment: .topLeading) {
+      .overlay {
         if let hovered, let id = hovered.bookmark {
-          BookmarkPreview(model: model, blockID: id, theme: theme)
-            .fixedSize()
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { previewSize = $0 }
-            .offset(x: -previewSize.width - 8, y: hovered.y - previewSize.height / 2)
-            .allowsHitTesting(false)
+          BookmarkPreviewPlacement(
+            lineY: hovered.y,
+            width: ConversationOverviewLayout.previewWidth(
+              textSize: appearance.textSize.scaled(13), room: room)
+          ) {
+            BookmarkPreview(model: model, blockID: id, theme: theme)
+          }
+          .allowsHitTesting(false)
         }
       }
     }
@@ -432,22 +437,54 @@ private struct OverviewViewport: View {
   }
 }
 
-/// The start of a bookmarked message, beside the overview, while the pointer is on its line.
+/// Lays a bookmark's preview where `ConversationOverviewLayout.previewOrigin` puts it, from the
+/// size it takes at `width` at most (#567). The overlay's alignment guides were not followed —
+/// the preview stayed in the overview's top corner, cut by the pane —, and an offset from a size
+/// measured afterwards lagged a frame behind.
+private struct BookmarkPreviewPlacement: Layout {
+  let lineY: Double
+  let width: Double
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    proposal.replacingUnspecifiedDimensions()
+  }
+
+  func placeSubviews(
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+  ) {
+    for subview in subviews {
+      let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
+      let origin = ConversationOverviewLayout.previewOrigin(
+        lineY: lineY, previewWidth: size.width, previewHeight: size.height,
+        overviewHeight: bounds.height)
+      subview.place(
+        at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
+        proposal: ProposedViewSize(size))
+    }
+  }
+}
+
+/// The start of a bookmarked message, beside the overview, while the pointer is on its line: in
+/// the conversation's own text size, as the messages read.
 private struct BookmarkPreview: View {
   let model: ConversationModel
   let blockID: String
   let theme: ConversationTheme
+  @Environment(\.conversationAppearance) private var appearance
 
   var body: some View {
     let block = model.blocks.first { $0.id == blockID }
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: 3) {
       if let block, let heading = Self.heading(of: block, agent: model.agentName) {
-        Text(heading).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+        Text(heading)
+          .font(theme.interfaceFont(size: appearance.textSize.scaled(11.5), weight: .semibold))
+          .foregroundStyle(theme.secondaryText.color)
+          .lineLimit(1)
       }
-      Text(block.map(ConversationModel.bookmarkLabel(of:)) ?? "")
-        .font(.callout)
+      Text(block.map(ConversationModel.bookmarkExcerpt(of:)) ?? "")
+        .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
+        .foregroundStyle(theme.text.color)
         .lineLimit(3)
-        .frame(maxWidth: 260, alignment: .leading)
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 7)
@@ -455,11 +492,19 @@ private struct BookmarkPreview: View {
     .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
   }
 
+  /// Who wrote it — Vibe Manager or a coordinator for a message relayed to the session (#568) —,
+  /// and when.
   private static func heading(of block: ConversationBlock, agent: String) -> String? {
     guard case .entry(let entry) = block else { return nil }
     let who: String
     switch entry.content {
-    case .userPrompt: who = String(localized: "You", bundle: .module)
+    case .userPrompt:
+      switch ConversationModel.relayedMessage(of: block)?.sender {
+      case .application: who = "Vibe Manager"
+      case .coordinator(let name):
+        who = String(localized: "Coordinator “\(name)”", bundle: .module)
+      case nil: who = String(localized: "You", bundle: .module)
+      }
     case .agentText: who = agent
     default: return nil
     }

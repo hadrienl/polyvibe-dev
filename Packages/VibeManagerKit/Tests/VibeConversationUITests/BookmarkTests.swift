@@ -169,4 +169,37 @@ struct BookmarkTests {
     #expect(label.count == 120)
     #expect(label.hasSuffix("…"))
   }
+
+  private static func prompt(_ text: String) -> ConversationBlock {
+    .entry(ConversationEntry(id: "p", content: .userPrompt(text, attachments: [])))
+  }
+
+  @Test("Vibe Manager's news is named by who sent it and the sessions it is about, not their identifiers")
+  func applicationNews() {
+    let block = Self.prompt(
+      """
+      [Vibe Manager] 2 events:
+      - “Revue générale” (B72A6790-1C2D-4E5F-8A9B-0C1D2E3F4A5B) finished its turn.
+      - “#12 export” (0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D) stopped: its agent is no longer running.
+      """)
+    #expect(ConversationModel.bookmarkExcerpt(of: block) == "Revue générale, #12 export")
+    #expect(ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · Revue générale, #12 export")
+  }
+
+  @Test("A coordinator's message is named by its coordinator, then its words without their marks")
+  func coordinatorMessage() {
+    let block = Self.prompt("[Coordinator “Release”] Fix the **tooltip**, then open a PR.")
+    #expect(ConversationModel.bookmarkExcerpt(of: block) == "Fix the tooltip, then open a PR.")
+    let label = ConversationModel.bookmarkLabel(of: block)
+    #expect(label.hasSuffix(" · Fix the tooltip, then open a PR."))
+    #expect(label.contains("Release"))
+    #expect(!label.contains("[Coordinator"))
+  }
+
+  @Test("A reply is named by the user's own words, not the passage it quotes")
+  func replyExcerpt() {
+    let reply = ReplyQuote.compose(
+      ReplyQuote(excerpt: "the old line", author: .agent, time: nil), message: "Why this one?")
+    #expect(ConversationModel.bookmarkExcerpt(of: Self.prompt(reply)) == "Why this one?")
+  }
 }

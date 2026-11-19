@@ -316,7 +316,8 @@ public struct ConversationView: View {
       .overlay(alignment: .trailing) {
         if showsOverview {
           ConversationOverview(
-            model: model, theme: theme, metrics: overviewMetrics, pager: pager
+            model: model, theme: theme, metrics: overviewMetrics, pager: pager,
+            room: paneWidth - overviewPlacement.width
           )
           .frame(width: overviewPlacement.width)
         }

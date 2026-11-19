@@ -200,4 +200,42 @@ struct ConversationOverviewLayoutTests {
     #expect(placement(920) == .init(width: 56, reserved: 36))
     #expect(placement(700) == .init(width: 56, reserved: 36))
   }
+
+  @Test("A bookmark's preview stands left of the overview, centred on the line it is shown for")
+  func previewBesideTheLine() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 300, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    // The gap between the preview and the overview, left of it; half its height above the line.
+    #expect(origin.x == -288)
+    #expect(origin.y == 270)
+  }
+
+  @Test("Near the top of the overview, the preview moves down to stay within it")
+  func previewAtTheTop() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 2, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.y == ConversationOverviewLayout.previewMargin)
+    #expect(origin.x == -288)
+  }
+
+  @Test("Near the bottom of the overview, the preview moves up to stay within it")
+  func previewAtTheBottom() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 698, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.y + 60 == 700 - ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("Taller than the overview, the preview starts at its top")
+  func previewTallerThanTheOverview() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 40, previewWidth: 280, previewHeight: 120, overviewHeight: 100)
+    #expect(origin.y == ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("The preview grows with the text, and never wider than the messages left of the overview")
+  func previewWidth() {
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 13, room: 1000) == 260)
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 1000) == 320)
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 200) == 188)
+  }
 }
