@@ -536,18 +536,21 @@ struct BlockView: View {
         )
         .environment(\.selectionBlock, selectionBlock)
         .environment(\.replyToPassage, passageReply(entry, author: .user))
+        .environment(\.litPassage, litPassage(entry))
         .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
       case .agentText(let text):
         AgentTextView(
           text: text, id: entry.id, readAloud: model.readAloud, date: entry.date,
           replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply,
-          reply: replyAction(entry, author: .agent))
-          .environment(\.selectionBlock, selectionBlock)
-          .environment(\.replyToPassage, passageReply(entry, author: .agent))
-          .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
-          // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
-          // written for the user to run (#548).
-          .environment(\.shellCommandRunner, model)
+          reply: replyAction(entry, author: .agent)
+        )
+        .environment(\.selectionBlock, selectionBlock)
+        .environment(\.replyToPassage, passageReply(entry, author: .agent))
+        .environment(\.litPassage, litPassage(entry))
+        .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
+        // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
+        // written for the user to run (#548).
+        .environment(\.shellCommandRunner, model)
       case .reasoning(let text):
         ReasoningRow(id: entry.id, text: text, model: model)
           .environment(\.selectionBlock, selectionBlock)
@@ -571,7 +574,14 @@ struct BlockView: View {
     return { model.reply(to: $0, author: author, date: entry.date, blockID: entry.id) }
   }
 
-  private func passageReply(_ entry: ConversationEntry, author: ReplyQuote.Author) -> PassageReply? {
+  /// The passage a reply quotes, while it is lit in `entry`.
+  private func litPassage(_ entry: ConversationEntry) -> PassageLight? {
+    guard !isNested, let lit = model.litPassage, lit.blockID == entry.id else { return nil }
+    return PassageLight(passage: lit) { [model] in model.passageShown(lit) }
+  }
+
+  private func passageReply(_ entry: ConversationEntry, author: ReplyQuote.Author) -> PassageReply?
+  {
     replyAction(entry, author: author).map { PassageReply(id: entry.id, action: $0) }
   }
 }

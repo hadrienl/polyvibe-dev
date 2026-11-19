@@ -40,6 +40,7 @@ struct SegmentView: NSViewRepresentable {
   @Environment(\.selectionBlock) private var block
   @Environment(\.conversationLinks) private var links
   @Environment(\.replyToPassage) private var replyToPassage
+  @Environment(\.litPassage) private var litPassage
 
   struct Input: Equatable {
     var content: Content
@@ -86,10 +87,16 @@ struct SegmentView: NSViewRepresentable {
     view.selectionBlock = block ?? ""
     if view.selection !== selection { view.selection = selection }
     view.replyAction = replyToPassage?.action
-    if case .prose = content { view.offersParagraphReply = true } else {
+    if case .prose = content {
+      view.offersParagraphReply = true
+    } else {
       view.offersParagraphReply = false
     }
     view.replyTint = theme.accent.nsColor
+    view.replyFill = theme.raised.nsColor
+    view.replyBorder = theme.border.nsColor
+    // Looked for once the text is shown: a message brought into view is laid out just now.
+    defer { view.light(litPassage, color: theme.warning.nsColor) }
     let size = appearance.textSize.pointSize
     let input = Input(
       content: content, theme: theme, size: size,
@@ -178,6 +185,13 @@ final class SegmentTextView: NSTextView {
   var selectionReplyOffset: Int?
   var replyTrackingArea: NSTrackingArea?
   var replyTint = NSColor.controlAccentColor
+  var replyFill = NSColor.windowBackgroundColor
+  var replyBorder = NSColor.separatorColor
+  /// The passage of a reply its message lights, looked for here.
+  var litRequest: LitPassage?
+  /// Where it is lit here: `nil` where it is not.
+  var litRange: NSRange?
+  var litColor = NSColor.systemYellow
 
   weak var selection: ConversationSelection? {
     didSet {
@@ -219,6 +233,8 @@ final class SegmentTextView: NSTextView {
     defer { showing = false }
     hideReplyButton()
     textStorage?.setAttributedString(text)
+    // Lit again on the new text, which the old's light does not fit.
+    if let litRequest { applyLight(litRequest) }
     measured.removeAll()
     selection?.setNeedsRefresh()
   }

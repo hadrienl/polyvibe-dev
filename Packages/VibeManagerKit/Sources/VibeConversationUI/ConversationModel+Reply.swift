@@ -54,7 +54,7 @@ extension ConversationModel {
       ?? ReplyLinks.source(of: quote, in: blocks[..<end])
     guard let source else { return }
     returnBlockID = replyID ?? Self.conversationEndID
-    reveal(source)
+    reveal(source, passage: quote)
   }
 
   /// Brings a reply into view, lit, from the passage it quotes.
@@ -77,16 +77,44 @@ extension ConversationModel {
   /// Where « Back to your reply » goes for a reply still on its way.
   static let conversationEndID = "reply:end"
 
-  private func reveal(_ blockID: String) {
+  /// Brings `blockID` into view, lit: only `passage` of it when one of its texts shows it — the
+  /// paragraph, the selection replied to —, else all of it.
+  private func reveal(_ blockID: String, passage: ReplyQuote? = nil) {
     scroll.jumpedAway()
     revealedBlockID = blockID
     revealRequest += 1
-    highlightedBlockID = blockID
+    litPassageShown = false
+    let request = revealRequest
+    litPassage = passage.map { LitPassage(blockID: blockID, quote: $0, request: request) }
+    highlightedBlockID = passage == nil ? blockID : nil
     highlightTask?.cancel()
     highlightTask = Task { [weak self] in
+      if passage != nil {
+        // Its message laid out, and its texts told: one of them shows it, or none does.
+        try? await Task.sleep(for: Self.passageSearchDuration)
+        guard !Task.isCancelled, let self else { return }
+        if !self.litPassageShown { self.highlightedBlockID = blockID }
+      }
       try? await Task.sleep(for: Self.highlightDuration)
-      guard !Task.isCancelled, let self, self.highlightedBlockID == blockID else { return }
-      self.highlightedBlockID = nil
+      guard !Task.isCancelled, let self else { return }
+      if self.highlightedBlockID == blockID { self.highlightedBlockID = nil }
+      if self.litPassage?.request == request { self.litPassage = nil }
     }
   }
+
+  /// How long its message's texts have to find the passage, before the whole message is lit.
+  static let passageSearchDuration = Duration.milliseconds(500)
+
+  /// A text of its message shows the passage lit.
+  func passageShown(_ passage: LitPassage) {
+    if litPassage == passage { litPassageShown = true }
+  }
+}
+
+/// The passage a reply quotes, lit in the message it comes from (#565).
+public struct LitPassage: Hashable, Sendable {
+  public var blockID: String
+  public var quote: ReplyQuote
+  /// The request that brought it into view: shown again, it is lit and scrolled to again.
+  public var request: Int
 }

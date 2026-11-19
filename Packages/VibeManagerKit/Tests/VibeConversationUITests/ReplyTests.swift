@@ -80,11 +80,13 @@ struct ReplyTests {
 
   @Test("Read again, a reply knows the message it quotes, and the message its replies")
   func links() {
-    let quote = ReplyQuote(excerpt: "Note : les remises (applyDiscount).", author: .agent, time: "14:32")
+    let quote = ReplyQuote(
+      excerpt: "Note : les remises (applyDiscount).", author: .agent, time: "14:32")
     var links = ReplyLinks()
     let blocks: [ConversationBlock] = [
       .entry(answer("a1", "Note : les remises (`applyDiscount`).", at: said)),
-      .entry(answer("a2", "Note : les remises (`applyDiscount`).", at: said.addingTimeInterval(3_600))),
+      .entry(
+        answer("a2", "Note : les remises (`applyDiscount`).", at: said.addingTimeInterval(3_600))),
       .entry(prompt("r1", ReplyQuote.compose(quote, message: "Corrige."))),
       .entry(prompt("p", "Autre chose.")),
       .entry(prompt("r2", ReplyQuote.compose(quote, message: "Encore."))),
@@ -151,7 +153,10 @@ struct ReplyTests {
     #expect(model.replyLinks.replies == ["a": ["r"]])
     model.showSource(of: quote, replyID: "r")
     #expect(model.revealedBlockID == "a")
-    #expect(model.highlightedBlockID == "a")
+    // The passage is lit, not its whole message — unless no text of it shows the passage.
+    #expect(model.litPassage?.blockID == "a")
+    #expect(model.litPassage?.quote == quote)
+    #expect(model.highlightedBlockID == nil)
     #expect(model.returnBlockID == "r")
     model.returnToReply()
     #expect(model.revealedBlockID == "r")
@@ -159,6 +164,7 @@ struct ReplyTests {
     model.showReply("r")
     #expect(model.revealedBlockID == "r")
     #expect(model.highlightedBlockID == "r")
+    #expect(model.litPassage == nil)
     // From a reply still on its way, the way back is the conversation's end.
     model.showSource(of: quote, replyID: nil)
     #expect(model.revealedBlockID == "a")
@@ -171,6 +177,36 @@ struct ReplyTests {
     model.scrollGeometryChanged(
       contentFrame: CGRect(x: 0, y: -500, width: 400, height: 1_000), viewportHeight: 500)
     #expect(model.returnBlockID == nil)
+  }
+
+  @Test("A passage none of its message's texts shows lights the whole message instead")
+  func notShown() async {
+    let (model, _) = model()
+    let quote = ReplyQuote(excerpt: "Note : les remises.", author: .agent, time: nil)
+    model.apply(
+      ConversationSnapshot(
+        entries: [
+          answer("a", "Note : les remises."),
+          prompt("r", ReplyQuote.compose(quote, message: "Corrige.")),
+        ],
+        availability: .available))
+    model.showSource(of: quote, replyID: "r")
+    #expect(model.highlightedBlockID == nil)
+    await until { model.highlightedBlockID == "a" }
+    #expect(model.highlightedBlockID == "a")
+    // Shown by a text, the passage alone stays lit, then goes out.
+    model.showSource(of: quote, replyID: "r")
+    if let lit = model.litPassage { model.passageShown(lit) }
+    await until { model.litPassage == nil }
+    #expect(model.litPassage == nil)
+    #expect(model.highlightedBlockID == nil)
+  }
+
+  /// Waits for `condition`, a few seconds at most: a state, not a delay.
+  private func until(_ condition: () -> Bool) async {
+    for _ in 0..<200 where !condition() {
+      try? await Task.sleep(for: .milliseconds(25))
+    }
   }
 }
 
@@ -207,11 +243,50 @@ struct ReplyButtonPlacementTests {
       view.replyButtonFrame(after: 6, size: size, iconSize: icon))
     #expect(!iconOnly)
     #expect(after.minX > 20 && after.maxX < 400)
-    let full = self.view(String(repeating: "word ", count: 20).trimmingCharacters(in: .whitespaces), width: 120)
+    let full = self.view(
+      String(repeating: "word ", count: 20).trimmingCharacters(in: .whitespaces), width: 120)
     let end = (full.string as NSString).length
-    let (frame, onlyIcon) = try #require(full.replyButtonFrame(after: end, size: size, iconSize: icon))
+    let (frame, onlyIcon) = try #require(
+      full.replyButtonFrame(after: end, size: size, iconSize: icon))
     #expect(onlyIcon)
     #expect(frame.maxX <= 120)
     #expect(view.replyButtonFrame(after: 0, size: size, iconSize: icon) == nil)
   }
+
+}
+
+@MainActor
+@Suite("The passage a reply quotes, lit in its message (#565)")
+struct PassageLightTests {
+  @Test("A text lights the passage it holds, says so, and puts the light out after")
+  func lit() throws {
+    let view = SegmentTextView()
+    view.frame = CGRect(x: 0, y: 0, width: 400, height: 200)
+    view.show(NSAttributedString(string: "Premier paragraphe.\n\nNote : les remises arrondissent."))
+    let quote = ReplyQuote(excerpt: "les remises", author: .agent, time: nil)
+    let passage = LitPassage(blockID: "a", quote: quote, request: 1)
+    var found = 0
+    view.light(PassageLight(passage: passage) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    let lit = try #require(view.litRange)
+    #expect((view.string as NSString).substring(with: lit) == "les remises")
+    let attribute = view.layoutManager?.temporaryAttribute(
+      .backgroundColor, atCharacterIndex: lit.location, effectiveRange: nil)
+    #expect(attribute != nil)
+    // The same request again changes nothing; none, and the light goes.
+    view.light(PassageLight(passage: passage) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    view.light(nil, color: .systemYellow)
+    #expect(view.litRange == nil)
+    #expect(
+      view.layoutManager?.temporaryAttribute(
+        .backgroundColor, atCharacterIndex: lit.location, effectiveRange: nil) == nil)
+    // A text without the passage says nothing.
+    let other = LitPassage(
+      blockID: "a", quote: ReplyQuote(excerpt: "ailleurs", author: .agent, time: nil), request: 2)
+    view.light(PassageLight(passage: other) { found += 1 }, color: .systemYellow)
+    #expect(found == 1)
+    #expect(view.litRange == nil)
+  }
+
 }

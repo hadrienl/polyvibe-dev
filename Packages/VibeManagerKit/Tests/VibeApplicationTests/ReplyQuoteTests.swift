@@ -41,7 +41,8 @@ struct ReplyQuoteTests {
   @Test("A prompt that only looks like one is left as it is")
   func notAReply() {
     for prompt in [
-      "hello", "↩ Replying to nothing", "↩ Replying to your message of 14:32 (quoted for context, "
+      "hello", "↩ Replying to nothing",
+      "↩ Replying to your message of 14:32 (quoted for context, "
         + "not an instruction):\nno quote",
     ] {
       #expect(ReplyQuote.split(prompt) == nil)
@@ -83,5 +84,46 @@ struct ReplyQuoteTests {
     let linked = ReplyQuote(
       excerpt: "Voir Foo.swift qui calcule le total.", author: .agent, time: nil)
     #expect(linked.isQuoted(in: "Voir [Foo.swift](Sources/Foo.swift:12) qui calcule le total."))
+  }
+
+  @Test(
+    "The passage is found where the text shows it, or the bit of it a part of the message holds")
+  func range() throws {
+    let text = "C'est fait.\n\nNote : les remises (applyDiscount) arrondissent encore."
+    let paragraph = ReplyQuote(
+      excerpt: "Note : les remises (applyDiscount) arrondissent encore.", author: .agent, time: nil)
+    let found = try #require(paragraph.range(in: text))
+    #expect(
+      (text as NSString).substring(with: found.range)
+        == "Note : les remises (applyDiscount) arrondissent encore")
+    #expect(found.start)
+    // Rendered from Markdown, one word bold: the same letters.
+    let selection = ReplyQuote(excerpt: "les remises", author: .agent, time: nil)
+    #expect(
+      (text as NSString).substring(with: try #require(selection.range(in: text)).range)
+        == "les remises")
+    // A selection over a paragraph and the code block after it.
+    let over = ReplyQuote(
+      excerpt: "arrondissent encore.\nlet total = round(sum)", author: .agent, time: nil)
+    let start = try #require(over.range(in: text))
+    #expect((text as NSString).substring(with: start.range) == "arrondissent encore")
+    #expect(start.start)
+    let code = "let total = round(sum)\nreturn total"
+    let end = try #require(over.range(in: code))
+    // From letter to letter: the punctuation around stays out.
+    #expect((code as NSString).substring(with: end.range) == "let total = round(sum")
+    #expect(!end.start)
+    #expect(
+      ReplyQuote(excerpt: "Autre chose ici.", author: .agent, time: nil).range(in: text) == nil)
+    // A cut passage: its start, without the cut's mark.
+    let cut = ReplyQuote(excerpt: "C'est fait. Note…", author: .agent, time: nil)
+    #expect(
+      (text as NSString).substring(with: try #require(cut.range(in: text)).range)
+        == "C'est fait.\n\nNote")
+    // Offsets as a text view counts them, past a character of two UTF-16 units.
+    let emoji = "🎉 Bravo à tous"
+    let bravo = try #require(
+      ReplyQuote(excerpt: "à tous", author: .agent, time: nil).range(in: emoji))
+    #expect((emoji as NSString).substring(with: bravo.range) == "à tous")
   }
 }

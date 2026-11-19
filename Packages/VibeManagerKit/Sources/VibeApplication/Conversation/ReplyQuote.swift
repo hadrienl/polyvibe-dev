@@ -143,6 +143,60 @@ public struct ReplyQuote: Hashable, Sendable {
   }
 
   static func letters(of text: String) -> String {
-    String(text.lowercased().unicodeScalars.filter(CharacterSet.alphanumerics.contains).map(Character.init))
+    String(
+      text.lowercased().unicodeScalars.filter(CharacterSet.alphanumerics.contains).map(
+        Character.init))
+  }
+
+  // MARK: Showing it
+
+  /// Where the passage is in `text`, a part of the message as the conversation shows it — a
+  /// paragraph run, a code block: all of it, or, for a passage that runs over several parts, the
+  /// bit of it this one holds. `start` says the passage starts here: there it is brought into view.
+  public func range(in text: String) -> (range: NSRange, start: Bool)? {
+    let passage = Self.marks(of: excerpt.hasSuffix("…") ? String(excerpt.dropLast()) : excerpt)
+      .map(\.scalar)
+    let shown = Self.marks(of: text)
+    let letters = shown.map(\.scalar)
+    guard !passage.isEmpty, !letters.isEmpty else { return nil }
+    func range(_ letters: Range<Int>) -> NSRange {
+      let start = shown[letters.lowerBound].offsets.lowerBound
+      return NSRange(
+        location: start, length: shown[letters.upperBound - 1].offsets.upperBound - start)
+    }
+    if let whole = letters.firstRange(of: passage) { return (range(whole), true) }
+    // Few enough letters that they could be anywhere: a part this short is not looked for.
+    let probe = min(passage.count, 12)
+    // It starts here, and runs on into the next part.
+    for start in letters.ranges(of: passage.prefix(probe)).map(\.lowerBound)
+    where passage.starts(with: letters[start...]) {
+      return (range(start..<letters.count), true)
+    }
+    // It ends here, come from the previous part.
+    for end in letters.ranges(of: passage.suffix(probe)).map(\.upperBound)
+    where passage.reversed().starts(with: letters[..<end].reversed()) {
+      return (range(0..<end), false)
+    }
+    // All of this part is inside it.
+    if letters.count >= probe, passage.firstRange(of: letters) != nil {
+      return (range(0..<letters.count), false)
+    }
+    return nil
+  }
+
+  /// The letters and digits of `text`, as `letters(of:)` compares them, each with where it is in
+  /// the text, in UTF-16 as a text view counts.
+  private static func marks(of text: String) -> [(scalar: Unicode.Scalar, offsets: Range<Int>)] {
+    var marks: [(scalar: Unicode.Scalar, offsets: Range<Int>)] = []
+    var offset = 0
+    for scalar in text.unicodeScalars {
+      let width = scalar.utf16.count
+      defer { offset += width }
+      for lower in String(scalar).lowercased().unicodeScalars
+      where CharacterSet.alphanumerics.contains(lower) {
+        marks.append((lower, offset..<offset + width))
+      }
+    }
+    return marks
   }
 }

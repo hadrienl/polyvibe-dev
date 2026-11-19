@@ -450,6 +450,10 @@ public final class ConversationModel {
   public internal(set) var replyLinks = ReplyLinks()
   /// The block brought into view by a reply or its passage, lit a moment.
   public internal(set) var highlightedBlockID: String?
+  /// The passage a reply quotes, brought into view and lit a moment in its message.
+  public internal(set) var litPassage: LitPassage?
+  /// Whether a text of its message showed `litPassage`: else its whole message is lit.
+  @ObservationIgnored var litPassageShown = false
   /// The reply the user left to read its passage: « Back to your reply » brings them there.
   public internal(set) var returnBlockID: String?
   @ObservationIgnored var highlightTask: Task<Void, Never>?
