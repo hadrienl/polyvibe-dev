@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 
 const REPO = "hadrienl/vibe-manager";
 const GH = `https://github.com/${REPO}`;
-const SITE_URL = "https://hadrienl.github.io/vibe-manager/";
+const SITE_URL = "https://polyvibe.dev/";
 const SOURCE_LANG = "fr";
 const DEFAULT_LANG = "en";
 
@@ -35,9 +35,9 @@ const LANGS = [
 const DOC_LANGS = ["en", "fr"];
 
 const PAGES = [
-  { id: "index", file: "index.html", href: "", title: (t) => `Vibe Manager · ${strip(t("hero.title"))}`, description: "hero.lede" },
-  { id: "changelog", file: "changelog.html", href: "changelog.html", title: (t) => `${strip(t("nav.changelog"))} · Vibe Manager`, description: "cl.lede" },
-  { id: "contribute", file: "contribute.html", href: "contribute.html", title: (t) => `${strip(t("nav.contribute"))} · Vibe Manager`, description: "contrib.lede" },
+  { id: "index", file: "index.html", href: "", title: (t) => `Polyvibe · ${strip(t("hero.title"))}`, description: "hero.lede" },
+  { id: "changelog", file: "changelog.html", href: "changelog.html", title: (t) => `${strip(t("nav.changelog"))} · Polyvibe`, description: "cl.lede" },
+  { id: "contribute", file: "contribute.html", href: "contribute.html", title: (t) => `${strip(t("nav.contribute"))} · Polyvibe`, description: "contrib.lede" },
 ];
 
 // The avatar's expressions, in the order of AvatarExpression.allCases: the page shows them in a row.
@@ -292,7 +292,7 @@ function renderRoot() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>Vibe Manager</title>
+<title>Polyvibe</title>
 <link rel="canonical" href="${SITE_URL}${DEFAULT_LANG}/">
 ${LANGS.map(([c]) => `<link rel="alternate" hreflang="${c}" href="${SITE_URL}${c}/">`).join("\n")}
 <link rel="alternate" hreflang="x-default" href="${SITE_URL}${DEFAULT_LANG}/">
@@ -323,7 +323,7 @@ ${LANGS.map(([c]) => `<link rel="alternate" hreflang="${c}" href="${SITE_URL}${c
 </head>
 <body>
   <main>
-    <h1>Vibe Manager</h1>
+    <h1>Polyvibe</h1>
     <ul>
       ${links}
     </ul>

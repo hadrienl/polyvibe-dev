@@ -1,6 +1,6 @@
 # The landing page
 
-The site served at <https://hadrienl.github.io/vibe-manager/>. `build.mjs` renders it into the
+The site served at <https://polyvibe.dev/> (GitHub Pages, custom domain; the former address <https://hadrienl.github.io/vibe-manager/> redirects there). `build.mjs` renders it into the
 folder GitHub Pages serves; `Scripts/publish-appcast.sh` runs it, then generates the Sparkle feed
 `appcast.xml` beside it, and the Appcast workflow deploys the whole on every change of `site/` on
 `main` and on every published, edited or deleted release. Nothing generated is committed.
