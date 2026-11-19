@@ -48,8 +48,8 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.2" fill="currentColor"/><circle cx="4.5" cy="12" r="1.2" fill="currentColor"/><circle cx="4.5" cy="18" r="1.2" fill="currentColor"/></g></symbol>
     <symbol id="i-mirror" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="8" height="15" rx="2"/><rect x="13.5" y="4" width="8" height="15" rx="2"/><path d="M6.5 16h.01M17.5 16h.01"/></g></symbol>
-    <symbol id="i-archive" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2"/><path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5M10 12.5h4"/></g></symbol>
-    <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M18 14.3a6.5 6.5 0 0 1 3.5 5.7"/></g></symbol>
+    <symbol id="i-orbit" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.5"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-25 12 12)"/></g></symbol>
+    <symbol id="i-run" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3"/><path d="M7 9.5l3 2.5-3 2.5M12.5 15h4.5"/></g></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18.5h2"/></g></symbol>
     <symbol id="i-reply" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 8 5 12.5 9.5 17"/><path d="M5 12.5h9a5 5 0 0 1 5 5V19"/></g></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M7 3.5h10a1 1 0 0 1 1 1v16l-6-4-6 4v-16a1 1 0 0 1 1-1z"/></symbol>
@@ -93,7 +93,7 @@
   <section class="hero">
     <div class="wrap">
       <h1 data-i18n="hero.title">Tous vos agents de code. <span class="grad">Une seule fenêtre.</span></h1>
-      <p class="lede" data-i18n="hero.lede">Polyvibe est une app macOS native pour mener plusieurs sessions Claude Code et Codex en parallèle, sans perdre le fil d'aucune. Gratuite et open source.</p>
+      <p class="lede" data-i18n="hero.lede">Polyvibe est une app macOS native pour mener plusieurs sessions Claude Code, Codex et Antigravity en parallèle, sans perdre le fil d'aucune. Gratuite et open source.</p>
       <div class="ctas">
         <a class="btn btn-primary js-dl" href="%%DOWNLOAD_URL%%"><svg aria-hidden="true"><use href="#i-apple"/></svg><span data-i18n="hero.cta_download">Télécharger pour macOS</span></a>
         <a class="btn btn-ghost" href="%%DOCS_HREF%%"><svg aria-hidden="true"><use href="#i-note"/></svg><span data-i18n="hero.cta_docs">Lire la documentation</span></a>
@@ -130,20 +130,16 @@
     <div class="wrap">
       <div class="head">
         <span class="eyebrow" data-i18n="new.eyebrow">Nouveautés</span>
-        <h2 data-i18n="new.title">Une session qui mène les autres, et vos téléphones dans la fenêtre</h2>
-        <p data-i18n="new.lede">Confiez la répartition du travail à une session, gardez simulateurs et téléphones sous les yeux, répondez à un passage précis et posez des signets dans la conversation.</p>
-      </div>
-
-      <div class="feature-row">
-        <div class="copy">
-          <span class="eyebrow" data-i18n="coord.eyebrow">Session coordinatrice</span>
-          <h3 data-i18n="coord.title">Un agent répartit le travail entre plusieurs sessions</h3>
-          <p data-i18n="coord.text">Allumez « Coordonner » et demandez en une phrase : la session crée une session enfant par tâche, chacune dans son dossier ou son worktree, leur écrit, lit leurs réponses et vous fait le point. Les enfants restent des sessions comme les autres, reliées à leur coordinatrice dans la barre latérale, et leurs demandes vous attendent toujours dans la palette.</p>
-        </div>
-        <picture class="pic-fade"><source srcset="%%ASSETS%%shots/coordination.jpg" media="(prefers-color-scheme: dark)"><img class="shot" src="%%ASSETS%%shots/coordination-light.jpg" data-i18n-attr="alt:coord.shot_alt" alt="Une session coordinatrice dans la barre latérale de Polyvibe, reliée par un filet à ses trois sessions enfants." loading="lazy" width="1900" height="1500"></picture>
+        <h2 data-i18n="new.title">Un troisième agent, et vos téléphones dans la fenêtre</h2>
+        <p data-i18n="new.lede">Antigravity rejoint Claude Code et Codex, simulateurs et téléphones s'ouvrent à côté de la conversation, et la conversation elle-même se cite, se marque et lance vos commandes.</p>
       </div>
 
       <div class="grid3">
+        <article class="card">
+          <span class="ico" style="background:var(--magenta)"><svg aria-hidden="true"><use href="#i-orbit"/></svg></span>
+          <h3 data-i18n="card.antigravity.title">Antigravity, troisième agent</h3>
+          <p data-i18n="card.antigravity.text">Antigravity CLI rejoint Claude Code et Codex : les modèles de votre compte, la reprise exacte de la conversation, et chaque outil lisible dans le fil.</p>
+        </article>
         <article class="card">
           <span class="ico" style="background:var(--coral)"><svg aria-hidden="true"><use href="#i-mirror"/></svg></span>
           <h3 data-i18n="card.mirror.title">Simulateurs et téléphones en miroir</h3>
@@ -155,9 +151,14 @@
           <p data-i18n="card.quote.text">Survolez un paragraphe de l'agent ou sélectionnez quelques mots : « Répondre » les cite devant votre message. Un clic sur la citation ramène à l'original.</p>
         </article>
         <article class="card">
-          <span class="ico" style="background:var(--magenta)"><svg aria-hidden="true"><use href="#i-bookmark"/></svg></span>
+          <span class="ico" style="background:var(--teal)"><svg aria-hidden="true"><use href="#i-bookmark"/></svg></span>
           <h3 data-i18n="card.bookmark.title">Des signets dans la conversation</h3>
           <p data-i18n="card.bookmark.text">Un clic dans la marge marque un message. La conversation entière, dessinée en petit à côté du texte, montre vos signets : un clic et vous y êtes.</p>
+        </article>
+        <article class="card">
+          <span class="ico" style="background:var(--ink)"><svg aria-hidden="true"><use href="#i-run"/></svg></span>
+          <h3 data-i18n="card.run.title">Exécutez la commande proposée</h3>
+          <p data-i18n="card.run.text">Quand l'agent vous tend une commande <code>! …</code>, un clic la lance, à côté de Copier. Un lien vers un script <code>.command</code> devient un bouton, qui demande avant de lancer.</p>
         </article>
         <article class="card">
           <span class="ico" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-phone"/></svg></span>
@@ -165,22 +166,12 @@
           <p data-i18n="card.companion.text">Suivez vos sessions et autorisez une commande depuis l'iPhone, par iCloud et sans serveur. En test sur TestFlight, pour les Mac Apple Silicon.</p>
           <a class="btn btn-ghost btn-sm" href="https://testflight.apple.com/join/DsJgybUh"><svg aria-hidden="true"><use href="#i-phone"/></svg><span data-i18n="card.companion.cta">Rejoindre la bêta TestFlight</span></a>
         </article>
-        <article class="card">
-          <span class="ico" style="background:var(--ink)"><svg aria-hidden="true"><use href="#i-users"/></svg></span>
-          <h3 data-i18n="card.accounts.title">Plusieurs comptes par agent</h3>
-          <p data-i18n="card.accounts.text">Votre abonnement perso et celui du travail, côte à côte : chaque compte de Claude Code ou de Codex a son dossier de configuration, et se choisit comme un agent à la création d'une session.</p>
-        </article>
-        <article class="card">
-          <span class="ico" style="background:var(--teal)"><svg aria-hidden="true"><use href="#i-archive"/></svg></span>
-          <h3 data-i18n="card.archive.title">L'archivage en une phrase</h3>
-          <p data-i18n="card.archive.text">« Chaque vendredi, archive ce qui est terminé depuis deux jours. » Un agent en fait une règle, testée avant d'agir ; chaque lot a son rapport, résumé si vous le voulez.</p>
-        </article>
       </div>
       <div class="chips new-more">
-        <span class="chip" data-i18n="card.context.title">Effort et contexte sous les yeux</span>
-        <span class="chip" data-i18n="new.more_send">« Envoyer maintenant » pendant un tour</span>
-        <span class="chip" data-i18n="new.more_zip">Thèmes importés depuis un .zip</span>
-        <span class="chip" data-i18n="new.more_worktrees">Emplacement des worktrees au choix</span>
+        <span class="chip" data-i18n="new.more_tabs">Onglets épinglés dans la vue web</span>
+        <span class="chip" data-i18n="new.more_codex_auto">Codex en mode automatique</span>
+        <span class="chip" data-i18n="new.more_folder_agent">Le dernier agent du dossier reproposé</span>
+        <span class="chip" data-i18n="new.more_haptics">L'alerte jouée aussi sur le trackpad</span>
       </div>
     </div>
   </section>
@@ -208,6 +199,15 @@
         <picture class="pic-fade"><source srcset="%%ASSETS%%shots/sidebar.jpg" media="(prefers-color-scheme: dark)"><img class="shot" src="%%ASSETS%%shots/sidebar-light.jpg" data-i18n-attr="alt:tasks.shot_alt" alt="La barre latérale de Polyvibe, avec les sessions rangées par statut et les demandes des agents en attente de réponse." loading="lazy" width="1420" height="1500"></picture>
       </div>
 
+      <div class="feature-row flip">
+        <div class="copy">
+          <span class="eyebrow" data-i18n="coord.eyebrow">Session coordinatrice</span>
+          <h3 data-i18n="coord.title">Un agent répartit le travail entre plusieurs sessions</h3>
+          <p data-i18n="coord.text">Allumez « Coordonner » et demandez en une phrase : la session crée une session enfant par tâche, chacune dans son dossier ou son worktree, leur écrit, lit leurs réponses et vous fait le point. Les enfants restent des sessions comme les autres, reliées à leur coordinatrice dans la barre latérale, et leurs demandes vous attendent toujours dans la palette.</p>
+        </div>
+        <picture class="pic-fade"><source srcset="%%ASSETS%%shots/coordination.jpg" media="(prefers-color-scheme: dark)"><img class="shot" src="%%ASSETS%%shots/coordination-light.jpg" data-i18n-attr="alt:coord.shot_alt" alt="Une session coordinatrice dans la barre latérale de Polyvibe, reliée par un filet à ses trois sessions enfants." loading="lazy" width="1900" height="1500"></picture>
+      </div>
+
       <div class="grid3">
         <article class="card">
           <span class="ico" style="background:var(--violet)"><svg aria-hidden="true"><use href="#i-moon"/></svg></span>
@@ -222,7 +222,7 @@
         <article class="card">
           <span class="ico" style="background:var(--teal)"><svg aria-hidden="true"><use href="#i-swap"/></svg></span>
           <h3 data-i18n="card.switch.title">Changez d'agent en cours de route</h3>
-          <p data-i18n="card.switch.text">Passez de Claude Code à Codex, ou d'un modèle à l'autre. Le nouvel agent reçoit un résumé du travail, que vous relisez avant l'envoi.</p>
+          <p data-i18n="card.switch.text">Passez de Claude Code à Codex ou à Antigravity, ou d'un modèle à l'autre : gardez la conversation, ou repartez avec tout l'historique ou un résumé que vous relisez avant l'envoi.</p>
         </article>
         <article class="card">
           <span class="ico" style="background:var(--magenta)"><svg aria-hidden="true"><use href="#i-note"/></svg></span>
@@ -241,8 +241,8 @@
         </article>
         <article class="card">
           <span class="ico" style="background:var(--teal)"><svg aria-hidden="true"><use href="#i-server"/></svg></span>
-          <h3 data-i18n="card.endpoint.title">Vos modèles, vos endpoints</h3>
-          <p data-i18n="card.endpoint.text">Ollama, LM Studio, OpenRouter ou la passerelle de votre entreprise : Claude Code ou Codex pilote le modèle de votre choix, testé avant la première session.</p>
+          <h3 data-i18n="card.endpoint.title">Vos comptes, vos modèles</h3>
+          <p data-i18n="card.endpoint.text">L'abonnement perso et celui du travail, côte à côte, et le modèle de votre choix : Ollama, LM Studio, OpenRouter ou la passerelle de votre entreprise, testé avant la première session.</p>
         </article>
         <article class="card">
           <span class="ico" style="background:var(--coral)"><svg aria-hidden="true"><use href="#i-shield"/></svg></span>
@@ -328,8 +328,8 @@
       </div>
       <div class="oss">
         <div class="stat"><b data-i18n="oss.free_value">0 €</b><span data-i18n="oss.free">Pas d'abonnement, pas de version pro.</span></div>
-        <div class="stat"><b>38</b><span data-i18n="oss.adr">Décisions d'architecture publiées, du stockage des sessions au terminal.</span></div>
-        <div class="stat"><b>2</b><span data-i18n="oss.agents">Agents pris en charge : Claude Code et Codex CLI, sur leur service ou sur un endpoint (Ollama, LM Studio, OpenRouter…).</span></div>
+        <div class="stat"><b>46</b><span data-i18n="oss.adr">Décisions d'architecture publiées, du stockage des sessions au terminal.</span></div>
+        <div class="stat"><b>3</b><span data-i18n="oss.agents">Agents pris en charge : Claude Code, Codex CLI et Antigravity CLI, sur leur service ou sur un endpoint (Ollama, LM Studio, OpenRouter…).</span></div>
       </div>
     </div>
   </section>
