@@ -30,6 +30,10 @@ public final class ConversationWorkspace {
   @ObservationIgnored private let follow: FollowConversation?
   @ObservationIgnored private let store: any ConversationAppearanceStore
   @ObservationIgnored private let agents: (any AgentProviderResolving)?
+  /// Where each conversation's bookmarks are kept (#567).
+  @ObservationIgnored private let bookmarks: any ConversationBookmarkStore
+  /// The last read or write of each session's bookmarks, which the next one waits for.
+  @ObservationIgnored private var bookmarkAccesses: [SessionID: Task<Void, Never>] = [:]
   /// The skills and commands read from the agents, shared by the sessions of a folder (#219).
   @ObservationIgnored let commands: AgentCommandCatalog
   /// Which list each model reads: another agent or folder starts from an empty one.
@@ -80,14 +84,39 @@ public final class ConversationWorkspace {
     store: any ConversationAppearanceStore = InMemoryConversationAppearanceStore(),
     agents: (any AgentProviderResolving)? = nil,
     themes: ConversationThemesModel = ConversationThemesModel(),
-    commands: AgentCommandCatalog = AgentCommandCatalog()
+    commands: AgentCommandCatalog = AgentCommandCatalog(),
+    bookmarks: any ConversationBookmarkStore = NoConversationBookmarks()
   ) {
     self.follow = follow
     self.store = store
     self.agents = agents
+    self.bookmarks = bookmarks
     self.commands = commands
     self.themes = themes
     appearance = store.appearance
+  }
+
+  /// Reads the session's bookmarks into its model, and keeps them as they change (#567): one
+  /// access after the other for a session, whichever model made it — a read after the last write
+  /// of a model let go of, each write after the read, so that none is lost.
+  private func connectBookmarks(of model: ConversationModel) {
+    let store = bookmarks
+    let id = model.sessionID
+    let previous = bookmarkAccesses[id]
+    let read = Task { [weak model] in
+      await previous?.value
+      guard let entries = try? await store.bookmarks(for: id) else { return }
+      model?.loadBookmarks(entries)
+    }
+    bookmarkAccesses[id] = read
+    model.saveBookmarks = { [weak self] entries in
+      guard let self else { return }
+      let previous = self.bookmarkAccesses[id]
+      self.bookmarkAccesses[id] = Task {
+        await previous?.value
+        try? await store.save(entries, for: id)
+      }
+    }
   }
 
   /// Learns which agents write a transcript the view can read.
@@ -162,6 +191,7 @@ public final class ConversationWorkspace {
     } else {
       model = ConversationModel(sessionID: session.id)
       model.appearance = appearance
+      connectBookmarks(of: model)
       if let follow {
         let id = session.id
         model.unfoldSubagents = { callIDs in

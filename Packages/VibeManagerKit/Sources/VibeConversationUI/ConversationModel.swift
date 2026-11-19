@@ -850,6 +850,9 @@ public final class ConversationModel {
     blocks = rebuilt
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
+    updateBookmarkedIndices(from: restart)
+    blocksChangedFrom = min(blocksChangedFrom ?? .max, restart)
+    blocksRevision += 1
     // Written only when they differ: every row reads them, and a write redraws them all (#462).
     var days = self.days
     days.update(blocks, from: restart)
@@ -1080,6 +1083,155 @@ public final class ConversationModel {
     scroll.jumpedAway()
     revealedBlockID = block.id
     revealRequest += 1
+  }
+
+  // MARK: - Bookmarks (#567)
+
+  /// The entries the user marked, by identifier: kept by the session's store, never sent to the
+  /// agent.
+  public private(set) var bookmarks: Set<String> = []
+  /// The blocks that hold one, in order: the overview's lines and the rotor's entries.
+  public private(set) var bookmarkedIndices: [Int] = []
+  /// Keeps the bookmarks once they change.
+  @ObservationIgnored public var saveBookmarks: ((Set<String>) -> Void)?
+  /// The last bookmark brought up: Next and Previous go on from it while it is on screen, where
+  /// the top of what is read may not reach it — near the end, the view cannot scroll that far.
+  @ObservationIgnored private var lastRevealedBookmark: String?
+  /// Bumped at each layout of the blocks: what the overview lays out again for.
+  public private(set) var blocksRevision = 0
+  /// The first block that may have changed since the overview last asked.
+  @ObservationIgnored private var blocksChangedFrom: Int?
+
+  /// The first block laid out again since the last call, `nil` when none was.
+  public func takeBlocksChangedFrom() -> Int? {
+    defer { blocksChangedFrom = nil }
+    return blocksChangedFrom
+  }
+  /// The block the selection of text is in, if one is: what Toggle Bookmark marks first.
+  @ObservationIgnored var selectedBlockID: () -> String? = { nil }
+  /// Where the rows are as they are built: what the overview and the commands start from.
+  @ObservationIgnored public let overview = ConversationOverviewTracker()
+  /// Where the overview asked to go: a block and how far into it, with a counter so that the
+  /// same place twice still moves.
+  public struct OverviewScroll: Hashable, Sendable {
+    public var blockID: String
+    public var offset: Double
+    public var count: Int
+  }
+  public private(set) var overviewScroll: OverviewScroll?
+
+  public var bookmarkedBlocks: [ConversationBlock] {
+    bookmarkedIndices.filter(blocks.indices.contains).map { blocks[$0] }
+  }
+
+  /// The bookmarks read from the store: added to any set before they arrived, which are kept
+  /// again with them.
+  public func loadBookmarks(_ entries: Set<String>) {
+    guard !entries.isSubset(of: bookmarks) else { return }
+    let setBefore = !bookmarks.isEmpty
+    bookmarks.formUnion(entries)
+    updateBookmarkedIndices()
+    if setBefore { saveBookmarks?(bookmarks) }
+  }
+
+  public func isBookmarked(_ block: ConversationBlock) -> Bool {
+    ConversationBookmarks.isMarked(block, in: bookmarks)
+  }
+
+  public func toggleBookmark(_ block: ConversationBlock) {
+    bookmarks = ConversationBookmarks.toggled(bookmarks, on: block)
+    updateBookmarkedIndices()
+    saveBookmarks?(bookmarks)
+  }
+
+  /// The marked blocks, those before `start` kept as they were.
+  private func updateBookmarkedIndices(from start: Int = 0) {
+    let indices =
+      bookmarkedIndices.prefix { $0 < start }
+      + ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks, from: start)
+    if indices != bookmarkedIndices { bookmarkedIndices = indices }
+  }
+
+  /// Toggle Bookmark, ⌘B: on the message the selection of text is in, on the one at the top of
+  /// what is read otherwise. `false` when there is none.
+  @discardableResult
+  public func toggleBookmarkInView() -> Bool {
+    guard let id = selectedBlockID() ?? overview.top?.blockID,
+      let block = blocks.first(where: { $0.id == id })
+    else { return false }
+    toggleBookmark(block)
+    return true
+  }
+
+  /// Next Bookmark, ⌥⌘J: the first bookmark below the top of what is read. `false` past the last.
+  @discardableResult
+  public func revealNextBookmark() -> Bool {
+    var index = topIndex ?? -1
+    if let last = lastRevealedOnScreen { index = max(index, last) }
+    guard let next = ConversationBookmarks.next(after: index, in: bookmarkedIndices) else {
+      return false
+    }
+    revealBookmark(blocks[next].id)
+    return true
+  }
+
+  /// Previous Bookmark, ⌥⌘K. `false` before the first.
+  @discardableResult
+  public func revealPreviousBookmark() -> Bool {
+    guard var index = topIndex else { return false }
+    var offset = overview.top?.offset ?? 0
+    if let last = lastRevealedOnScreen, last > index { (index, offset) = (last, 0) }
+    guard
+      let previous = ConversationBookmarks.previous(
+        before: index, offset: offset, in: bookmarkedIndices)
+    else { return false }
+    revealBookmark(blocks[previous].id)
+    return true
+  }
+
+  /// The last bookmark brought up, while it is still in what is read.
+  private var lastRevealedOnScreen: Int? {
+    guard let id = lastRevealedBookmark, overview.isRead(id) else { return nil }
+    return blocks.firstIndex { $0.id == id }
+  }
+
+  /// The block at the top of what is read.
+  private var topIndex: Int? {
+    guard let id = overview.top?.blockID else { return nil }
+    return blocks.firstIndex { $0.id == id }
+  }
+
+  /// Brings a bookmarked block to the top of what is read, and lights it a moment, as a reply
+  /// lights the message it answers (#565).
+  public func revealBookmark(_ blockID: String) {
+    lastRevealedBookmark = blockID
+    reveal(blockID)
+  }
+
+  /// Scrolls to where the overview was clicked or dragged.
+  public func scrollOverview(to blockID: String, offset: Double) {
+    scroll.jumpedAway()
+    overviewScroll = OverviewScroll(
+      blockID: blockID, offset: offset, count: (overviewScroll?.count ?? 0) + 1)
+  }
+
+  /// What a bookmark says of its message: the start of its text, or what the tools did.
+  public static func bookmarkLabel(of block: ConversationBlock) -> String {
+    let text: String
+    switch block {
+    case .entry(let entry):
+      switch entry.content {
+      case .userPrompt(let prompt, let attachments):
+        text = AttachedPaths.displayText(
+          prompt, joinedCount: attachments.filter(\.isWrittenInText).count)
+      case .agentText(let answer), .reasoning(let answer?): text = answer
+      default: text = ToolBlockView.accessibilityTitle(of: block)
+      }
+    case .toolGroup, .subagentGroup:
+      text = ToolBlockView.accessibilityTitle(of: block)
+    }
+    let flat = text.split(whereSeparator: \.isNewline).joined(separator: " ")
+    return flat.count > 120 ? String(flat.prefix(119)) + "…" : flat
   }
 
   /// Whether a sub-agent's block is unfolded, wherever it is shown: on its own, as a line of a

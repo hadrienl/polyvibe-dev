@@ -511,6 +511,11 @@ struct ConversationPreferencesTests {
     #expect(appearance.density == .compact)
     #expect(appearance.lightTheme == "paper")
     #expect(appearance.defaultPresentation == .conversation)
+    // Written before the overview existed (#567): shown.
+    #expect(appearance.showsOverview)
+    let hidden = try JSONDecoder().decode(
+      ConversationAppearance.self, from: Data(#"{"showsOverview":false}"#.utf8))
+    #expect(!hidden.showsOverview)
   }
 
   @Test("The dark theme applies in dark mode only while the system is followed")

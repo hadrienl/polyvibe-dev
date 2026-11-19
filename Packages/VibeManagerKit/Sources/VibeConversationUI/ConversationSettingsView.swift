@@ -177,6 +177,10 @@ public struct ConversationSettingsView: View {
             Text("Your messages", bundle: .module)
           }
           .pickerStyle(.segmented)
+          // In place of the scroll bar (#567).
+          Toggle(isOn: $appearance.showsOverview) {
+            Text("Show the overview beside the conversation", bundle: .module)
+          }
         } header: {
           Text("Display", bundle: .module)
         }

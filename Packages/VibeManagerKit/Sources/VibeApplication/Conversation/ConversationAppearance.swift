@@ -79,6 +79,8 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
   public var showsReasoning: Bool
   public var wrapsCode: Bool
   public var showsDiffLineNumbers: Bool
+  /// The whole conversation drawn small beside it, in place of the scroll bar (#567).
+  public var showsOverview: Bool
 
   public static let defaultLightTheme = "system-light"
   public static let defaultDarkTheme = "system-dark"
@@ -100,7 +102,8 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
     expandsEdits: Bool = false,
     showsReasoning: Bool = true,
     wrapsCode: Bool = false,
-    showsDiffLineNumbers: Bool = true
+    showsDiffLineNumbers: Bool = true,
+    showsOverview: Bool = true
   ) {
     self.defaultPresentation = defaultPresentation
     self.followsSystemAppearance = followsSystemAppearance
@@ -119,6 +122,7 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
     self.showsReasoning = showsReasoning
     self.wrapsCode = wrapsCode
     self.showsDiffLineNumbers = showsDiffLineNumbers
+    self.showsOverview = showsOverview
   }
 
   public init(from decoder: any Decoder) throws {
@@ -144,7 +148,8 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
       expandsEdits: value(.expandsEdits, fallback.expandsEdits),
       showsReasoning: value(.showsReasoning, fallback.showsReasoning),
       wrapsCode: value(.wrapsCode, fallback.wrapsCode),
-      showsDiffLineNumbers: value(.showsDiffLineNumbers, fallback.showsDiffLineNumbers)
+      showsDiffLineNumbers: value(.showsDiffLineNumbers, fallback.showsDiffLineNumbers),
+      showsOverview: value(.showsOverview, fallback.showsOverview)
     )
   }
 

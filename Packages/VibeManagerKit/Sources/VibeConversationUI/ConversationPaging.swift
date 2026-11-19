@@ -23,6 +23,17 @@ final class ConversationPager {
     return y + insets.top
   }
 
+  /// The part of the messages read now, between the toolbar and the foot: where it starts in
+  /// them and how tall it is (#567).
+  func readableRange() -> (top: Double, height: Double)? {
+    guard let scrollView, let document = scrollView.documentView, document.isFlipped else {
+      return nil
+    }
+    let clip = scrollView.contentView.bounds
+    let insets = scrollView.contentInsets
+    return (clip.origin.y + insets.top, max(clip.height - insets.top - insets.bottom, 0))
+  }
+
   /// Where the view starts after a page. The messages scroll under the toolbar, which veils them
   /// (#118, #228): only what lies between the insets is read, so a page is that height, less the
   /// part kept on screen to read on from — no line is skipped under the veil — and the ends are

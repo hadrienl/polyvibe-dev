@@ -40,9 +40,13 @@ public struct ConversationView: View {
   @State private var pagePending = false
   /// One selection from one message to the next (#381).
   @State private var selection = ConversationSelection()
+  /// The width of the messages' pane, which the overview takes its margin from (#567).
+  @State private var paneWidth = 0.0
 
   private static let bottomID = "conversation.bottom"
   private static let pageTargetID = "conversation.page"
+  /// The messages' own coordinates: where each row says it is (#567).
+  static let contentSpace = "conversation.content"
 
   public init(
     model: ConversationModel, theme: ConversationTheme, appearance: ConversationAppearance,
@@ -99,7 +103,8 @@ public struct ConversationView: View {
               { model.terminalScreenChanged($0) })
           )
           .frame(maxWidth: layout.contentWidth)
-          .padding(.horizontal, layout.sideMargin)
+          .padding(.leading, leadingMargin)
+          .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
           .padding(.bottom, showsComposer ? 8 : 16)
           .frame(maxWidth: .infinity)
         }
@@ -179,6 +184,50 @@ public struct ConversationView: View {
 
   private var spacing: Double { layout.blockSpacing }
 
+  // MARK: - Overview and bookmarks (#567)
+
+  /// Left of the messages: room for their bookmarks, whatever margin the theme gives.
+  private var leadingMargin: Double { max(layout.sideMargin, BookmarkGutter.reach) }
+
+  private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }
+
+  private var overviewPlacement: ConversationOverviewLayout.Placement {
+    guard showsOverview, paneWidth > 0 else { return .init(width: 0, reserved: 0) }
+    return ConversationOverviewLayout.placement(
+      paneWidth: paneWidth, contentWidth: layout.contentWidth, leadingMargin: leadingMargin,
+      trailingMargin: layout.sideMargin)
+  }
+
+  /// What the overview estimates the blocks never built with. The column's width by steps: a
+  /// window resized does not wrap every message again at each frame.
+  private var overviewMetrics: ConversationOverviewLayout.Metrics {
+    let available =
+      paneWidth - leadingMargin - layout.sideMargin - overviewPlacement.reserved
+    let column = min(layout.contentWidth, max(available, 200))
+    return ConversationOverviewLayout.Metrics(
+      columnWidth: (column / 40).rounded() * 40, textSize: appearance.textSize.pointSize,
+      lineHeight: layout.lineHeight, blockSpacing: spacing,
+      paragraphSpacing: layout.paragraphSpacing)
+  }
+
+  /// Tells the overview where the part read now is.
+  private func trackReadablePart() {
+    guard let readable = pager.readableRange() else { return }
+    model.overview.scrolled(readableTop: readable.top, readableHeight: readable.height)
+  }
+
+  /// Scrolls so that this point of the messages is at the top of what is read, through the mark
+  /// the pages use (#227).
+  private func scrollMark(to top: Double, proxy: ScrollViewProxy) {
+    // A mark already there is not laid out again.
+    guard max(top, 0) != max(pageTarget, 0) else {
+      proxy.scrollTo(Self.pageTargetID, anchor: .top)
+      return
+    }
+    pagePending = true
+    pageTarget = top
+  }
+
   private var conversation: some View {
     // What it reads of the messages scrolled away, with the theme and the size they are shown at.
     let _ = selection.source = .of(model, theme: theme, appearance: appearance)
@@ -213,7 +262,8 @@ public struct ConversationView: View {
         }
         .environment(\.conversationSelection, selection)
         .frame(maxWidth: layout.contentWidth)
-        .padding(.horizontal, layout.sideMargin)
+        .padding(.leading, leadingMargin)
+        .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
         .padding(.top, layout.topPadding)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
@@ -221,6 +271,7 @@ public struct ConversationView: View {
         // to the scroll view's top inset, which macOS 26 covers with the toolbar's edge effect
         // (#228).
         .frame(minHeight: viewportHeight, alignment: .bottom)
+        .coordinateSpace(name: Self.contentSpace)
         // Inside the scroll view of the messages: the pager finds it from here (#227).
         .background(ConversationPagerProbe(pager: pager).accessibilityHidden(true))
         .overlay(alignment: .topLeading) {
@@ -246,16 +297,46 @@ public struct ConversationView: View {
         } action: { frame in
           contentFrame = frame
           model.scrollGeometryChanged(contentFrame: frame, viewportHeight: viewportHeight)
+          trackReadablePart()
         }
       }
-      .onGeometryChange(for: Double.self) {
-        $0.size.height
-      } action: { height in
-        viewportHeight = height
-        model.scrollGeometryChanged(contentFrame: contentFrame, viewportHeight: height)
+      .onGeometryChange(for: CGSize.self) {
+        $0.size
+      } action: { size in
+        paneWidth = size.width
+        guard size.height != viewportHeight else { return }
+        viewportHeight = size.height
+        model.scrollGeometryChanged(contentFrame: contentFrame, viewportHeight: size.height)
+        trackReadablePart()
       }
       .defaultScrollAnchor(.bottom)
+      // The overview stands for the scroll bar (#567).
+      .scrollIndicators(showsOverview ? .hidden : .automatic)
       .modifier(ToolbarVeil())
+      .overlay(alignment: .trailing) {
+        if showsOverview {
+          ConversationOverview(
+            model: model, theme: theme, metrics: overviewMetrics, pager: pager
+          )
+          .frame(width: overviewPlacement.width)
+        }
+      }
+      .onChange(of: model.overviewScroll) {
+        guard let target = model.overviewScroll else { return }
+        if let top = model.overview.top(of: target.blockID) {
+          scrollMark(to: top + target.offset, proxy: proxy)
+        } else {
+          // Not built: brought up first, the next move of the drag lands to the point.
+          proxy.scrollTo(target.blockID, anchor: .top)
+        }
+      }
+      .onAppear {
+        let selection = selection
+        model.selectedBlockID = {
+          guard selection.isActive, selection.anchor != selection.focus else { return nil }
+          return selection.focus?.block
+        }
+      }
       .onChange(of: model.scrollToBottomRequest) {
         proxy.scrollTo(Self.bottomID, anchor: .bottom)
         // Once it has gone there, and the rows it reached are measured.
@@ -263,13 +344,7 @@ public struct ConversationView: View {
       }
       .onChange(of: model.pageRequest) {
         guard let top = pager.readableTop(after: model.pageRequest.page) else { return }
-        // A mark already there is not laid out again.
-        guard max(top, 0) != max(pageTarget, 0) else {
-          proxy.scrollTo(Self.pageTargetID, anchor: .top)
-          return
-        }
-        pagePending = true
-        pageTarget = top
+        scrollMark(to: top, proxy: proxy)
       }
       .onChange(of: model.revealRequest) {
         guard let id = model.revealedBlockID else { return }
@@ -316,6 +391,12 @@ public struct ConversationView: View {
         ForEach(model.failureBlocks) { block in
           AccessibilityRotorEntry(
             Text(verbatim: ToolBlockView.accessibilityTitle(of: block)), id: block.id)
+        }
+      }
+      .accessibilityRotor(Text("Bookmarks", bundle: .module)) {
+        ForEach(model.bookmarkedBlocks) { block in
+          AccessibilityRotorEntry(
+            Text(verbatim: ConversationModel.bookmarkLabel(of: block)), id: block.id)
         }
       }
       .accessibilityRotor(Text("Sub-agents", bundle: .module)) {
@@ -407,7 +488,8 @@ public struct ConversationView: View {
       PromptComposer(model: model, isActive: isActive)
     }
     .frame(maxWidth: layout.contentWidth)
-    .padding(.horizontal, layout.sideMargin)
+    .padding(.leading, leadingMargin)
+    .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
     .padding(.bottom, 16)
     .frame(maxWidth: .infinity)
     .modifier(PlainFooterBackground(theme: theme))
@@ -496,15 +578,73 @@ struct BlockRow: View {
   let block: ConversationBlock
   let model: ConversationModel
   let spacing: Double
+  @Environment(\.conversationTheme) private var theme
+  @Environment(\.conversationAppearance) private var appearance
+  @State private var isHovered = false
 
   var body: some View {
-    if let day = model.days.day(opening: block.id) {
-      VStack(alignment: .leading, spacing: spacing) {
-        DaySeparator(day: day, clock: model.clock)
-        BlockView(block: block, model: model)
+    Group {
+      if let day = model.days.day(opening: block.id) {
+        VStack(alignment: .leading, spacing: spacing) {
+          DaySeparator(day: day, clock: model.clock)
+          bookmarkable
+        }
+      } else {
+        bookmarkable
       }
-    } else {
-      BlockView(block: block, model: model)
+    }
+    // Where it is in the messages, for the overview (#567). Not moved by a scroll.
+    .onGeometryChange(for: CGRect.self) {
+      $0.frame(in: .named(ConversationView.contentSpace))
+    } action: { frame in
+      model.overview.rowLaidOut(block.id, frame: frame)
+    }
+    .onDisappear { model.overview.rowGone(block.id) }
+  }
+
+  /// The block, its bookmark in the margin left of it, and the light a bookmark brings it up
+  /// with (#567).
+  private var bookmarkable: some View {
+    BlockView(block: block, model: model)
+      // A message's own view lights it already (#565): the others, here.
+      .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
+      .onHover { isHovered = $0 }
+      .overlay(alignment: .topLeading) {
+        BookmarkGutter(
+          isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+        ) {
+          model.toggleBookmark(block)
+        }
+        .padding(.top, firstLineTop)
+        .offset(x: -BookmarkGutter.reach)
+      }
+  }
+
+  /// Whether its view lights it itself when it is brought up: what the user and the agent wrote.
+  private var isLitByItsView: Bool {
+    guard case .entry(let entry) = block else { return false }
+    switch entry.content {
+    case .userPrompt, .agentText: return true
+    default: return false
+    }
+  }
+
+  private var linePitch: Double {
+    appearance.textSize.pointSize * theme.layout.at(appearance.density).lineHeight
+  }
+
+  /// Where the block's first line starts in it: inside a bubble or a tool's frame, its padding.
+  private var firstLineTop: Double {
+    let framed = appearance.density == .compact ? 6.0 : 9.0
+    switch block {
+    case .toolGroup, .subagentGroup:
+      return framed
+    case .entry(let entry):
+      switch entry.content {
+      case .userPrompt: return appearance.userMessageStyle == .bubbles ? 10 : 6
+      case .tool, .notice(.shell): return framed
+      default: return 0
+      }
     }
   }
 }

@@ -1,0 +1,203 @@
+import Foundation
+import Testing
+
+@testable import VibeApplication
+
+@Suite("Bookmarks in a conversation (#567)")
+struct ConversationBookmarksTests {
+  private static func prompt(_ id: String) -> ConversationEntry {
+    ConversationEntry(id: id, content: .userPrompt("prompt \(id)", attachments: []))
+  }
+
+  private static func read(_ id: String) -> ConversationEntry {
+    ConversationEntry(
+      id: id, content: .tool(ToolCall(callID: id, kind: .read, state: .succeeded)))
+  }
+
+  private static let entries = [prompt("p1"), read("r1"), read("r2"), prompt("p2")]
+
+  @Test("A bookmark on a group of tools names its first call, and finds it ungrouped too")
+  func groups() throws {
+    let grouped = ConversationGrouping.blocks(Self.entries, grouping: true)
+    let group = try #require(grouped.first { $0.id == "group:r1" })
+    let bookmarks = ConversationBookmarks.toggled([], on: group)
+    #expect(bookmarks == ["r1"])
+    #expect(ConversationBookmarks.markedIndices(in: grouped, bookmarks: bookmarks) == [1])
+
+    let ungrouped = ConversationGrouping.blocks(Self.entries, grouping: false)
+    #expect(ConversationBookmarks.markedIndices(in: ungrouped, bookmarks: bookmarks) == [1])
+  }
+
+  @Test("A group holding any bookmarked call is marked, and toggled it loses them all")
+  func groupUnmarked() throws {
+    let grouped = ConversationGrouping.blocks(Self.entries, grouping: true)
+    let group = try #require(grouped.first { $0.id == "group:r1" })
+    // Set on the second call while the tools were shown one by one.
+    #expect(ConversationBookmarks.isMarked(group, in: ["r2"]))
+    #expect(ConversationBookmarks.toggled(["r2", "p1"], on: group) == ["p1"])
+  }
+
+  @Test("An entry no longer shown marks nothing, and is kept")
+  func gone() {
+    let blocks = ConversationGrouping.blocks(Self.entries)
+    let bookmarks: Set<String> = ["gone", "p2"]
+    #expect(ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks) == [2])
+    let toggled = ConversationBookmarks.toggled(bookmarks, on: blocks[0])
+    #expect(toggled == ["gone", "p2", "p1"])
+  }
+
+  @Test("The next bookmark is below the block at the top of the view, none past the last")
+  func next() {
+    let marked = [2, 5, 9]
+    #expect(ConversationBookmarks.next(after: 0, in: marked) == 2)
+    #expect(ConversationBookmarks.next(after: 2, in: marked) == 5)
+    #expect(ConversationBookmarks.next(after: 6, in: marked) == 9)
+    #expect(ConversationBookmarks.next(after: 9, in: marked) == nil)
+  }
+
+  @Test("The previous one is the block at the top once the view is past its start")
+  func previous() {
+    let marked = [2, 5, 9]
+    #expect(ConversationBookmarks.previous(before: 5, offset: 0, in: marked) == 2)
+    #expect(ConversationBookmarks.previous(before: 5, offset: 3, in: marked) == 2)
+    #expect(ConversationBookmarks.previous(before: 5, offset: 40, in: marked) == 5)
+    #expect(ConversationBookmarks.previous(before: 7, offset: 40, in: marked) == 5)
+    #expect(ConversationBookmarks.previous(before: 2, offset: 0, in: marked) == nil)
+  }
+}
+
+@MainActor
+@Suite("The overview of a conversation (#567)")
+struct ConversationOverviewLayoutTests {
+  private static let metrics = ConversationOverviewLayout.Metrics(
+    columnWidth: 700, textSize: 14, lineHeight: 1.25, blockSpacing: 18, paragraphSpacing: 10)
+
+  private static func text(_ id: String, _ text: String) -> ConversationBlock {
+    .entry(ConversationEntry(id: id, content: .agentText(text)))
+  }
+
+  private static func tool(_ id: String, failed: Bool = false) -> ConversationBlock {
+    .entry(
+      ConversationEntry(
+        id: id,
+        content: .tool(
+          ToolCall(callID: id, kind: .shell, state: failed ? .failed(exitCode: 1) : .succeeded))))
+  }
+
+  private static func layout(
+    _ blocks: [ConversationBlock], measured: [String: Double] = [:],
+    shapes: ConversationOverviewShapes = ConversationOverviewShapes()
+  ) -> ConversationOverviewLayout {
+    ConversationOverviewLayout(blocks: blocks, measured: measured, metrics: metrics, shapes: shapes)
+  }
+
+  @Test("A text's lines and paragraphs are counted in characters, blank lines left out")
+  func lines() {
+    let long = String(repeating: "é", count: 250)
+    let shape = ConversationOverviewLayout.lines(of: "\(long)\n\n  \nshort\n\n", mark: .text)
+    #expect(shape.lineLengths == [250, 5])
+    #expect(shape.paragraphs == 2)
+    // 100 characters a line: 3 lines, then 1.
+    #expect(shape.lineCount(width: 100) == 4)
+  }
+
+  @Test("Blocks never built are estimated, and the height measured replaces the estimate")
+  func estimates() {
+    let blocks = [Self.text("a", "one line"), Self.tool("t"), Self.text("b", "x")]
+    let estimated = Self.layout(blocks)
+    let pitch = 14 * 1.25
+    #expect(estimated.items.map(\.height) == [pitch, pitch + 20, pitch])
+    #expect(estimated.items.map(\.top) == [0, pitch + 18, 2 * pitch + 20 + 36])
+    #expect(estimated.height == 3 * pitch + 20 + 36)
+
+    let measured = Self.layout(blocks, measured: ["t": 100])
+    #expect(measured.items[1].height == 100)
+    #expect(measured.items[2].top == pitch + 18 + 100 + 18)
+  }
+
+  @Test("A text is read once, until it changes: not for each layout, nor each width")
+  func readOnce() {
+    let shapes = ConversationOverviewShapes()
+    var blocks = [Self.text("a", "first"), Self.text("b", "second")]
+    _ = Self.layout(blocks, shapes: shapes)
+    _ = Self.layout(blocks, measured: ["a": 40], shapes: shapes)
+    _ = ConversationOverviewLayout(
+      blocks: blocks, measured: [:],
+      metrics: .init(
+        columnWidth: 300, textSize: 14, lineHeight: 1.25, blockSpacing: 18, paragraphSpacing: 10),
+      shapes: shapes)
+    #expect(shapes.readCount == 2)
+    blocks[1] = Self.text("b", "second, and more")
+    _ = Self.layout(blocks, shapes: shapes)
+    #expect(shapes.readCount == 3)
+  }
+
+  @Test("Blocks changed at the end are laid out again from there, the others kept")
+  func replacing() {
+    let shapes = ConversationOverviewShapes()
+    let blocks = [Self.text("a", "one"), Self.text("b", "two"), Self.text("c", "three")]
+    let first = Self.layout(blocks, shapes: shapes)
+    let grown = [Self.text("a", "one"), Self.text("b", "two, longer")] + [Self.text("d", "four")]
+    let replaced = first.replacing(from: 1, blocks: grown, measured: [:], shapes: shapes)
+    #expect(replaced == Self.layout(grown))
+    #expect(replaced.index(of: "c") == nil)
+    #expect(replaced.index(of: "d") == 2)
+    // "a" was not read again.
+    #expect(shapes.readCount == 5)
+  }
+
+  @Test("A failed tool is drawn as a failure")
+  func failure() {
+    let layout = Self.layout([Self.tool("ok"), Self.tool("ko", failed: true)])
+    #expect(layout.items.map(\.shape.mark) == [.tool, .failure])
+  }
+
+  @Test("A height in the conversation is a block and how far into it, and back")
+  func positions() {
+    let blocks = [Self.text("a", "x"), Self.text("b", "x"), Self.text("c", "x")]
+    let layout = Self.layout(blocks, measured: ["a": 100, "b": 50, "c": 80])
+    // a: 0–100, b: 118–168, c: 186–266.
+    #expect(layout.position(atY: -5) == .init(index: 0, offset: 0))
+    #expect(layout.position(atY: 40) == .init(index: 0, offset: 40))
+    #expect(layout.position(atY: 110) == .init(index: 0, offset: 100))
+    #expect(layout.position(atY: 130) == .init(index: 1, offset: 12))
+    #expect(layout.position(atY: 1000) == .init(index: 2, offset: 80))
+    #expect(layout.y(of: .init(index: 1, offset: 12)) == 130)
+    #expect(layout.index(of: "c") == 2)
+    #expect(ConversationOverviewLayout().position(atY: 0) == nil)
+  }
+
+  @Test("The whole conversation fits the overview, never drawn larger than a fifth")
+  func scale() {
+    let blocks = [Self.text("a", "x")]
+    #expect(Self.layout(blocks, measured: ["a": 10_000]).scale(forHeight: 500) == 0.05)
+    #expect(
+      Self.layout(blocks, measured: ["a": 100]).scale(forHeight: 500)
+        == ConversationOverviewLayout.maximumScale)
+  }
+
+  @Test("The overview takes the margin right of the text, which does not move")
+  func wideMargin() {
+    // A 1400-point pane, an 820-point column between 32-point margins: 258 points on each side
+    // of them, then the right margin, less the gap.
+    let placement = ConversationOverviewLayout.placement(
+      paneWidth: 1400, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
+    #expect(placement == .init(width: 278, reserved: 0))
+  }
+
+  @Test("Narrower than the minimum, it keeps the minimum and the text makes room, little by little")
+  func narrowMargin() {
+    func placement(_ pane: Double) -> ConversationOverviewLayout.Placement {
+      ConversationOverviewLayout.placement(
+        paneWidth: pane, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
+    }
+    // 956 points: just enough margin, nothing given up.
+    #expect(placement(956) == .init(width: 56, reserved: 0))
+    // Two points less: two points given up, not the whole width.
+    #expect(placement(954) == .init(width: 56, reserved: 2))
+    #expect(placement(940) == .init(width: 56, reserved: 16))
+    // Once the column fills the pane, its right margin and the gap make up the rest.
+    #expect(placement(920) == .init(width: 56, reserved: 36))
+    #expect(placement(700) == .init(width: 56, reserved: 36))
+  }
+}
