@@ -431,7 +431,11 @@ public final class AppEnvironment {
         agents: registry, diagnostics: diagnostics),
       // The skills an agent could not read, and the listings that failed, go to the diagnostics:
       // a list that never opens is otherwise left unexplained (#219).
-      commands: AgentCommandCatalog(diagnostics: diagnostics.log))
+      commands: AgentCommandCatalog(diagnostics: diagnostics.log),
+      // Each conversation's bookmarks (#567), beside the notes.
+      bookmarks: FileConversationBookmarkStore(
+        directory: data.store.deletingLastPathComponent()
+          .appendingPathComponent("Bookmarks", isDirectory: true)))
     // A session's initial command typed: its conversation looks for the panel it may open (#219).
     launcher.commandTyped = { [weak conversations] id, command in
       conversations?.commandTyped(command, in: id)

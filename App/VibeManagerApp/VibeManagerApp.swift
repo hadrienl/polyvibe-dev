@@ -255,6 +255,26 @@ struct VibeManagerApp: App {
         }
         .keyboardShortcut(.upArrow, modifiers: [.command, .option])
 
+        // The conversation's bookmarks (#567): ⌥⌘↑↓ walk the sessions, so ⌥⌘J and ⌥⌘K, letters
+        // that every keyboard types the same way, walk the bookmarks.
+        Button("Toggle Bookmark") {
+          environment.appModel.toggleBookmark()
+        }
+        .keyboardShortcut("b", modifiers: .command)
+        .disabled(!environment.appModel.canUseBookmarks)
+
+        Button("Next Bookmark") {
+          environment.appModel.revealNextBookmark()
+        }
+        .keyboardShortcut("j", modifiers: [.command, .option])
+        .disabled(!environment.appModel.canUseBookmarks)
+
+        Button("Previous Bookmark") {
+          environment.appModel.revealPreviousBookmark()
+        }
+        .keyboardShortcut("k", modifiers: [.command, .option])
+        .disabled(!environment.appModel.canUseBookmarks)
+
         // The order arranged by hand (#44), as the prompt templates are: only in the Manual sort,
         // and never out of the session's group. Over Settings, the same keys move a template.
         Button("Move Up") {

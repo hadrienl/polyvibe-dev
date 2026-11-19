@@ -30,6 +30,8 @@ public final class ConversationWorkspace {
   @ObservationIgnored private let follow: FollowConversation?
   @ObservationIgnored private let store: any ConversationAppearanceStore
   @ObservationIgnored private let agents: (any AgentProviderResolving)?
+  /// Where each conversation's bookmarks are kept (#567).
+  @ObservationIgnored private let bookmarks: any ConversationBookmarkStore
   /// The skills and commands read from the agents, shared by the sessions of a folder (#219).
   @ObservationIgnored let commands: AgentCommandCatalog
   /// Which list each model reads: another agent or folder starts from an empty one.
@@ -80,14 +82,35 @@ public final class ConversationWorkspace {
     store: any ConversationAppearanceStore = InMemoryConversationAppearanceStore(),
     agents: (any AgentProviderResolving)? = nil,
     themes: ConversationThemesModel = ConversationThemesModel(),
-    commands: AgentCommandCatalog = AgentCommandCatalog()
+    commands: AgentCommandCatalog = AgentCommandCatalog(),
+    bookmarks: any ConversationBookmarkStore = NoConversationBookmarks()
   ) {
     self.follow = follow
     self.store = store
     self.agents = agents
+    self.bookmarks = bookmarks
     self.commands = commands
     self.themes = themes
     appearance = store.appearance
+  }
+
+  /// Reads the session's bookmarks into its model, and keeps them as they change, one write after
+  /// the other (#567).
+  private func connectBookmarks(of model: ConversationModel) {
+    let store = bookmarks
+    let id = model.sessionID
+    var lastWrite: Task<Void, Never>?
+    model.saveBookmarks = { entries in
+      let previous = lastWrite
+      lastWrite = Task {
+        await previous?.value
+        try? await store.save(entries, for: id)
+      }
+    }
+    Task { [weak model] in
+      guard let entries = try? await store.bookmarks(for: id) else { return }
+      model?.loadBookmarks(entries)
+    }
   }
 
   /// Learns which agents write a transcript the view can read.
@@ -162,6 +185,7 @@ public final class ConversationWorkspace {
     } else {
       model = ConversationModel(sessionID: session.id)
       model.appearance = appearance
+      connectBookmarks(of: model)
       if let follow {
         let id = session.id
         model.unfoldSubagents = { callIDs in

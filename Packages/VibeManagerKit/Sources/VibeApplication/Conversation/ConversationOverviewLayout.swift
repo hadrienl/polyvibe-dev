@@ -158,6 +158,11 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     public var width: Double
     /// Taken from the right of the messages: none while the margin holds the overview.
     public var reserved: Double
+
+    public init(width: Double, reserved: Double) {
+      self.width = width
+      self.reserved = reserved
+    }
   }
 
   public static let minimumWidth = 56.0
