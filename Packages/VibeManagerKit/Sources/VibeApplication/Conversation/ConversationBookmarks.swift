@@ -75,11 +75,11 @@ public enum ConversationBookmarks {
 
   /// The indices of the blocks that hold a bookmark, in the conversation's order. An entry no
   /// longer shown marks nothing, and is kept: it may come back.
-  public static func markedIndices(in blocks: [ConversationBlock], bookmarks: Set<String>)
-    -> [Int]
-  {
-    guard !bookmarks.isEmpty else { return [] }
-    return blocks.indices.filter { isMarked(blocks[$0], in: bookmarks) }
+  public static func markedIndices(
+    in blocks: [ConversationBlock], bookmarks: Set<String>, from start: Int = 0
+  ) -> [Int] {
+    guard !bookmarks.isEmpty, start < blocks.count else { return [] }
+    return blocks.indices.dropFirst(max(start, 0)).filter { isMarked(blocks[$0], in: bookmarks) }
   }
 
   /// How far into a block the top of the view may be and still stand at its start: the view a

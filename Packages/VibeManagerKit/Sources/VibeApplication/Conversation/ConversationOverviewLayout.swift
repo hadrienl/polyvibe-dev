@@ -146,6 +146,37 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     place(measured)
   }
 
+  /// The blocks from `start` on laid out again, those before kept with their shapes: what a
+  /// conversation that grows changes, at the end.
+  @MainActor
+  public func replacing(
+    from start: Int, blocks: [ConversationBlock], measured: [String: Double],
+    shapes cache: ConversationOverviewShapes
+  ) -> ConversationOverviewLayout {
+    guard let metrics, start >= 0, start <= ids.count, start <= blocks.count else {
+      return ConversationOverviewLayout(
+        blocks: blocks, measured: measured, metrics: metrics ?? Self.fallbackMetrics,
+        shapes: cache)
+    }
+    var layout = self
+    for id in ids[start...] { layout.indices[id] = nil }
+    layout.ids.removeSubrange(start...)
+    layout.shapes.removeSubrange(start...)
+    layout.estimates.removeSubrange(start...)
+    for block in blocks[start...] {
+      let shape = cache.shape(of: block)
+      layout.indices[block.id] = layout.ids.count
+      layout.ids.append(block.id)
+      layout.shapes.append(shape)
+      layout.estimates.append(Self.estimatedHeight(of: shape, metrics: metrics))
+    }
+    layout.place(measured)
+    return layout
+  }
+
+  private static let fallbackMetrics = Metrics(
+    columnWidth: 700, textSize: 14.5, lineHeight: 1.25, blockSpacing: 18, paragraphSpacing: 10)
+
   /// The same blocks, with the heights measured since: nothing is read nor estimated again.
   public func remeasured(_ measured: [String: Double]) -> ConversationOverviewLayout {
     var layout = self
@@ -245,16 +276,23 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   public static let gap = 12.0
 
   /// The margin right of the column, less a gap; or, narrower than the minimum, the minimum, the
-  /// column then laid out in what remains.
+  /// messages giving up what it lacks — no more, so that the text moves as the window narrows,
+  /// never in a jump.
   ///
-  /// The column is `contentWidth` at most, between its margins, centred in the pane.
+  /// The column is `contentWidth` at most, between its margins, centred in what the messages
+  /// have: the pane, less what they give up.
   public static func placement(
     paneWidth: Double, contentWidth: Double, leadingMargin: Double, trailingMargin: Double
   ) -> Placement {
-    let box = min(contentWidth + leadingMargin + trailingMargin, paneWidth)
-    let free = (paneWidth - box) / 2 + trailingMargin - gap
+    let column = contentWidth + leadingMargin + trailingMargin
+    let free = (paneWidth - min(column, paneWidth)) / 2 + trailingMargin - gap
     guard free < minimumWidth else { return Placement(width: free.rounded(.down), reserved: 0) }
-    return Placement(width: minimumWidth, reserved: minimumWidth)
+    // Centred, the column moves by half of what is given up while it keeps its width; once it
+    // fills the pane, only its right margin stands between it and the overview.
+    let centred = 2 * (minimumWidth - free)
+    let reserved =
+      column + centred <= paneWidth ? centred : max(minimumWidth + gap - trailingMargin, 0)
+    return Placement(width: minimumWidth, reserved: reserved)
   }
 
   // MARK: - Shapes

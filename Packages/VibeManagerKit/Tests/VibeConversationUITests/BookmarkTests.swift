@@ -44,16 +44,42 @@ struct BookmarkTests {
     #expect(saved == [["m1"], []])
   }
 
-  @Test("Bookmarks read from the store join those set before they arrived, and are not saved")
+  @Test("Bookmarks read from the store join those set before they arrived, saved with them")
   func load() {
     let model = Self.model()
-    var saves = 0
-    model.saveBookmarks = { _ in saves += 1 }
+    var saved: [Set<String>] = []
+    model.saveBookmarks = { saved.append($0) }
     model.toggleBookmark(model.blocks[0])
     model.loadBookmarks(["m3", "gone"])
     #expect(model.bookmarks == ["m0", "m3", "gone"])
     #expect(model.bookmarkedIndices == [0, 3])
-    #expect(saves == 1)
+    // Saved again with what was read: the write of the first alone would have lost them.
+    #expect(saved == [["m0"], ["m0", "m3", "gone"]])
+  }
+
+  @Test("Read with none set before, they are not written back")
+  func loadAlone() {
+    let model = Self.model()
+    var saves = 0
+    model.saveBookmarks = { _ in saves += 1 }
+    model.loadBookmarks(["m3"])
+    #expect(saves == 0)
+  }
+
+  @Test("Near the end, where the view cannot bring a bookmark to the top, Next goes on from it")
+  func nextNearTheEnd() {
+    let model = Self.model()
+    model.loadBookmarks(["m4", "m5"])
+    // The view at the bottom: m3 at the top, m4 and m5 below it, in what is read.
+    Self.laidOut(model, top: 370)
+    #expect(model.revealNextBookmark())
+    #expect(model.revealedBlockID == "m4")
+    // The view could not move: the top is still m3.
+    #expect(model.revealNextBookmark())
+    #expect(model.revealedBlockID == "m5")
+    #expect(!model.revealNextBookmark())
+    #expect(model.revealPreviousBookmark())
+    #expect(model.revealedBlockID == "m4")
   }
 
   @Test("Messages arriving later find their bookmarks")

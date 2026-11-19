@@ -132,6 +132,20 @@ struct ConversationOverviewLayoutTests {
     #expect(shapes.readCount == 3)
   }
 
+  @Test("Blocks changed at the end are laid out again from there, the others kept")
+  func replacing() {
+    let shapes = ConversationOverviewShapes()
+    let blocks = [Self.text("a", "one"), Self.text("b", "two"), Self.text("c", "three")]
+    let first = Self.layout(blocks, shapes: shapes)
+    let grown = [Self.text("a", "one"), Self.text("b", "two, longer")] + [Self.text("d", "four")]
+    let replaced = first.replacing(from: 1, blocks: grown, measured: [:], shapes: shapes)
+    #expect(replaced == Self.layout(grown))
+    #expect(replaced.index(of: "c") == nil)
+    #expect(replaced.index(of: "d") == 2)
+    // "a" was not read again.
+    #expect(shapes.readCount == 5)
+  }
+
   @Test("A failed tool is drawn as a failure")
   func failure() {
     let layout = Self.layout([Self.tool("ok"), Self.tool("ko", failed: true)])
@@ -171,11 +185,19 @@ struct ConversationOverviewLayoutTests {
     #expect(placement == .init(width: 278, reserved: 0))
   }
 
-  @Test("Narrower than the minimum, it keeps the minimum and the text makes room")
+  @Test("Narrower than the minimum, it keeps the minimum and the text makes room, little by little")
   func narrowMargin() {
-    let placement = ConversationOverviewLayout.placement(
-      paneWidth: 900, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
-    #expect(placement.width == ConversationOverviewLayout.minimumWidth)
-    #expect(placement.reserved == ConversationOverviewLayout.minimumWidth)
+    func placement(_ pane: Double) -> ConversationOverviewLayout.Placement {
+      ConversationOverviewLayout.placement(
+        paneWidth: pane, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
+    }
+    // 956 points: just enough margin, nothing given up.
+    #expect(placement(956) == .init(width: 56, reserved: 0))
+    // Two points less: two points given up, not the whole width.
+    #expect(placement(954) == .init(width: 56, reserved: 2))
+    #expect(placement(940) == .init(width: 56, reserved: 16))
+    // Once the column fills the pane, its right margin and the gap make up the rest.
+    #expect(placement(920) == .init(width: 56, reserved: 36))
+    #expect(placement(700) == .init(width: 56, reserved: 36))
   }
 }

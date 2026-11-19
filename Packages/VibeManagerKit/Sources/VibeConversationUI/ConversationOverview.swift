@@ -67,6 +67,18 @@ public final class ConversationOverviewTracker {
     updateTop()
   }
 
+  /// Whether a block built now shows in what is read.
+  func isRead(_ id: String) -> Bool {
+    guard let frame = frames[id] else { return false }
+    return frame.maxY > readableTop && frame.minY < readableTop + readableHeight
+  }
+
+  /// Forgets the heights measured at another width or text size: estimated again until their
+  /// rows are built anew. Those built now are measured as they are.
+  func forgetMeasures() {
+    measured = frames.mapValues { Double($0.height) }
+  }
+
   /// Where a block built now starts in the messages; `nil` for one that is not.
   func top(of id: String) -> Double? { frames[id].map { Double($0.minY) } }
 
@@ -92,12 +104,13 @@ public final class ConversationOverviewTracker {
 /// to tell whether the drawing changed.
 final class OverviewLayoutBox {
   let layout: ConversationOverviewLayout
-  /// The blocks it was laid out from: the same ones measured anew only add heights up again.
-  let blocks: [ConversationBlock]
+  /// The layout of the blocks it was made from (`ConversationModel.blocksRevision`).
+  let blocksRevision: Int
 
-  init(_ layout: ConversationOverviewLayout = ConversationOverviewLayout(), blocks: [ConversationBlock] = []) {
+  init(_ layout: ConversationOverviewLayout = ConversationOverviewLayout(), blocksRevision: Int = -1)
+  {
     self.layout = layout
-    self.blocks = blocks
+    self.blocksRevision = blocksRevision
   }
 }
 
@@ -126,7 +139,7 @@ struct ConversationOverview: View {
   static let tagMargin = 12.0
 
   private struct LayoutKey: Equatable {
-    var blocks: [ConversationBlock]
+    var blocksRevision: Int
     var measureRevision: Int
     var metrics: ConversationOverviewLayout.Metrics
   }
@@ -171,19 +184,28 @@ struct ConversationOverview: View {
     }
     .onChange(
       of: LayoutKey(
-        blocks: model.blocks, measureRevision: model.overview.measureRevision, metrics: metrics),
+        blocksRevision: model.blocksRevision, measureRevision: model.overview.measureRevision,
+        metrics: metrics),
       initial: true
     ) { _, key in
-      let measured = model.overview.measured
-      if key.metrics == layout.metrics, key.blocks == box.blocks {
-        box = OverviewLayoutBox(layout.remeasured(measured), blocks: key.blocks)
+      let changedFrom = model.takeBlocksChangedFrom()
+      let tracker = model.overview
+      let layout: ConversationOverviewLayout
+      if key.metrics != self.layout.metrics {
+        // Heights measured at another width or text size no longer hold.
+        if self.layout.metrics != nil { tracker.forgetMeasures() }
+        layout = ConversationOverviewLayout(
+          blocks: model.blocks, measured: tracker.measured, metrics: key.metrics,
+          shapes: tracker.shapes)
+      } else if key.blocksRevision != box.blocksRevision {
+        // Only what changed, at the end of a conversation that grows.
+        layout = self.layout.replacing(
+          from: changedFrom ?? 0, blocks: model.blocks, measured: tracker.measured,
+          shapes: tracker.shapes)
       } else {
-        box = OverviewLayoutBox(
-          ConversationOverviewLayout(
-            blocks: key.blocks, measured: measured, metrics: key.metrics,
-            shapes: model.overview.shapes),
-          blocks: key.blocks)
+        layout = self.layout.remeasured(tracker.measured)
       }
+      box = OverviewLayoutBox(layout, blocksRevision: key.blocksRevision)
     }
     .accessibilityHidden(true)
   }
@@ -442,7 +464,9 @@ private struct BookmarkPreview: View {
     default: return nil
     }
     guard let date = entry.date else { return who }
-    return "\(who) · \(date.formatted(date: .omitted, time: .shortened))"
+    // The day too, for a message of another day.
+    let day: Date.FormatStyle.DateStyle = Calendar.current.isDateInToday(date) ? .omitted : .abbreviated
+    return "\(who) · \(date.formatted(date: day, time: .shortened))"
   }
 }
 

@@ -103,7 +103,7 @@ public struct ConversationView: View {
               { model.terminalScreenChanged($0) })
           )
           .frame(maxWidth: layout.contentWidth)
-          .padding(.leading, layout.sideMargin)
+          .padding(.leading, leadingMargin)
           .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
           .padding(.bottom, showsComposer ? 8 : 16)
           .frame(maxWidth: .infinity)
@@ -488,7 +488,7 @@ public struct ConversationView: View {
       PromptComposer(model: model, isActive: isActive)
     }
     .frame(maxWidth: layout.contentWidth)
-    .padding(.leading, layout.sideMargin)
+    .padding(.leading, leadingMargin)
     .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
     .padding(.bottom, 16)
     .frame(maxWidth: .infinity)

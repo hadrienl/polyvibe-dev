@@ -32,6 +32,8 @@ public final class ConversationWorkspace {
   @ObservationIgnored private let agents: (any AgentProviderResolving)?
   /// Where each conversation's bookmarks are kept (#567).
   @ObservationIgnored private let bookmarks: any ConversationBookmarkStore
+  /// The last read or write of each session's bookmarks, which the next one waits for.
+  @ObservationIgnored private var bookmarkAccesses: [SessionID: Task<Void, Never>] = [:]
   /// The skills and commands read from the agents, shared by the sessions of a folder (#219).
   @ObservationIgnored let commands: AgentCommandCatalog
   /// Which list each model reads: another agent or folder starts from an empty one.
@@ -94,22 +96,26 @@ public final class ConversationWorkspace {
     appearance = store.appearance
   }
 
-  /// Reads the session's bookmarks into its model, and keeps them as they change, one write after
-  /// the other (#567).
+  /// Reads the session's bookmarks into its model, and keeps them as they change (#567): one
+  /// access after the other for a session, whichever model made it — a read after the last write
+  /// of a model let go of, each write after the read, so that none is lost.
   private func connectBookmarks(of model: ConversationModel) {
     let store = bookmarks
     let id = model.sessionID
-    var lastWrite: Task<Void, Never>?
-    model.saveBookmarks = { entries in
-      let previous = lastWrite
-      lastWrite = Task {
+    let previous = bookmarkAccesses[id]
+    let read = Task { [weak model] in
+      await previous?.value
+      guard let entries = try? await store.bookmarks(for: id) else { return }
+      model?.loadBookmarks(entries)
+    }
+    bookmarkAccesses[id] = read
+    model.saveBookmarks = { [weak self] entries in
+      guard let self else { return }
+      let previous = self.bookmarkAccesses[id]
+      self.bookmarkAccesses[id] = Task {
         await previous?.value
         try? await store.save(entries, for: id)
       }
-    }
-    Task { [weak model] in
-      guard let entries = try? await store.bookmarks(for: id) else { return }
-      model?.loadBookmarks(entries)
     }
   }
 

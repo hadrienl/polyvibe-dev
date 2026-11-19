@@ -94,7 +94,7 @@ extension ConversationModel {
 
   /// Brings `blockID` into view, lit: only `passage` of it when one of its texts shows it — the
   /// paragraph, the selection replied to —, else all of it.
-  private func reveal(_ blockID: String, passage: ReplyQuote? = nil) {
+  func reveal(_ blockID: String, passage: ReplyQuote? = nil) {
     scroll.jumpedAway()
     revealedBlockID = blockID
     revealRequest += 1

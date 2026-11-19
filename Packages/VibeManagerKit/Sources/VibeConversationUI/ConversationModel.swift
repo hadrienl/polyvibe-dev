@@ -850,7 +850,9 @@ public final class ConversationModel {
     blocks = rebuilt
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
-    updateBookmarkedIndices()
+    updateBookmarkedIndices(from: restart)
+    blocksChangedFrom = min(blocksChangedFrom ?? .max, restart)
+    blocksRevision += 1
     // Written only when they differ: every row reads them, and a write redraws them all (#462).
     var days = self.days
     days.update(blocks, from: restart)
@@ -1092,6 +1094,19 @@ public final class ConversationModel {
   public private(set) var bookmarkedIndices: [Int] = []
   /// Keeps the bookmarks once they change.
   @ObservationIgnored public var saveBookmarks: ((Set<String>) -> Void)?
+  /// The last bookmark brought up: Next and Previous go on from it while it is on screen, where
+  /// the top of what is read may not reach it — near the end, the view cannot scroll that far.
+  @ObservationIgnored private var lastRevealedBookmark: String?
+  /// Bumped at each layout of the blocks: what the overview lays out again for.
+  public private(set) var blocksRevision = 0
+  /// The first block that may have changed since the overview last asked.
+  @ObservationIgnored private var blocksChangedFrom: Int?
+
+  /// The first block laid out again since the last call, `nil` when none was.
+  public func takeBlocksChangedFrom() -> Int? {
+    defer { blocksChangedFrom = nil }
+    return blocksChangedFrom
+  }
   /// The block the selection of text is in, if one is: what Toggle Bookmark marks first.
   @ObservationIgnored var selectedBlockID: () -> String? = { nil }
   /// Where the rows are as they are built: what the overview and the commands start from.
@@ -1109,11 +1124,14 @@ public final class ConversationModel {
     bookmarkedIndices.filter(blocks.indices.contains).map { blocks[$0] }
   }
 
-  /// The bookmarks read from the store: added to any set before they arrived.
+  /// The bookmarks read from the store: added to any set before they arrived, which are kept
+  /// again with them.
   public func loadBookmarks(_ entries: Set<String>) {
     guard !entries.isSubset(of: bookmarks) else { return }
+    let setBefore = !bookmarks.isEmpty
     bookmarks.formUnion(entries)
     updateBookmarkedIndices()
+    if setBefore { saveBookmarks?(bookmarks) }
   }
 
   public func isBookmarked(_ block: ConversationBlock) -> Bool {
@@ -1126,8 +1144,11 @@ public final class ConversationModel {
     saveBookmarks?(bookmarks)
   }
 
-  private func updateBookmarkedIndices() {
-    let indices = ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks)
+  /// The marked blocks, those before `start` kept as they were.
+  private func updateBookmarkedIndices(from start: Int = 0) {
+    let indices =
+      bookmarkedIndices.prefix { $0 < start }
+      + ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks, from: start)
     if indices != bookmarkedIndices { bookmarkedIndices = indices }
   }
 
@@ -1145,7 +1166,8 @@ public final class ConversationModel {
   /// Next Bookmark, ⌥⌘J: the first bookmark below the top of what is read. `false` past the last.
   @discardableResult
   public func revealNextBookmark() -> Bool {
-    let index = topIndex ?? -1
+    var index = topIndex ?? -1
+    if let last = lastRevealedOnScreen { index = max(index, last) }
     guard let next = ConversationBookmarks.next(after: index, in: bookmarkedIndices) else {
       return false
     }
@@ -1156,12 +1178,21 @@ public final class ConversationModel {
   /// Previous Bookmark, ⌥⌘K. `false` before the first.
   @discardableResult
   public func revealPreviousBookmark() -> Bool {
-    guard let index = topIndex,
+    guard var index = topIndex else { return false }
+    var offset = overview.top?.offset ?? 0
+    if let last = lastRevealedOnScreen, last > index { (index, offset) = (last, 0) }
+    guard
       let previous = ConversationBookmarks.previous(
-        before: index, offset: overview.top?.offset ?? 0, in: bookmarkedIndices)
+        before: index, offset: offset, in: bookmarkedIndices)
     else { return false }
     revealBookmark(blocks[previous].id)
     return true
+  }
+
+  /// The last bookmark brought up, while it is still in what is read.
+  private var lastRevealedOnScreen: Int? {
+    guard let id = lastRevealedBookmark, overview.isRead(id) else { return nil }
+    return blocks.firstIndex { $0.id == id }
   }
 
   /// The block at the top of what is read.
@@ -1173,17 +1204,8 @@ public final class ConversationModel {
   /// Brings a bookmarked block to the top of what is read, and lights it a moment, as a reply
   /// lights the message it answers (#565).
   public func revealBookmark(_ blockID: String) {
-    scroll.jumpedAway()
-    revealedBlockID = blockID
-    revealRequest += 1
-    litPassage = nil
-    highlightedBlockID = blockID
-    highlightTask?.cancel()
-    highlightTask = Task { [weak self] in
-      try? await Task.sleep(for: Self.highlightDuration)
-      guard !Task.isCancelled, let self else { return }
-      if self.highlightedBlockID == blockID { self.highlightedBlockID = nil }
-    }
+    lastRevealedBookmark = blockID
+    reveal(blockID)
   }
 
   /// Scrolls to where the overview was clicked or dragged.

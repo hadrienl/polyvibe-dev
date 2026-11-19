@@ -131,7 +131,7 @@ public final class AppEnvironment {
     // application's own are brought back to owner only before anything is read from them.
     let repaired = DataDirectoryPermissions.repair([
       data.store.deletingLastPathComponent(), data.notes, data.journal, data.usage, data.logs,
-      data.icons, data.drops, Self.terminalsDirectory(of: data),
+      data.icons, data.drops, Self.terminalsDirectory(of: data), Self.bookmarksDirectory(of: data),
     ])
     let diagnosticsLocation = DiagnosticsLocation(directory: data.logs)
     self.diagnosticsLocation = diagnosticsLocation
@@ -433,9 +433,7 @@ public final class AppEnvironment {
       // a list that never opens is otherwise left unexplained (#219).
       commands: AgentCommandCatalog(diagnostics: diagnostics.log),
       // Each conversation's bookmarks (#567), beside the notes.
-      bookmarks: FileConversationBookmarkStore(
-        directory: data.store.deletingLastPathComponent()
-          .appendingPathComponent("Bookmarks", isDirectory: true)))
+      bookmarks: FileConversationBookmarkStore(directory: Self.bookmarksDirectory(of: data)))
     // A session's initial command typed: its conversation looks for the panel it may open (#219).
     launcher.commandTyped = { [weak conversations] id, command in
       conversations?.commandTyped(command, in: id)
@@ -760,6 +758,11 @@ public final class AppEnvironment {
   }
 
   /// `Terminals/`, beside the store: each session's drawer of side terminals (#43).
+  /// Each conversation's bookmarks (#567), beside the notes.
+  static func bookmarksDirectory(of data: DataLocation) -> URL {
+    data.store.deletingLastPathComponent().appendingPathComponent("Bookmarks", isDirectory: true)
+  }
+
   static func terminalsDirectory(of data: DataLocation) -> URL {
     data.store.deletingLastPathComponent().appendingPathComponent("Terminals", isDirectory: true)
   }
