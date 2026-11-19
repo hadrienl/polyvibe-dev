@@ -1229,7 +1229,7 @@ public final class ConversationModel {
 
   /// The start of a bookmarked message, under who wrote it in its preview: for Vibe Manager's
   /// news, the sessions it is about, never their identifiers; for a coordinator's message, its
-  /// words as they read; for a reply, the user's words without the passage quoted (#565).
+  /// words as they read; for the user's, their words as the conversation shows them.
   public static func bookmarkExcerpt(of block: ConversationBlock) -> String {
     if let relayed = relayedMessage(of: block) {
       switch relayed.sender {
@@ -1242,9 +1242,9 @@ public final class ConversationModel {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let prompt, let attachments):
-        text = AttachedPaths.displayText(
-          ReplyQuote.message(of: prompt),
-          joinedCount: attachments.filter(\.isWrittenInText).count)
+        // As its bubble shows it: a reply's own words (#565), without the paths that became
+        // attachments.
+        text = ReplyLinks.shown(prompt, attachments: attachments).message
       case .agentText(let answer), .reasoning(let answer?): text = answer
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }

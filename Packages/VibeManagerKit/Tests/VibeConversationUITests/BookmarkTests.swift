@@ -196,10 +196,23 @@ struct BookmarkTests {
     #expect(!label.contains("[Coordinator"))
   }
 
-  @Test("A reply is named by the user's own words, not the passage it quotes")
-  func replyExcerpt() {
-    let reply = ReplyQuote.compose(
-      ReplyQuote(excerpt: "the old line", author: .agent, time: nil), message: "Why this one?")
-    #expect(ConversationModel.bookmarkExcerpt(of: Self.prompt(reply)) == "Why this one?")
+  @Test("A reply's bookmark is named by the user's words, not the passage it quotes")
+  func replyLabel() {
+    // From the review session's patch, kept as it was written.
+    let quote = ReplyQuote(excerpt: "the passage", author: .agent, date: nil)
+    let reply = Self.prompt(ReplyQuote.compose(quote, message: "Fix it"))
+    #expect(ConversationModel.bookmarkLabel(of: reply) == "Fix it")
+    #expect(ConversationModel.bookmarkExcerpt(of: reply) == "Fix it")
+  }
+
+  @Test("Several messages of one coordinator are told apart by their words")
+  func coordinatorMessagesApart() {
+    func label(_ text: String) -> String {
+      ConversationModel.bookmarkLabel(
+        of: Self.prompt(CoordinationPolicy.fromCoordinator(text, coordinatorName: "V2")))
+    }
+    #expect(label("Rebase on main.").contains("V2"))
+    #expect(label("Rebase on main.").hasSuffix(" · Rebase on main."))
+    #expect(label("Rebase on main.") != label("Open the PR."))
   }
 }
