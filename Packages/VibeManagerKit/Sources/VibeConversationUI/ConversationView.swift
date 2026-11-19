@@ -528,16 +528,23 @@ struct BlockView: View {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let text, let attachments):
-        UserPromptView(
-          text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
-          showQuote: isNested ? nil : { model.showSource(of: $0, replyID: entry.id) },
-          reply: replyAction(entry, author: .user),
-          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply
-        )
-        .environment(\.selectionBlock, selectionBlock)
-        .environment(\.replyToPassage, passageReply(entry, author: .user))
-        .environment(\.litPassage, litPassage(entry))
-        .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
+        // Vibe Manager's or the coordinator's, not the user's: who wrote it says so.
+        if let relayed = RelayedMessage(text) {
+          RelayedMessageView(
+            id: entry.id, message: relayed, text: text, date: entry.date, model: model)
+            .environment(\.selectionBlock, selectionBlock)
+        } else {
+          UserPromptView(
+            text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
+            showQuote: isNested ? nil : { model.showSource(of: $0, replyID: entry.id) },
+            reply: replyAction(entry, author: .user),
+            replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply
+          )
+          .environment(\.selectionBlock, selectionBlock)
+          .environment(\.replyToPassage, passageReply(entry, author: .user))
+          .environment(\.litPassage, litPassage(entry))
+          .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
+        }
       case .agentText(let text):
         AgentTextView(
           text: text, id: entry.id, readAloud: model.readAloud, date: entry.date,
@@ -683,6 +690,12 @@ extension ConversationSelection.Source {
         }
         switch entry.content {
         case .userPrompt(let text, let attachments):
+          if let relayed = RelayedMessage(text) {
+            // Folded, nothing of it is shown.
+            guard model.isExpanded(id: entry.id, default: false) else { return [] }
+            return pieces(
+              MarkdownBlocksView.contents(MarkdownCache.shared.blocks(for: relayed.body)))
+          }
           let shown = ReplyLinks.shown(text, attachments: attachments).message
           guard !shown.isEmpty else { return [] }
           let color = appearance.userMessageStyle == .bubbles ? theme.bubbleText : theme.text
