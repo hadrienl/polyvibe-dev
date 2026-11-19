@@ -62,11 +62,12 @@ struct SettingsControlsTests {
     let model = Self.workspace()
     let page = SettingsPageWindow(model: model, page: .conversation)
     defer { page.close() }
-    await page.settle("the switches") { page.switches().count >= 7 }
+    await page.settle("the switches") { page.switches().count >= 8 }
 
     let appearance = { model.conversations.appearance }
     let settings: [(String, () -> Bool)] = [
       ("light and dark", { appearance().followsSystemAppearance }),
+      ("the overview", { appearance().showsOverview }),
       ("grouped calls", { appearance().groupsToolCalls }),
       ("failures", { appearance().expandsFailures }),
       ("edits", { appearance().expandsEdits }),
