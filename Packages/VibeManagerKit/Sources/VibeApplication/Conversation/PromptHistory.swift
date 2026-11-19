@@ -22,7 +22,9 @@ public struct PromptHistory: Hashable, Sendable {
       case .userPrompt(let typed, _):
         // What the application typed — a coordinator's message, Vibe Manager's events — is not
         // the user's to recall (#352).
-        guard let text = CoordinatorInstructions.userText(of: typed) else { return nil }
+        guard let userText = CoordinatorInstructions.userText(of: typed) else { return nil }
+        // A reply is recalled without the passage it quoted (#565).
+        let text = ReplyQuote.message(of: userText)
         return hasShellMode ? Self.recalled(message: text) : text
       case .notice(.shell(let run)) where hasShellMode:
         return Self.recalled(command: run.command)
