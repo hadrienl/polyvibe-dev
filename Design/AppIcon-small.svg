@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Polyvibe: three agents, three waves that meet. Coral, violet and green are the session colors. -->
+  <defs>
+    <linearGradient id="bg" x1="150" y1="110" x2="870" y2="920" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#232a3e"/>
+      <stop offset="1" stop-color="#0d1020"/>
+    </linearGradient>
+    <clipPath id="tile"><rect x="72" y="72" width="880" height="880" rx="210"/></clipPath>
+  </defs>
+  <rect x="72" y="72" width="880" height="880" rx="210" fill="url(#bg)"/>
+  <rect x="73.5" y="73.5" width="877" height="877" rx="208.5" fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="3"/>
+  <g clip-path="url(#tile)">
+    <g style="isolation:isolate">
+      <circle cx="512" cy="392" r="84" fill="#ff8b65" style="mix-blend-mode:screen"/>
+      <circle cx="512" cy="392" r="150" fill="none" stroke="#ff8b65" stroke-opacity="0.95" stroke-width="40" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="84" fill="#7667e8" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="150" fill="none" stroke="#7667e8" stroke-opacity="0.95" stroke-width="40" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="84" fill="#47c3a2" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="150" fill="none" stroke="#47c3a2" stroke-opacity="0.95" stroke-width="40" style="mix-blend-mode:screen"/>
+    </g>
+  </g>
+</svg>
