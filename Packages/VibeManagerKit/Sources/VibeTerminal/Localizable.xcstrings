@@ -1,102 +1,102 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "Another copy of Vibe Manager is attached to this terminal host." : {
+    "Another copy of Polyvibe is attached to this terminal host." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "توجد نسخة أخرى من Vibe Manager متصلة بمضيف الطرفيات هذا."
+            "value" : "توجد نسخة أخرى من Polyvibe متصلة بمضيف الطرفيات هذا."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eine andere Kopie von Vibe Manager ist bereits mit diesem Terminal-Host verbunden."
+            "value" : "Eine andere Kopie von Polyvibe ist bereits mit diesem Terminal-Host verbunden."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Otra copia de Vibe Manager ya está conectada a este host de terminales."
+            "value" : "Otra copia de Polyvibe ya está conectada a este host de terminales."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Une autre copie de Vibe Manager est déjà reliée à cet hôte des terminaux."
+            "value" : "Une autre copie de Polyvibe est déjà reliée à cet hôte des terminaux."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager की एक अन्य कॉपी इस टर्मिनल होस्ट से जुड़ी है।"
+            "value" : "Polyvibe की एक अन्य कॉपी इस टर्मिनल होस्ट से जुड़ी है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un’altra copia di Vibe Manager è collegata a questo host dei terminali."
+            "value" : "Un’altra copia di Polyvibe è collegata a questo host dei terminali."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "別のVibe Managerがこのターミナルホストに接続しています。"
+            "value" : "別のPolyvibeがこのターミナルホストに接続しています。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다른 Vibe Manager 사본이 이미 이 터미널 호스트에 연결되어 있습니다."
+            "value" : "다른 Polyvibe 사본이 이미 이 터미널 호스트에 연결되어 있습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een ander exemplaar van Vibe Manager is al verbonden met deze terminalhost."
+            "value" : "Een ander exemplaar van Polyvibe is al verbonden met deze terminalhost."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inna kopia Vibe Manager jest już połączona z tym hostem terminali."
+            "value" : "Inna kopia Polyvibe jest już połączona z tym hostem terminali."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Outra cópia do Vibe Manager já está conectada a este host dos terminais."
+            "value" : "Outra cópia do Polyvibe já está conectada a este host dos terminais."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "К этому хосту терминалов уже подключена другая копия Vibe Manager."
+            "value" : "К этому хосту терминалов уже подключена другая копия Polyvibe."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu terminal sunucusuna başka bir Vibe Manager kopyası bağlı."
+            "value" : "Bu terminal sunucusuna başka bir Polyvibe kopyası bağlı."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "До цього хоста терміналів уже під’єднано іншу копію Vibe Manager."
+            "value" : "До цього хоста терміналів уже під’єднано іншу копію Polyvibe."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "另一个 Vibe Manager 副本已连接到此终端主机。"
+            "value" : "另一个 Polyvibe 副本已连接到此终端主机。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "另一份 Vibe Manager 已連接到此終端機主機。"
+            "value" : "另一份 Polyvibe 已連接到此終端機主機。"
           }
         }
       }

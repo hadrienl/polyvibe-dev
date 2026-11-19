@@ -192,6 +192,8 @@ public struct RedactedPath: Hashable, Sendable {
     "/usr/bin", "/usr/local/bin", "/usr/local/Cellar", "/opt/homebrew/bin",
     "/opt/homebrew/Cellar", "/bin", "/sbin", "/usr/sbin", "/Applications/Xcode.app",
     "/Library/Developer/CommandLineTools", "/System", "/usr/lib",
+    "/Applications/Polyvibe.app",
+    // Where Sparkle updated a copy installed before the rename: it keeps the bundle's folder name.
     "/Applications/Vibe Manager.app",
   ]
 

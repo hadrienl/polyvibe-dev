@@ -35,7 +35,7 @@ public enum CoordinationToolCatalog {
     .init(
       name: "session_create",
       description: """
-        Creates a child session: a new Vibe Manager session, shown under yours in the sidebar, \
+        Creates a child session: a new Polyvibe session, shown under yours in the sidebar, \
         running its own agent in its own folder. Create the folder first — for parallel work, a \
         git worktree of its own (`git worktree add`) — since no two running sessions may share \
         one. The mission is the child's first prompt; it is marked as coming from you. With \
@@ -116,7 +116,7 @@ public enum CoordinationToolCatalog {
     .init(
       name: "wake_after",
       description: """
-        Asks Vibe Manager to write to you after a while, so that you can check on something it \
+        Asks Polyvibe to write to you after a while, so that you can check on something it \
         cannot see — a pull request being merged — without waiting in a loop. One wake-up at a \
         time: a new call replaces the previous one. Then end your turn.
         """,
@@ -129,7 +129,7 @@ public enum CoordinationToolCatalog {
       name: "notify_user",
       description: """
         Calls the user: your session is marked as needing them, and a notification is shown if \
-        Vibe Manager is in the background. Say what you need in the message.
+        Polyvibe is in the background. Say what you need in the message.
         """,
       inputSchema: schema(["message": ["type": "string"]], required: ["message"])),
   ]
@@ -140,18 +140,18 @@ extension AgentToolServerDefinition {
   public static let coordination = AgentToolServerDefinition(
     name: CoordinationToolCatalog.serverName,
     instructions: """
-      These tools let this Vibe Manager session coordinate child sessions: create them, follow \
+      These tools let this Polyvibe session coordinate child sessions: create them, follow \
       them, write to them, move and stop them. Each child is a session of its own the user sees \
       in the sidebar, with its own agent, folder and conversation: when the user asks you to \
       start sessions, or to hand several tasks to agents they can follow, use these tools rather \
       than subagents of your own. They work once the user turns on “Coordinate” in this \
-      session's message field; a tool answers so when it is off. Vibe Manager writes to you when \
+      session's message field; a tool answers so when it is off. Polyvibe writes to you when \
       a child finishes a turn, waits for the user, or stops: you do not need to poll.
       """,
     tools: CoordinationToolCatalog.tools,
     closedMessage:
-      "Vibe Manager is not open: child sessions can only be driven while the application is. "
-      + "Ask the user to open Vibe Manager, then try again.",
+      "Polyvibe is not open: child sessions can only be driven while the application is. "
+      + "Ask the user to open Polyvibe, then try again.",
     refusal:
       "This process cannot coordinate sessions: it does not run in the terminal of a Vibe "
       + "Manager session, or runs in a child session.")

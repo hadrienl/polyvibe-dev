@@ -71,7 +71,7 @@ public enum AgentActivityInput: Hashable, Sendable {
   case output
   /// The user typed this into the session's terminal, in one write.
   case userInput([UInt8])
-  /// Vibe Manager typed the answer to this request into the terminal (#40).
+  /// Polyvibe typed the answer to this request into the terminal (#40).
   case answerSent(AgentRequestID)
   /// Time passed: the deadlines the state is waiting on are checked.
   case tick

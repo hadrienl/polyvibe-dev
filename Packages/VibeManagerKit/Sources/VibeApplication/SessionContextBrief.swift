@@ -203,7 +203,7 @@ public struct SessionContextBriefBuilder: Sendable {
 
   private static let preamble = """
     This session is being restarted in a new process, because its previous conversation could \
-    not be resumed. Nothing below comes from that conversation — it is what Vibe Manager had \
+    not be resumed. Nothing below comes from that conversation — it is what Polyvibe had \
     recorded about the session.
     """
 

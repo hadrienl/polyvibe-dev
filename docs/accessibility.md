@@ -97,7 +97,7 @@ Its window never takes the keyboard by itself: the application in front keeps it
 | Give the bubble the keyboard, from any application; press again to give it back | ⌃⌥⌘P |
 | Previous / next request | ← / → |
 | The answers of the request | Tab, then Space |
-| Open the request's session: Vibe Manager comes forward | ⌘↩ |
+| Open the request's session: Polyvibe comes forward | ⌘↩ |
 | Fold the bubble into the avatar | ⌘- |
 | Give the keyboard back to the application in front | Escape |
 

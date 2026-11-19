@@ -44,7 +44,7 @@ public actor FileTicketResolverRepository: TicketResolverRepository {
     guard stored.schema <= Self.schema else {
       throw TicketResolverStoreError.unreadable(
         reason: String(
-          localized: "the file was written by a newer version of Vibe Manager.", bundle: .module))
+          localized: "the file was written by a newer version of Polyvibe.", bundle: .module))
     }
     return TicketResolverDocument(
       resolvers: stored.resolvers, knownPresets: Set(stored.knownPresets))

@@ -897,7 +897,7 @@ final class BrowserDownloads: NSObject, WKDownloadDelegate {
   static func quarantineProperties(address: URL?, page: URL?) -> [String: Any] {
     var properties: [String: Any] = [
       kLSQuarantineTypeKey as String: kLSQuarantineTypeWebDownload as String,
-      kLSQuarantineAgentNameKey as String: "Vibe Manager",
+      kLSQuarantineAgentNameKey as String: "Polyvibe",
     ]
     func kept(_ url: URL?) -> URL? {
       guard let url, ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "") else {

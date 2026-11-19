@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Archives Vibe Companion, the mobile companion's iOS application, and uploads it to TestFlight,
+# Archives Polyvibe Companion, the mobile companion's iOS application, and uploads it to TestFlight,
 # for the release `v<version>` of the Mac application: the same commit and build number, so that
 # a tester knows which Mac the phone goes with. Run by the `testflight` job of
 # `.github/workflows/release.yml`, or by hand from the maintainer's Mac.
@@ -74,7 +74,7 @@ if [[ "$version" == *-* ]]; then
 else
   readonly build_number="$commits.1"
 fi
-step "Vibe Companion $marketing_version ($build_number)"
+step "Polyvibe Companion $marketing_version ($build_number)"
 rm -rf "$work"
 mkdir -p "$work"
 
@@ -85,7 +85,7 @@ xcodebuild \
   -scheme VibeCompanion \
   -configuration Release \
   -destination 'generic/platform=iOS' \
-  -archivePath "$work/Vibe Companion.xcarchive" \
+  -archivePath "$work/Polyvibe Companion.xcarchive" \
   -skipPackagePluginValidation \
   -allowProvisioningUpdates \
   "${authentication[@]}" \
@@ -105,7 +105,7 @@ if (( dry_run )); then
   plutil -replace destination -string export "$export_options"
 fi
 xcodebuild -exportArchive \
-  -archivePath "$work/Vibe Companion.xcarchive" \
+  -archivePath "$work/Polyvibe Companion.xcarchive" \
   -exportPath "$work/export" \
   -exportOptionsPlist "$export_options" \
   -allowProvisioningUpdates \

@@ -4,7 +4,7 @@ import Foundation
 import UserNotifications
 import os
 
-/// The notification service extension of Vibe Companion (#368): CloudKit pushes a generic alert at
+/// The notification service extension of Polyvibe Companion (#368): CloudKit pushes a generic alert at
 /// each request of the Mac — « Un agent attend votre réponse » — and this fetches the request's
 /// record, whose texts are encrypted, to write the session and the agent in it before iOS shows it.
 ///
@@ -101,7 +101,7 @@ private final class PendingAlert: @unchecked Sendable {
         self.handler = nil
         self.content = nil
         if let alert {
-          // A request without a session's title keeps « Vibe Manager ».
+          // A request without a session's title keeps « Polyvibe ».
           if !alert.title.isEmpty { content.title = alert.title }
           content.subtitle = alert.subtitle
           content.body = alert.body

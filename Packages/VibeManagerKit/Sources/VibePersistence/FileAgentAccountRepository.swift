@@ -38,7 +38,7 @@ public actor FileAgentAccountRepository: AgentAccountRepository {
     guard stored.schema <= schema else {
       throw AgentAccountStoreError.unreadable(
         reason: String(
-          localized: "the file was written by a newer version of Vibe Manager.", bundle: .module))
+          localized: "the file was written by a newer version of Polyvibe.", bundle: .module))
     }
     return stored.accounts
   }

@@ -33,7 +33,7 @@ step() {
 readonly work="$(mktemp -d "${TMPDIR:-/tmp}/vibe-clean-install.XXXXXX")"
 readonly mountpoint="$work/volume"
 readonly applications="$work/Applications"
-readonly app="$applications/Vibe Manager.app"
+readonly app="$applications/Polyvibe.app"
 host_pid=""
 
 cleanup() {
@@ -51,7 +51,7 @@ xcrun stapler validate "$image" || fail "the disk image carries no notarization 
 step "Installing"
 mkdir -p "$mountpoint" "$applications"
 hdiutil attach -quiet -nobrowse -readonly -mountpoint "$mountpoint" "$image"
-ditto "$mountpoint/Vibe Manager.app" "$app"
+ditto "$mountpoint/Polyvibe.app" "$app"
 hdiutil detach -quiet "$mountpoint"
 
 step "Gatekeeper, on the application"
@@ -71,7 +71,7 @@ step "The terminal host refuses an ad hoc binary carrying the application's iden
 readonly host_directory="$work/host"
 readonly logs="$work/logs"
 mkdir -p "$host_directory" "$logs"
-"$app/Contents/MacOS/Vibe Manager" --terminal-host "$host_directory" --log-directory "$logs" &
+"$app/Contents/MacOS/Polyvibe" --terminal-host "$host_directory" --log-directory "$logs" &
 host_pid=$!
 readonly socket="$host_directory/host-v1.sock"
 for _ in {1..100}; do

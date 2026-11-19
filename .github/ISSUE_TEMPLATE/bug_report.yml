@@ -26,8 +26,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Vibe Manager version
-      description: Vibe Manager › About Vibe Manager.
+      label: Polyvibe version
+      description: Polyvibe › About Polyvibe.
       placeholder: 1.0.0 (42)
     validations:
       required: true

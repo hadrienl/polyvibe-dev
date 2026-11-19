@@ -407,10 +407,10 @@ struct EndpointConfigurationTests {
   func headers() throws {
     let configuration = EndpointConfiguration(
       baseURL: try #require(URL(string: "https://h")), wireProtocol: .messages,
-      authentication: .header(name: "x-api-key"), headers: ["X-Title": "Vibe Manager"])
+      authentication: .header(name: "x-api-key"), headers: ["X-Title": "Polyvibe"])
     #expect(
       configuration.requestHeaders(secret: "k")
-        == ["x-api-key": "k", "X-Title": "Vibe Manager"])
+        == ["x-api-key": "k", "X-Title": "Polyvibe"])
     #expect(
       EndpointConfiguration(
         baseURL: try #require(URL(string: "https://h")), wireProtocol: .messages

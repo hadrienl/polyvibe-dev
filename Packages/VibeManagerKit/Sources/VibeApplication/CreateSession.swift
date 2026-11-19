@@ -325,7 +325,7 @@ public struct CreateSession: Sendable {
       return SessionDraftIssue(
         field: .model,
         message: String(
-          localized: "\(agentName) does not let Vibe Manager choose a model.", bundle: .module),
+          localized: "\(agentName) does not let Polyvibe choose a model.", bundle: .module),
         remedy: String(localized: "Go back to the default model of the agent.", bundle: .module)
       )
     case .invalidWorkingDirectory:

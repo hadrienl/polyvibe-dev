@@ -12,10 +12,10 @@ struct CompanionSettingsView: View {
       Section {
         Toggle(isOn: $companion.isEnabled) {
           Text(
-            "Use Vibe Manager from your iPhone", bundle: .module,
+            "Use Polyvibe from your iPhone", bundle: .module,
             comment: "Settings › iPhone Companion: the switch that turns the companion on.")
           Text(
-            "The Vibe Companion app shows this Mac’s sessions, follows their conversations and answers their requests. It finds the Mac through your iCloud account, then talks to it directly.",
+            "The Polyvibe Companion app shows this Mac’s sessions, follows their conversations and answers their requests. It finds the Mac through your iCloud account, then talks to it directly.",
             bundle: .module)
         }
         .disabled(!companion.canRun)
@@ -35,7 +35,7 @@ struct CompanionSettingsView: View {
         // opens TestFlight straight away; the README's section walks through the whole setup.
         VStack(alignment: .leading, spacing: 6) {
           Text(
-            "The companion is in alpha test: the Vibe Companion app is not on the App Store yet. Install it on your iPhone through TestFlight.",
+            "The companion is in alpha test: the Polyvibe Companion app is not on the App Store yet. Install it on your iPhone through TestFlight.",
             bundle: .module
           )
           .foregroundStyle(.secondary)
@@ -53,7 +53,7 @@ struct CompanionSettingsView: View {
           } label: {
             Text(
               "Join the TestFlight beta…", bundle: .module,
-              comment: "Settings › iPhone Companion: opens the public TestFlight invitation to Vibe Companion.")
+              comment: "Settings › iPhone Companion: opens the public TestFlight invitation to Polyvibe Companion.")
           }
           .buttonStyle(.link)
         }
@@ -62,7 +62,7 @@ struct CompanionSettingsView: View {
         Section {
           if companion.phones.isEmpty {
             Text(
-              "Open Vibe Companion on an iPhone signed in to the same iCloud account: it appears here.",
+              "Open Polyvibe Companion on an iPhone signed in to the same iCloud account: it appears here.",
               bundle: .module
             )
             .foregroundStyle(.secondary)
@@ -119,7 +119,7 @@ struct CompanionSettingsView: View {
       }
     } message: {
       Text(
-        "It can no longer connect to this Mac. Opening Vibe Companion on it again adds it back.",
+        "It can no longer connect to this Mac. Opening Polyvibe Companion on it again adds it back.",
         bundle: .module)
     }
   }
@@ -133,7 +133,7 @@ struct CompanionSettingsView: View {
     case .available: nil
     case .notEmbedded:
       String(
-        localized: "This build of Vibe Manager does not include the companion.", bundle: .module)
+        localized: "This build of Polyvibe does not include the companion.", bundle: .module)
     case .needsAppleSilicon:
       String(localized: "The iPhone companion needs a Mac with Apple silicon.", bundle: .module)
     }

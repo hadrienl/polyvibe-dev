@@ -56,8 +56,8 @@ struct TemplateWordingTests {
     #expect(Self.problem(english: "Model", value: "Modèle", modelWord: french) == nil)
     #expect(
       Self.problem(
-        english: "NSLocalNetworkUsageDescription Vibe Manager reaches the model servers…",
-        value: "Vibe Manager joint les serveurs de modèles…", modelWord: french) == nil)
+        english: "NSLocalNetworkUsageDescription Polyvibe reaches the model servers…",
+        value: "Polyvibe joint les serveurs de modèles…", modelWord: french) == nil)
     #expect(
       Self.problem(
         english: "Default model of the agent", value: "Modèle par défaut de l’agent",

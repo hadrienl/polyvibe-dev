@@ -1,7 +1,7 @@
 import Foundation
 import VibeApplication
 
-/// Whether the user let Vibe Manager approve a CLI's activity hooks, kept across launches (#45).
+/// Whether the user let Polyvibe approve a CLI's activity hooks, kept across launches (#45).
 ///
 /// In the user defaults rather than next to the sessions: it is a preference, which the Settings
 /// window changes and a copy of the application with its own data folder shares.

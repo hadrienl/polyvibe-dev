@@ -28,7 +28,7 @@ readonly repository_root="${0:A:h:h}"
 readonly work="$repository_root/build/update-check"
 readonly port=8492
 readonly feed="http://127.0.0.1:$port"
-readonly installed="$work/Applications/Vibe Manager.app"
+readonly installed="$work/Applications/Polyvibe.app"
 readonly old_version="0.9.0" new_version="0.9.1"
 readonly domain="eu.hadrien.VibeManager"
 readonly saved_state="$work/sparkle-defaults.plist"
@@ -154,17 +154,17 @@ build() {
       VIBE_UPDATE_PUBLIC_KEY="$(<"$work/keys/release.public")" \
       build > "$work/build-$version.log" 2>&1 \
       || { grep -E 'error:' "$work/build-$version.log" | head -20; fail "$version did not build"; }
-    local product="$work/DerivedData/Build/Products/Release/Vibe Manager.app"
+    local product="$work/DerivedData/Build/Products/Release/Polyvibe.app"
     [[ "$(defaults read "$product/Contents/Info.plist" CFBundleShortVersionString)" == "$version" ]] \
       || fail "the product is not $version"
     codesign --verify --deep --strict "$product" || fail "$version does not verify"
     mkdir -p "$work/builds/$version"
-    ditto "$product" "$work/builds/$version/Vibe Manager.app"
+    ditto "$product" "$work/builds/$version/Polyvibe.app"
   done
   # The derived data is the bulk of the disk used, and nothing reads it again.
   rm -rf "$work/DerivedData"
 
-  ditto -c -k --sequesterRsrc --keepParent "$work/builds/$new_version/Vibe Manager.app" \
+  ditto -c -k --sequesterRsrc --keepParent "$work/builds/$new_version/Polyvibe.app" \
     "$work/builds/VibeManager-$new_version.zip"
   print "\nBuilt. Next: Scripts/update-check.sh serve good"
 }
@@ -189,7 +189,7 @@ serve() {
   print "==> Installing $old_version afresh"
   rm -rf "$work/Applications" "$work/data" "$work/feed"
   mkdir -p "$work/Applications" "$work/data" "$work/feed/items"
-  ditto "$work/builds/$old_version/Vibe Manager.app" "$installed"
+  ditto "$work/builds/$old_version/Polyvibe.app" "$installed"
   cp "$archive" "$work/feed/"
 
   print "==> Writing the feed ($scenario)"
@@ -209,15 +209,15 @@ serve() {
 ==> Serving $feed/appcast.xml — Ctrl-C when done.
 
 In another terminal:  open "$installed"
-Then, in the copy (its title bar reads $old_version in About Vibe Manager):
+Then, in the copy (its title bar reads $old_version in About Polyvibe):
   1. Start a session with the mock agent; leave it running.
 STEPS
   case "$scenario" in
-    good) print "  2. Vibe Manager → Check for Updates…: $new_version is offered, with its notes and
+    good) print "  2. Polyvibe → Check for Updates…: $new_version is offered, with its notes and
      without the checklist. Install and Relaunch asks about the running agent.
   3. Keep Running and Install: $new_version opens, the session is running, its history on screen.
   4. Settings → Privacy: Full Disk Access as it was before the update." ;;
-    bad) print "  2. Vibe Manager → Check for Updates…, Install: Sparkle says the update is improperly
+    bad) print "  2. Polyvibe → Check for Updates…, Install: Sparkle says the update is improperly
      signed, and $old_version keeps running." ;;
     unstable) print "  2. Check for Updates…: nothing new on Stable.
   3. Settings → Updates → Channel: Unstable, then Check Now: $new_version is offered." ;;

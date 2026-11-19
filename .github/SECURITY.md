@@ -1,12 +1,12 @@
 # Security policy
 
-Vibe Manager launches coding agents and shells, reads their transcripts and holds access to the
+Polyvibe launches coding agents and shells, reads their transcripts and holds access to the
 folders you give it. A flaw in any of that matters, so please report it privately first.
 
 ## Supported versions
 
 Only the latest release receives security fixes. The application updates itself through Sparkle;
-check **Vibe Manager › Check for Updates…** before reporting.
+check **Polyvibe › Check for Updates…** before reporting.
 
 ## Reporting a vulnerability
 

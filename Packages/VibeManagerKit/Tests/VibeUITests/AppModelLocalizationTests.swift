@@ -30,21 +30,21 @@ struct AppModelLocalizationTests {
     #expect(report.message == "1 more was left closed when you cancelled. 1 session came back.")
     let offer = AppModel.RestoreOffer(
       sessionCount: 1, leftoverProcessIdentifiers: [], interruptedAt: nil)
-    #expect(offer.message == "Vibe Manager stopped unexpectedly. 1 session was running.")
+    #expect(offer.message == "Polyvibe stopped unexpectedly. 1 session was running.")
     #expect(
       AppModel.DetachedNotice(runningCount: 2, endedCount: 1).message
-        == "3 agents kept running while Vibe Manager was closed; 1 has finished since.")
+        == "3 agents kept running while Polyvibe was closed; 1 has finished since.")
   }
 
   @Test("The window's title reads the same in French, placeholder of a draft included (#159)")
   func windowTitle() {
-    let (application, session) = ("Vibe Manager", "Refonte")
+    let (application, session) = ("Polyvibe", "Refonte")
     #expect(
       Localization.string("\(application) › \(session)", module: "VibeUI", in: "fr")
-        == "Vibe Manager › Refonte")
+        == "Polyvibe › Refonte")
     #expect(
       Localization.string("\(application), \(session)", module: "VibeUI", in: "fr")
-        == "Vibe Manager, Refonte")
+        == "Polyvibe, Refonte")
     #expect(Localization.string("New Session", module: "VibeUI", in: "fr") == "Nouvelle session")
   }
 
@@ -52,14 +52,14 @@ struct AppModelLocalizationTests {
   func detached() {
     #expect(
       Localization.string(
-        "\(1) agents kept running while Vibe Manager was closed.", module: "VibeUI", in: "fr")
-        == "1 agent a continué de tourner pendant que Vibe Manager était fermé.")
+        "\(1) agents kept running while Polyvibe was closed.", module: "VibeUI", in: "fr")
+        == "1 agent a continué de tourner pendant que Polyvibe était fermé.")
     let (total, ended) = (4, 2)
     #expect(
       Localization.string(
-        "\(total) agents kept running while Vibe Manager was closed; \(ended) have finished since.",
+        "\(total) agents kept running while Polyvibe was closed; \(ended) have finished since.",
         module: "VibeUI", in: "fr")
-        == "4 agents ont continué de tourner pendant que Vibe Manager était fermé\u{00A0}; 2 se sont terminés depuis."
+        == "4 agents ont continué de tourner pendant que Polyvibe était fermé\u{00A0}; 2 se sont terminés depuis."
     )
   }
 

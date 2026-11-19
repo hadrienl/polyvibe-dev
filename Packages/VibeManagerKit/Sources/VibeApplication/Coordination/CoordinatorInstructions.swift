@@ -8,7 +8,7 @@ import Foundation
 /// never replaces. In English, as every word said to an agent.
 public enum CoordinatorInstructions {
   public static let text = """
-    You are a coordinator session in Vibe Manager, a macOS application that runs coding agents \
+    You are a coordinator session in Polyvibe, a macOS application that runs coding agents \
     in sessions. The user gives you a set of tasks — "handle every ticket of milestone V2" — and \
     you get them done by child sessions that you create and follow with the vibe-sessions tools. \
     You are the user's main point of contact: you pass their instructions on to the children, \
@@ -21,14 +21,14 @@ public enum CoordinatorInstructions {
     endpoint is the user's to ask for, never yours to choose, whatever its name suggests. Wait \
     for the user's go once; after that, carry on on your own.
     2. Give each child its own folder. For work on a git repository, create a worktree and a \
-    branch for it yourself (`git worktree add`); Vibe Manager creates nothing in git. No two \
+    branch for it yourself (`git worktree add`); Polyvibe creates nothing in git. No two \
     running sessions may share a folder.
     3. Create a child per task that can start (session_create), with a self-contained mission: \
     the task, the ticket's address, the branch to work on, and what "done" means — usually a \
     pull request. Keep the others for later, or create them with start false. Respect the limit \
     of running children agents_list gives.
-    4. Then end your turn. Vibe Manager writes to you when a child finishes a turn, waits for \
-    the user, or stops. Do not poll in a loop. To check on something Vibe Manager cannot see — a \
+    4. Then end your turn. Polyvibe writes to you when a child finishes a turn, waits for \
+    the user, or stops. Do not poll in a loop. To check on something Polyvibe cannot see — a \
     pull request being merged — call wake_after, then end your turn.
     5. When a child's pull request is merged, close the child (session_close), move it to done \
     (session_set_status), and start the tasks it unblocked.
@@ -48,7 +48,7 @@ public enum CoordinatorInstructions {
     """
 
   /// The part of a prompt the user wrote: `nil` for a message the application typed — a
-  /// coordinator's to its child, Vibe Manager's to a coordinator —, and without what it put in
+  /// coordinator's to its child, Polyvibe's to a coordinator —, and without what it put in
   /// front of the user's message.
   public static func userText(of prompt: String) -> String? {
     let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -61,19 +61,19 @@ public enum CoordinatorInstructions {
     return prompt
   }
 
-  /// What every message of Vibe Manager's to an agent opens with.
-  static let applicationMark = "[Vibe Manager]"
+  /// What every message of Polyvibe's to an agent opens with.
+  static let applicationMark = "[Polyvibe]"
 
   /// Put in front of the user's next message once they turned coordination on while the agent
   /// runs.
   public static let turnedOn = """
-    [Vibe Manager] The user turned on coordination for this session: the vibe-sessions tools now \
+    [Polyvibe] The user turned on coordination for this session: the vibe-sessions tools now \
     let you create and drive child sessions. The first tool you call answers with the rules.
     """
 
   /// Put in front of the user's next message once they turned it off.
   public static let turnedOff = """
-    [Vibe Manager] The user turned off coordination for this session: create no more child \
+    [Polyvibe] The user turned off coordination for this session: create no more child \
     sessions. Children already running go on.
     """
 

@@ -35,7 +35,7 @@ struct UpdatesSettingsView: View {
           Text(
             """
             A new version is downloaded in the background and installed the next time you quit \
-            Vibe Manager. Turned off, you are told first.
+            Polyvibe. Turned off, you are told first.
             """,
             bundle: .module)
         }
@@ -72,7 +72,7 @@ struct UpdatesSettingsView: View {
         } label: {
           if let ready = updates.readyToInstall {
             Text(
-              "Version \(ready.version) will be installed when you quit Vibe Manager.",
+              "Version \(ready.version) will be installed when you quit Polyvibe.",
               bundle: .module)
           } else if let waiting = updates.waitingVersion {
             Text("Version \(waiting) is available.", bundle: .module)
@@ -105,7 +105,7 @@ struct UpdatesSettingsView: View {
     case .developmentBuild:
       LocalizedStringResource(
         """
-        This copy of Vibe Manager was built from its source, and is never replaced by a release. \
+        This copy of Polyvibe was built from its source, and is never replaced by a release. \
         Updates come to the copies downloaded from GitHub.
         """,
         bundle: .module)

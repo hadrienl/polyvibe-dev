@@ -26,7 +26,7 @@ public enum SessionStoreError: Error, Equatable, LocalizedError, Sendable {
       return String(localized: "The work session contains invalid data.", bundle: .module)
     case .unsupportedSchemaVersion:
       return String(
-        localized: "The session store was created by a newer version of Vibe Manager.",
+        localized: "The session store was created by a newer version of Polyvibe.",
         bundle: .module)
     case .recoveryUnavailable:
       return String(localized: "No valid session backup is available.", bundle: .module)
@@ -36,8 +36,8 @@ public enum SessionStoreError: Error, Equatable, LocalizedError, Sendable {
     case .recoveryRefusedForNewerStore:
       return String(
         localized: """
-          The session store was created by a newer version of Vibe Manager and must not be \
-          replaced by an older backup. Update Vibe Manager to open it.
+          The session store was created by a newer version of Polyvibe and must not be \
+          replaced by an older backup. Update Polyvibe to open it.
           """,
         bundle: .module)
     }

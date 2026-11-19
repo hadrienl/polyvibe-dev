@@ -3,7 +3,7 @@ import VibeApplication
 import VibeProcess
 
 /// Asks Codex whether the activity hooks will run, and approves them — only them — when the user
-/// agreed to it in Vibe Manager (#45).
+/// agreed to it in Polyvibe (#45).
 ///
 /// Codex keeps its approvals in `config.toml` (`hooks.state."<key>".trusted_hash`), keyed by the
 /// hook's place and fingerprint. They are written through Codex's own local server, with the

@@ -43,7 +43,7 @@ enum CompanionMirrorServer {
   }
 
   private static func mirror(udid: String, _ receiving: RecvStream, _ sending: SendStream) async {
-    // Bundle: Contents/Helpers/Vibe Manager Companion.app, the bridges in Contents/MacOS.
+    // Bundle: Contents/Helpers/Polyvibe Companion.app, the bridges in Contents/MacOS.
     let folder = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent()
       .appendingPathComponent("MacOS")
     let bridge: DeviceBridge

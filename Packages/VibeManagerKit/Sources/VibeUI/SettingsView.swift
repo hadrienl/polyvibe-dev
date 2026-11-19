@@ -724,7 +724,7 @@ struct PrivacySettingsView: View {
             Text(
               """
               macOS gives each process the access it had when it started. Agents run in a \
-              background process of Vibe Manager, which keeps running while they work.
+              background process of Polyvibe, which keeps running while they work.
               """,
               bundle: .module
             )
@@ -993,7 +993,7 @@ struct PendingRestartExplanation: View {
     switch runner {
     case .application:
       Text(
-        "Agents run inside Vibe Manager for now. Quit and reopen Vibe Manager to give them the access.",
+        "Agents run inside Polyvibe for now. Quit and reopen Polyvibe to give them the access.",
         bundle: .module)
     case .host:
       if runningAgents == 0 {
@@ -1075,7 +1075,7 @@ private struct ProcessAccessRows: View {
     LabeledContent {
       Text(state(report.identity))
     } label: {
-      Text("Vibe Manager", bundle: .module)
+      Text("Polyvibe", bundle: .module)
       Text("What a process of this copy gets when it starts now.", bundle: .module)
     }
     if report.runner.runner == .host {
@@ -1092,7 +1092,7 @@ private struct ProcessAccessRows: View {
       Text(state(report.interface))
     } label: {
       Text("This window", bundle: .module)
-      Text("Until Vibe Manager is next opened.", bundle: .module)
+      Text("Until Polyvibe is next opened.", bundle: .module)
     }
   }
 
@@ -1215,7 +1215,7 @@ private struct SideTerminalsRow: View {
       Text(
         """
         What each side terminal showed is written to disk, so that it is still there when its \
-        session is reopened or Vibe Manager relaunched. It stays on this Mac, readable by you \
+        session is reopened or Polyvibe relaunched. It stays on this Mac, readable by you \
         alone and out of backups. Turned off, the histories already kept are erased.
         """,
         bundle: .module)
@@ -1285,7 +1285,7 @@ private struct QuitBehaviorRow: View {
       Text(
         """
         Agents kept running go on working in the background, and are back on screen as they are \
-        the next time Vibe Manager is opened. A restart of the Mac stops them.
+        the next time Polyvibe is opened. A restart of the Mac stops them.
         """,
         bundle: .module
       )

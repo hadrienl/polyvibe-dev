@@ -1,18 +1,20 @@
 MACOSX_DEPLOYMENT_TARGET = 14.0
 SWIFT_VERSION = 6.0
 PRODUCT_BUNDLE_IDENTIFIER = eu.hadrien.VibeManager
-PRODUCT_NAME = Vibe Manager
+PRODUCT_NAME = Polyvibe
 MARKETING_VERSION = 1.0.0
 CURRENT_PROJECT_VERSION = 1
 GENERATE_INFOPLIST_FILE = YES
-INFOPLIST_KEY_CFBundleDisplayName = Vibe Manager
+INFOPLIST_KEY_CFBundleDisplayName = Polyvibe
 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.developer-tools
 // Merged with the generated keys: Sparkle's own, which Xcode has no build setting for (#92).
 INFOPLIST_FILE = App/VibeManagerApp/Info.plist
 // Where updates are looked for, and the EdDSA key an update must be signed with (ADR 0033). The
 // key is public: its private half is a secret of the `release` environment, and a copy offline.
-// Empty, the application does not look for updates at all.
-VIBE_UPDATE_FEED_URL = https:/$()/hadrienl.github.io/vibe-manager/appcast.xml
+// Empty, the application does not look for updates at all. A copy built before the rename still
+// reads hadrienl.github.io/vibe-manager/appcast.xml, which GitHub Pages redirects to this domain
+// (ADR 0046).
+VIBE_UPDATE_FEED_URL = https:/$()/polyvibe.dev/appcast.xml
 VIBE_UPDATE_PUBLIC_KEY = K32Oa1zTevzFvIiLBZ7rnLd1u6jPtTlPl5VdmNfm+hg=
 ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
@@ -30,17 +32,17 @@ SWIFT_EMIT_LOC_STRINGS = YES
 
 // Why the application asks, in each alert macOS can raise on its behalf. The agents it launches
 // run as its children, so every protected folder they read is requested in its name.
-INFOPLIST_KEY_NSDesktopFolderUsageDescription = Vibe Manager lets the coding agent you launched read the folder you chose.
-INFOPLIST_KEY_NSDocumentsFolderUsageDescription = Vibe Manager lets the coding agent you launched read the folder you chose.
-INFOPLIST_KEY_NSDownloadsFolderUsageDescription = Vibe Manager lets the coding agent you launched read the folder you chose.
-INFOPLIST_KEY_NSRemovableVolumesUsageDescription = Vibe Manager opens the working folder you chose on this volume.
-INFOPLIST_KEY_NSNetworkVolumesUsageDescription = Vibe Manager opens the working folder you chose on this volume.
-INFOPLIST_KEY_NSFileProviderDomainUsageDescription = Vibe Manager opens the working folder you chose in iCloud Drive.
+INFOPLIST_KEY_NSDesktopFolderUsageDescription = Polyvibe lets the coding agent you launched read the folder you chose.
+INFOPLIST_KEY_NSDocumentsFolderUsageDescription = Polyvibe lets the coding agent you launched read the folder you chose.
+INFOPLIST_KEY_NSDownloadsFolderUsageDescription = Polyvibe lets the coding agent you launched read the folder you chose.
+INFOPLIST_KEY_NSRemovableVolumesUsageDescription = Polyvibe opens the working folder you chose on this volume.
+INFOPLIST_KEY_NSNetworkVolumesUsageDescription = Polyvibe opens the working folder you chose on this volume.
+INFOPLIST_KEY_NSFileProviderDomainUsageDescription = Polyvibe opens the working folder you chose in iCloud Drive.
 // The gateway of #107 reaches a model server on the local network, such as Ollama on another Mac.
-INFOPLIST_KEY_NSLocalNetworkUsageDescription = Vibe Manager reaches the model servers you declared on your local network.
+INFOPLIST_KEY_NSLocalNetworkUsageDescription = Polyvibe reaches the model servers you declared on your local network.
 // The composer's dictation (#340), and a page of the web view that asks for the microphone (#315):
 // without this key, WebKit does not even give pages `navigator.mediaDevices`.
-INFOPLIST_KEY_NSMicrophoneUsageDescription = Vibe Manager uses the microphone when you dictate a message, transcribed on this Mac, and when a page in the web view asks you for it.
+INFOPLIST_KEY_NSMicrophoneUsageDescription = Polyvibe uses the microphone when you dictate a message, transcribed on this Mac, and when a page in the web view asks you for it.
 // The hardened runtime of a release refuses the microphone without its entitlement, and only it is
 // granted (ADR 0021).
 CODE_SIGN_ENTITLEMENTS = App/VibeManagerApp/VibeManager.entitlements

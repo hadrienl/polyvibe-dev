@@ -170,25 +170,51 @@ struct NotificationSoundFolderTests {
     let folder = temporaryFolder()
     defer { try? FileManager.default.removeItem(at: folder) }
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    let other = folder.appendingPathComponent("Vibe Manager #393 abc – Gong.wav")
+    let other = folder.appendingPathComponent("Polyvibe #393 abc – Gong.wav")
     let foreign = folder.appendingPathComponent("codex-alert.wav")
     try wave.write(to: other)
     try wave.write(to: foreign)
     let source = folder.appendingPathComponent("source.wav")
     try wave.write(to: source)
 
-    let sounds = NotificationSoundFolder(applicationName: "Vibe Manager", directory: folder)
-    #expect(try sounds.install(source, name: "Carillon/doux") == "Vibe Manager – Carillon-doux.wav")
-    #expect(try sounds.install(source, name: "Goutte") == "Vibe Manager – Goutte.wav")
+    let sounds = NotificationSoundFolder(applicationName: "Polyvibe", directory: folder)
+    #expect(try sounds.install(source, name: "Carillon/doux") == "Polyvibe – Carillon-doux.wav")
+    #expect(try sounds.install(source, name: "Goutte") == "Polyvibe – Goutte.wav")
     var names = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
-    #expect(names.contains("Vibe Manager – Goutte.wav"))
-    #expect(!names.contains("Vibe Manager – Carillon-doux.wav"))
+    #expect(names.contains("Polyvibe – Goutte.wav"))
+    #expect(!names.contains("Polyvibe – Carillon-doux.wav"))
 
     sounds.clear()
     names = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
-    #expect(!names.contains("Vibe Manager – Goutte.wav"))
+    #expect(!names.contains("Polyvibe – Goutte.wav"))
     #expect(names.contains(other.lastPathComponent))
     #expect(names.contains(foreign.lastPathComponent))
+  }
+
+  @Test("The release removes the file it left under its former name; a test build does not")
+  func formerName() throws {
+    let folder = temporaryFolder()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    let former = folder.appendingPathComponent("Vibe Manager – Gong.wav")
+    try wave.write(to: former)
+    let source = folder.appendingPathComponent("source.wav")
+    try wave.write(to: source)
+
+    #expect(NotificationSoundFolder.formerNames(of: "Polyvibe #393 abc").isEmpty)
+    let testBuild = NotificationSoundFolder(
+      applicationName: "Polyvibe #393 abc",
+      formerApplicationNames: NotificationSoundFolder.formerNames(of: "Polyvibe #393 abc"),
+      directory: folder)
+    _ = try testBuild.install(source, name: "Goutte")
+    #expect(FileManager.default.fileExists(atPath: former.path))
+
+    let release = NotificationSoundFolder(
+      applicationName: "Polyvibe",
+      formerApplicationNames: NotificationSoundFolder.formerNames(of: "Polyvibe"),
+      directory: folder)
+    #expect(try release.install(source, name: "Goutte") == "Polyvibe – Goutte.wav")
+    #expect(!FileManager.default.fileExists(atPath: former.path))
   }
 
   @Test("A name of many bytes, or with what cannot be seen, still makes a file; no copy is left")
@@ -198,16 +224,16 @@ struct NotificationSoundFolderTests {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     let source = folder.appendingPathComponent("source.wav")
     try wave.write(to: source)
-    let sounds = NotificationSoundFolder(applicationName: "Vibe Manager", directory: folder)
+    let sounds = NotificationSoundFolder(applicationName: "Polyvibe", directory: folder)
 
     let coders = String(repeating: "👩🏽‍💻", count: 60)
     let installed = try sounds.install(source, name: coders)
     #expect(installed.utf8.count <= 255)
-    #expect(installed.hasPrefix("Vibe Manager – 👩🏽‍💻"))
+    #expect(installed.hasPrefix("Polyvibe – 👩🏽‍💻"))
     let marks = "e" + String(repeating: "\u{301}", count: 300)
     #expect(try sounds.install(source, name: marks).utf8.count <= 255)
     #expect(
-      try sounds.install(source, name: "Bip\u{202E}vaw.exe") == "Vibe Manager – Bipvaw.exe.wav")
+      try sounds.install(source, name: "Bip\u{202E}vaw.exe") == "Polyvibe – Bipvaw.exe.wav")
     let names = try FileManager.default.contentsOfDirectory(atPath: folder.path)
     #expect(!names.contains { $0.hasSuffix(".tmp") })
   }

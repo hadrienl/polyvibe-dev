@@ -1,5 +1,5 @@
 <h1>Réglages</h1>
-<p class="lede">Chaque page de <strong>Vibe Manager › Réglages…</strong> (<kbd>⌘,</kbd>), et le rôle de chaque réglage. La barre latérale les regroupe comme Réglages Système ; la fenêtre s’élargit d’elle-même pour les pages qui demandent de la place, comme les gabarits.</p>
+<p class="lede">Chaque page de <strong>Polyvibe › Réglages…</strong> (<kbd>⌘,</kbd>), et le rôle de chaque réglage. La barre latérale les regroupe comme Réglages Système ; la fenêtre s’élargit d’elle-même pour les pages qui demandent de la place, comme les gabarits.</p>
 
 <vm-shot name="settings-general" alt="Réglages, page Général : la barre latérale des pages, à côté les sessions et les terminaux annexes.">La page Général, et la barre latérale de toutes les pages.</vm-shot>
 
@@ -71,7 +71,7 @@
 <p>Les règles d’archivage et les protections : voir <a href="archive.html">Archivage automatique</a>.</p>
 
 <h2 id="worktrees">Worktrees</h2>
-<p>Où les agents créent leurs worktrees : <code>{repo}/.claude/worktrees/{branch}</code> par défaut, à côté du dépôt, dans <code>~/Worktrees/{project}/{branch}</code>, ou un chemin personnalisé construit avec des variables, avec un aperçu. Des exceptions se règlent projet par projet (<strong>Ajouter…</strong>), et <strong>Rétablir le défaut</strong> revient au chemin par défaut. Vibe Manager ne crée rien dans Git : il indique ce chemin à l’agent, pour ses nouveaux worktrees seulement.</p>
+<p>Où les agents créent leurs worktrees : <code>{repo}/.claude/worktrees/{branch}</code> par défaut, à côté du dépôt, dans <code>~/Worktrees/{project}/{branch}</code>, ou un chemin personnalisé construit avec des variables, avec un aperçu. Des exceptions se règlent projet par projet (<strong>Ajouter…</strong>), et <strong>Rétablir le défaut</strong> revient au chemin par défaut. Polyvibe ne crée rien dans Git : il indique ce chemin à l’agent, pour ses nouveaux worktrees seulement.</p>
 
 <h2 id="companion">Compagnon iPhone</h2>
 <p>L’assistant du compagnon et les iPhone appairés : voir <a href="companion.html">Compagnon iPhone</a>.</p>
@@ -84,7 +84,7 @@
 <p>La ligne <strong>Résolveurs</strong> ouvre leur page. Un résolveur indique quelles adresses sont des tickets : GitHub, GitLab, les merge requests GitLab, Jira Cloud et Linear sont fournis. Ajoutez les vôtres pour un GitLab auto-hébergé, un Jira Server ou un Redmine : un nom, un <strong>motif d’adresse</strong> avec une capture nommée comme <code>(?&lt;number&gt;[0-9]+)</code>, un <strong>identifiant</strong> comme <code>#{number}</code>, et des motifs de <strong>nettoyage du titre</strong>. <strong>Tester avec une adresse</strong> le vérifie. Les résolveurs peuvent être importés et exportés ; voir <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/ticket-resolvers.md">docs/ticket-resolvers.md</a>.</p>
 
 <h2 id="privacy">Confidentialité</h2>
-<p>Indique si Vibe Manager dispose de l’<strong>Accès complet au disque</strong> — Accordé, Non accordé, ou Accordé, pas encore effectif —, avec <strong>Ouvrir Réglages Système</strong>. Les agents héritent de l’accès du processus qui les fait tourner, lequel a pu démarrer avant que vous l’accordiez : <strong>Redémarrer à la fin des agents</strong> le laisse partir une fois son dernier agent terminé, <strong>Redémarrer maintenant…</strong> arrête les agents qu’il cite et les reprend. La section <strong>Processus par processus</strong> apparaît quand ils ne sont pas d’accord.</p>
+<p>Indique si Polyvibe dispose de l’<strong>Accès complet au disque</strong> — Accordé, Non accordé, ou Accordé, pas encore effectif —, avec <strong>Ouvrir Réglages Système</strong>. Les agents héritent de l’accès du processus qui les fait tourner, lequel a pu démarrer avant que vous l’accordiez : <strong>Redémarrer à la fin des agents</strong> le laisse partir une fois son dernier agent terminé, <strong>Redémarrer maintenant…</strong> arrête les agents qu’il cite et les reprend. La section <strong>Processus par processus</strong> apparaît quand ils ne sont pas d’accord.</p>
 <dl>
   <dt id="usage">Données de ce Mac › Suivre l’utilisation des agents</dt>
   <dd>Enregistre le temps d’exécution et lit les compteurs de jetons pour le <a href="conversation.html#usage">bouton Utilisation</a> de la barre d’état et la <a href="conversation.html#usage-window">fenêtre Utilisation</a>, et télécharge la liste publique des tarifs dont leurs coûts sont tirés, au plus une fois par jour. Désactivé, rien n’est lu et rien n’est téléchargé. <strong>Effacer les données d’utilisation…</strong> efface ce qui a été enregistré, pas les transcripts des agents.</dd>
@@ -97,6 +97,6 @@
   <dt>Rechercher automatiquement les mises à jour</dt><dd>Chaque jour, chaque semaine ou chaque mois.</dd>
   <dt>Télécharger et installer automatiquement les mises à jour</dt><dd>Installe en arrière-plan ; sinon, la question vous est posée.</dd>
   <dt>Canal</dt><dd><strong>Stable</strong>, ou <strong>Instable</strong> pour recevoir aussi les versions candidates.</dd>
-  <dt>Rechercher maintenant</dt><dd>Aussi dans <strong>Vibe Manager › Rechercher les mises à jour…</strong>.</dd>
+  <dt>Rechercher maintenant</dt><dd>Aussi dans <strong>Polyvibe › Rechercher les mises à jour…</strong>.</dd>
 </dl>
 <p>Les mises à jour sont signées deux fois — avec le Developer ID de l’app et avec une clé EdDSA — et vérifiées avant d’être installées. Quand des agents tournent, la mise à jour pose la même question qu’en quittant : installer en les laissant tourner, ou tout arrêter.</p>

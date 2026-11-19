@@ -11,7 +11,7 @@ import VibeDomain
 @Suite("The phone's relayed messages")
 @MainActor
 struct CompanionRelayedMessageTests {
-  @Test("Vibe Manager's news and a coordinator's message carry who wrote them")
+  @Test("Polyvibe's news and a coordinator's message carry who wrote them")
   func relayed() throws {
     let child = SessionID()
     let news = CoordinationInbox.message(for: [

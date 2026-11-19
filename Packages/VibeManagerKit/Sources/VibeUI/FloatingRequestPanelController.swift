@@ -5,7 +5,7 @@ import SwiftUI
 import VibeApplication
 
 /// The window of the floating panel (#41): a panel above the other applications, on every Space
-/// and beside full-screen ones, that never activates Vibe Manager.
+/// and beside full-screen ones, that never activates Polyvibe.
 ///
 /// It is shown with `orderFrontRegardless()`, never made key by the application: the application
 /// in front keeps the keyboard. A click on a button acts without taking it; a click in a text
@@ -310,7 +310,7 @@ public final class FloatingRequestPanelController {
 
   // MARK: - Keyboard
 
-  /// ⌃⌥⌘P: the bubble takes the keyboard, without Vibe Manager coming forward.
+  /// ⌃⌥⌘P: the bubble takes the keyboard, without Polyvibe coming forward.
   private func takeKeyboard() {
     guard let window, window.isVisible else { return }
     if window.isKeyWindow {
@@ -399,7 +399,7 @@ final class GlobalHotKey: @unchecked Sendable {
     guard installed == noErr, registered == noErr else { return nil }
   }
 
-  /// "VMfp": Vibe Manager's floating panel.
+  /// "VMfp": Polyvibe's floating panel.
   static let signature = OSType(0x564D_6670)
 
   deinit {

@@ -30,11 +30,11 @@ final class CompanionComposition {
     publish = PublishCompanionSnapshot(publisher: link)
   }
 
-  /// `Contents/Helpers/Vibe Manager Companion.app`, when this build embeds it (`VIBE_EMBED_COMPANION`).
+  /// `Contents/Helpers/Polyvibe Companion.app`, when this build embeds it (`VIBE_EMBED_COMPANION`).
   nonisolated static func bundledAgent() -> URL? {
     guard Bundle.main.bundleURL.pathExtension == "app" else { return nil }
     let agent = Bundle.main.bundleURL.appendingPathComponent(
-      "Contents/Helpers/Vibe Manager Companion.app", isDirectory: true)
+      "Contents/Helpers/Polyvibe Companion.app", isDirectory: true)
     return FileManager.default.fileExists(atPath: agent.path) ? agent : nil
   }
 
@@ -186,10 +186,10 @@ final class CompanionComposition {
     return id
   }
 
-  /// "Vibe Manager #347 abc1234" — the name `Scripts/local-build.sh` gives a test build — says
+  /// "Polyvibe #347 abc1234" — the name `Scripts/local-build.sh` gives a test build — says
   /// "#347 abc1234"; a plain build says nothing more than its version.
   static func buildLabel(applicationName: String?) -> String {
-    guard let name = applicationName, name.hasPrefix("Vibe Manager") else { return "" }
-    return name.dropFirst("Vibe Manager".count).trimmingCharacters(in: .whitespaces)
+    guard let name = applicationName, name.hasPrefix("Polyvibe") else { return "" }
+    return name.dropFirst("Polyvibe".count).trimmingCharacters(in: .whitespaces)
   }
 }

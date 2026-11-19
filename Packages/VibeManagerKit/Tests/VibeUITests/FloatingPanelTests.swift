@@ -72,7 +72,7 @@ struct FloatingPanelTests {
     #expect(notifier.posted.count == 1)
   }
 
-  @Test("On: hidden while Vibe Manager is in front with its window, shown when it is not")
+  @Test("On: hidden while Polyvibe is in front with its window, shown when it is not")
   func noDuplicate() async {
     let first = session("First")
     let (model, panel) = await makeModel([first], preferences: .init(showsFloatingPanel: true))
@@ -228,7 +228,7 @@ struct FloatingPanelTests {
     #expect(panel.focusRequest == 1)
   }
 
-  @Test("Opening a session from the bubble brings Vibe Manager forward")
+  @Test("Opening a session from the bubble brings Polyvibe forward")
   func openSession() async {
     let first = session("First")
     let (model, _) = await makeModel([first], preferences: .init(showsFloatingPanel: true))

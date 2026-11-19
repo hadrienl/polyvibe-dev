@@ -3,21 +3,33 @@ import VibeApplication
 
 /// `~/Library/Sounds`, where the notifications of an application outside a sandbox find the
 /// sounds they play (#393). One file of the application's at a time, named after it and the
-/// sound: "Vibe Manager – Chime.wav". It also appears among the alert sounds of System Settings.
+/// sound: "Polyvibe – Chime.wav". It also appears among the alert sounds of System Settings.
 /// A copy of the application under another name — a test build — keeps its own file, and leaves
 /// the others alone.
 public struct NotificationSoundFolder: NotificationSoundInstalling {
   private let prefix: String
+  private let formerPrefixes: [String]
   private let directory: URL
 
-  /// - Parameter applicationName: the bundle's name, which the file's starts with.
+  /// - Parameters:
+  ///   - applicationName: the bundle's name, which the file's starts with.
+  ///   - formerApplicationNames: the names the application had before, whose file it removes
+  ///     like its own: "Vibe Manager – Chime.wav" is left over once Vibe Manager became Polyvibe.
   public init(
     applicationName: String,
+    formerApplicationNames: [String] = [],
     directory: URL = FileManager.default.homeDirectoryForCurrentUser
       .appendingPathComponent("Library/Sounds", isDirectory: true)
   ) {
     prefix = "\(applicationName) – "
+    formerPrefixes = formerApplicationNames.map { "\($0) – " }
     self.directory = directory
+  }
+
+  /// The names the release had before: only the release removes their file, never a test build,
+  /// which leaves alone the sound of another copy the user may still run.
+  public static func formerNames(of applicationName: String) -> [String] {
+    applicationName == "Polyvibe" ? ["Vibe Manager"] : []
   }
 
   public func install(_ source: URL, name: String) throws -> String {
@@ -49,7 +61,8 @@ public struct NotificationSoundFolder: NotificationSoundInstalling {
 
   private func removeOthers(keeping kept: String?) {
     let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
-    for name in names where name.hasPrefix(prefix) && name != kept {
+    let prefixes = [prefix] + formerPrefixes
+    for name in names where prefixes.contains(where: name.hasPrefix) && name != kept {
       try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
     }
   }

@@ -53,7 +53,7 @@ struct SettingsSheet: View {
           Text("Mac")
         } footer: {
           Text(
-            "The Macs of your iCloud account where Vibe Manager runs the companion. There’s nothing else to pair."
+            "The Macs of your iCloud account where Polyvibe runs the companion. There’s nothing else to pair."
           )
         }
         Section("Notifications") {
@@ -74,7 +74,7 @@ struct SettingsSheet: View {
       .alert("This Mac Is Still Connected", isPresented: $showsStillConnected) {
       } message: {
         Text(
-          "Vibe Manager is running on this Mac and would put it back in the list. Quit it there first. If it has already stopped, try again in a while."
+          "Polyvibe is running on this Mac and would put it back in the list. Quit it there first. If it has already stopped, try again in a while."
         )
       }
       .navigationTitle("Settings")

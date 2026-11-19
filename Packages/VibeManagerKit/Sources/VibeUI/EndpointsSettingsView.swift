@@ -461,7 +461,7 @@ struct EndpointsSettingsView: View {
               }
               .labelsHidden()
               .font(.body.monospaced())
-              TextField(text: binding.headers[index].value, prompt: Text(verbatim: "Vibe Manager"))
+              TextField(text: binding.headers[index].value, prompt: Text(verbatim: "Polyvibe"))
               {
                 Text("Header value", bundle: .module)
               }
@@ -928,7 +928,7 @@ struct EndpointsSettingsView: View {
     switch error {
     case .noList:
       return String(
-        localized: "The endpoint gave no list of models Vibe Manager can read. Type them below.",
+        localized: "The endpoint gave no list of models Polyvibe can read. Type them below.",
         bundle: .module)
     case .failed(let detail):
       return EndpointCheckRow.sentence(for: detail)

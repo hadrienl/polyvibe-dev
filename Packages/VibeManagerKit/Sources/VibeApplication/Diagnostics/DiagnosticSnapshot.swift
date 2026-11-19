@@ -263,7 +263,7 @@ public enum DiagnosticArchive {
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.dateFormat = "yyyy-MM-dd HH.mm"
-    return "Vibe Manager Diagnostics \(formatter.string(from: date)).zip"
+    return "Polyvibe Diagnostics \(formatter.string(from: date)).zip"
   }
 
   private static func date(_ date: Date?) -> String {
@@ -276,7 +276,7 @@ public enum DiagnosticArchive {
     let application = snapshot.application
     let settings = snapshot.settings
     return """
-      Vibe Manager diagnostics
+      Polyvibe diagnostics
       Created: \(date(snapshot.createdAt))
       \(exclusions)
 

@@ -1,4 +1,4 @@
-// The Mac's companion agent (#347): `Vibe Manager Companion.app`, embedded in the application's
+// The Mac's companion agent (#347): `Polyvibe Companion.app`, embedded in the application's
 // Contents/Helpers when VIBE_EMBED_COMPANION is YES. An application without a Dock icon, the only
 // bundle that holds the iCloud entitlement (ADR 0021), with an App ID and a profile of its own.
 #include "CompanionBase.xcconfig"
@@ -9,8 +9,8 @@ SDKROOT = macosx
 MACOSX_DEPLOYMENT_TARGET = 14.5
 ARCHS = arm64
 PRODUCT_BUNDLE_IDENTIFIER = eu.hadrien.VibeManager.CompanionAgent
-PRODUCT_NAME = Vibe Manager Companion
-INFOPLIST_KEY_CFBundleDisplayName = Vibe Manager Companion
+PRODUCT_NAME = Polyvibe Companion
+INFOPLIST_KEY_CFBundleDisplayName = Polyvibe Companion
 INFOPLIST_KEY_LSUIElement = YES
 INFOPLIST_KEY_LSApplicationCategoryType = public.app-category.developer-tools
 CODE_SIGN_ENTITLEMENTS = App/VibeCompanionAgent/VibeCompanionAgent.entitlements

@@ -125,7 +125,7 @@ public enum AgentLaunchError: Error, Equatable, Sendable, LocalizedError {
       return String(localized: "The model \(id) is not offered by this agent.", bundle: .module)
     case .modelSelectionUnsupported:
       return String(
-        localized: "This agent does not let Vibe Manager choose a model.", bundle: .module)
+        localized: "This agent does not let Polyvibe choose a model.", bundle: .module)
     case .initialPromptUnsupported:
       return String(localized: "This agent does not accept an initial prompt.", bundle: .module)
     case .resumeUnsupported:

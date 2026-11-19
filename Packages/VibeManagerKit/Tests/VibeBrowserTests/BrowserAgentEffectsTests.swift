@@ -107,7 +107,7 @@ struct BrowserAgentEffectsTests {
         == kLSQuarantineTypeWebDownload as String
     }
     let properties = try #require(Self.quarantine(of: file))
-    #expect(properties[kLSQuarantineAgentNameKey as String] as? String == "Vibe Manager")
+    #expect(properties[kLSQuarantineAgentNameKey as String] as? String == "Polyvibe")
     // Where it came from goes to Launch Services' record of quarantine events, which this process
     // is not given back: what the file itself carries is checked.
     #expect(getxattr(file.path, "com.apple.quarantine", nil, 0, 0, 0) > 0)

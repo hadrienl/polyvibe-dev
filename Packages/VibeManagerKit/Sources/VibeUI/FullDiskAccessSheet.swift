@@ -32,7 +32,7 @@ struct FullDiskAccessSheet: View {
 
       Text(
         """
-        Vibe Manager runs coding agents on your behalf. macOS asks for permission every time one \
+        Polyvibe runs coding agents on your behalf. macOS asks for permission every time one \
         of them reads your Desktop, Documents, Downloads, an external disk or iCloud Drive — and \
         it asks in the name of this application, once per folder.
         """,
@@ -58,13 +58,13 @@ struct FullDiskAccessSheet: View {
           Text(
             "Open Privacy & Security → Full Disk Access.", bundle: .module,
             comment: "The names of the pane and the setting in System Settings."))
-        step(2, Text("Turn Vibe Manager on.", bundle: .module))
+        step(2, Text("Turn Polyvibe on.", bundle: .module))
         step(
           3,
           Text(
             """
-            Come back to Vibe Manager. Agents get the access as soon as the background process \
-            that runs them restarts, which Vibe Manager does when none of them is running.
+            Come back to Polyvibe. Agents get the access as soon as the background process \
+            that runs them restarts, which Polyvibe does when none of them is running.
             """,
             bundle: .module))
       }

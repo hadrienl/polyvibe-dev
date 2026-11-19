@@ -107,7 +107,7 @@ func runsInTheRequestedWorkingDirectory() async throws {
 func missingTrampolineFallsBackToTheShell() throws {
   // The terminal host outlived the build it was started from (#382): spawning the trampoline
   // failed with ENOENT, reported as "No executable was found at /bin/zsh".
-  let gone = "/tmp/vibe-manager-gone-\(UUID().uuidString)/Vibe Manager"
+  let gone = "/tmp/vibe-manager-gone-\(UUID().uuidString)/Polyvibe"
   #expect(
     ControllingTerminal.arguments(for: "/bin/zsh", arguments: ["-l"], trampoline: gone) == nil)
 
@@ -121,7 +121,7 @@ func missingTrampolineFallsBackToTheShell() throws {
 func missingTrampolineIsLogged() {
   let log = RecordingDiagnosticLog()
   let diagnostics = Diagnostics(log: log, pseudonym: .ephemeral())
-  let gone = "/tmp/vibe-manager-gone-\(UUID().uuidString)/Vibe Manager"
+  let gone = "/tmp/vibe-manager-gone-\(UUID().uuidString)/Polyvibe"
   var shell = TerminalSpec(
     executableURL: URL(fileURLWithPath: "/bin/zsh"),
     workingDirectoryURL: URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true),

@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-/// Vibe Companion (#347, #400): the Mac's sessions on the iPhone, driven over the direct channel,
+/// Polyvibe Companion (#347, #400): the Mac's sessions on the iPhone, driven over the direct channel,
 /// with CloudKit for the Mac's address and the notifications.
 @main
 struct VibeCompanionApp: App {

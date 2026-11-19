@@ -208,7 +208,7 @@ public final class AppModel {
   }
   /// The application's name, as its bundle gives it, at the head of the window's title (#159).
   /// A workspace assembled without a bundle — the tests' — goes by the product's name.
-  public var applicationName = "Vibe Manager"
+  public var applicationName = "Polyvibe"
   /// Brings the application forward: "Open Session" from the floating panel, while another
   /// application is in front.
   @ObservationIgnored public var activateApplication: @MainActor () -> Void = {
@@ -579,7 +579,7 @@ public final class AppModel {
 
     public var message: String {
       String(
-        localized: "Vibe Manager stopped unexpectedly. \(sessionCount) sessions were running.",
+        localized: "Polyvibe stopped unexpectedly. \(sessionCount) sessions were running.",
         bundle: .module)
     }
 
@@ -610,17 +610,17 @@ public final class AppModel {
       switch endedCount {
       case 0:
         return String(
-          localized: "\(total) agents kept running while Vibe Manager was closed.",
+          localized: "\(total) agents kept running while Polyvibe was closed.",
           bundle: .module)
       case 1:
         return String(
           localized:
-            "\(total) agents kept running while Vibe Manager was closed; 1 has finished since.",
+            "\(total) agents kept running while Polyvibe was closed; 1 has finished since.",
           bundle: .module)
       default:
         return String(
           localized:
-            "\(total) agents kept running while Vibe Manager was closed; \(endedCount) have finished since.",
+            "\(total) agents kept running while Polyvibe was closed; \(endedCount) have finished since.",
           bundle: .module,
           comment:
             "Agents left running when the application quit, then how many of them ended since; both above one."

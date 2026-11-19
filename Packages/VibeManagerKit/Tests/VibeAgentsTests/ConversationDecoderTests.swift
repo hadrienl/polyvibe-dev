@@ -842,7 +842,7 @@ struct FileTranscriptTailTests {
 @Suite("The mock agent's conversation")
 struct MockConversationTests {
   /// The mock script, run with only what it needs of `inherited`. Run with all of it, a mock
-  /// started by tests in the terminal of an agent of Vibe Manager finds that session's
+  /// started by tests in the terminal of an agent of Polyvibe finds that session's
   /// `VIBE_AGENT_ACTIVITY_LOG` and reports into it: its `SessionEnd` took a question the real
   /// agent was waiting on off the queue (#271).
   static func mockAgent(

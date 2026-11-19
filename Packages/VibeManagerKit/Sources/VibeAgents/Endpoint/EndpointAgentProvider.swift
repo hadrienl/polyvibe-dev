@@ -621,7 +621,7 @@ extension CodexEndpointAgentProvider: AgentLaunchPreparing, AgentLaunchObserverP
   }
 }
 
-/// An endpoint Antigravity drives: everything above but the Vibe Manager tools and instructions,
+/// An endpoint Antigravity drives: everything above but the Polyvibe tools and instructions,
 /// which `agy` is not given yet (#541). Not claiming them keeps coordination, which is offered to
 /// the agents that conform, from being offered to a session that could not coordinate.
 public struct AntigravityEndpointAgentProvider: AgentProvider {

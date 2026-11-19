@@ -2,7 +2,7 @@ import AppKit
 import Security
 import os
 
-/// `Vibe Manager Companion.app`: an application without a Dock icon (`LSUIElement`), because a
+/// `Polyvibe Companion.app`: an application without a Dock icon (`LSUIElement`), because a
 /// CloudKit push is delivered to an application, never to a service (#347). The application starts
 /// it from its bundle's `Contents/Helpers`, with the link's socket and the folder of its state.
 @main
@@ -11,7 +11,7 @@ enum CompanionAgentMain {
   static func main() {
     guard let arguments = CompanionAgent.Arguments(CommandLine.arguments) else {
       Logger(subsystem: "eu.hadrien.VibeManager.companion", category: "agent")
-        .error("started without --link and --state: Vibe Manager starts it, not the user")
+        .error("started without --link and --state: Polyvibe starts it, not the user")
       exit(64)
     }
     // A build signed ad hoc — CI's interface test, a contributor without the team — cannot hold

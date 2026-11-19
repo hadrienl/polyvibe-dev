@@ -1,7 +1,7 @@
 import SwiftUI
 import VibeApplication
 
-/// Asks, in Vibe Manager's own words, before a CLI's hooks are approved on the user's behalf
+/// Asks, in Polyvibe's own words, before a CLI's hooks are approved on the user's behalf
 /// (#45). Codex would otherwise ask in the terminal, in a screen of its own, where "trust all" is
 /// the tempting answer and approves more than these.
 struct HookConsentSheet: View {
@@ -24,14 +24,14 @@ struct HookConsentSheet: View {
       Text(
         """
         To show in the sidebar when \(request.agentName) is working, asks a question or has \
-        finished an answer, Vibe Manager adds hooks to its sessions. They only note these moments \
-        in a file of Vibe Manager's; they never answer in your place.
+        finished an answer, Polyvibe adds hooks to its sessions. They only note these moments \
+        in a file of Polyvibe's; they never answer in your place.
         """,
         bundle: .module,
         comment: "Why the hooks are added; the argument is the agent's name.")
       Text(
         """
-        \(request.agentName) asks for new hooks to be approved once. Vibe Manager approves these \
+        \(request.agentName) asks for new hooks to be approved once. Polyvibe approves these \
         ones, and no other.
         """,
         bundle: .module,

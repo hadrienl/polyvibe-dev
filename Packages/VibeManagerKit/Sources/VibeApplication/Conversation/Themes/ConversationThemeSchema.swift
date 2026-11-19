@@ -104,7 +104,7 @@ public enum ConversationThemeSchema {
       schema(forAgent: false, isDark: nil).merging(
         [
           "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "title": "Vibe Manager conversation theme, format \(ConversationThemeFile.format)",
+          "title": "Polyvibe conversation theme, format \(ConversationThemeFile.format)",
           "description":
             "A personal theme of the conversation view. Its file name is its identifier; "
             + "every pair of colours a reader must read is also held to WCAG contrasts, which a "

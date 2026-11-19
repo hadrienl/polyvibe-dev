@@ -224,7 +224,7 @@ public enum TerminalError: Error, Hashable, Codable, LocalizedError, Sendable {
     case .executableNotFound(let path):
       return String(localized: "No executable was found at \(path).", bundle: .module)
     case .executableNotPermitted(let path):
-      return String(localized: "Vibe Manager is not allowed to run \(path).", bundle: .module)
+      return String(localized: "Polyvibe is not allowed to run \(path).", bundle: .module)
     case .notExecutable(let path):
       return String(localized: "\(path) is not a runnable executable.", bundle: .module)
     case .workingDirectoryUnavailable(let path):
@@ -244,7 +244,7 @@ public enum TerminalError: Error, Hashable, Codable, LocalizedError, Sendable {
         bundle: .module)
     case .tooManySessions(let limit):
       return String(
-        localized: "Vibe Manager already runs \(limit) terminals, the most it runs at once.",
+        localized: "Polyvibe already runs \(limit) terminals, the most it runs at once.",
         bundle: .module)
     case .hostStopped:
       return String(

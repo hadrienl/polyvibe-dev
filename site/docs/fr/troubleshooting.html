@@ -13,7 +13,7 @@
   <dt>« Sessions indisponibles », ou le fichier des sessions est dit endommagé</dt>
   <dd><strong>Restaurer la sauvegarde</strong> rétablit la version précédente ; le fichier endommagé est conservé à côté, jamais supprimé. Sans sauvegarde, quittez, déplacez <code>sessions.json</code> ailleurs et relancez l’app.</dd>
   <dt>Les agents laissés en cours ne peuvent pas être rattachés</dt>
-  <dd>Une autre copie de l’app les détient, ou l’hôte des terminaux n’a pas répondu à temps : cliquez sur <strong>Réessayer</strong> dans le bandeau. En dernier recours, <code>pkill -f -- 'Vibe Manager --terminal-host'</code> arrête l’hôte et les agents qu’il gardait ; leurs conversations sont reprises au lancement suivant.</dd>
+  <dd>Une autre copie de l’app les détient, ou l’hôte des terminaux n’a pas répondu à temps : cliquez sur <strong>Réessayer</strong> dans le bandeau. En dernier recours, <code>pkill -f -- 'Polyvibe --terminal-host'</code> arrête l’hôte et les agents qu’il gardait ; leurs conversations sont reprises au lancement suivant.</dd>
   <dt>L’Accès complet au disque est accordé, et les agents sont toujours sollicités</dt>
   <dd>Les agents héritent de l’accès du processus qui les a lancés. Dans <a href="settings.html#privacy">Réglages › Confidentialité</a>, choisissez <strong>Redémarrer à la fin des agents</strong> ou <strong>Redémarrer maintenant…</strong>.</dd>
   <dt>La conversation reste vide</dt>
@@ -21,7 +21,7 @@
   <dt>L’activité de la session ne s’affiche pas (en cours, en attente…)</dt>
   <dd>Activez l’activité de l’agent dans <a href="settings.html#agents">Réglages › Agents</a> et approuvez ses hooks.</dd>
   <dt>Aucune mise à jour n’est proposée</dt>
-  <dd><strong>Vibe Manager › Rechercher les mises à jour…</strong> explique pourquoi quand cette copie ne peut pas se mettre à jour elle-même. Les versions candidates ne sont proposées que sur le canal <strong>Instable</strong>. Vous pouvez toujours télécharger la dernière image disque depuis GitHub Releases et glisser l’app par-dessus l’ancienne.</dd>
+  <dd><strong>Polyvibe › Rechercher les mises à jour…</strong> explique pourquoi quand cette copie ne peut pas se mettre à jour elle-même. Les versions candidates ne sont proposées que sur le canal <strong>Instable</strong>. Vous pouvez toujours télécharger la dernière image disque depuis GitHub Releases et glisser l’app par-dessus l’ancienne.</dd>
   <dt>La connexion à un site échoue dans la vue web du compagnon</dt>
   <dd>Les passkeys ne fonctionnent pas dans la vue web : utilisez un mot de passe, ou touchez <strong>Ouvrir dans Safari</strong>. Voir <a href="companion.html#web">La vue web</a>.</dd>
 </dl>
@@ -30,7 +30,7 @@
 <h2 id="privacy">Ce qui reste sur votre Mac</h2>
 <ul>
   <li><strong>Pas de compte, pas de télémétrie, rien d’envoyé.</strong> Les seules requêtes réseau que l’app fait d’elle-même sont la recherche de mises à jour et les pages que vous, ou vos agents, ouvrez dans la vue web.</li>
-  <li><strong>Aucun identifiant n’est lu.</strong> Les agents utilisent leur propre connexion ; Vibe Manager ne voit jamais de clé d’API.</li>
+  <li><strong>Aucun identifiant n’est lu.</strong> Les agents utilisent leur propre connexion ; Polyvibe ne voit jamais de clé d’API.</li>
   <li><strong>Les conversations sont lues, pas copiées.</strong> La vue conversation lit les transcripts des agents en mémoire ; le suivi de l’utilisation ne lit que leurs compteurs.</li>
   <li>Les résumés, les thèmes et les avatars sont générés par vos agents, avec votre compte, seulement quand vous les activez ou les demandez.</li>
   <li>Chaque fichier de l’app n’est lisible que par vous.</li>
@@ -63,7 +63,7 @@
 
 <h2 id="uninstall">Désinstaller</h2>
 <p>Quittez l’app — choisissez <strong>Tout arrêter</strong> si elle le demande —, puis, dans un terminal :</p>
-<pre><code>rm -rf "/Applications/Vibe Manager.app" \
+<pre><code>rm -rf "/Applications/Polyvibe.app" \
   ~/Library/Application\ Support/com.hadrienl.VibeManager \
   ~/Library/Logs/Vibe\ Manager \
   "$TMPDIR/vibe-manager"

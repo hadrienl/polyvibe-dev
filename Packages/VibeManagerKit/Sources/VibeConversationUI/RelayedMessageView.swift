@@ -1,8 +1,8 @@
 import SwiftUI
 import VibeApplication
 
-/// A message Vibe Manager or the session's coordinator sent it, folded under who wrote it — and,
-/// for Vibe Manager's news, the sessions it is about. Unfolded, what the agent read, in English as
+/// A message Polyvibe or the session's coordinator sent it, folded under who wrote it — and,
+/// for Polyvibe's news, the sessions it is about. Unfolded, what the agent read, in English as
 /// it read it.
 struct RelayedMessageView: View {
   let id: String
@@ -61,11 +61,11 @@ struct RelayedMessageView: View {
     }
   }
 
-  /// Who wrote it, and the sessions Vibe Manager's news is about.
+  /// Who wrote it, and the sessions Polyvibe's news is about.
   private var summary: Text {
     switch message.sender {
     case .application:
-      let sender = Text(verbatim: "Vibe Manager").fontWeight(.semibold)
+      let sender = Text(verbatim: "Polyvibe").fontWeight(.semibold)
       guard !message.children.isEmpty else { return sender }
       return sender + Text(verbatim: " · " + message.children.joined(separator: ", "))
     case .coordinator(let name):
@@ -77,7 +77,7 @@ struct RelayedMessageView: View {
   static func summary(of message: RelayedMessage) -> String {
     switch message.sender {
     case .application:
-      return (["Vibe Manager"] + [message.children.joined(separator: ", ")])
+      return (["Polyvibe"] + [message.children.joined(separator: ", ")])
         .filter { !$0.isEmpty }.joined(separator: " · ")
     case .coordinator(let name):
       return String(localized: "Coordinator “\(name)”", bundle: .module)

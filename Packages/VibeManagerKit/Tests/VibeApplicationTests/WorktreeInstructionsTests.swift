@@ -8,7 +8,7 @@ struct WorktreeInstructionsTests {
   private let agent = AgentProviderID("claude-code")
   private let day = Date(timeIntervalSince1970: 1_793_000_000)
 
-  @Test("A session is given the path with what Vibe Manager knows resolved")
+  @Test("A session is given the path with what Polyvibe knows resolved")
   func session() throws {
     let session = WorkSession(
       name: "Update banner", repositories: [RepositoryContext(path: "/nowhere/vibe")])

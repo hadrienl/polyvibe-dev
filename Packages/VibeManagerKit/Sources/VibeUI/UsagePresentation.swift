@@ -10,7 +10,7 @@ enum UsagePresentation {
         Tokens are read from the transcripts Claude Code and Codex write on this Mac. They are \
         approximate: a transcript the CLI deletes can no longer be read, an interrupted answer may \
         be written without its usage, calls the CLI makes outside its transcript are not seen, and \
-        sessions started outside Vibe Manager are never counted.
+        sessions started outside Polyvibe are never counted.
         """,
       bundle: .module)
   }
@@ -29,7 +29,7 @@ enum UsagePresentation {
   static var runningTimeExplanation: String {
     String(
       localized: """
-        The time the agent's process was running in Vibe Manager, whether it was working or \
+        The time the agent's process was running in Polyvibe, whether it was working or \
         waiting for you. Time the Mac spent asleep is not counted.
         """,
       bundle: .module)
@@ -166,7 +166,7 @@ enum UsagePresentation {
         localized: LocalizedStringResource(
           " (\(counts.afterRelaunch) after relaunch)", locale: locale, bundle: .module,
           comment:
-            "How many of the resumes followed a relaunch of Vibe Manager. Keep the leading space."))
+            "How many of the resumes followed a relaunch of Polyvibe. Keep the leading space."))
     }
     if counts.afterSwitch > 0 {
       parts.append(

@@ -89,7 +89,7 @@ public struct FileSystemExecutableLocator: ExecutableLocator {
   private func inspect(path: String, source: AgentDetectionSource) -> ExecutableLocation {
     // Keep the stable path we discovered instead of replacing it with a symlink's current
     // target. Self-updating CLIs such as Claude Code repoint `~/.local/bin/claude` and remove the
-    // old version while Vibe Manager is still running. Caching the versioned target would then
+    // old version while Polyvibe is still running. Caching the versioned target would then
     // make the next restart try to launch a file that no longer exists.
     //
     // FileManager and FileHandle follow symlinks for all three checks, so the target is still

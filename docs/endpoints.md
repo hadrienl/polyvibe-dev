@@ -84,7 +84,7 @@ run the harness on your own account with its maker, and send it the session's co
 
 ## The gateway
 
-A process of the application's own binary, `Vibe Manager --endpoint-gateway`, started when a
+A process of the application's own binary, `Polyvibe --endpoint-gateway`, started when a
 session on an endpoint starts, listening on `127.0.0.1` only. It keeps running while such sessions
 run — after the application quits too, for the sessions the terminal host keeps — and stops by
 itself once the application has noticed that the last one ended, within a few minutes.

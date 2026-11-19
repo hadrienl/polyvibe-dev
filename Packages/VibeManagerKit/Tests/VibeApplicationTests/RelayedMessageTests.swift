@@ -83,7 +83,7 @@ struct RelayedMessageTests {
     #expect(RelayedMessage("Fix the tests") == nil)
     #expect(RelayedMessage("[Coordinator] not a mark") == nil)
     // The mark pasted by the user, without the news it titles.
-    #expect(RelayedMessage("[Vibe Manager] why did you say that?") == nil)
+    #expect(RelayedMessage("[Polyvibe] why did you say that?") == nil)
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\nPlan milestone V2") == nil)
     // Files alone, sent once coordination was turned on.
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\n") == nil)

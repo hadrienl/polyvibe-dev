@@ -77,7 +77,7 @@ public enum EndpointTestDetail: Hashable, Sendable {
 
 public enum EndpointDiscoveryError: Error, Equatable, Sendable {
   case failed(EndpointTestDetail)
-  /// The endpoint answered, but with no list of models Vibe Manager can read: they are typed.
+  /// The endpoint answered, but with no list of models Polyvibe can read: they are typed.
   case noList
 }
 

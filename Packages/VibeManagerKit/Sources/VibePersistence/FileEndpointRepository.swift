@@ -48,7 +48,7 @@ public actor FileEndpointRepository: EndpointRepository {
     guard stored.schema <= schema else {
       throw EndpointStoreError.unreadable(
         reason: String(
-          localized: "the file was written by a newer version of Vibe Manager.", bundle: .module))
+          localized: "the file was written by a newer version of Polyvibe.", bundle: .module))
     }
     return stored.endpoints
   }

@@ -20,8 +20,8 @@ public enum BrowserBridge {
   public static let socketEnvironmentKey = "VIBE_BROWSER_SOCKET"
 
   static let closedMessage =
-    "Vibe Manager is not open: the web view is only there while the application is. "
-    + "Ask the user to open Vibe Manager, then try again."
+    "Polyvibe is not open: the web view is only there while the application is. "
+    + "Ask the user to open Polyvibe, then try again."
 
   /// Runs the bridge or the command if the arguments ask for one, and never returns then.
   public static func runIfRequested(
@@ -231,7 +231,7 @@ public enum BrowserCommandLine {
            vibe browser screenshot [<tab>] -o <file.png>
            vibe browser close <tab>
 
-    Drives the web view of the Vibe Manager session this terminal belongs to.
+    Drives the web view of the Polyvibe session this terminal belongs to.
 
     """
 
@@ -281,7 +281,7 @@ public enum BrowserCommandLine {
     guard let socketPath = environment[BrowserBridge.socketEnvironmentKey], !socketPath.isEmpty
     else {
       FileHandle.standardError.write(
-        Data("vibe: run this in the terminal of a Vibe Manager session.\n".utf8))
+        Data("vibe: run this in the terminal of a Polyvibe session.\n".utf8))
       return 3
     }
     guard FileManager.default.fileExists(atPath: socketPath) else {
@@ -298,7 +298,7 @@ public enum BrowserCommandLine {
     guard writeAll(BrowserMCPServer.line(request), to: descriptor), let line = reader.next(),
       let answer = try? JSONDecoder().decode(JSONValue.self, from: line)
     else {
-      FileHandle.standardError.write(Data("vibe: Vibe Manager did not answer.\n".utf8))
+      FileHandle.standardError.write(Data("vibe: Polyvibe did not answer.\n".utf8))
       return 1
     }
     if let error = answer["error"]?["message"]?.stringValue {

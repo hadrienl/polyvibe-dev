@@ -1,6 +1,6 @@
 #!/bin/sh
 # Minimal stand-in for a coding agent CLI.
-# It exists so Vibe Manager can exercise launching, streaming and resuming without
+# It exists so Polyvibe can exercise launching, streaming and resuming without
 # Claude, Codex, an account or a network call.
 #
 # The scenario tests of #19 drive it further:

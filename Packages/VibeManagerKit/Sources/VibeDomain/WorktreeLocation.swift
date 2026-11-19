@@ -1,7 +1,7 @@
 import Foundation
 
 /// Where the agents create the worktree of a task (#432): text and variables, as Settings ›
-/// Worktrees builds it. Vibe Manager creates nothing in git; it gives the path to the agents.
+/// Worktrees builds it. Polyvibe creates nothing in git; it gives the path to the agents.
 ///
 /// Stored as text, each variable written `{name}`: `{repo}/.claude/worktrees/{branch}`.
 public struct WorktreeLocation: Hashable, Codable, Sendable {

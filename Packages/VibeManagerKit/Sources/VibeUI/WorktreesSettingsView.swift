@@ -25,7 +25,7 @@ struct WorktreesSettingsView: View {
           "Worktree Location", bundle: .module, comment: "A section of Settings › Worktrees.")
       } footer: {
         Text(
-          "Vibe Manager gives this path to every agent, which creates the worktree of a task there itself. It applies to new worktrees only: those of open sessions stay where they are.",
+          "Polyvibe gives this path to every agent, which creates the worktree of a task there itself. It applies to new worktrees only: those of open sessions stay where they are.",
           bundle: .module
         )
         .foregroundStyle(.secondary)

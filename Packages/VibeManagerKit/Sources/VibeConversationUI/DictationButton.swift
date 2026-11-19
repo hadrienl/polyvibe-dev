@@ -213,7 +213,7 @@ struct DictationPopover: View {
   private func problemContent(_ problem: DictationController.Problem) -> some View {
     switch problem {
     case .microphoneDenied:
-      Text("Vibe Manager may not use the microphone.", bundle: .module).font(.headline)
+      Text("Polyvibe may not use the microphone.", bundle: .module).font(.headline)
       Text(
         "Allow it in System Settings › Privacy & Security › Microphone, then dictate again.",
         bundle: .module

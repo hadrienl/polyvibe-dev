@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:vibe="https://hadrienl.github.io/vibe-manager/xml-namespaces/vibe">
   <channel>
-    <title>Vibe Manager</title>
-    <link>https://hadrienl.github.io/vibe-manager/appcast.xml</link>
+    <title>Polyvibe</title>
+    <link>https://polyvibe.dev/appcast.xml</link>
     <language>en</language>
     <item>
-      <title>Vibe Manager 1.1.0</title>
+      <title>Polyvibe 1.1.0</title>
       <link>https://github.com/hadrienl/vibe-manager/releases/tag/v1.1.0</link>
       <sparkle:version>140.1</sparkle:version>
       <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
@@ -27,7 +27,7 @@
       <enclosure url="https://github.com/hadrienl/vibe-manager/releases/download/v1.1.0/VibeManager-1.1.0.zip" length="41000000" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJlLTEuMS4w+/=="/>
     </item>
     <item>
-      <title>Vibe Manager 1.1.0-rc.10</title>
+      <title>Polyvibe 1.1.0-rc.10</title>
       <link>https://github.com/hadrienl/vibe-manager/releases/tag/v1.1.0-rc.10</link>
       <sparkle:version>140</sparkle:version>
       <sparkle:shortVersionString>1.1.0-rc.10</sparkle:shortVersionString>
@@ -42,7 +42,7 @@
       <enclosure url="https://github.com/hadrienl/vibe-manager/releases/download/v1.1.0-rc.10/VibeManager-1.1.0-rc.10.zip" length="40999999" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJlLXJjMTA="/>
     </item>
     <item>
-      <title>Vibe Manager 1.1.0-rc.9</title>
+      <title>Polyvibe 1.1.0-rc.9</title>
       <link>https://github.com/hadrienl/vibe-manager/releases/tag/v1.1.0-rc.9</link>
       <sparkle:version>138</sparkle:version>
       <sparkle:shortVersionString>1.1.0-rc.9</sparkle:shortVersionString>
@@ -55,7 +55,7 @@
       <enclosure url="https://github.com/hadrienl/vibe-manager/releases/download/v1.1.0-rc.9/VibeManager-1.1.0-rc.9.zip" length="40999000" type="application/octet-stream" sparkle:edSignature="c2lnbmF0dXJlLXJjOQ=="/>
     </item>
     <item>
-      <title>Vibe Manager 1.0.0</title>
+      <title>Polyvibe 1.0.0</title>
       <link>https://github.com/hadrienl/vibe-manager/releases/tag/v1.0.0</link>
       <sparkle:version>120</sparkle:version>
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>

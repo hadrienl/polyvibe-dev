@@ -28,7 +28,7 @@ public enum CoordinationRefusal: Error, Equatable, Sendable {
     case .coordinationOff:
       return
         "Coordination is off for this session. Ask the user to turn on “Coordinate” in this "
-        + "session's message field in Vibe Manager, then call the tool again."
+        + "session's message field in Polyvibe, then call the tool again."
     case .childCannotCoordinate:
       return
         "This session is a child of a coordinator, and a child cannot create sessions of its "

@@ -3,7 +3,7 @@ import VibeApplication
 
 /// Claude Code loads tool servers from `--mcp-config`, which adds to the user's own servers rather
 /// than replacing them (no `--strict-mcp-config`). Each server's tools are allowed with
-/// `--allowedTools mcp__<name>`: Vibe Manager asks for itself before anything is done as the user
+/// `--allowedTools mcp__<name>`: Polyvibe asks for itself before anything is done as the user
 /// (ADR 0023), and Claude asking again for the same call would be a second question with no new
 /// answer.
 extension ClaudeCodeAgentProvider: AgentToolServing {

@@ -1,7 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%lld other agents run inside Vibe Manager and will stop either way." : {
+    "%lld other agents run inside Polyvibe and will stop either way." : {
       "localizations" : {
         "ar" : {
           "variations" : {
@@ -9,37 +9,37 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكلاء آخرين داخل Vibe Manager، وسيتوقفون في كل الأحوال."
+                  "value" : "يعمل %lld وكلاء آخرين داخل Polyvibe، وسيتوقفون في كل الأحوال."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكيلًا آخر داخل Vibe Manager، وسيتوقفون في كل الأحوال."
+                  "value" : "يعمل %lld وكيلًا آخر داخل Polyvibe، وسيتوقفون في كل الأحوال."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكيل آخر داخل Vibe Manager، وسيتوقف في كل الأحوال."
+                  "value" : "يعمل %lld وكيل آخر داخل Polyvibe، وسيتوقف في كل الأحوال."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكيل آخر داخل Vibe Manager، وسيتوقفون في كل الأحوال."
+                  "value" : "يعمل %lld وكيل آخر داخل Polyvibe، وسيتوقفون في كل الأحوال."
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكيلان آخران داخل Vibe Manager، وسيتوقفان في كل الأحوال."
+                  "value" : "يعمل %lld وكيلان آخران داخل Polyvibe، وسيتوقفان في كل الأحوال."
                 }
               },
               "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يعمل %lld وكيل آخر داخل Vibe Manager، وسيتوقف في كل الأحوال."
+                  "value" : "يعمل %lld وكيل آخر داخل Polyvibe، وسيتوقف في كل الأحوال."
                 }
               }
             }
@@ -51,13 +51,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld weiterer Agent läuft in Vibe Manager und wird in jedem Fall gestoppt."
+                  "value" : "%lld weiterer Agent läuft in Polyvibe und wird in jedem Fall gestoppt."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld weitere Agents laufen in Vibe Manager und werden in jedem Fall gestoppt."
+                  "value" : "%lld weitere Agents laufen in Polyvibe und werden in jedem Fall gestoppt."
                 }
               }
             }
@@ -69,13 +69,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld other agent runs inside Vibe Manager and will stop either way."
+                  "value" : "%lld other agent runs inside Polyvibe and will stop either way."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld other agents run inside Vibe Manager and will stop either way."
+                  "value" : "%lld other agents run inside Polyvibe and will stop either way."
                 }
               }
             }
@@ -87,19 +87,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld agentes más se ejecutan en Vibe Manager y se detendrán de todos modos."
+                  "value" : "%lld agentes más se ejecutan en Polyvibe y se detendrán de todos modos."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld agente más se ejecuta en Vibe Manager y se detendrá de todos modos."
+                  "value" : "%lld agente más se ejecuta en Polyvibe y se detendrá de todos modos."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld agentes más se ejecutan en Vibe Manager y se detendrán de todos modos."
+                  "value" : "%lld agentes más se ejecutan en Polyvibe y se detendrán de todos modos."
                 }
               }
             }
@@ -111,19 +111,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld autres agents s’exécutent dans Vibe Manager et s’arrêteront dans tous les cas."
+                  "value" : "%lld autres agents s’exécutent dans Polyvibe et s’arrêteront dans tous les cas."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld autre agent s’exécute dans Vibe Manager et s’arrêtera dans tous les cas."
+                  "value" : "%lld autre agent s’exécute dans Polyvibe et s’arrêtera dans tous les cas."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld autres agents s’exécutent dans Vibe Manager et s’arrêteront dans tous les cas."
+                  "value" : "%lld autres agents s’exécutent dans Polyvibe et s’arrêteront dans tous les cas."
                 }
               }
             }
@@ -135,13 +135,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld अन्य एजेंट Vibe Manager के भीतर चल रहा है और हर हाल में रुक जाएगा।"
+                  "value" : "%lld अन्य एजेंट Polyvibe के भीतर चल रहा है और हर हाल में रुक जाएगा।"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld अन्य एजेंट Vibe Manager के भीतर चल रहे हैं और हर हाल में रुक जाएँगे।"
+                  "value" : "%lld अन्य एजेंट Polyvibe के भीतर चल रहे हैं और हर हाल में रुक जाएँगे।"
                 }
               }
             }
@@ -153,19 +153,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld altri agenti sono in esecuzione in Vibe Manager e verranno arrestati in ogni caso."
+                  "value" : "%lld altri agenti sono in esecuzione in Polyvibe e verranno arrestati in ogni caso."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld altro agente è in esecuzione in Vibe Manager e verrà arrestato in ogni caso."
+                  "value" : "%lld altro agente è in esecuzione in Polyvibe e verrà arrestato in ogni caso."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld altri agenti sono in esecuzione in Vibe Manager e verranno arrestati in ogni caso."
+                  "value" : "%lld altri agenti sono in esecuzione in Polyvibe e verranno arrestati in ogni caso."
                 }
               }
             }
@@ -177,7 +177,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "ほかに%lld個のエージェントがVibe Manager内で実行中で、いずれにしても停止します。"
+                  "value" : "ほかに%lld個のエージェントがPolyvibe内で実行中で、いずれにしても停止します。"
                 }
               }
             }
@@ -189,7 +189,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "다른 에이전트 %lld개가 Vibe Manager 안에서 실행 중이며 어느 쪽이든 중단됩니다."
+                  "value" : "다른 에이전트 %lld개가 Polyvibe 안에서 실행 중이며 어느 쪽이든 중단됩니다."
                 }
               }
             }
@@ -201,13 +201,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld andere agent draait in Vibe Manager en stopt hoe dan ook."
+                  "value" : "%lld andere agent draait in Polyvibe en stopt hoe dan ook."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld andere agents draaien in Vibe Manager en stoppen hoe dan ook."
+                  "value" : "%lld andere agents draaien in Polyvibe en stoppen hoe dan ook."
                 }
               }
             }
@@ -219,25 +219,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld inni agenci działają w Vibe Manager i zostaną zatrzymani w każdym przypadku."
+                  "value" : "%lld inni agenci działają w Polyvibe i zostaną zatrzymani w każdym przypadku."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld innych agentów działa w Vibe Manager i zostanie zatrzymanych w każdym przypadku."
+                  "value" : "%lld innych agentów działa w Polyvibe i zostanie zatrzymanych w każdym przypadku."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld inny agent działa w Vibe Manager i zostanie zatrzymany w każdym przypadku."
+                  "value" : "%lld inny agent działa w Polyvibe i zostanie zatrzymany w każdym przypadku."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld innego agenta działa w Vibe Manager i zostanie zatrzymane w każdym przypadku."
+                  "value" : "%lld innego agenta działa w Polyvibe i zostanie zatrzymane w każdym przypadku."
                 }
               }
             }
@@ -249,19 +249,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld outros agentes estão em execução no Vibe Manager e serão parados de qualquer forma."
+                  "value" : "%lld outros agentes estão em execução no Polyvibe e serão parados de qualquer forma."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld outro agente está em execução no Vibe Manager e será parado de qualquer forma."
+                  "value" : "%lld outro agente está em execução no Polyvibe e será parado de qualquer forma."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "%lld outros agentes estão em execução no Vibe Manager e serão parados de qualquer forma."
+                  "value" : "%lld outros agentes estão em execução no Polyvibe e serão parados de qualquer forma."
                 }
               }
             }
@@ -273,25 +273,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ещё %lld агента работают в Vibe Manager и в любом случае будут остановлены."
+                  "value" : "Ещё %lld агента работают в Polyvibe и в любом случае будут остановлены."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ещё %lld агентов работают в Vibe Manager и в любом случае будут остановлены."
+                  "value" : "Ещё %lld агентов работают в Polyvibe и в любом случае будут остановлены."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ещё %lld агент работает в Vibe Manager и в любом случае будет остановлен."
+                  "value" : "Ещё %lld агент работает в Polyvibe и в любом случае будет остановлен."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ещё %lld агента работают в Vibe Manager и в любом случае будут остановлены."
+                  "value" : "Ещё %lld агента работают в Polyvibe и в любом случае будут остановлены."
                 }
               }
             }
@@ -303,13 +303,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager içinde %lld başka ajan çalışıyor ve her durumda duracak."
+                  "value" : "Polyvibe içinde %lld başka ajan çalışıyor ve her durumda duracak."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager içinde %lld başka ajan çalışıyor ve her durumda duracaklar."
+                  "value" : "Polyvibe içinde %lld başka ajan çalışıyor ve her durumda duracaklar."
                 }
               }
             }
@@ -321,25 +321,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ще %lld агенти працюють у Vibe Manager і будуть зупинені у будь-якому разі."
+                  "value" : "Ще %lld агенти працюють у Polyvibe і будуть зупинені у будь-якому разі."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ще %lld агентів працюють у Vibe Manager і будуть зупинені у будь-якому разі."
+                  "value" : "Ще %lld агентів працюють у Polyvibe і будуть зупинені у будь-якому разі."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ще %lld агент працює у Vibe Manager і буде зупинений у будь-якому разі."
+                  "value" : "Ще %lld агент працює у Polyvibe і буде зупинений у будь-якому разі."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Ще %lld агента працюють у Vibe Manager і будуть зупинені у будь-якому разі."
+                  "value" : "Ще %lld агента працюють у Polyvibe і будуть зупинені у будь-якому разі."
                 }
               }
             }
@@ -351,7 +351,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "另有 %lld 个智能体在 Vibe Manager 中运行，无论如何都会停止。"
+                  "value" : "另有 %lld 个智能体在 Polyvibe 中运行，无论如何都会停止。"
                 }
               }
             }
@@ -363,7 +363,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "另有 %lld 個代理程式在 Vibe Manager 中執行，無論如何都會停止。"
+                  "value" : "另有 %lld 個代理程式在 Polyvibe 中執行，無論如何都會停止。"
                 }
               }
             }
@@ -371,102 +371,102 @@
         }
       }
     },
-    "About Vibe Manager" : {
+    "About Polyvibe" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حول Vibe Manager"
+            "value" : "حول Polyvibe"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Über Vibe Manager"
+            "value" : "Über Polyvibe"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Acerca de Vibe Manager"
+            "value" : "Acerca de Polyvibe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "À propos de Vibe Manager"
+            "value" : "À propos de Polyvibe"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager के बारे में"
+            "value" : "Polyvibe के बारे में"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Informazioni su Vibe Manager"
+            "value" : "Informazioni su Polyvibe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Managerについて"
+            "value" : "Polyvibeについて"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager에 관하여"
+            "value" : "Polyvibe에 관하여"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Over Vibe Manager"
+            "value" : "Over Polyvibe"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager — informacje"
+            "value" : "Polyvibe — informacje"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sobre o Vibe Manager"
+            "value" : "Sobre o Polyvibe"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "О программе Vibe Manager"
+            "value" : "О программе Polyvibe"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager Hakkında"
+            "value" : "Polyvibe Hakkında"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Про Vibe Manager"
+            "value" : "Про Polyvibe"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关于 Vibe Manager"
+            "value" : "关于 Polyvibe"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "關於 Vibe Manager"
+            "value" : "關於 Polyvibe"
           }
         }
       }
@@ -4917,203 +4917,203 @@
         }
       }
     },
-    "Install Vibe Manager %@ and Relaunch…" : {
+    "Install Polyvibe %@ and Relaunch…" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تثبيت Vibe Manager %@ وإعادة الفتح…"
+            "value" : "تثبيت Polyvibe %@ وإعادة الفتح…"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ installieren und neu starten …"
+            "value" : "Polyvibe %@ installieren und neu starten …"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instalar Vibe Manager %@ y reabrir…"
+            "value" : "Instalar Polyvibe %@ y reabrir…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installer Vibe Manager %@ et relancer…"
+            "value" : "Installer Polyvibe %@ et relancer…"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ इंस्टॉल करें और फिर से लॉन्च करें…"
+            "value" : "Polyvibe %@ इंस्टॉल करें और फिर से लॉन्च करें…"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installa Vibe Manager %@ e riapri…"
+            "value" : "Installa Polyvibe %@ e riapri…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@をインストールして再起動…"
+            "value" : "Polyvibe %@をインストールして再起動…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ 설치 후 다시 실행…"
+            "value" : "Polyvibe %@ 설치 후 다시 실행…"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installeer Vibe Manager %@ en herstart…"
+            "value" : "Installeer Polyvibe %@ en herstart…"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zainstaluj Vibe Manager %@ i uruchom ponownie…"
+            "value" : "Zainstaluj Polyvibe %@ i uruchom ponownie…"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instalar o Vibe Manager %@ e Reabrir…"
+            "value" : "Instalar o Polyvibe %@ e Reabrir…"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Установить Vibe Manager %@ и перезапустить…"
+            "value" : "Установить Polyvibe %@ и перезапустить…"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ Sürümünü Yükle ve Yeniden Aç…"
+            "value" : "Polyvibe %@ Sürümünü Yükle ve Yeniden Aç…"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Інсталювати Vibe Manager %@ і перезапустити…"
+            "value" : "Інсталювати Polyvibe %@ і перезапустити…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安装 Vibe Manager %@ 并重新启动…"
+            "value" : "安装 Polyvibe %@ 并重新启动…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "安裝 Vibe Manager %@ 並重新開啟…"
+            "value" : "安裝 Polyvibe %@ 並重新開啟…"
           }
         }
       }
     },
-    "Install Vibe Manager %@ and relaunch?" : {
+    "Install Polyvibe %@ and relaunch?" : {
       "comment" : "The version about to be installed.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "هل تريد تثبيت Vibe Manager %@ وإعادة الفتح؟"
+            "value" : "هل تريد تثبيت Polyvibe %@ وإعادة الفتح؟"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ installieren und neu starten?"
+            "value" : "Polyvibe %@ installieren und neu starten?"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "¿Instalar Vibe Manager %@ y reabrir?"
+            "value" : "¿Instalar Polyvibe %@ y reabrir?"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installer Vibe Manager %@ et relancer ?"
+            "value" : "Installer Polyvibe %@ et relancer ?"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ इंस्टॉल करके फिर से लॉन्च करें?"
+            "value" : "Polyvibe %@ इंस्टॉल करके फिर से लॉन्च करें?"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installare Vibe Manager %@ e riaprire?"
+            "value" : "Installare Polyvibe %@ e riaprire?"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@をインストールして再起動しますか？"
+            "value" : "Polyvibe %@をインストールして再起動しますか？"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@을(를) 설치하고 다시 실행하겠습니까?"
+            "value" : "Polyvibe %@을(를) 설치하고 다시 실행하겠습니까?"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ installeren en herstarten?"
+            "value" : "Polyvibe %@ installeren en herstarten?"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zainstalować Vibe Manager %@ i uruchomić ponownie?"
+            "value" : "Zainstalować Polyvibe %@ i uruchomić ponownie?"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instalar o Vibe Manager %@ e reabrir?"
+            "value" : "Instalar o Polyvibe %@ e reabrir?"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Установить Vibe Manager %@ и перезапустить?"
+            "value" : "Установить Polyvibe %@ и перезапустить?"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ sürümü yüklenip uygulama yeniden açılsın mı?"
+            "value" : "Polyvibe %@ sürümü yüklenip uygulama yeniden açılsın mı?"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Інсталювати Vibe Manager %@ і перезапустити?"
+            "value" : "Інсталювати Polyvibe %@ і перезапустити?"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "要安装 Vibe Manager %@ 并重新启动吗？"
+            "value" : "要安装 Polyvibe %@ 并重新启动吗？"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "要安裝 Vibe Manager %@ 並重新開啟嗎？"
+            "value" : "要安裝 Polyvibe %@ 並重新開啟嗎？"
           }
         }
       }
@@ -11169,102 +11169,102 @@
         }
       }
     },
-    "They still won't have Full Disk Access when you reopen Vibe Manager: stop them to restart them with it." : {
+    "They still won't have Full Disk Access when you reopen Polyvibe: stop them to restart them with it." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لن يحصلوا على الوصول الكامل إلى القرص عند إعادة فتح Vibe Manager: أوقفهم لإعادة تشغيلهم به."
+            "value" : "لن يحصلوا على الوصول الكامل إلى القرص عند إعادة فتح Polyvibe: أوقفهم لإعادة تشغيلهم به."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Auch beim erneuten Öffnen von Vibe Manager haben sie keinen Festplattenvollzugriff: Stoppe sie, damit sie damit neu starten."
+            "value" : "Auch beim erneuten Öffnen von Polyvibe haben sie keinen Festplattenvollzugriff: Stoppe sie, damit sie damit neu starten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seguirán sin tener acceso total al disco cuando vuelvas a abrir Vibe Manager: detenlos para que se reinicien con él."
+            "value" : "Seguirán sin tener acceso total al disco cuando vuelvas a abrir Polyvibe: detenlos para que se reinicien con él."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ils n’auront toujours pas l’accès complet au disque à la réouverture de Vibe Manager : arrêtez-les pour qu’ils redémarrent avec."
+            "value" : "Ils n’auront toujours pas l’accès complet au disque à la réouverture de Polyvibe : arrêtez-les pour qu’ils redémarrent avec."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager फिर से खोलने पर भी उनके पास पूर्ण डिस्क ऐक्सेस नहीं होगा: इसके साथ फिर से शुरू करने के लिए उन्हें रोकें।"
+            "value" : "Polyvibe फिर से खोलने पर भी उनके पास पूर्ण डिस्क ऐक्सेस नहीं होगा: इसके साथ फिर से शुरू करने के लिए उन्हें रोकें।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Non avranno ancora l’accesso completo al disco quando riaprirai Vibe Manager: arrestali per riavviarli con l’accesso."
+            "value" : "Non avranno ancora l’accesso completo al disco quando riaprirai Polyvibe: arrestali per riavviarli con l’accesso."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Managerを再度開いても、これらにはフルディスクアクセスがありません。停止すると、フルディスクアクセス付きで再起動されます。"
+            "value" : "Polyvibeを再度開いても、これらにはフルディスクアクセスがありません。停止すると、フルディスクアクセス付きで再起動されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager를 다시 열어도 에이전트에는 여전히 전체 디스크 접근 권한이 없습니다. 권한을 적용하려면 중단한 후 재시작하십시오."
+            "value" : "Polyvibe를 다시 열어도 에이전트에는 여전히 전체 디스크 접근 권한이 없습니다. 권한을 적용하려면 중단한 후 재시작하십시오."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ze hebben nog steeds geen volledige schijftoegang wanneer je Vibe Manager opnieuw opent: stop ze om ze ermee te herstarten."
+            "value" : "Ze hebben nog steeds geen volledige schijftoegang wanneer je Polyvibe opnieuw opent: stop ze om ze ermee te herstarten."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Po ponownym otwarciu Vibe Manager nadal nie będą mieć pełnego dostępu do dysku: zatrzymaj ich, aby uruchomić ich ponownie z tym dostępem."
+            "value" : "Po ponownym otwarciu Polyvibe nadal nie będą mieć pełnego dostępu do dysku: zatrzymaj ich, aby uruchomić ich ponownie z tym dostępem."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eles ainda não terão Acesso Total ao Disco quando você reabrir o Vibe Manager: pare-os para reiniciá-los com o acesso."
+            "value" : "Eles ainda não terão Acesso Total ao Disco quando você reabrir o Polyvibe: pare-os para reiniciá-los com o acesso."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "При повторном открытии Vibe Manager у них по-прежнему не будет полного доступа к диску: остановите их, чтобы перезапустить с ним."
+            "value" : "При повторном открытии Polyvibe у них по-прежнему не будет полного доступа к диску: остановите их, чтобы перезапустить с ним."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager’ı yeniden açtığınızda da Tam Disk Erişimi’ne sahip olmayacaklar: bu erişimle yeniden başlamaları için onları durdurun."
+            "value" : "Polyvibe’ı yeniden açtığınızda da Tam Disk Erişimi’ne sahip olmayacaklar: bu erişimle yeniden başlamaları için onları durdurun."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Після повторного відкриття Vibe Manager вони все ще не матимуть повного доступу до диска: зупиніть їх, щоб перезапустити з ним."
+            "value" : "Після повторного відкриття Polyvibe вони все ще не матимуть повного доступу до диска: зупиніть їх, щоб перезапустити з ним."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新打开 Vibe Manager 后，它们仍不会拥有完全磁盘访问权限：请停止它们，以便在拥有该权限的情况下重新启动。"
+            "value" : "重新打开 Polyvibe 后，它们仍不会拥有完全磁盘访问权限：请停止它们，以便在拥有该权限的情况下重新启动。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重新打開 Vibe Manager 後，它們仍不會有「完全取用磁碟」權限：請將其停止，以便在具備權限的情況下重新啟動。"
+            "value" : "重新打開 Polyvibe 後，它們仍不會有「完全取用磁碟」權限：請將其停止，以便在具備權限的情況下重新啟動。"
           }
         }
       }
@@ -11870,405 +11870,405 @@
         }
       }
     },
-    "Vibe Manager %@ can't take back the running agents." : {
+    "Polyvibe %@ can't take back the running agents." : {
       "comment" : "The version about to be installed.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لا يمكن لـ Vibe Manager %@ استعادة الوكلاء قيد التشغيل."
+            "value" : "لا يمكن لـ Polyvibe %@ استعادة الوكلاء قيد التشغيل."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ kann die laufenden Agents nicht übernehmen."
+            "value" : "Polyvibe %@ kann die laufenden Agents nicht übernehmen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ no puede recuperar los agentes en curso."
+            "value" : "Polyvibe %@ no puede recuperar los agentes en curso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ ne peut pas reprendre les agents en cours."
+            "value" : "Polyvibe %@ ne peut pas reprendre les agents en cours."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ चल रहे एजेंटों को वापस नहीं ले सकता।"
+            "value" : "Polyvibe %@ चल रहे एजेंटों को वापस नहीं ले सकता।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ non può riprendere gli agenti in esecuzione."
+            "value" : "Polyvibe %@ non può riprendere gli agenti in esecuzione."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@は実行中のエージェントを引き継げません。"
+            "value" : "Polyvibe %@は実行中のエージェントを引き継げません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@은(는) 실행 중인 에이전트를 이어받을 수 없습니다."
+            "value" : "Polyvibe %@은(는) 실행 중인 에이전트를 이어받을 수 없습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ kan de actieve agents niet overnemen."
+            "value" : "Polyvibe %@ kan de actieve agents niet overnemen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ nie może przejąć działających agentów."
+            "value" : "Polyvibe %@ nie może przejąć działających agentów."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager %@ não consegue retomar os agentes em execução."
+            "value" : "O Polyvibe %@ não consegue retomar os agentes em execução."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ не может подхватить работающих агентов."
+            "value" : "Polyvibe %@ не может подхватить работающих агентов."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ çalışan ajanları devralamaz."
+            "value" : "Polyvibe %@ çalışan ajanları devralamaz."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ не може підхопити запущених агентів."
+            "value" : "Polyvibe %@ не може підхопити запущених агентів."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ 无法接管正在运行的智能体。"
+            "value" : "Polyvibe %@ 无法接管正在运行的智能体。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ 無法接手執行中的代理程式。"
+            "value" : "Polyvibe %@ 無法接手執行中的代理程式。"
           }
         }
       }
     },
-    "Vibe Manager %@ will be installed as Vibe Manager quits." : {
+    "Polyvibe %@ will be installed as Polyvibe quits." : {
       "comment" : "The version about to be installed.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سيتم تثبيت Vibe Manager %@ عند إنهاء Vibe Manager."
+            "value" : "سيتم تثبيت Polyvibe %@ عند إنهاء Polyvibe."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ wird beim Beenden von Vibe Manager installiert."
+            "value" : "Polyvibe %@ wird beim Beenden von Polyvibe installiert."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ se instalará al salir de Vibe Manager."
+            "value" : "Polyvibe %@ se instalará al salir de Polyvibe."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ sera installé en quittant Vibe Manager."
+            "value" : "Polyvibe %@ sera installé en quittant Polyvibe."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ तब इंस्टॉल होगा जब Vibe Manager बंद होगा।"
+            "value" : "Polyvibe %@ तब इंस्टॉल होगा जब Polyvibe बंद होगा।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ verrà installato alla chiusura di Vibe Manager."
+            "value" : "Polyvibe %@ verrà installato alla chiusura di Polyvibe."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@はVibe Managerの終了時にインストールされます。"
+            "value" : "Polyvibe %@はPolyvibeの終了時にインストールされます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager를 종료하면 Vibe Manager %@이(가) 설치됩니다."
+            "value" : "Polyvibe를 종료하면 Polyvibe %@이(가) 설치됩니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ wordt geïnstalleerd wanneer Vibe Manager stopt."
+            "value" : "Polyvibe %@ wordt geïnstalleerd wanneer Polyvibe stopt."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ zostanie zainstalowany przy zakończeniu Vibe Manager."
+            "value" : "Polyvibe %@ zostanie zainstalowany przy zakończeniu Polyvibe."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager %@ será instalado quando o Vibe Manager for encerrado."
+            "value" : "O Polyvibe %@ será instalado quando o Polyvibe for encerrado."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ будет установлен при завершении Vibe Manager."
+            "value" : "Polyvibe %@ будет установлен при завершении Polyvibe."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@, Vibe Manager kapanırken yüklenecek."
+            "value" : "Polyvibe %@, Polyvibe kapanırken yüklenecek."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ буде інстальовано під час виходу з Vibe Manager."
+            "value" : "Polyvibe %@ буде інстальовано під час виходу з Polyvibe."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ 将在 Vibe Manager 退出时安装。"
+            "value" : "Polyvibe %@ 将在 Polyvibe 退出时安装。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager %@ 會在 Vibe Manager 結束時安裝。"
+            "value" : "Polyvibe %@ 會在 Polyvibe 結束時安裝。"
           }
         }
       }
     },
-    "Vibe Manager Help" : {
+    "Polyvibe Help" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "مساعدة Vibe Manager"
+            "value" : "مساعدة Polyvibe"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager-Hilfe"
+            "value" : "Polyvibe-Hilfe"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ayuda de Vibe Manager"
+            "value" : "Ayuda de Polyvibe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aide Vibe Manager"
+            "value" : "Aide Polyvibe"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager सहायता"
+            "value" : "Polyvibe सहायता"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aiuto di Vibe Manager"
+            "value" : "Aiuto di Polyvibe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Managerヘルプ"
+            "value" : "Polyvibeヘルプ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 도움말"
+            "value" : "Polyvibe 도움말"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager Help"
+            "value" : "Polyvibe Help"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager — pomoc"
+            "value" : "Polyvibe — pomoc"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ajuda do Vibe Manager"
+            "value" : "Ajuda do Polyvibe"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Справка Vibe Manager"
+            "value" : "Справка Polyvibe"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager Yardımı"
+            "value" : "Polyvibe Yardımı"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Довідка Vibe Manager"
+            "value" : "Довідка Polyvibe"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 帮助"
+            "value" : "Polyvibe 帮助"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 輔助說明"
+            "value" : "Polyvibe 輔助說明"
           }
         }
       }
     },
-    "Vibe Manager is already running with this data." : {
+    "Polyvibe is already running with this data." : {
       "comment" : "Title of the alert shown when a second copy is launched on the same data.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager يعمل بالفعل بهذه البيانات."
+            "value" : "Polyvibe يعمل بالفعل بهذه البيانات."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager läuft bereits mit diesen Daten."
+            "value" : "Polyvibe läuft bereits mit diesen Daten."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager ya se está ejecutando con estos datos."
+            "value" : "Polyvibe ya se está ejecutando con estos datos."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager tourne déjà avec ces données."
+            "value" : "Polyvibe tourne déjà avec ces données."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager इस डेटा के साथ पहले से चल रहा है।"
+            "value" : "Polyvibe इस डेटा के साथ पहले से चल रहा है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager è già in esecuzione con questi dati."
+            "value" : "Polyvibe è già in esecuzione con questi dati."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager はすでにこのデータで実行中です。"
+            "value" : "Polyvibe はすでにこのデータで実行中です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager가 이미 이 데이터로 실행 중입니다."
+            "value" : "Polyvibe가 이미 이 데이터로 실행 중입니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager draait al met deze gegevens."
+            "value" : "Polyvibe draait al met deze gegevens."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager działa już z tymi danymi."
+            "value" : "Polyvibe działa już z tymi danymi."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager já está em execução com estes dados."
+            "value" : "O Polyvibe já está em execução com estes dados."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager уже запущен с этими данными."
+            "value" : "Polyvibe уже запущен с этими данными."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager bu verilerle zaten çalışıyor."
+            "value" : "Polyvibe bu verilerle zaten çalışıyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager уже працює з цими даними."
+            "value" : "Polyvibe уже працює з цими даними."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 已在使用这些数据运行。"
+            "value" : "Polyvibe 已在使用这些数据运行。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 已在使用這些資料執行。"
+            "value" : "Polyvibe 已在使用這些資料執行。"
           }
         }
       }
@@ -12473,102 +12473,102 @@
         }
       }
     },
-    "You can leave them working in the background and find them as they are the next time you open Vibe Manager. A restart of the Mac stops them." : {
+    "You can leave them working in the background and find them as they are the next time you open Polyvibe. A restart of the Mac stops them." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يمكنك تركهم يعملون في الخلفية وستجدهم كما هم في المرة القادمة التي تفتح فيها Vibe Manager. إعادة تشغيل الـ Mac توقفهم."
+            "value" : "يمكنك تركهم يعملون في الخلفية وستجدهم كما هم في المرة القادمة التي تفتح فيها Polyvibe. إعادة تشغيل الـ Mac توقفهم."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kannst sie im Hintergrund weiterarbeiten lassen und findest sie beim nächsten Öffnen von Vibe Manager unverändert vor. Ein Neustart des Mac stoppt sie."
+            "value" : "Du kannst sie im Hintergrund weiterarbeiten lassen und findest sie beim nächsten Öffnen von Polyvibe unverändert vor. Ein Neustart des Mac stoppt sie."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puedes dejarlos trabajando en segundo plano y encontrarlos tal cual la próxima vez que abras Vibe Manager. Reiniciar el Mac los detiene."
+            "value" : "Puedes dejarlos trabajando en segundo plano y encontrarlos tal cual la próxima vez que abras Polyvibe. Reiniciar el Mac los detiene."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous pouvez les laisser travailler en arrière-plan et les retrouver tels quels à la prochaine ouverture de Vibe Manager. Un redémarrage du Mac les arrête."
+            "value" : "Vous pouvez les laisser travailler en arrière-plan et les retrouver tels quels à la prochaine ouverture de Polyvibe. Un redémarrage du Mac les arrête."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आप उन्हें बैकग्राउंड में काम करने दे सकते हैं और अगली बार Vibe Manager खोलने पर उन्हें वैसे ही पा सकते हैं। Mac रीस्टार्ट करने से वे रुक जाते हैं।"
+            "value" : "आप उन्हें बैकग्राउंड में काम करने दे सकते हैं और अगली बार Polyvibe खोलने पर उन्हें वैसे ही पा सकते हैं। Mac रीस्टार्ट करने से वे रुक जाते हैं।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puoi lasciarli lavorare in background e ritrovarli così come sono alla prossima apertura di Vibe Manager. Un riavvio del Mac li arresta."
+            "value" : "Puoi lasciarli lavorare in background e ritrovarli così come sono alla prossima apertura di Polyvibe. Un riavvio del Mac li arresta."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バックグラウンドで作業を続けさせ、次回Vibe Managerを開いたときにそのままの状態で戻ることができます。Macを再起動すると停止します。"
+            "value" : "バックグラウンドで作業を続けさせ、次回Polyvibeを開いたときにそのままの状態で戻ることができます。Macを再起動すると停止します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "백그라운드에서 계속 작업하도록 둘 수 있으며, 다음에 Vibe Manager를 열면 그대로 이어집니다. Mac을 재시동하면 중단됩니다."
+            "value" : "백그라운드에서 계속 작업하도록 둘 수 있으며, 다음에 Polyvibe를 열면 그대로 이어집니다. Mac을 재시동하면 중단됩니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je kunt ze op de achtergrond laten doorwerken en ze terugvinden zoals ze waren wanneer je Vibe Manager weer opent. Een herstart van de Mac stopt ze."
+            "value" : "Je kunt ze op de achtergrond laten doorwerken en ze terugvinden zoals ze waren wanneer je Polyvibe weer opent. Een herstart van de Mac stopt ze."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Możesz zostawić ich pracujących w tle i zastać ich w niezmienionym stanie przy następnym otwarciu Vibe Manager. Ponowne uruchomienie Maca ich zatrzyma."
+            "value" : "Możesz zostawić ich pracujących w tle i zastać ich w niezmienionym stanie przy następnym otwarciu Polyvibe. Ponowne uruchomienie Maca ich zatrzyma."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você pode deixá-los trabalhando em segundo plano e encontrá-los como estão na próxima vez que abrir o Vibe Manager. Reiniciar o Mac os interrompe."
+            "value" : "Você pode deixá-los trabalhando em segundo plano e encontrá-los como estão na próxima vez que abrir o Polyvibe. Reiniciar o Mac os interrompe."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Можно оставить их работать в фоне и найти в том же состоянии при следующем открытии Vibe Manager. Перезагрузка Mac их остановит."
+            "value" : "Можно оставить их работать в фоне и найти в том же состоянии при следующем открытии Polyvibe. Перезагрузка Mac их остановит."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Onları arka planda çalışır durumda bırakabilir ve Vibe Manager’ı bir sonraki açışınızda olduğu gibi bulabilirsiniz. Mac’i yeniden başlatmak onları durdurur."
+            "value" : "Onları arka planda çalışır durumda bırakabilir ve Polyvibe’ı bir sonraki açışınızda olduğu gibi bulabilirsiniz. Mac’i yeniden başlatmak onları durdurur."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ви можете залишити їх працювати у фоні й знайти в тому ж стані під час наступного відкриття Vibe Manager. Перезапуск Mac зупиняє їх."
+            "value" : "Ви можете залишити їх працювати у фоні й знайти в тому ж стані під час наступного відкриття Polyvibe. Перезапуск Mac зупиняє їх."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你可以让它们在后台继续工作，下次打开 Vibe Manager 时它们会保持原样。重新启动 Mac 会停止它们。"
+            "value" : "你可以让它们在后台继续工作，下次打开 Polyvibe 时它们会保持原样。重新启动 Mac 会停止它们。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你可以讓它們在背景繼續工作，下次打開 Vibe Manager 時會維持原樣。重新啟動 Mac 會讓它們停止。"
+            "value" : "你可以讓它們在背景繼續工作，下次打開 Polyvibe 時會維持原樣。重新啟動 Mac 會讓它們停止。"
           }
         }
       }

@@ -16,7 +16,7 @@ import VibeUpdates
 /// one and becomes a side terminal's shell (#43); given `--endpoint-gateway`, it is the gateway
 /// between an agent and a model endpoint (#107). Those never return: no `NSApplication` is created,
 /// so they have no Dock icon, no menu bar and no window. Being the same signed binary is the point:
-/// TCC and the peer checks all see Vibe Manager.
+/// TCC and the peer checks all see Polyvibe.
 @main
 enum Entry {
   static func main() {
@@ -77,7 +77,7 @@ struct VibeManagerApp: App {
               model: environment.appModel)
           }
           // The requests above the other applications (#41): a window of its own, shown only
-          // when the option is on and Vibe Manager is not in front.
+          // when the option is on and Polyvibe is not in front.
           if appDelegate.floatingPanel == nil {
             appDelegate.floatingPanel = FloatingRequestPanelController(model: environment.appModel)
           }
@@ -101,7 +101,7 @@ struct VibeManagerApp: App {
     .defaultSize(width: 1_180, height: 760)
     .commands {
       CommandGroup(replacing: .appInfo) {
-        Button("About Vibe Manager") {
+        Button("About Polyvibe") {
           AboutPanel.show()
         }
       }
@@ -366,7 +366,7 @@ struct VibeManagerApp: App {
       // stays.
       CommandGroup(replacing: .help) {
         if let issues = Self.issues {
-          Link("Vibe Manager Help", destination: issues)
+          Link("Polyvibe Help", destination: issues)
             .keyboardShortcut("?", modifiers: .command)
         }
         if let newIssue = Self.newIssue {
@@ -479,7 +479,7 @@ private enum AboutPanel {
   }
 }
 
-/// Vibe Manager → Check for Updates… (#92). A copy that does not update itself still has the item:
+/// Polyvibe → Check for Updates… (#92). A copy that does not update itself still has the item:
 /// it opens the Updates tab, which says why.
 private struct UpdateCommands: View {
   let model: AppModel
@@ -489,7 +489,7 @@ private struct UpdateCommands: View {
     if let updates = model.updates {
       if let ready = updates.readyToInstall, updates.canOfferReadyUpdate {
         // Set aside by Later: installed when the application quits, or now from here.
-        Button("Install Vibe Manager \(ready.version) and Relaunch…") {
+        Button("Install Polyvibe \(ready.version) and Relaunch…") {
           updates.offerReadyUpdate()
         }
       } else if !updates.isAvailable {
@@ -1194,7 +1194,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var information = String(
       localized: """
         You can leave them working in the background and find them as they are the next time you \
-        open Vibe Manager. A restart of the Mac stops them.
+        open Polyvibe. A restart of the Mac stops them.
         """)
     // Left running, they keep the access they started with: a host from before the grant carries
     // on without it, and "Quit & Reopen" in System Settings would not change that (#76).
@@ -1203,7 +1203,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         "\n\n"
         + String(
           localized: """
-            They still won't have Full Disk Access when you reopen Vibe Manager: stop them to \
+            They still won't have Full Disk Access when you reopen Polyvibe: stop them to \
             restart them with it.
             """)
     }
@@ -1221,7 +1221,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       information +=
         "\n\n"
         + String(
-          localized: "\(inProcess) other agents run inside Vibe Manager and will stop either way.")
+          localized: "\(inProcess) other agents run inside Polyvibe and will stop either way.")
     }
     alert.informativeText = information
     alert.addButton(withTitle: String(localized: "Keep Running"))
@@ -1350,7 +1350,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = String(
-      localized: "Vibe Manager \(ready.version) will be installed as Vibe Manager quits.",
+      localized: "Polyvibe \(ready.version) will be installed as Polyvibe quits.",
       comment: "The version about to be installed.")
     alert.informativeText = String(
       localized: """
@@ -1377,7 +1377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     switch question {
     case .keepOrStop(let running, let inProcess):
       alert.messageText = String(
-        localized: "Install Vibe Manager \(candidate.version) and relaunch?",
+        localized: "Install Polyvibe \(candidate.version) and relaunch?",
         comment: "The version about to be installed.")
       var information =
         running == 1
@@ -1403,7 +1403,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         information +=
           "\n\n"
           + String(
-            localized: "\(inProcess) other agents run inside Vibe Manager and will stop either way."
+            localized: "\(inProcess) other agents run inside Polyvibe and will stop either way."
           )
       }
       alert.informativeText = information
@@ -1418,7 +1418,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     case .mustStop(let running):
       alert.alertStyle = .warning
       alert.messageText = String(
-        localized: "Vibe Manager \(candidate.version) can't take back the running agents.",
+        localized: "Polyvibe \(candidate.version) can't take back the running agents.",
         comment: "The version about to be installed.")
       alert.informativeText = String(
         localized: """

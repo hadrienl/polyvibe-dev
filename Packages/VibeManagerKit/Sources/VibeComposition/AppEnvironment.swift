@@ -592,7 +592,10 @@ public final class AppEnvironment {
       preferences: UserDefaultsAlertSoundPreferences(suiteName: data.defaultsSuite),
       decoder: AudioFileAlertSoundDecoder(),
       generators: AgentAlertSoundGenerators(agents: registry),
-      installer: Self.bundleName().map { NotificationSoundFolder(applicationName: $0) },
+      installer: Self.bundleName().map {
+        NotificationSoundFolder(
+          applicationName: $0, formerApplicationNames: NotificationSoundFolder.formerNames(of: $0))
+      },
       player: SystemAlertSoundPlayer(),
       // The trackpad too (#555): a test never taps the developer's.
       rhythmPlayer: Self.bundleName().map { _ in TrackpadRhythmPlayer() },
@@ -868,7 +871,7 @@ public final class AppEnvironment {
       "vibe": "#!/bin/sh\nexec \(quoted) \(flag) \"$@\"\n",
       "open": """
       #!/bin/sh
-      # A web page opened from a Vibe Manager session goes to the session's web view.
+      # A web page opened from a Polyvibe session goes to the session's web view.
       if [ "$#" -eq 1 ]; then
         case "$1" in
           http://*|https://*)

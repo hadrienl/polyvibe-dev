@@ -1,4 +1,4 @@
-<h1>Installer Vibe Manager</h1>
+<h1>Installer Polyvibe</h1>
 <p class="lede">Téléchargez l’image disque, glissez l’app dans Applications, et vérifiez qu’au moins un agent est installé et connecté.</p>
 
 <h2 id="requirements">Configuration requise</h2>
@@ -14,28 +14,28 @@
     </table>
   </li>
 </ul>
-<p id="languages">L’app parle 17 langues : English, français, Deutsch, español, italiano, português (Brasil), Nederlands, polski, Türkçe, українська, русский, العربية, हिन्दी, 日本語, 한국어, 简体中文 et 繁體中文. Elle suit la langue de macOS ; pour en choisir une autre pour Vibe Manager seulement, ouvrez <strong>Réglages Système › Général › Langue et région › Applications</strong>.</p>
-<p>Vibe Manager utilise vos agents tels quels, avec votre propre compte et votre quota. Il ne demande jamais de clé d’API.</p>
+<p id="languages">L’app parle 17 langues : English, français, Deutsch, español, italiano, português (Brasil), Nederlands, polski, Türkçe, українська, русский, العربية, हिन्दी, 日本語, 한국어, 简体中文 et 繁體中文. Elle suit la langue de macOS ; pour en choisir une autre pour Polyvibe seulement, ouvrez <strong>Réglages Système › Général › Langue et région › Applications</strong>.</p>
+<p>Polyvibe utilise vos agents tels quels, avec votre propre compte et votre quota. Il ne demande jamais de clé d’API.</p>
 
 <h2 id="download">Télécharger et installer</h2>
 <ol>
   <li>Téléchargez le dernier <code>.dmg</code> depuis la <a href="../">page d’accueil</a> ou depuis <a href="https://github.com/hadrienl/vibe-manager/releases">GitHub Releases</a>.</li>
-  <li>Ouvrez-le et glissez <strong>Vibe Manager</strong> dans <strong>Applications</strong>.</li>
+  <li>Ouvrez-le et glissez <strong>Polyvibe</strong> dans <strong>Applications</strong>.</li>
   <li>Lancez-le depuis Applications. L’app est signée avec un Developer ID et notarisée par Apple : macOS l’ouvre sans avertissement.</li>
 </ol>
 <p>Les mises à jour sont ensuite proposées par l’app elle-même : voir <a href="settings.html#updates">Réglages › Mises à jour</a>.</p>
 
 <h2 id="agents-detected">Comment les agents sont trouvés</h2>
-<p>Au lancement, et chaque fois que vous cliquez sur <strong>Relancer la détection</strong>, Vibe Manager cherche <code>claude</code> et <code>codex</code> aux emplacements habituels — <code>/opt/homebrew/bin</code>, <code>/usr/local/bin</code>, <code>~/.local/bin</code>, <code>~/.bun/bin</code>, <code>~/.npm-global/bin</code>, <code>~/.volta/bin</code>, les shims d’asdf et de mise, <code>~/.claude/local</code>, <code>~/.codex/bin</code>… — puis dans votre <code>PATH</code>, et enfin dans le <code>PATH</code> de votre shell de connexion. Une version native est préférée à une version qui tourne sous Rosetta.</p>
+<p>Au lancement, et chaque fois que vous cliquez sur <strong>Relancer la détection</strong>, Polyvibe cherche <code>claude</code> et <code>codex</code> aux emplacements habituels — <code>/opt/homebrew/bin</code>, <code>/usr/local/bin</code>, <code>~/.local/bin</code>, <code>~/.bun/bin</code>, <code>~/.npm-global/bin</code>, <code>~/.volta/bin</code>, les shims d’asdf et de mise, <code>~/.claude/local</code>, <code>~/.codex/bin</code>… — puis dans votre <code>PATH</code>, et enfin dans le <code>PATH</code> de votre shell de connexion. Une version native est préférée à une version qui tourne sous Rosetta.</p>
 <p>Quand un agent est inutilisable, le formulaire de nouvelle session en donne la raison : non installé, non exécutable, trop ancien ou non connecté. Corrigez-le dans un terminal, puis cliquez sur <strong>Relancer la détection</strong>.</p>
 
 <h2 id="full-disk-access">Accès complet au disque</h2>
-<p>Les agents tournent comme processus enfants de Vibe Manager : quand l’un d’eux lit un dossier protégé — Documents, Bureau, Téléchargements, iCloud Drive —, macOS demande l’autorisation à <em>Vibe Manager</em>. Pour vous éviter une série d’alertes en plein travail, l’app propose une fois, au premier lancement, d’accorder l’<strong>Accès complet au disque</strong> :</p>
+<p>Les agents tournent comme processus enfants de Polyvibe : quand l’un d’eux lit un dossier protégé — Documents, Bureau, Téléchargements, iCloud Drive —, macOS demande l’autorisation à <em>Polyvibe</em>. Pour vous éviter une série d’alertes en plein travail, l’app propose une fois, au premier lancement, d’accorder l’<strong>Accès complet au disque</strong> :</p>
 <vm-shot name="full-disk-access" class="center" alt="La feuille « Laisser les agents lire vos dossiers », avec trois étapes et le bouton Ouvrir Réglages Système.">L’étape unique de l’Accès complet au disque.</vm-shot>
 <ol>
   <li>Cliquez sur <strong>Ouvrir Réglages Système</strong> : Confidentialité et sécurité › Accès complet au disque s’ouvre.</li>
-  <li>Activez <strong>Vibe Manager</strong>.</li>
-  <li>Revenez dans Vibe Manager.</li>
+  <li>Activez <strong>Polyvibe</strong>.</li>
+  <li>Revenez dans Polyvibe.</li>
 </ol>
 <p><strong>Plus tard</strong> est une réponse tout à fait valable : les dépôts sont rarement dans des dossiers protégés, et rien n’est désactivé. Vous pourrez l’accorder plus tard depuis <a href="settings.html#privacy">Réglages › Confidentialité</a>, qui indique aussi si les processus qui font tourner vos agents en disposent déjà.</p>
 <div class="callout tip"><p>Les agents gardent l’accès qu’ils avaient à leur démarrage. Si vous accordez l’Accès complet au disque pendant que des agents tournent, Réglages › Confidentialité propose <strong>Redémarrer à la fin des agents</strong> ou <strong>Redémarrer maintenant…</strong> pour qu’ils en bénéficient.</p></div>

@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E00000000000000000000001"
-               BuildableName = "Vibe Manager.app"
+               BuildableName = "Polyvibe.app"
                BlueprintName = "VibeManager"
                ReferencedContainer = "container:VibeManager.xcodeproj">
             </BuildableReference>
@@ -56,7 +56,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E00000000000000000000001"
-            BuildableName = "Vibe Manager.app"
+            BuildableName = "Polyvibe.app"
             BlueprintName = "VibeManager"
             ReferencedContainer = "container:VibeManager.xcodeproj">
          </BuildableReference>
@@ -72,7 +72,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E00000000000000000000001"
-            BuildableName = "Vibe Manager.app"
+            BuildableName = "Polyvibe.app"
             BlueprintName = "VibeManager"
             ReferencedContainer = "container:VibeManager.xcodeproj">
          </BuildableReference>

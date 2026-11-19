@@ -28,7 +28,7 @@ public enum CompanionRequestAlerts {
 
   /// The keys of the phone's `Localizable.strings`, in the application and in its extension.
   public enum LocalizationKey {
-    /// « Vibe Manager ».
+    /// « Polyvibe ».
     public static let title = "COMPANION_REQUEST_ALERT_TITLE"
     /// « Un agent attend votre réponse ».
     public static let body = "COMPANION_REQUEST_ALERT_BODY"

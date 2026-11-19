@@ -1479,7 +1479,7 @@ private struct OtherInstanceBanner: View {
         .foregroundStyle(.orange)
       VStack(alignment: .leading, spacing: 2) {
         Text(
-          "Another copy of Vibe Manager (pid \(String(processIdentifier))) is running these sessions.",
+          "Another copy of Polyvibe (pid \(String(processIdentifier))) is running these sessions.",
           bundle: .module, comment: "The process identifier of the other copy."
         )
         .font(.callout)
@@ -1506,7 +1506,7 @@ private struct OtherInstanceBanner: View {
     .announcedOnAppear(
       String(
         localized:
-          "Another copy of Vibe Manager is running these sessions. Nothing was restored or changed here.",
+          "Another copy of Polyvibe is running these sessions. Nothing was restored or changed here.",
         bundle: .module))
   }
 }
@@ -1517,7 +1517,7 @@ private struct InProcessAgentBar: View {
     HStack(spacing: 8) {
       Image(systemName: "exclamationmark.triangle")
         .foregroundStyle(.orange)
-      Text("This agent will stop when Vibe Manager quits.", bundle: .module)
+      Text("This agent will stop when Polyvibe quits.", bundle: .module)
         .font(.callout)
       Text("The background terminal host could not be used for it.", bundle: .module)
         .font(.caption)
@@ -1534,7 +1534,7 @@ private struct InProcessAgentBar: View {
 /// Agents still working in the background whose host would not let this copy reattach.
 ///
 /// Said as it is: they are running, nothing was stopped or closed, and trying again is the way
-/// back. Calling it "another copy of Vibe Manager" would be wrong — it is the host.
+/// back. Calling it "another copy of Polyvibe" would be wrong — it is the host.
 private struct HostUnavailableBanner: View {
   let reason: String
   let isRetrying: Bool
@@ -1547,7 +1547,7 @@ private struct HostUnavailableBanner: View {
         .foregroundStyle(.orange)
       VStack(alignment: .leading, spacing: 2) {
         Text(
-          "Your agents are still running in the background, but Vibe Manager could not reattach.",
+          "Your agents are still running in the background, but Polyvibe could not reattach.",
           bundle: .module
         )
         .font(.callout)
@@ -1581,7 +1581,7 @@ private struct HostUnavailableBanner: View {
     .announcedOnAppear(
       String(
         localized:
-          "Your agents are still running in the background, but Vibe Manager could not reattach. \(reason)",
+          "Your agents are still running in the background, but Polyvibe could not reattach. \(reason)",
         bundle: .module,
         comment: "Why the application could not reattach to its agents, in one sentence."))
   }

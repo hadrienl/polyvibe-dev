@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import VibeConversationUI
 
-/// The window's title as the toolbar draws it (#159): "Vibe Manager" in the secondary style, the
+/// The window's title as the toolbar draws it (#159): "Polyvibe" in the secondary style, the
 /// session on screen in the primary one, on one line.
 ///
 /// It stands in for the title the system draws, which says it all in one style: the window keeps
@@ -177,7 +177,7 @@ struct ToolbarTitleLayout {
     measured.map { max($0, minimumNameWidth) } ?? fallbackRoom(detailWidth: detailWidth)
   }
 
-  /// Whether "Vibe Manager ›" is shown before the session's name: when it fits with the whole name,
+  /// Whether "Polyvibe ›" is shown before the session's name: when it fits with the whole name,
   /// or with enough of it to read — below that, the application's name gives way.
   static func showsApplicationName(
     room: CGFloat, applicationWidth: CGFloat, nameWidth: CGFloat

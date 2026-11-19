@@ -123,9 +123,9 @@ struct DiagnosticsExportTests {
     defer { try? FileManager.default.removeItem(at: directory) }
     // As the system writes them: a header line, then JSON whose slashes are escaped.
     let report = #"""
-      {"app_name":"Vibe Manager","bug_type":"309","os_version":"macOS 15.1"}
+      {"app_name":"Polyvibe","bug_type":"309","os_version":"macOS 15.1"}
       {
-        "procPath" : "\/Users\/alice\/Applications\/Vibe Manager.app\/Contents\/MacOS\/Vibe Manager",
+        "procPath" : "\/Users\/alice\/Applications\/Polyvibe.app\/Contents\/MacOS\/Polyvibe",
         "cwd" : "\/Users\/alice\/Documents\/Client Project\/api",
         "volume" : "\/Volumes\/Acme Secret\/work",
         "usedImages" : [{"path" : "\/usr\/lib\/system\/libsystem_kernel.dylib"}],
@@ -134,12 +134,18 @@ struct DiagnosticsExportTests {
       }
       """#
     try Data(report.utf8).write(
-      to: directory.appendingPathComponent("Vibe Manager-2026-09-24-101010.ips"))
+      to: directory.appendingPathComponent("Polyvibe-2026-09-24-101010.ips"))
+    // A crash of the days before the update, under the application's former name.
+    try Data(report.utf8).write(
+      to: directory.appendingPathComponent("Vibe Manager-2026-09-20-090000.ips"))
     try Data(report.utf8).write(to: directory.appendingPathComponent("Other App-2026.ips"))
 
     let reports = DiagnosticsCollector.crashReports(in: directory, home: "/Users/alice")
 
-    #expect(reports.map(\.name) == ["Vibe Manager-2026-09-24-101010.ips"])
+    #expect(
+      reports.map(\.name) == [
+        "Polyvibe-2026-09-24-101010.ips", "Vibe Manager-2026-09-20-090000.ips",
+      ])
     let text = String(decoding: reports[0].contents, as: UTF8.self)
     for secret in ["alice", "Client", "Project", "Documents", "Acme", "Secret", "Desktop", "plan"] {
       #expect(!text.contains(secret), "\(secret) survived")

@@ -1,4 +1,4 @@
-# Contributing to Vibe Manager
+# Contributing to Polyvibe
 
 Thanks for taking the time to help. Bug reports, ideas, translations and pull requests are all
 welcome. By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -6,7 +6,7 @@ welcome. By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUC
 ## Reporting a bug or asking for a feature
 
 Open an [issue](https://github.com/hadrienl/vibe-manager/issues/new/choose) with the matching
-template. For a bug, the version (**Vibe Manager › About**), the macOS version, the agent involved
+template. For a bug, the version (**Polyvibe › About**), the macOS version, the agent involved
 and the steps to reproduce it are what make it fixable. **Help › Report an Issue…** in the
 application opens the same page.
 
