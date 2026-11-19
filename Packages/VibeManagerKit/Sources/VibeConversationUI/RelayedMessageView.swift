@@ -70,6 +70,17 @@ struct RelayedMessageView: View {
     }
   }
 
+  /// The same, as VoiceOver's rotor names it.
+  static func summary(of message: RelayedMessage) -> String {
+    switch message.sender {
+    case .application:
+      return (["Vibe Manager"] + [message.children.joined(separator: ", ")])
+        .filter { !$0.isEmpty }.joined(separator: " · ")
+    case .coordinator(let name):
+      return String(localized: "Coordinator “\(name)”", bundle: .module)
+    }
+  }
+
   private var symbol: String {
     switch message.sender {
     case .application: "bell"

@@ -13,19 +13,25 @@ public struct RelayedMessage: Equatable, Sendable {
   }
 
   public let sender: Sender
-  /// What it says, in Markdown, without its mark. A child is named in bold, without the
-  /// identifier the coordinator was given.
+  /// What it says, in Markdown, without its mark. Vibe Manager's words are shown as they were
+  /// written — a command, a question —, and a child is named in bold, without the identifier the
+  /// coordinator was given; a coordinator's are its own Markdown.
   public let body: String
   /// The children it names, in order and once each: what it is about, folded.
   public let children: [String]
 
   /// `nil` for what the user wrote — the coordination prefaces in front of their words included.
   public init?(_ text: String) {
+    // Most prompts are the user's: told apart before anything is copied.
+    guard text.drop(while: \.isWhitespace).first == "[" else { return nil }
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard CoordinatorInstructions.userText(of: trimmed) == nil else { return nil }
+    guard CoordinatorInstructions.userText(of: trimmed) == nil,
+      // A preface alone: the user's message was only files.
+      trimmed != CoordinatorInstructions.turnedOn, trimmed != CoordinatorInstructions.turnedOff
+    else { return nil }
     if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) {
       let rest = trimmed.dropFirst(CoordinationPolicy.coordinatorMark.count)
-      guard let close = rest.range(of: "”]") else { return nil }
+      guard let close = rest.range(of: CoordinationPolicy.coordinatorMarkEnd) else { return nil }
       sender = .coordinator(String(rest[..<close.lowerBound]))
       children = []
       body = rest[close.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -40,7 +46,7 @@ public struct RelayedMessage: Equatable, Sendable {
     if let first = lines.first, first.wholeMatch(of: /\d+ events?:/) != nil {
       lines.removeFirst()
     }
-    body = lines.map { Self.namingChildren(in: String($0)) }.joined(separator: "\n")
+    body = lines.map { Self.shown(String($0)) }.joined(separator: "\n")
     var named: [String] = []
     for match in rest.matches(of: Self.child()) where !named.contains(String(match.1)) {
       named.append(String(match.1))
@@ -48,21 +54,41 @@ public struct RelayedMessage: Equatable, Sendable {
     children = named
   }
 
+  /// A prompt's, unless files came with it: only the user sends files.
+  public init?(_ text: String, attachments: [MessageAttachment]) {
+    guard attachments.isEmpty else { return nil }
+    self.init(text)
+  }
+
   /// « “name” (identifier) », as Vibe Manager names a child to its coordinator.
   private static func child() -> Regex<(Substring, Substring)> {
     /“(.+?)” \([0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\)/
   }
 
-  /// Each « “name” (identifier) » of a line as the name, in bold.
-  static func namingChildren(in line: String) -> String {
-    line.replacing(child()) { "**" + escaped(String($0.1)) + "**" }
+  /// A line of Vibe Manager's in Markdown that shows it as written: its list mark kept, each
+  /// child's name in bold.
+  static func shown(_ line: String) -> String {
+    var rest = Substring(line)
+    var result = ""
+    if rest.hasPrefix("- ") {
+      result = "- "
+      rest = rest.dropFirst(2)
+    }
+    for match in rest.matches(of: child()) {
+      result += escaped(rest[rest.startIndex..<match.range.lowerBound])
+      result += "**" + escaped(match.1) + "**"
+      rest = rest[match.range.upperBound...]
+    }
+    return result + escaped(rest)
   }
 
-  /// A name as Markdown shows it, whatever punctuation it holds.
-  private static func escaped(_ name: String) -> String {
+  /// Text that Markdown shows as it is: each ASCII punctuation mark escaped.
+  private static func escaped(_ text: Substring) -> String {
     var result = ""
-    for character in name {
-      if "\\`*_[]<>#|~!".contains(character) { result.append("\\") }
+    for character in text {
+      if character.isASCII, character.isPunctuation || character.isSymbol {
+        result.append("\\")
+      }
       result.append(character)
     }
     return result

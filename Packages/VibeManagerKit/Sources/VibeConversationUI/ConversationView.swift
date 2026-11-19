@@ -482,8 +482,11 @@ public struct ConversationView: View {
   }
 
   private static func rotorLabel(_ block: ConversationBlock) -> String {
-    guard case .entry(let entry) = block, case .userPrompt(let text, _) = entry.content else {
-      return block.id
+    guard case .entry(let entry) = block,
+      case .userPrompt(let text, let attachments) = entry.content
+    else { return block.id }
+    if let relayed = RelayedMessage(text, attachments: attachments) {
+      return RelayedMessageView.summary(of: relayed)
     }
     // A reply is named by its own words, not by the passage it quotes (#565).
     return String(ReplyQuote.message(of: text).prefix(80))
@@ -529,10 +532,11 @@ struct BlockView: View {
       switch entry.content {
       case .userPrompt(let text, let attachments):
         // Vibe Manager's or the coordinator's, not the user's: who wrote it says so.
-        if let relayed = RelayedMessage(text) {
+        if let relayed = RelayedMessage(text, attachments: attachments) {
           RelayedMessageView(
-            id: entry.id, message: relayed, text: text, date: entry.date, model: model)
-            .environment(\.selectionBlock, selectionBlock)
+            id: entry.id, message: relayed, text: text, date: entry.date, model: model
+          )
+          .environment(\.selectionBlock, selectionBlock)
         } else {
           UserPromptView(
             text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
@@ -690,7 +694,7 @@ extension ConversationSelection.Source {
         }
         switch entry.content {
         case .userPrompt(let text, let attachments):
-          if let relayed = RelayedMessage(text) {
+          if let relayed = RelayedMessage(text, attachments: attachments) {
             // Folded, nothing of it is shown.
             guard model.isExpanded(id: entry.id, default: false) else { return [] }
             return pieces(
@@ -714,7 +718,10 @@ extension ConversationSelection.Source {
         }
         let author: ReplyQuote.Author
         switch entry.content {
-        case .userPrompt: author = .user
+        // Vibe Manager's and a coordinator's words are not the user's to quote as theirs.
+        case .userPrompt(let text, let attachments):
+          guard RelayedMessage(text, attachments: attachments) == nil else { return nil }
+          author = .user
         case .agentText: author = .agent
         default: return nil
         }
