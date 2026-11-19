@@ -134,6 +134,7 @@ struct ConversationOverview: View {
 
   private struct Hover: Equatable {
     var bookmark: String?
+    /// The bookmark's line, not the pointer: its preview stays put while the pointer moves near.
     var y: Double
   }
 
@@ -162,8 +163,9 @@ struct ConversationOverview: View {
       .onContinuousHover { phase in
         switch phase {
         case .active(let point):
-          let bookmark = bookmark(atY: point.y, scale: scale)
-          let hover = Hover(bookmark: bookmark, y: point.y)
+          let line = Self.bookmarkLine(
+            nearY: point.y, marked: model.bookmarkedIndices, layout: layout, scale: scale)
+          let hover = Hover(bookmark: line?.id, y: line?.y ?? point.y)
           if hover != hovered { hovered = hover }
         case .ended:
           hovered = nil
@@ -217,14 +219,22 @@ struct ConversationOverview: View {
 
   /// The bookmark whose line is within a few points of that height in the overview.
   private func bookmark(atY y: Double, scale: Double) -> String? {
-    var nearest: (id: String, distance: Double)?
-    for index in model.bookmarkedIndices where index < layout.count {
-      let distance = abs(Self.bookmarkY(top: layout.tops[index], scale: scale) - y)
+    Self.bookmarkLine(nearY: y, marked: model.bookmarkedIndices, layout: layout, scale: scale)?.id
+  }
+
+  /// The bookmark whose line is nearest that height, within a few points, and where its line is.
+  static func bookmarkLine(
+    nearY y: Double, marked: [Int], layout: ConversationOverviewLayout, scale: Double
+  ) -> (id: String, y: Double)? {
+    var nearest: (id: String, y: Double, distance: Double)?
+    for index in marked where index < layout.count {
+      let line = bookmarkY(top: layout.tops[index], scale: scale)
+      let distance = abs(line - y)
       if distance <= 5, nearest.map({ distance < $0.distance }) ?? true {
-        nearest = (layout.ids[index], distance)
+        nearest = (layout.ids[index], line, distance)
       }
     }
-    return nearest?.id
+    return nearest.map { ($0.id, $0.y) }
   }
 
   static func bookmarkY(top: Double, scale: Double) -> Double {
@@ -481,10 +491,13 @@ private struct BookmarkPreview: View {
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(1)
       }
-      Text(block.map(ConversationModel.bookmarkExcerpt(of:)) ?? "")
-        .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
-        .foregroundStyle(theme.text.color)
-        .lineLimit(3)
+      let excerpt = block.map(ConversationModel.bookmarkExcerpt(of:)) ?? ""
+      if !excerpt.isEmpty {
+        Text(excerpt)
+          .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
+          .foregroundStyle(theme.text.color)
+          .lineLimit(3)
+      }
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 7)

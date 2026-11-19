@@ -215,4 +215,51 @@ struct BookmarkTests {
     #expect(label("Rebase on main.").hasSuffix(" · Rebase on main."))
     #expect(label("Rebase on main.") != label("Open the PR."))
   }
+
+  @Test("A message sent as coordination is turned on is named by the user's words, not the note")
+  func prefacedLabel() {
+    let block = Self.prompt(CoordinatorInstructions.turnedOn + "\n\nShip it")
+    #expect(ConversationModel.bookmarkLabel(of: block) == "Ship it")
+    #expect(ConversationModel.bookmarkExcerpt(of: block) == "Ship it")
+  }
+
+  @Test("Vibe Manager's news that names no session is named by its words")
+  func applicationNewsWithoutSessions() {
+    let block = Self.prompt(CoordinationInbox.message(for: [.wake("is #12 merged?", at: .now)]))
+    let excerpt = ConversationModel.bookmarkExcerpt(of: block)
+    #expect(excerpt.contains("is #12 merged?"))
+    #expect(!excerpt.contains("\\"))
+    #expect(ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · " + excerpt)
+  }
+
+  @Test("A coordinator's lists, headings and quotes lose their marks")
+  func coordinatorBlocks() {
+    let block = Self.prompt(
+      "[Coordinator “Release”] ## Plan\n\n- Rebase on main\n- Open the PR\n\n> Not before CI.")
+    #expect(
+      ConversationModel.bookmarkExcerpt(of: block)
+        == "Plan Rebase on main Open the PR Not before CI.")
+  }
+
+  @Test("Near a bookmark's line, the preview stands at the line, wherever the pointer is")
+  func previewKeepsToTheLine() {
+    let model = Self.model()
+    let shapes = ConversationOverviewShapes()
+    let layout = ConversationOverviewLayout(
+      blocks: model.blocks, measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
+      metrics: .init(
+        columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8),
+      shapes: shapes)
+    // Block 2 starts at 240 points: its line at 240 × 0.1 + 1.5.
+    let line = ConversationOverview.bookmarkY(top: 240, scale: 0.1)
+    for pointer in [line - 4, line, line + 4] {
+      let found = ConversationOverview.bookmarkLine(
+        nearY: pointer, marked: [2], layout: layout, scale: 0.1)
+      #expect(found?.id == "m2")
+      #expect(found?.y == line)
+    }
+    #expect(
+      ConversationOverview.bookmarkLine(nearY: line + 6, marked: [2], layout: layout, scale: 0.1)
+        == nil)
+  }
 }

@@ -315,9 +315,9 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   }
 
   /// How wide a bookmark's preview may be: wider as the text is larger, never wider than the
-  /// room left of the overview.
+  /// room left of the overview — narrower then, never past the pane's edge.
   public static func previewWidth(textSize: Double, room: Double) -> Double {
-    min(max(260, textSize * 20), max(room - previewGap - previewMargin, 120))
+    min(max(260, textSize * 20), max(room - previewGap - previewMargin, 0))
   }
 
   // MARK: - Shapes

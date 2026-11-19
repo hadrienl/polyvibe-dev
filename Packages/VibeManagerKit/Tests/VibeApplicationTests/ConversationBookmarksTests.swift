@@ -238,4 +238,14 @@ struct ConversationOverviewLayoutTests {
     #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 1000) == 320)
     #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 200) == 188)
   }
+
+  @Test("In a narrow pane, the preview narrows rather than reach past the pane's left edge")
+  func previewInANarrowPane() {
+    let room = 100.0
+    let width = ConversationOverviewLayout.previewWidth(textSize: 13, room: room)
+    #expect(width == 88)
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 300, previewWidth: width, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.x == -room + ConversationOverviewLayout.previewMargin)
+  }
 }

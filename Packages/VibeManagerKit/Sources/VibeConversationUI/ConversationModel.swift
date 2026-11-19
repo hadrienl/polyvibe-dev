@@ -1220,31 +1220,35 @@ public final class ConversationModel {
   /// does folded, before its words.
   public static func bookmarkLabel(of block: ConversationBlock) -> String {
     guard let relayed = relayedMessage(of: block) else { return bookmarkExcerpt(of: block) }
-    // Vibe Manager's summary names the sessions already.
+    // Vibe Manager's summary names the sessions already, when there are any.
     let summary = RelayedMessageView.summary(of: relayed)
-    guard case .coordinator = relayed.sender else { return oneLine(summary) }
+    if case .application = relayed.sender, !relayed.children.isEmpty { return oneLine(summary) }
     let words = bookmarkExcerpt(of: block)
     return words.isEmpty ? summary : oneLine(summary + " · " + words)
   }
 
   /// The start of a bookmarked message, under who wrote it in its preview: for Vibe Manager's
-  /// news, the sessions it is about, never their identifiers; for a coordinator's message, its
-  /// words as they read; for the user's, their words as the conversation shows them.
+  /// news, the sessions it is about, never their identifiers — its words when it names none —;
+  /// for a coordinator's message, its words as they read; for the user's, their words as the
+  /// conversation shows them.
   public static func bookmarkExcerpt(of block: ConversationBlock) -> String {
     if let relayed = relayedMessage(of: block) {
-      switch relayed.sender {
-      case .application: return oneLine(relayed.children.joined(separator: ", "))
-      case .coordinator: return oneLine(plainText(ofMarkdown: relayed.body))
+      if case .application = relayed.sender, !relayed.children.isEmpty {
+        return oneLine(relayed.children.joined(separator: ", "))
       }
+      return oneLine(plainText(ofMarkdown: relayed.body))
     }
     let text: String
     switch block {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let prompt, let attachments):
-        // As its bubble shows it: a reply's own words (#565), without the paths that became
-        // attachments.
-        text = ReplyLinks.shown(prompt, attachments: attachments).message
+        // As its bubble shows it — a reply's own words (#565), without the paths that became
+        // attachments —, and without the note Vibe Manager put in front once coordination was
+        // turned on or off (#352): the bubble keeps it, but it would name every such message
+        // alike.
+        let shown = ReplyLinks.shown(prompt, attachments: attachments).message
+        text = CoordinatorInstructions.userText(of: shown) ?? shown
       case .agentText(let answer), .reasoning(let answer?): text = answer
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
@@ -1266,13 +1270,19 @@ public final class ConversationModel {
     return flat.count > 120 ? String(flat.prefix(119)) + "…" : flat
   }
 
-  /// A coordinator's Markdown as it reads, without its marks.
-  private static func plainText(ofMarkdown markdown: String) -> String {
-    let options = AttributedString.MarkdownParsingOptions(
-      interpretedSyntax: .inlineOnlyPreservingWhitespace)
-    return (try? AttributedString(markdown: markdown, options: options)).map {
-      String($0.characters)
-    } ?? markdown
+  /// Markdown as it reads, without its marks — a list's, a heading's, a quote's included —, its
+  /// blocks one after the other.
+  static func plainText(ofMarkdown markdown: String) -> String {
+    guard let parsed = try? AttributedString(markdown: markdown) else { return markdown }
+    var text = ""
+    var block: PresentationIntent?
+    for run in parsed.runs {
+      // Parsed whole, blocks lose what stood between them: a space between each.
+      if !text.isEmpty, run.presentationIntent != block { text += " " }
+      block = run.presentationIntent
+      text += String(parsed[run.range].characters)
+    }
+    return text
   }
 
   /// Whether a sub-agent's block is unfolded, wherever it is shown: on its own, as a line of a
