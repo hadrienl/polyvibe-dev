@@ -232,12 +232,26 @@ extension ConversationSelection {
     func view(at place: SelectionPlace) -> SegmentTextView? {
       shown.first { $0.block == place.block && $0.segment == place.segment }?.view
     }
+    // Released at the very start of a text, it ends with the text before.
+    var end = last
+    if end.offset == 0, end != first,
+      let previous = shown.last(where: {
+        key(SelectionPlace(block: $0.block, segment: $0.segment, offset: 0), order)
+          < key(end, order)
+      })
+    {
+      end = SelectionPlace(
+        block: previous.block, segment: previous.segment, offset: previous.view.textLength)
+    }
     // At the selection's end, or at its start when the end has scrolled away.
     let (ending, offset): (SegmentTextView?, Int) =
-      view(at: last).map { ($0, last.offset) } ?? (view(at: first), first.offset)
-    // The message it starts in is the one replied to.
-    let starting = shown.first { $0.block == first.block && $0.view.replyAction != nil }?.view
-    guard let ending, let reply = starting?.replyAction ?? ending.replyAction else { return }
+      view(at: end).map { ($0, end.offset) } ?? (view(at: first), first.offset)
+    // The message it starts in is the one replied to, on screen or not: its author and its time
+    // say where the passage comes from. Started in what cannot be replied to, no reply.
+    let reply =
+      source.map { $0.reply(first.block) }
+      ?? shown.first { $0.block == first.block }?.view.replyAction
+    guard let ending, let reply else { return }
     let passage = SelectionText.plain(selectedPieces)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     guard !passage.isEmpty else { return }

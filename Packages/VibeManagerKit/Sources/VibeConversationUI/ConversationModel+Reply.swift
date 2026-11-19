@@ -25,6 +25,21 @@ extension ConversationModel {
     requestComposerFocus()
   }
 
+  /// The passage the next message replies to, while the field shows it: an answer to the agent's
+  /// question takes none, and it waits for the next message.
+  public var shownReplyTarget: ReplyTarget? {
+    [.ready, .chattingAboutQuestion].contains(composerState) ? replyTarget : nil
+  }
+
+  /// Whether `draft` is a command of the CLI — `/compact`, `/review 12` —, not a message that
+  /// starts with a path, as `/Users/me/Foo.swift still crashes`.
+  static func isCLICommand(_ draft: String) -> Bool {
+    guard draft.hasPrefix("/") else { return false }
+    let name = draft.dropFirst().prefix { !$0.isWhitespace }
+    return !name.isEmpty
+      && name.allSatisfy { $0.isLetter || $0.isNumber || ":_-.".contains($0) }
+  }
+
   /// The passage taken back, by ✕ or Escape. Returns whether there was one.
   @discardableResult
   public func cancelReply() -> Bool {

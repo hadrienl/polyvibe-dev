@@ -65,6 +65,17 @@ struct ReplyTests {
     #expect(await model.send())
     #expect(model.echoes.last?.text == "ls")
     #expect(model.replyTarget?.quote.excerpt == "passage")
+    // A message that starts with a path is a message.
+    model.draft = "/Users/me/Foo.swift still crashes"
+    #expect(await model.send())
+    #expect(model.echoes.last?.text.hasPrefix("↩ Replying to your message") == true)
+    #expect(model.replyTarget == nil)
+    #expect(ConversationModel.isCLICommand("/compact"))
+    #expect(ConversationModel.isCLICommand("/review 12"))
+    #expect(ConversationModel.isCLICommand("/plugin:command arg"))
+    #expect(!ConversationModel.isCLICommand("/Users/me/Foo.swift still crashes"))
+    #expect(!ConversationModel.isCLICommand("/ alone"))
+    #expect(!ConversationModel.isCLICommand("hello /compact"))
   }
 
   @Test("✕ or Escape take the passage back; an empty one is never offered")
@@ -83,6 +94,7 @@ struct ReplyTests {
     let quote = ReplyQuote(
       excerpt: "Note : les remises (applyDiscount).", author: .agent, time: "14:32")
     var links = ReplyLinks()
+    var places: [String: Int] = [:]
     let blocks: [ConversationBlock] = [
       .entry(answer("a1", "Note : les remises (`applyDiscount`).", at: said)),
       .entry(
@@ -91,14 +103,21 @@ struct ReplyTests {
       .entry(prompt("p", "Autre chose.")),
       .entry(prompt("r2", ReplyQuote.compose(quote, message: "Encore."))),
     ]
-    links.update(blocks, from: 0, timeZone: paris)
+    links.update(blocks, from: 0, places: &places, timeZone: paris)
     // The one said at the time quoted, though another later says the same.
     #expect(links.sources == ["r1": "a1", "r2": "a1"])
     #expect(links.replies == ["a1": ["r1", "r2"]])
     // Laid out again from the last block, the others keep theirs.
-    links.update(Array(blocks.prefix(4)), from: 4, timeZone: paris)
+    links.update(Array(blocks.prefix(4)), from: 4, places: &places, timeZone: paris)
     #expect(links.sources == ["r1": "a1"])
     #expect(links.replies == ["a1": ["r1"]])
+    // A reply moved up by blocks merged before it, its link unchanged: still known after a later
+    // layout that starts past its new place.
+    let merged = [blocks[0], blocks[2], blocks[3]]
+    links.update(merged, from: 1, places: &places, timeZone: paris)
+    #expect(places["r1"] == 1)
+    links.update(merged, from: 2, places: &places, timeZone: paris)
+    #expect(links.sources == ["r1": "a1"])
   }
 
   @Test("Behind what the application put in front of it, a reply still knows its message")
@@ -112,8 +131,23 @@ struct ReplyTests {
           CoordinatorInstructions.turnedOn + "\n\n" + ReplyQuote.compose(quote, message: "Go."))),
     ]
     var links = ReplyLinks()
-    links.update(blocks, from: 0)
+    var places: [String: Int] = [:]
+    links.update(blocks, from: 0, places: &places)
     #expect(links.sources == ["r": "a"])
+    // Shown: the user's words alone; a message that replies to nothing keeps it, as before.
+    #expect(
+      ReplyLinks.shown(
+        CoordinatorInstructions.turnedOn + "\n\n" + ReplyQuote.compose(quote, message: "Go."),
+        attachments: []) == (quote, "Go."))
+    let plain = CoordinatorInstructions.turnedOn + "\n\nhello"
+    #expect(ReplyLinks.shown(plain, attachments: []).message == plain)
+    // Replied to, such a message is found as it was shown.
+    let own = ReplyQuote(excerpt: plain, author: .user, time: nil)
+    let mine: [ConversationBlock] = [
+      .entry(prompt("u", plain)), .entry(prompt("r", ReplyQuote.compose(own, message: "Then?"))),
+    ]
+    links.update(mine, from: 0, places: &places)
+    #expect(links.sources == ["r": "u"])
   }
 
   @Test("A message sent from the phone takes no passage, which stays for the Mac's next one")
@@ -136,7 +170,8 @@ struct ReplyTests {
       .entry(prompt("r", ReplyQuote.compose(own, message: "Actually, not."))),
     ]
     var links = ReplyLinks()
-    links.update(blocks, from: 0)
+    var places: [String: Int] = [:]
+    links.update(blocks, from: 0, places: &places)
     #expect(links.sources == ["u": "a", "r": "u"])
   }
 

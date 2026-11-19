@@ -683,8 +683,7 @@ extension ConversationSelection.Source {
         }
         switch entry.content {
         case .userPrompt(let text, let attachments):
-          let shown = AttachedPaths.displayText(
-            text, joinedCount: attachments.filter(\.isWrittenInText).count)
+          let shown = ReplyLinks.shown(text, attachments: attachments).message
           guard !shown.isEmpty else { return [] }
           let color = appearance.userMessageStyle == .bubbles ? theme.bubbleText : theme.text
           return pieces([.plain(shown, color: color)])
@@ -695,6 +694,18 @@ extension ConversationSelection.Source {
         default:
           return []
         }
+      },
+      reply: { id in
+        guard case .entry(let entry) = model.blocks.first(where: { $0.id == id }) else {
+          return nil
+        }
+        let author: ReplyQuote.Author
+        switch entry.content {
+        case .userPrompt: author = .user
+        case .agentText: author = .agent
+        default: return nil
+        }
+        return { model.reply(to: $0, author: author, date: entry.date, blockID: entry.id) }
       })
   }
 }

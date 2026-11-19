@@ -40,6 +40,9 @@ final class ConversationSelection {
     /// The text of a block's segments, in reading order, as its views would show it: none for a
     /// block that holds no selectable text.
     var pieces: (String) -> [SelectionText.Piece]
+    /// Replies to a passage of a block, wherever its views are (#565): `nil` for a block that
+    /// cannot be replied to.
+    var reply: (String) -> ((String) -> Void)? = { _ in nil }
   }
 
   /// A segment on screen: its view, its block and its rank among the block's segments.

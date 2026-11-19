@@ -448,6 +448,8 @@ public final class ConversationModel {
   /// Which message each reply quotes, and the replies each has (#565). Written only when it
   /// changes: every row reads it.
   public internal(set) var replyLinks = ReplyLinks()
+  /// Where each reply is among the blocks, for `replyLinks`: it changes without them.
+  @ObservationIgnored var replyPlaces: [String: Int] = [:]
   /// The block brought into view by a reply or its passage, lit a moment.
   public internal(set) var highlightedBlockID: String?
   /// The passage a reply quotes, brought into view and lit a moment in its message.
@@ -853,7 +855,7 @@ public final class ConversationModel {
     days.update(blocks, from: restart)
     if days != self.days { self.days = days }
     var replyLinks = self.replyLinks
-    replyLinks.update(blocks, from: restart)
+    replyLinks.update(blocks, from: restart, places: &replyPlaces)
     if replyLinks != self.replyLinks { self.replyLinks = replyLinks }
     layoutCount += 1
     lastLayoutWork = LayoutWork(entries: changed.count, blocks: rebuilt.count - restart)
@@ -1659,10 +1661,10 @@ public final class ConversationModel {
     let kind = typed.kind(shell: shell)
     // What the application has to tell the agent goes first (#352), never in front of a command —
     // the shell's or the CLI's.
-    let preface =
-      kind == .message && !draft.hasPrefix("/") ? takePreface?() : nil
+    let isMessage = kind == .message && !Self.isCLICommand(draft)
+    let preface = isMessage ? takePreface?() : nil
     // The passage replied to goes in front of the message, never of a command (#565).
-    let reply = kind == .message && !draft.hasPrefix("/") ? replyTarget : nil
+    let reply = isMessage ? replyTarget : nil
     let message =
       reply.map { ReplyQuote.compose($0.quote, message: typed.messageText(shell: shell)) } ?? draft
     let submission =

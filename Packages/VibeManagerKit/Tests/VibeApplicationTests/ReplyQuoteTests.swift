@@ -84,6 +84,14 @@ struct ReplyQuoteTests {
     let linked = ReplyQuote(
       excerpt: "Voir Foo.swift qui calcule le total.", author: .agent, time: nil)
     #expect(linked.isQuoted(in: "Voir [Foo.swift](Sources/Foo.swift:12) qui calcule le total."))
+    // A whole answer replied to from its menu is its Markdown: its links' addresses are not read.
+    let markdown = "See [Foo.swift](Sources/Foo.swift:12) for the fix."
+    let whole = ReplyQuote(excerpt: markdown, author: .agent, time: nil)
+    #expect(whole.isQuoted(in: markdown))
+    let shown = "See Foo.swift for the fix."
+    #expect(
+      whole.range(in: shown).map { (shown as NSString).substring(with: $0.range) }
+        == "See Foo.swift for the fix")
   }
 
   @Test(

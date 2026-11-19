@@ -305,6 +305,46 @@ struct ConversationSelectionTests {
     #expect(second.code.selectedRange().length == 0)
   }
 
+  @Test(
+    "« Reply to Selection » replies to the message the selection starts in, shown or not (#565)")
+  func replyToSelection() throws {
+    let harness = Harness(shared: true)
+    let (first, second) = (harness.messages[0], harness.messages[1])
+    var replied: [String] = []
+    first.selection.source?.reply = { block in
+      block == "m0" ? { replied.append("m0: " + $0) } : { replied.append("m1: " + $0) }
+    }
+    harness.drag(
+      from: (first.last, NSPoint(x: 5, y: 8)), to: (second.first, NSPoint(x: 60, y: 8)))
+    let button = try #require(second.first.replyButton)
+    #expect(!button.isHidden)
+    button.performClick(nil)
+    #expect(replied.count == 1)
+    #expect(replied.first?.hasPrefix("m0: ast paragraph.") == true)
+    // Its first message scrolled away: still the one replied to.
+    harness.drag(
+      from: (first.last, NSPoint(x: 5, y: 8)), to: (second.first, NSPoint(x: 60, y: 8)))
+    for view in first.segments { view.removeFromSuperview() }
+    first.selection.offerReply()
+    try #require(second.first.replyButton).performClick(nil)
+    #expect(replied.last?.hasPrefix("m0: ") == true)
+    // Started in what cannot be replied to: no button.
+    first.selection.source?.reply = { _ in nil }
+    first.selection.offerReply()
+    #expect(second.first.replyButton?.isHidden != false)
+  }
+
+  @Test("Released at the very start of a text, « Reply to Selection » follows the text before")
+  func replyAtTextStart() throws {
+    let harness = Harness(shared: true)
+    let (first, second) = (harness.messages[0], harness.messages[1])
+    first.selection.source?.reply = { _ in { _ in } }
+    harness.drag(
+      from: (first.last, NSPoint(x: 5, y: 8)), to: (second.first, NSPoint(x: 0, y: 8)))
+    #expect(first.selection.focus?.offset == 0)
+    #expect(first.last.replyButton?.isHidden == false)
+  }
+
   @Test("A message scrolled away is copied from the conversation, whole")
   func copyWithoutViews() throws {
     let harness = Harness(messages: 3, shared: true)

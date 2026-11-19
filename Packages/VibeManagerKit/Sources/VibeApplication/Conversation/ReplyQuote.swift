@@ -130,10 +130,16 @@ public struct ReplyQuote: Hashable, Sendable {
   /// Whether `text` — a message's Markdown — holds the passage, which is that message as the
   /// conversation showed it: only letters and digits are compared, the Markdown's marks gone.
   public func isQuoted(in text: String) -> Bool {
-    let passage = Self.letters(of: excerpt.hasSuffix("…") ? String(excerpt.dropLast()) : excerpt)
+    let passage = Self.letters(of: shownExcerpt)
     guard !passage.isEmpty else { return false }
     // Its start is enough, and holds less of what the Markdown could break — a link's address.
     return Self.letters(of: Self.withoutLinkTargets(text)).contains(String(passage.prefix(160)))
+  }
+
+  /// The passage as the conversation shows it, without the mark of its cut: a whole answer
+  /// replied to from its menu is its Markdown, whose links' addresses are not shown.
+  private var shownExcerpt: String {
+    Self.withoutLinkTargets(excerpt.hasSuffix("…") ? String(excerpt.dropLast()) : excerpt)
   }
 
   /// `[Foo.swift](Sources/Foo.swift:12)` as it is shown: `Foo.swift`.
@@ -154,8 +160,7 @@ public struct ReplyQuote: Hashable, Sendable {
   /// paragraph run, a code block: all of it, or, for a passage that runs over several parts, the
   /// bit of it this one holds. `start` says the passage starts here: there it is brought into view.
   public func range(in text: String) -> (range: NSRange, start: Bool)? {
-    let passage = Self.marks(of: excerpt.hasSuffix("…") ? String(excerpt.dropLast()) : excerpt)
-      .map(\.scalar)
+    let passage = Self.marks(of: shownExcerpt).map(\.scalar)
     let shown = Self.marks(of: text)
     let letters = shown.map(\.scalar)
     guard !passage.isEmpty, !letters.isEmpty else { return nil }

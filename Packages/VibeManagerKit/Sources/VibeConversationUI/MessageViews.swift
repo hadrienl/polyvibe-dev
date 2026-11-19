@@ -28,39 +28,35 @@ struct UserPromptView: View {
   var body: some View {
     let size = appearance.textSize.pointSize
     // Without the paths that became attachments; an echo's text never holds them.
-    let written = AttachedPaths.displayText(
-      text, joinedCount: attachments.filter(\.isWrittenInText).count)
     // A reply shows the passage it quotes over the user's own words (#565).
-    // Behind what the application put in front of it (#352), if anything.
-    let replied = ReplyQuote.split(CoordinatorInstructions.userText(of: written) ?? written)
-    let shown = replied?.message ?? written
+    let (quote, shown) = ReplyLinks.shown(text, attachments: attachments)
     Group {
       if appearance.userMessageStyle == .bubbles {
         HStack {
           Spacer(minLength: 80)
           VStack(alignment: .trailing, spacing: 6) {
-            if !shown.isEmpty || replied != nil {
+            if !shown.isEmpty || quote != nil {
               VStack(alignment: .leading, spacing: 6) {
-                if let quote = replied?.quote { header(quote, color: theme.bubbleText) }
+                if let quote { header(quote, color: theme.bubbleText) }
                 if !shown.isEmpty { content(shown, size: size) }
               }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(theme.bubble.color)
-                .clipShape(
+              .padding(.horizontal, 14)
+              .padding(.vertical, 10)
+              .background(theme.bubble.color)
+              .clipShape(
+                UnevenRoundedRectangle(
+                  topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
+                  bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius)
+              )
+              .overlay {
+                if let border = theme.bubbleBorder {
                   UnevenRoundedRectangle(
                     topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
-                    bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius)
-                )
-                .overlay {
-                  if let border = theme.bubbleBorder {
-                    UnevenRoundedRectangle(
-                      topLeadingRadius: bubbleRadius, bottomLeadingRadius: bubbleRadius,
-                      bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius
-                    ).stroke(border.color, lineWidth: 1.5)
-                  }
+                    bottomTrailingRadius: min(4, bubbleRadius), topTrailingRadius: bubbleRadius
+                  ).stroke(border.color, lineWidth: 1.5)
                 }
-                .modifier(SpokenPrompt(text: shown))
+              }
+              .modifier(SpokenPrompt(text: shown))
             }
             if !attachments.isEmpty {
               AttachmentStrip(attachments: attachments, alignment: .trailing)
@@ -82,7 +78,7 @@ struct UserPromptView: View {
               Text("You", bundle: .module)
                 .font(theme.interfaceFont(size: size * 0.78, weight: .semibold))
                 .foregroundStyle(theme.secondaryText.color)
-              if let quote = replied?.quote { header(quote, color: theme.text) }
+              if let quote { header(quote, color: theme.text) }
               if !shown.isEmpty { content(shown, size: size) }
             }
             .modifier(SpokenPrompt(text: shown))
@@ -135,12 +131,12 @@ struct UserPromptView: View {
   @ViewBuilder
   private var replyButton: some View {
     if let reply {
-      let written = ReplyQuote.message(
-        of: AttachedPaths.displayText(
-          text, joinedCount: attachments.filter(\.isWrittenInText).count))
-      ReplyButton { reply(written) }
-        .opacity(isHovered && !written.isEmpty ? 1 : 0)
-        .disabled(!isHovered || written.isEmpty)
+      let shown = ReplyLinks.shown(text, attachments: attachments).message
+      ReplyButton { reply(shown) }
+        .opacity(isHovered && !shown.isEmpty ? 1 : 0)
+        .disabled(!isHovered || shown.isEmpty)
+        // Its menu's « Reply » is VoiceOver's: not a dimmed button on every message.
+        .accessibilityHidden(!isHovered)
     }
   }
 
@@ -285,15 +281,16 @@ private struct ReadAloudButton: View {
         }
       }
       .font(.system(size: 9, weight: .semibold))
-        .foregroundStyle(isReading ? theme.onAccent.color : theme.secondaryText.color)
-        .frame(width: 22, height: 22)
-        .background(isReading ? theme.accent.color : theme.surface.color, in: Circle())
-        .overlay(Circle().stroke(isReading ? Color.clear : theme.border.color))
-        .contentShape(Circle())
+      .foregroundStyle(isReading ? theme.onAccent.color : theme.secondaryText.color)
+      .frame(width: 22, height: 22)
+      .background(isReading ? theme.accent.color : theme.surface.color, in: Circle())
+      .overlay(Circle().stroke(isReading ? Color.clear : theme.border.color))
+      .contentShape(Circle())
     }
     .buttonStyle(.plain)
     .accessibilityLabel(
-      isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
+      isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module)
+    )
     .help(isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
   }
 }
