@@ -66,6 +66,7 @@ struct ConversationBookmarksTests {
   }
 }
 
+@MainActor
 @Suite("The overview of a conversation (#567)")
 struct ConversationOverviewLayoutTests {
   private static let metrics = ConversationOverviewLayout.Metrics(
@@ -83,45 +84,64 @@ struct ConversationOverviewLayoutTests {
           ToolCall(callID: id, kind: .shell, state: failed ? .failed(exitCode: 1) : .succeeded))))
   }
 
-  @Test("Text is wrapped at the column's width, paragraph by paragraph")
-  func wrap() {
-    // 100 characters a line at 700 points of 14-point text.
-    let long = String(repeating: "a", count: 250)
-    let wrapped = ConversationOverviewLayout.wrap("\(long)\n\nshort\n\n", width: 100)
-    #expect(wrapped.count == 4)
-    #expect(wrapped.paragraphs == 2)
-    #expect(wrapped.lines == [1, 1, 0.5, 0.05])
+  private static func layout(
+    _ blocks: [ConversationBlock], measured: [String: Double] = [:],
+    shapes: ConversationOverviewShapes = ConversationOverviewShapes()
+  ) -> ConversationOverviewLayout {
+    ConversationOverviewLayout(blocks: blocks, measured: measured, metrics: metrics, shapes: shapes)
+  }
+
+  @Test("A text's lines and paragraphs are counted in characters, blank lines left out")
+  func lines() {
+    let long = String(repeating: "é", count: 250)
+    let shape = ConversationOverviewLayout.lines(of: "\(long)\n\n  \nshort\n\n", mark: .text)
+    #expect(shape.lineLengths == [250, 5])
+    #expect(shape.paragraphs == 2)
+    // 100 characters a line: 3 lines, then 1.
+    #expect(shape.lineCount(width: 100) == 4)
   }
 
   @Test("Blocks never built are estimated, and the height measured replaces the estimate")
-  func estimates() throws {
+  func estimates() {
     let blocks = [Self.text("a", "one line"), Self.tool("t"), Self.text("b", "x")]
-    let estimated = ConversationOverviewLayout(blocks: blocks, measured: [:], metrics: Self.metrics)
+    let estimated = Self.layout(blocks)
     let pitch = 14 * 1.25
     #expect(estimated.items.map(\.height) == [pitch, pitch + 20, pitch])
     #expect(estimated.items.map(\.top) == [0, pitch + 18, 2 * pitch + 20 + 36])
     #expect(estimated.height == 3 * pitch + 20 + 36)
 
-    let measured = ConversationOverviewLayout(
-      blocks: blocks, measured: ["t": 100], metrics: Self.metrics, reusing: estimated)
+    let measured = Self.layout(blocks, measured: ["t": 100])
     #expect(measured.items[1].height == 100)
     #expect(measured.items[2].top == pitch + 18 + 100 + 18)
-    #expect(measured.items[1].shape == estimated.items[1].shape)
+  }
+
+  @Test("A text is read once, until it changes: not for each layout, nor each width")
+  func readOnce() {
+    let shapes = ConversationOverviewShapes()
+    var blocks = [Self.text("a", "first"), Self.text("b", "second")]
+    _ = Self.layout(blocks, shapes: shapes)
+    _ = Self.layout(blocks, measured: ["a": 40], shapes: shapes)
+    _ = ConversationOverviewLayout(
+      blocks: blocks, measured: [:],
+      metrics: .init(
+        columnWidth: 300, textSize: 14, lineHeight: 1.25, blockSpacing: 18, paragraphSpacing: 10),
+      shapes: shapes)
+    #expect(shapes.readCount == 2)
+    blocks[1] = Self.text("b", "second, and more")
+    _ = Self.layout(blocks, shapes: shapes)
+    #expect(shapes.readCount == 3)
   }
 
   @Test("A failed tool is drawn as a failure")
   func failure() {
-    let layout = ConversationOverviewLayout(
-      blocks: [Self.tool("ok"), Self.tool("ko", failed: true)], measured: [:],
-      metrics: Self.metrics)
+    let layout = Self.layout([Self.tool("ok"), Self.tool("ko", failed: true)])
     #expect(layout.items.map(\.shape.mark) == [.tool, .failure])
   }
 
   @Test("A height in the conversation is a block and how far into it, and back")
-  func positions() throws {
+  func positions() {
     let blocks = [Self.text("a", "x"), Self.text("b", "x"), Self.text("c", "x")]
-    let layout = ConversationOverviewLayout(
-      blocks: blocks, measured: ["a": 100, "b": 50, "c": 80], metrics: Self.metrics)
+    let layout = Self.layout(blocks, measured: ["a": 100, "b": 50, "c": 80])
     // a: 0–100, b: 118–168, c: 186–266.
     #expect(layout.position(atY: -5) == .init(index: 0, offset: 0))
     #expect(layout.position(atY: 40) == .init(index: 0, offset: 40))
@@ -136,11 +156,10 @@ struct ConversationOverviewLayoutTests {
   @Test("The whole conversation fits the overview, never drawn larger than a fifth")
   func scale() {
     let blocks = [Self.text("a", "x")]
-    let layout = ConversationOverviewLayout(
-      blocks: blocks, measured: ["a": 10_000], metrics: Self.metrics)
-    #expect(layout.scale(forHeight: 500) == 0.05)
-    let short = ConversationOverviewLayout(blocks: blocks, measured: ["a": 100], metrics: Self.metrics)
-    #expect(short.scale(forHeight: 500) == ConversationOverviewLayout.maximumScale)
+    #expect(Self.layout(blocks, measured: ["a": 10_000]).scale(forHeight: 500) == 0.05)
+    #expect(
+      Self.layout(blocks, measured: ["a": 100]).scale(forHeight: 500)
+        == ConversationOverviewLayout.maximumScale)
   }
 
   @Test("The overview takes the margin right of the text, which does not move")

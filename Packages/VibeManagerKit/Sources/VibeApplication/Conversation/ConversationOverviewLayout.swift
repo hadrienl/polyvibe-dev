@@ -7,6 +7,9 @@ import Foundation
 /// of the column, a tool folded on its title — and the height measured once its row has been
 /// built. Each block is placed under the one before, the whole conversation fitting the height of
 /// the overview.
+///
+/// A session can hold tens of thousands of blocks: what a block looks like is read once, whatever
+/// the width (`ConversationOverviewShapes`), and a layout only adds heights up.
 public struct ConversationOverviewLayout: Equatable, Sendable {
   /// What the estimates are made with: the column and the text as the conversation shows them.
   public struct Metrics: Hashable, Sendable {
@@ -32,7 +35,10 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     public var linePitch: Double { textSize * lineHeight }
 
     /// About as many characters as a line of the column holds: half the text size each.
-    var charactersPerLine: Int { max(16, Int(columnWidth / (textSize * 0.5))) }
+    public var charactersPerLine: Int { max(16, Int(columnWidth / (textSize * 0.5))) }
+
+    /// A bubble leaves room on its leading side.
+    public var charactersPerBubbleLine: Int { max(12, charactersPerLine * 4 / 5) }
   }
 
   /// How a block is drawn.
@@ -49,12 +55,33 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     case quiet
   }
 
-  /// A block drawn small, wherever it is.
+  /// What a block looks like, whatever the width it is shown at.
   public struct Shape: Hashable, Sendable {
     public var mark: Mark
-    /// The length of each line of text, from 0 to 1 of the column, top to bottom.
-    public var lines: [Double]
-    public var estimatedHeight: Double
+    /// The length of each line of its text that is not blank, in characters, top to bottom: the
+    /// first `maximumLines` of them.
+    public var lineLengths: [Int]
+    /// Lines past `maximumLines`, counted one each.
+    public var moreLines: Int
+    public var paragraphs: Int
+    /// For tools: how many rows they take folded.
+    public var rows: Int
+
+    public init(
+      mark: Mark, lineLengths: [Int] = [], moreLines: Int = 0, paragraphs: Int = 1, rows: Int = 1
+    ) {
+      self.mark = mark
+      self.lineLengths = lineLengths
+      self.moreLines = moreLines
+      self.paragraphs = paragraphs
+      self.rows = rows
+    }
+
+    /// How many lines its text makes `width` characters wide.
+    public func lineCount(width: Int) -> Int {
+      let width = max(width, 1)
+      return lineLengths.reduce(moreLines) { $0 + max(($1 + width - 1) / width, 1) }
+    }
   }
 
   /// A block placed in the conversation.
@@ -77,69 +104,99 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     }
   }
 
-  public private(set) var items: [Item] = []
+  /// The blocks, their shapes, the height each is given until measured, then where each is and
+  /// how tall: kept apart, so that new heights only add numbers up again.
+  public private(set) var ids: [String] = []
+  public private(set) var shapes: [Shape] = []
+  private var estimates: [Double] = []
+  public private(set) var tops: [Double] = []
+  public private(set) var heights: [Double] = []
   /// The conversation's height, in its points.
   public private(set) var height = 0.0
   public private(set) var metrics: Metrics?
   private var indices: [String: Int] = [:]
-  /// What each shape was made from, so that a block that did not change keeps its shape.
-  private var signatures: [String: Signature] = [:]
 
   /// No line is kept beyond that many in a block: drawn small, a long file reads as a mass.
-  static let maximumLines = 2000
+  public static let maximumLines = 2000
 
   public init() {}
 
-  /// Lays the blocks out, taking from `previous` the shapes of those that did not change.
+  /// Lays the blocks out, with the shapes `shapes` keeps for them.
   ///
   /// - Parameter measured: the height of the rows already built, by block.
+  @MainActor
   public init(
     blocks: [ConversationBlock], measured: [String: Double], metrics: Metrics,
-    reusing previous: ConversationOverviewLayout? = nil
+    shapes: ConversationOverviewShapes
+  ) {
+    self.init(
+      blocks: blocks, shapes: blocks.map(shapes.shape(of:)), measured: measured, metrics: metrics)
+  }
+
+  /// Lays the blocks out with their shapes, read already.
+  public init(
+    blocks: [ConversationBlock], shapes: [Shape], measured: [String: Double], metrics: Metrics
   ) {
     self.metrics = metrics
-    let reusable = previous?.metrics == metrics ? previous : nil
-    items.reserveCapacity(blocks.count)
+    self.shapes = shapes
+    ids = blocks.map(\.id)
+    estimates = shapes.map { Self.estimatedHeight(of: $0, metrics: metrics) }
+    indices.reserveCapacity(ids.count)
+    for (index, id) in ids.enumerated() { indices[id] = index }
+    place(measured)
+  }
+
+  /// The same blocks, with the heights measured since: nothing is read nor estimated again.
+  public func remeasured(_ measured: [String: Double]) -> ConversationOverviewLayout {
+    var layout = self
+    layout.place(measured)
+    return layout
+  }
+
+  private mutating func place(_ measured: [String: Double]) {
+    guard let metrics else { return }
+    heights = estimates
+    for (id, height) in measured {
+      if let index = indices[id] { heights[index] = height }
+    }
+    tops = []
+    tops.reserveCapacity(heights.count)
     var top = 0.0
-    for block in blocks {
-      let signature = Signature(block)
-      let shape: Shape
-      if let reusable, let index = reusable.indices[block.id],
-        reusable.signatures[block.id] == signature
-      {
-        shape = reusable.items[index].shape
-      } else {
-        shape = Self.shape(of: block, metrics: metrics)
-      }
-      let height = max(measured[block.id] ?? shape.estimatedHeight, 1)
-      indices[block.id] = items.count
-      signatures[block.id] = signature
-      items.append(Item(id: block.id, shape: shape, top: top, height: height))
-      top += height + metrics.blockSpacing
+    for index in heights.indices {
+      heights[index] = max(heights[index], 1)
+      tops.append(top)
+      top += heights[index] + metrics.blockSpacing
     }
     height = max(top - metrics.blockSpacing, 0)
   }
+
+  public var count: Int { ids.count }
+
+  public func item(at index: Int) -> Item {
+    Item(id: ids[index], shape: shapes[index], top: tops[index], height: heights[index])
+  }
+
+  /// Every block placed: for tests, the drawing reads the arrays.
+  public var items: [Item] { ids.indices.map(item(at:)) }
 
   public func index(of id: String) -> Int? { indices[id] }
 
   /// Where a place is, from the conversation's top.
   public func y(of position: Position) -> Double {
-    guard items.indices.contains(position.index) else { return 0 }
-    let item = items[position.index]
-    return item.top + min(max(position.offset, 0), item.height)
+    guard tops.indices.contains(position.index) else { return 0 }
+    return tops[position.index] + min(max(position.offset, 0), heights[position.index])
   }
 
   /// The block at that height, and how far into it; the space after a block counts as its end.
   public func position(atY y: Double) -> Position? {
-    guard !items.isEmpty else { return nil }
+    guard !tops.isEmpty else { return nil }
     var low = 0
-    var high = items.count - 1
+    var high = tops.count - 1
     while low < high {
       let middle = (low + high + 1) / 2
-      if items[middle].top <= y { low = middle } else { high = middle - 1 }
+      if tops[middle] <= y { low = middle } else { high = middle - 1 }
     }
-    let item = items[low]
-    return Position(index: low, offset: min(max(y - item.top, 0), item.height))
+    return Position(index: low, offset: min(max(y - tops[low], 0), heights[low]))
   }
 
   /// How much smaller the overview draws the conversation: all of it in `overviewHeight`, never
@@ -150,6 +207,24 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   }
 
   public static let maximumScale = 0.2
+
+  /// The height a block never built is given.
+  public static func estimatedHeight(of shape: Shape, metrics: Metrics) -> Double {
+    let pitch = metrics.linePitch
+    // A tool folded on its title: the line, and the frame's padding.
+    let toolHeight = pitch + 20
+    switch shape.mark {
+    case .tool, .failure:
+      return Double(max(shape.rows, 1)) * toolHeight
+    case .prompt:
+      return Double(max(shape.lineCount(width: metrics.charactersPerBubbleLine), 1)) * pitch + 20
+    case .text:
+      return Double(max(shape.lineCount(width: metrics.charactersPerLine), 1)) * pitch
+        + Double(max(shape.paragraphs - 1, 0)) * metrics.paragraphSpacing
+    case .quiet:
+      return pitch
+    }
+  }
 
   // MARK: - Width
 
@@ -184,6 +259,78 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
 
   // MARK: - Shapes
 
+  static func shape(of block: ConversationBlock) -> Shape {
+    let failed = block.toolState.map { if case .failed = $0 { true } else { false } } ?? false
+    let tool = Shape(mark: failed ? .failure : .tool)
+    switch block {
+    case .toolGroup:
+      return tool
+    case .subagentGroup(_, let runs):
+      var shape = tool
+      shape.rows = max(runs.count, 1)
+      return shape
+    case .entry(let entry):
+      switch entry.content {
+      case .userPrompt(let text, _):
+        return lines(of: text, mark: .prompt)
+      case .agentText(let text):
+        return lines(of: text, mark: .text)
+      case .tool:
+        return tool
+      case .reasoning, .notice:
+        return Shape(mark: .quiet)
+      }
+    }
+  }
+
+  /// The lines of a text that are not blank, their length in characters, and its paragraphs: one
+  /// pass over its bytes, the text made contiguous once — a text read from a transcript comes
+  /// from Foundation, where walking its characters one by one costs far more.
+  static func lines(of text: String, mark: Mark) -> Shape {
+    var shape = Shape(mark: mark)
+    var contiguous = text
+    contiguous.makeContiguousUTF8()
+    var length = 0
+    var isBlank = true
+    var previousWasBlank = false
+    var hasContent = false
+    func endLine() {
+      if isBlank {
+        previousWasBlank = true
+      } else {
+        if previousWasBlank, hasContent { shape.paragraphs += 1 }
+        previousWasBlank = false
+        hasContent = true
+        if shape.lineLengths.count < maximumLines {
+          shape.lineLengths.append(length)
+        } else {
+          shape.moreLines += 1
+        }
+      }
+      length = 0
+      isBlank = true
+    }
+    _ = contiguous.utf8.withContiguousStorageIfAvailable { bytes in
+      for byte in bytes {
+        if byte == 0x0A {
+          endLine()
+        } else if byte & 0xC0 != 0x80 {
+          // The first byte of a character: its continuation bytes are not counted.
+          length += 1
+          if byte != 0x20, byte != 0x09, byte != 0x0D { isBlank = false }
+        }
+      }
+    }
+    endLine()
+    return shape
+  }
+}
+
+/// What each block of a conversation looks like drawn small, read once (#567): kept as long as the
+/// conversation, so that neither a new layout, nor a width, nor a view made again reads the
+/// thousands of texts of a long session anew.
+@MainActor
+public final class ConversationOverviewShapes {
   private struct Signature: Hashable {
     var kind: Int
     var size: Int
@@ -191,11 +338,12 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
 
     init(_ block: ConversationBlock) {
       failed = block.toolState.map { if case .failed = $0 { true } else { false } } ?? false
+      // UTF-16 counts: a text from Foundation knows its own without reading it.
       switch block {
       case .entry(let entry):
         switch entry.content {
-        case .userPrompt(let text, _): (kind, size) = (0, text.utf8.count)
-        case .agentText(let text): (kind, size) = (1, text.utf8.count)
+        case .userPrompt(let text, _): (kind, size) = (0, text.utf16.count)
+        case .agentText(let text): (kind, size) = (1, text.utf16.count)
         case .reasoning: (kind, size) = (2, 0)
         case .tool: (kind, size) = (3, 1)
         case .notice: (kind, size) = (4, 0)
@@ -206,66 +354,19 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     }
   }
 
-  static func shape(of block: ConversationBlock, metrics: Metrics) -> Shape {
-    let pitch = metrics.linePitch
-    // A tool folded on its title: the line, and the frame's padding.
-    let toolHeight = pitch + 20
-    let failed = block.toolState.map { if case .failed = $0 { true } else { false } } ?? false
-    let tool = Shape(mark: failed ? .failure : .tool, lines: [], estimatedHeight: toolHeight)
-    switch block {
-    case .toolGroup:
-      return tool
-    case .subagentGroup(_, let runs):
-      var shape = tool
-      shape.estimatedHeight = Double(max(runs.count, 1)) * toolHeight
-      return shape
-    case .entry(let entry):
-      switch entry.content {
-      case .userPrompt(let text, _):
-        // A bubble leaves room on its leading side.
-        let wrapped = wrap(text, width: Int(Double(metrics.charactersPerLine) * 0.8))
-        let lines = wrapped.lines.map { $0 * 0.8 }
-        return Shape(
-          mark: .prompt, lines: lines,
-          estimatedHeight: Double(max(wrapped.count, 1)) * pitch + 20)
-      case .agentText(let text):
-        let wrapped = wrap(text, width: metrics.charactersPerLine)
-        return Shape(
-          mark: .text, lines: wrapped.lines,
-          estimatedHeight: Double(max(wrapped.count, 1)) * pitch
-            + Double(wrapped.paragraphs - 1) * metrics.paragraphSpacing)
-      case .tool:
-        return tool
-      case .reasoning, .notice:
-        return Shape(mark: .quiet, lines: [0.3], estimatedHeight: pitch)
-      }
-    }
-  }
+  private var shapes: [String: (signature: Signature, shape: ConversationOverviewLayout.Shape)] =
+    [:]
+  /// How many shapes were read: a test holds it to the blocks that changed.
+  public private(set) var readCount = 0
 
-  /// The lines a text makes at `width` characters: their lengths, from 0 to 1, the first
-  /// `maximumLines` of them; how many there are; how many paragraphs.
-  static func wrap(_ text: String, width: Int) -> (lines: [Double], count: Int, paragraphs: Int) {
-    let width = max(width, 1)
-    var lines: [Double] = []
-    var count = 0
-    var paragraphs = 1
-    var previousWasBlank = false
-    for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
-      let length = line.count
-      guard length > 0, !line.allSatisfy(\.isWhitespace) else {
-        previousWasBlank = true
-        continue
-      }
-      if previousWasBlank, count > 0 { paragraphs += 1 }
-      previousWasBlank = false
-      let full = length / width
-      let rest = length % width
-      let made = full + (rest > 0 ? 1 : 0)
-      count += made
-      guard lines.count < maximumLines else { continue }
-      lines.append(contentsOf: repeatElement(1, count: min(full, maximumLines - lines.count)))
-      if rest > 0, lines.count < maximumLines { lines.append(Double(rest) / Double(width)) }
-    }
-    return (lines, count, paragraphs)
+  public init() {}
+
+  public func shape(of block: ConversationBlock) -> ConversationOverviewLayout.Shape {
+    let signature = Signature(block)
+    if let known = shapes[block.id], known.signature == signature { return known.shape }
+    let shape = ConversationOverviewLayout.shape(of: block)
+    shapes[block.id] = (signature, shape)
+    readCount += 1
+    return shape
   }
 }

@@ -22,8 +22,13 @@ public final class ConversationOverviewTracker {
   @ObservationIgnored public private(set) var measured: [String: Double] = [:]
   /// The rows built now, in the messages' coordinates.
   @ObservationIgnored private(set) var frames: [String: CGRect] = [:]
-  /// Bumped when a height measured changes: the overview lays out again.
+  /// Bumped when heights measured changed, at most every `measureDelay`: the overview lays out
+  /// again then, rather than for each row a scroll builds.
   public private(set) var measureRevision = 0
+  @ObservationIgnored private var measurePending = false
+  static let measureDelay = Duration.milliseconds(150)
+  /// What each block looks like drawn small, read once for the conversation.
+  @ObservationIgnored public let shapes = ConversationOverviewShapes()
   public private(set) var top: Top?
   /// The height of what is read, between the toolbar and the foot.
   public private(set) var readableHeight = 0.0
@@ -35,9 +40,20 @@ public final class ConversationOverviewTracker {
     frames[id] = frame
     if abs((measured[id] ?? -1) - frame.height) > 0.5 {
       measured[id] = frame.height
-      measureRevision += 1
+      scheduleMeasureRevision()
     }
     updateTop()
+  }
+
+  private func scheduleMeasureRevision() {
+    guard !measurePending else { return }
+    measurePending = true
+    Task { [weak self] in
+      try? await Task.sleep(for: Self.measureDelay)
+      guard let self else { return }
+      self.measurePending = false
+      self.measureRevision += 1
+    }
   }
 
   func rowGone(_ id: String) {
@@ -72,6 +88,19 @@ public final class ConversationOverviewTracker {
   }
 }
 
+/// A layout, compared by identity: a new one is a new box. Thousands of blocks are never compared
+/// to tell whether the drawing changed.
+final class OverviewLayoutBox {
+  let layout: ConversationOverviewLayout
+  /// The blocks it was laid out from: the same ones measured anew only add heights up again.
+  let blocks: [ConversationBlock]
+
+  init(_ layout: ConversationOverviewLayout = ConversationOverviewLayout(), blocks: [ConversationBlock] = []) {
+    self.layout = layout
+    self.blocks = blocks
+  }
+}
+
 /// The whole conversation drawn small, beside it, in place of the scroll bar (#567): a click
 /// goes there, a drag scrolls, a bookmark is a line of the accent that brings its message up.
 struct ConversationOverview: View {
@@ -81,9 +110,12 @@ struct ConversationOverview: View {
   /// Hands the wheel's scrolls over to the messages.
   let pager: ConversationPager
 
-  @State private var layout = ConversationOverviewLayout()
+  @State private var box = OverviewLayoutBox()
   @State private var dragGrab: Double?
   @State private var hovered: Hover?
+  @State private var previewSize = CGSize(width: 260, height: 44)
+
+  private var layout: ConversationOverviewLayout { box.layout }
 
   private struct Hover: Equatable {
     var bookmark: String?
@@ -103,10 +135,10 @@ struct ConversationOverview: View {
     GeometryReader { geometry in
       let scale = layout.scale(forHeight: geometry.size.height)
       ZStack(alignment: .topLeading) {
-        OverviewBlocks(layout: layout, scale: scale, colors: .init(theme))
+        OverviewBlocks(box: box, scale: scale, colors: .init(theme))
           .equatable()
         OverviewViewport(
-          model: model, tracker: model.overview, layout: layout, scale: scale,
+          model: model, tracker: model.overview, box: box, scale: scale,
           colors: .init(theme),
           isActive: dragGrab != nil || (hovered != nil && hovered?.bookmark == nil))
       }
@@ -122,13 +154,13 @@ struct ConversationOverview: View {
           hovered = nil
         }
       }
-      // Left of the overview, level with the line.
+      // Left of the overview, level with the line, over the messages.
       .overlay(alignment: .topLeading) {
         if let hovered, let id = hovered.bookmark {
           BookmarkPreview(model: model, blockID: id, theme: theme)
             .fixedSize()
-            .alignmentGuide(.leading) { $0[.trailing] + 8 }
-            .alignmentGuide(.top) { $0[VerticalAlignment.center] - hovered.y }
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { previewSize = $0 }
+            .offset(x: -previewSize.width - 8, y: hovered.y - previewSize.height / 2)
             .allowsHitTesting(false)
         }
       }
@@ -142,9 +174,16 @@ struct ConversationOverview: View {
         blocks: model.blocks, measureRevision: model.overview.measureRevision, metrics: metrics),
       initial: true
     ) { _, key in
-      layout = ConversationOverviewLayout(
-        blocks: key.blocks, measured: model.overview.measured, metrics: key.metrics,
-        reusing: layout)
+      let measured = model.overview.measured
+      if key.metrics == layout.metrics, key.blocks == box.blocks {
+        box = OverviewLayoutBox(layout.remeasured(measured), blocks: key.blocks)
+      } else {
+        box = OverviewLayoutBox(
+          ConversationOverviewLayout(
+            blocks: key.blocks, measured: measured, metrics: key.metrics,
+            shapes: model.overview.shapes),
+          blocks: key.blocks)
+      }
     }
     .accessibilityHidden(true)
   }
@@ -152,17 +191,17 @@ struct ConversationOverview: View {
   /// The bookmark whose line is within a few points of that height in the overview.
   private func bookmark(atY y: Double, scale: Double) -> String? {
     var nearest: (id: String, distance: Double)?
-    for index in model.bookmarkedIndices where layout.items.indices.contains(index) {
-      let distance = abs(Self.bookmarkY(layout.items[index], scale: scale) - y)
+    for index in model.bookmarkedIndices where index < layout.count {
+      let distance = abs(Self.bookmarkY(top: layout.tops[index], scale: scale) - y)
       if distance <= 5, nearest.map({ distance < $0.distance }) ?? true {
-        nearest = (layout.items[index].id, distance)
+        nearest = (layout.ids[index], distance)
       }
     }
     return nearest?.id
   }
 
-  static func bookmarkY(_ item: ConversationOverviewLayout.Item, scale: Double) -> Double {
-    item.top * scale + 1.5
+  static func bookmarkY(top: Double, scale: Double) -> Double {
+    top * scale + 1.5
   }
 
   private func drag(scale: Double) -> some Gesture {
@@ -186,7 +225,7 @@ struct ConversationOverview: View {
         guard let grab = dragGrab, grab.isFinite, scale > 0,
           let position = layout.position(atY: (value.location.y - grab) / scale)
         else { return }
-        model.scrollOverview(to: layout.items[position.index].id, offset: position.offset)
+        model.scrollOverview(to: layout.ids[position.index], offset: position.offset)
       }
       .onEnded { _ in dragGrab = nil }
   }
@@ -216,59 +255,118 @@ struct OverviewColors: Equatable {
 }
 
 /// The blocks, drawn again only when the layout changes: never while scrolling.
+///
+/// Thousands of blocks share a few points: one shape of each kind is drawn per half point, and
+/// each kind is filled at once.
 private struct OverviewBlocks: View, Equatable {
-  let layout: ConversationOverviewLayout
+  let box: OverviewLayoutBox
   let scale: Double
   let colors: OverviewColors
 
-  var body: some View {
-    Canvas { context, size in
-      let left = ConversationOverview.tagMargin
-      let width = max(size.width - left - 6, 1)
-      for item in layout.items {
-        let top = item.top * scale
-        guard top <= size.height else { break }
-        let height = max(item.height * scale, 1)
-        switch item.shape.mark {
-        case .prompt:
-          let longest = item.shape.lines.max() ?? 0.4
-          let bubbleWidth = max(width * longest, width * 0.2)
-          let rect = CGRect(x: left + width - bubbleWidth, y: top, width: bubbleWidth, height: height)
-          context.fill(Path(roundedRect: rect, cornerRadius: 1.5), with: .color(colors.bubble))
-          drawLines(
-            item.shape.lines, in: rect.insetBy(dx: 2, dy: min(2, height / 4)), context: context)
-        case .text:
-          drawLines(
-            item.shape.lines, in: CGRect(x: left, y: top, width: width, height: height),
-            context: context)
-        case .tool, .failure:
-          let rect = CGRect(x: left + 0.5, y: top + 0.5, width: width - 1, height: max(height - 1, 1))
-          let path = Path(roundedRect: rect, cornerRadius: 1.5)
-          context.fill(path, with: .color(colors.tool))
-          context.stroke(
-            path, with: .color(item.shape.mark == .failure ? colors.failure : colors.toolBorder),
-            lineWidth: 1)
-        case .quiet:
-          context.fill(
-            Path(CGRect(x: left, y: top, width: width * 0.3, height: min(height, 1.5))),
-            with: .color(colors.text.opacity(0.5)))
-        }
-      }
+  nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.box === rhs.box && lhs.scale == rhs.scale && lhs.colors == rhs.colors
+  }
+
+  private static func kind(_ mark: ConversationOverviewLayout.Mark) -> Int {
+    switch mark {
+    case .prompt: 0
+    case .text: 1
+    case .tool: 2
+    case .failure: 3
+    case .quiet: 4
     }
   }
 
-  /// A line every point and a half at most: a long block drawn small reads as a mass anyway.
-  private func drawLines(_ lines: [Double], in rect: CGRect, context: GraphicsContext) {
-    guard !lines.isEmpty, rect.height > 0 else { return }
-    let pitch = rect.height / Double(lines.count)
+  var body: some View {
+    Canvas { context, size in
+      let layout = box.layout
+      guard let metrics = layout.metrics else { return }
+      let left = ConversationOverview.tagMargin
+      let width = max(size.width - left - 6, 1)
+      var text = Path()
+      var bubbles = Path()
+      var tools = Path()
+      var failures = Path()
+      var quiet = Path()
+      var lastRow = [Int](repeating: .min, count: 5)
+      for index in 0..<layout.count {
+        let shape = layout.shapes[index]
+        let top = layout.tops[index] * scale
+        guard top <= size.height else { break }
+        let height = max(layout.heights[index] * scale, 1)
+        let kind = Self.kind(shape.mark)
+        let row = Int(top * 2)
+        // Under a point, a block of the same kind already drawn there stands for it.
+        guard height >= 2 || row != lastRow[kind] else { continue }
+        lastRow[kind] = row
+        switch shape.mark {
+        case .prompt:
+          let longest = shape.lineLengths.max() ?? 0
+          let fraction = min(Double(longest) / Double(metrics.charactersPerBubbleLine), 1)
+          let bubbleWidth = max(width * 0.8 * fraction, width * 0.2)
+          let rect = CGRect(
+            x: left + width - bubbleWidth, y: top, width: bubbleWidth, height: height)
+          bubbles.addRoundedRect(in: rect, cornerSize: CGSize(width: 1.5, height: 1.5))
+          if height >= 4 {
+            addLines(
+              shape, width: metrics.charactersPerBubbleLine,
+              in: rect.insetBy(dx: 2, dy: min(2, height / 4)), to: &text)
+          }
+        case .text:
+          addLines(
+            shape, width: metrics.charactersPerLine,
+            in: CGRect(x: left, y: top, width: width, height: height), to: &text)
+        case .tool, .failure:
+          let rect = CGRect(x: left, y: top, width: width, height: height)
+          if height >= 6 {
+            let path = Path(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 1.5)
+            context.fill(path, with: .color(colors.tool))
+            context.stroke(
+              path, with: .color(shape.mark == .failure ? colors.failure : colors.toolBorder),
+              lineWidth: 1)
+          } else if shape.mark == .failure {
+            failures.addRect(rect)
+          } else {
+            tools.addRect(rect)
+          }
+        case .quiet:
+          quiet.addRect(CGRect(x: left, y: top, width: width * 0.3, height: min(height, 1.5)))
+        }
+      }
+      context.fill(bubbles, with: .color(colors.bubble))
+      context.fill(tools, with: .color(colors.toolBorder))
+      context.fill(text, with: .color(colors.text))
+      context.fill(quiet, with: .color(colors.text.opacity(0.5)))
+      context.fill(failures, with: .color(colors.failure))
+    }
+  }
+
+  /// The lines of a text at `width` characters, one every point and a half at most: a long block
+  /// drawn small reads as a mass anyway.
+  private func addLines(
+    _ shape: ConversationOverviewLayout.Shape, width: Int, in rect: CGRect, to path: inout Path
+  ) {
+    let total = shape.lineCount(width: width)
+    guard total > 0, rect.height > 0 else { return }
+    let pitch = rect.height / Double(total)
     let stride = max(Int((1.5 / pitch).rounded(.up)), 1)
     let thickness = max(min(pitch * Double(stride) * 0.55, 2.5), 0.8)
-    var path = Path()
-    for index in Swift.stride(from: 0, to: lines.count, by: stride) {
-      let y = rect.minY + Double(index) * pitch
-      path.addRect(CGRect(x: rect.minX, y: y, width: rect.width * lines[index], height: thickness))
+    var visual = 0
+    for length in shape.lineLengths {
+      let count = max((length + width - 1) / width, 1)
+      // The first of its lines drawn, then every `stride` lines.
+      var line = (stride - visual % stride) % stride
+      while line < count {
+        let isLast = line == count - 1
+        let fraction = isLast ? Double(length - (count - 1) * width) / Double(width) : 1
+        path.addRect(
+          CGRect(
+            x: rect.minX, y: rect.minY + Double(visual + line) * pitch,
+            width: rect.width * max(min(fraction, 1), 0.05), height: thickness))
+        line += stride
+      }
+      visual += count
     }
-    context.fill(path, with: .color(colors.text))
   }
 }
 
@@ -276,7 +374,7 @@ private struct OverviewBlocks: View, Equatable {
 private struct OverviewViewport: View {
   let model: ConversationModel
   let tracker: ConversationOverviewTracker
-  let layout: ConversationOverviewLayout
+  let box: OverviewLayoutBox
   let scale: Double
   let colors: OverviewColors
   let isActive: Bool
@@ -290,6 +388,7 @@ private struct OverviewViewport: View {
   }
 
   var body: some View {
+    let layout = box.layout
     let thumb = Self.thumb(tracker: tracker, layout: layout, scale: scale)
     let marked = model.bookmarkedIndices
     Canvas { context, size in
@@ -299,8 +398,8 @@ private struct OverviewViewport: View {
           with: .color(isActive ? colors.viewportActive : colors.viewport))
       }
       let left = ConversationOverview.tagMargin
-      for index in marked where layout.items.indices.contains(index) {
-        let y = ConversationOverview.bookmarkY(layout.items[index], scale: scale)
+      for index in marked where index < layout.count {
+        let y = ConversationOverview.bookmarkY(top: layout.tops[index], scale: scale)
         context.fill(
           Path(CGRect(x: left - 2, y: y - 0.75, width: size.width - left - 2, height: 1.5)),
           with: .color(colors.accent.opacity(0.6)))
