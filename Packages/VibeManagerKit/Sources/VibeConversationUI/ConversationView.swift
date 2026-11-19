@@ -200,7 +200,8 @@ public struct ConversationView: View {
               } else {
                 UserPromptView(
                   text: echo.text, attachments: echo.messageAttachments, date: echo.sentAt,
-                  isEcho: true)
+                  isEcho: true, agentName: model.agentName,
+                  showQuote: { model.showSource(of: $0, replyID: nil) })
                 echoStatus(echo)
               }
             }
@@ -282,7 +283,9 @@ public struct ConversationView: View {
         }
       }
       .overlay(alignment: .bottom) {
-        if model.scroll.unseenCount > 0 {
+        if model.returnBlockID != nil {
+          ReturnToReplyButton(model: model).padding(.bottom, 10)
+        } else if model.scroll.unseenCount > 0 {
           Button {
             model.jumpToBottom()
           } label: {
@@ -482,7 +485,8 @@ public struct ConversationView: View {
     guard case .entry(let entry) = block, case .userPrompt(let text, _) = entry.content else {
       return block.id
     }
-    return String(text.prefix(80))
+    // A reply is named by its own words, not by the passage it quotes (#565).
+    return String(ReplyQuote.message(of: text).prefix(80))
   }
 }
 
@@ -524,12 +528,22 @@ struct BlockView: View {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let text, let attachments):
-        UserPromptView(text: text, attachments: attachments, date: entry.date)
-          .environment(\.selectionBlock, selectionBlock)
+        UserPromptView(
+          text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
+          showQuote: isNested ? nil : { model.showSource(of: $0, replyID: entry.id) },
+          reply: replyAction(entry, author: .user),
+          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply
+        )
+        .environment(\.selectionBlock, selectionBlock)
+        .environment(\.replyToPassage, passageReply(entry, author: .user))
+        .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
       case .agentText(let text):
         AgentTextView(
-          text: text, id: entry.id, readAloud: model.readAloud, date: entry.date)
+          text: text, id: entry.id, readAloud: model.readAloud, date: entry.date,
+          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply)
           .environment(\.selectionBlock, selectionBlock)
+          .environment(\.replyToPassage, passageReply(entry, author: .agent))
+          .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))
           // Only the agent's own answers: a command in a sub-agent's mission or a plan was not
           // written for the user to run (#548).
           .environment(\.shellCommandRunner, model)
@@ -546,6 +560,18 @@ struct BlockView: View {
         NoticeRow(notice: notice)
       }
     }
+  }
+
+  /// Replies to a passage of `entry` (#565): none inside a sub-agent's activity.
+  private func replyAction(_ entry: ConversationEntry, author: ReplyQuote.Author)
+    -> ((String) -> Void)?
+  {
+    guard !isNested else { return nil }
+    return { model.reply(to: $0, author: author, date: entry.date, blockID: entry.id) }
+  }
+
+  private func passageReply(_ entry: ConversationEntry, author: ReplyQuote.Author) -> PassageReply? {
+    replyAction(entry, author: author).map { PassageReply(id: entry.id, action: $0) }
   }
 }
 

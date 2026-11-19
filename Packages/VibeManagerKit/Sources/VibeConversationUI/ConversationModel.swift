@@ -357,7 +357,7 @@ public final class ConversationModel {
   public var subagentBlocks: [ConversationBlock] { rotor.subagents.map { blocks[$0] } }
   /// The messages that open a day, and which day (#458).
   public private(set) var days = ConversationDays()
-  public private(set) var scroll = ConversationScrollState()
+  public internal(set) var scroll = ConversationScrollState()
   /// Bumped when the view should scroll to the end: a counter, so that twice in a row still moves.
   public private(set) var scrollToBottomRequest = 0
   /// Where the content's top was at the last scroll reading, to tell a scroll up from growth.
@@ -443,6 +443,16 @@ public final class ConversationModel {
     didSet { if draft != oldValue { updateCommandSuggestions() } }
   }
   public private(set) var attachments: [URL] = []
+  /// The passage the next message replies to, shown above the field (#565).
+  public internal(set) var replyTarget: ReplyTarget?
+  /// Which message each reply quotes, and the replies each has (#565). Written only when it
+  /// changes: every row reads it.
+  public internal(set) var replyLinks = ReplyLinks()
+  /// The block brought into view by a reply or its passage, lit a moment.
+  public internal(set) var highlightedBlockID: String?
+  /// The reply the user left to read its passage: « Back to your reply » brings them there.
+  public internal(set) var returnBlockID: String?
+  @ObservationIgnored var highlightTask: Task<Void, Never>?
   public private(set) var echoes: [PendingEcho] = []
   /// A prompt pasted whose Return is not written yet: another pasted now would join it.
   public private(set) var isSubmitting = false
@@ -838,6 +848,9 @@ public final class ConversationModel {
     var days = self.days
     days.update(blocks, from: restart)
     if days != self.days { self.days = days }
+    var replyLinks = self.replyLinks
+    replyLinks.update(blocks, from: restart)
+    if replyLinks != self.replyLinks { self.replyLinks = replyLinks }
     layoutCount += 1
     lastLayoutWork = LayoutWork(entries: changed.count, blocks: rebuilt.count - restart)
     if wasEmpty || scroll.blocksAppended(appended) { scrollToBottomRequest += 1 }
@@ -981,8 +994,8 @@ public final class ConversationModel {
   @ObservationIgnored public var unfoldSubagents: ((Set<String>) -> Void)?
   @ObservationIgnored private var unfoldedSubagents: Set<String> = []
   /// The block to bring into view, and a counter: the same one twice in a row still moves.
-  public private(set) var revealedBlockID: String?
-  public private(set) var revealRequest = 0
+  public internal(set) var revealedBlockID: String?
+  public internal(set) var revealRequest = 0
 
   /// - Parameter lingers: whether sub-agents that left the running stay a moment, dimmed.
   private func updateTray(lingers: Bool = true) {
@@ -1642,9 +1655,13 @@ public final class ConversationModel {
     // the shell's or the CLI's.
     let preface =
       kind == .message && !draft.hasPrefix("/") ? takePreface?() : nil
+    // The passage replied to goes in front of the message, never of a command (#565).
+    let reply = kind == .message && !draft.hasPrefix("/") ? replyTarget : nil
+    let message =
+      reply.map { ReplyQuote.compose($0.quote, message: typed.messageText(shell: shell)) } ?? draft
     let submission =
-      preface.map { PromptSubmission(text: $0 + "\n\n" + draft, attachments: attachments) }
-      ?? typed
+      preface.map { PromptSubmission(text: $0 + "\n\n" + message, attachments: attachments) }
+      ?? PromptSubmission(text: message, attachments: attachments)
     let keystrokes = PromptEncoding.keystrokes(
       for: submission, format: promptFormat, whileWorking: isAgentWorking)
     // Prompts still on their way reach the transcript first: this one is confirmed only once
@@ -1684,6 +1701,8 @@ public final class ConversationModel {
     let submitDelay = promptFormat.delayBeforeSubmit(attachmentCount: attachments.count)
     draft = ""
     attachments = []
+    if reply != nil { replyTarget = nil }
+    returnBlockID = nil
     historyNavigation = PromptHistoryNavigation()
     scroll.jumpedToBottom()
     scrollToBottomRequest += 1

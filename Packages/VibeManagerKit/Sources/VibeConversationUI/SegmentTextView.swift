@@ -39,6 +39,7 @@ struct SegmentView: NSViewRepresentable {
   @Environment(\.conversationSelection) private var selection
   @Environment(\.selectionBlock) private var block
   @Environment(\.conversationLinks) private var links
+  @Environment(\.replyToPassage) private var replyToPassage
 
   struct Input: Equatable {
     var content: Content
@@ -84,6 +85,11 @@ struct SegmentView: NSViewRepresentable {
     view.markdown = markdown
     view.selectionBlock = block ?? ""
     if view.selection !== selection { view.selection = selection }
+    view.replyAction = replyToPassage?.action
+    if case .prose = content { view.offersParagraphReply = true } else {
+      view.offersParagraphReply = false
+    }
+    view.replyTint = theme.accent.nsColor
     let size = appearance.textSize.pointSize
     let input = Input(
       content: content, theme: theme, size: size,
@@ -157,6 +163,22 @@ final class SegmentTextView: NSTextView {
   /// The block of the conversation it draws part of, for the selection; empty outside one.
   var selectionBlock = ""
 
+  /// Replies to a passage of its message (#565): `nil` where it cannot be replied to.
+  var replyAction: ((String) -> Void)? {
+    didSet { if replyAction == nil { hideReplyButton() } }
+  }
+  /// Whether « Reply » shows at the end of the paragraph under the pointer: in the agent's prose,
+  /// not in a code block, a table or a bubble that hugs its words.
+  var offersParagraphReply = false
+  /// The button over the text, at the end of a paragraph or of the selection.
+  var replyButton: ReplyAccessoryButton?
+  /// The paragraph it follows, or `nil` when it follows the selection, or is hidden.
+  var repliedParagraph: NSRange?
+  /// Where the selection's button stands, while it shows: the paragraphs' then wait.
+  var selectionReplyOffset: Int?
+  var replyTrackingArea: NSTrackingArea?
+  var replyTint = NSColor.controlAccentColor
+
   weak var selection: ConversationSelection? {
     didSet {
       guard oldValue !== selection else { return }
@@ -195,6 +217,7 @@ final class SegmentTextView: NSTextView {
   func show(_ text: NSAttributedString) {
     showing = true
     defer { showing = false }
+    hideReplyButton()
     textStorage?.setAttributedString(text)
     measured.removeAll()
     selection?.setNeedsRefresh()
@@ -275,9 +298,11 @@ final class SegmentTextView: NSTextView {
       // A word, a paragraph: the text view's own, in this segment only.
       super.mouseDown(with: event)
       selection.selectedWithin(self)
+      selection.offerReply()
       return
     }
     selection.track(event, in: self)
+    selection.offerReply()
   }
 
   /// The link under a point of the window, if the point is on its text, for a click to open it.
@@ -303,6 +328,8 @@ final class SegmentTextView: NSTextView {
     _ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting: Bool
   ) {
     super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelecting)
+    // The selection gone, so is its « Reply » (#565).
+    if selectionReplyOffset != nil, selectedRange().length == 0 { hideReplyButton() }
     // Moved by the keyboard — an arrow, ⇧-arrow —, the selection is this segment's alone now.
     if let selection, !selection.applying, !showing, !stillSelecting,
       window?.firstResponder === self
