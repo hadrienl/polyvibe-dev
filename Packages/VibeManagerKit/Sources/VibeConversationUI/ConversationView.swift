@@ -540,7 +540,8 @@ struct BlockView: View {
       case .agentText(let text):
         AgentTextView(
           text: text, id: entry.id, readAloud: model.readAloud, date: entry.date,
-          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply)
+          replies: model.replyLinks.replies[entry.id] ?? [], showReply: model.showReply,
+          reply: replyAction(entry, author: .agent))
           .environment(\.selectionBlock, selectionBlock)
           .environment(\.replyToPassage, passageReply(entry, author: .agent))
           .modifier(ReplyHighlight(isLit: model.highlightedBlockID == entry.id))

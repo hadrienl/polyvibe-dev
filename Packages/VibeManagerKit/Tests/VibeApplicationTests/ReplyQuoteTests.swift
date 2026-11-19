@@ -79,5 +79,9 @@ struct ReplyQuoteTests {
     let cut = ReplyQuote(excerpt: "C'est fait. Note…", author: .agent, time: nil)
     #expect(cut.isQuoted(in: "C'est fait.\n\nNote : les remises."))
     #expect(!ReplyQuote(excerpt: "…", author: .agent, time: nil).isQuoted(in: "anything"))
+    // A link is read as it is shown: its text, not its address.
+    let linked = ReplyQuote(
+      excerpt: "Voir Foo.swift qui calcule le total.", author: .agent, time: nil)
+    #expect(linked.isQuoted(in: "Voir [Foo.swift](Sources/Foo.swift:12) qui calcule le total."))
   }
 }

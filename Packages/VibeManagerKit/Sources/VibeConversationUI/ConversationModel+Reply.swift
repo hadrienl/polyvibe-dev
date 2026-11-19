@@ -33,12 +33,25 @@ extension ConversationModel {
     return true
   }
 
+  /// The passage put aside while a message that is not the composer's is sent — the phone's — and
+  /// given back after.
+  public func setReplyAside() -> ReplyTarget? {
+    defer { replyTarget = nil }
+    return replyTarget
+  }
+
+  public func restoreReply(_ target: ReplyTarget?) {
+    if let target, replyTarget == nil { replyTarget = target }
+  }
+
   /// Brings the passage a reply quotes into view, lit, and offers the way back to the reply.
   /// `replyID` is `nil` for a reply still on its way: the way back is then the conversation's end.
   public func showSource(of quote: ReplyQuote, replyID: String?) {
+    // Only among the messages before the reply: a later one may say the same.
+    let end = replyID.flatMap { id in blocks.firstIndex { $0.id == id } } ?? blocks.endIndex
     let source =
       replyID.flatMap { replyLinks.sources[$0] }
-      ?? ReplyLinks.source(of: quote, in: blocks[...])
+      ?? ReplyLinks.source(of: quote, in: blocks[..<end])
     guard let source else { return }
     returnBlockID = replyID ?? Self.conversationEndID
     reveal(source)

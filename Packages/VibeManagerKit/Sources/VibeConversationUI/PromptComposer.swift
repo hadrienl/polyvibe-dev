@@ -23,7 +23,8 @@ struct PromptComposer: View {
     let state = model.composerState
     let isShell = state == .ready && model.composerMode == .shell
     VStack(alignment: .leading, spacing: 10) {
-      if let target = model.replyTarget {
+      // An answer to the agent's question takes no passage: it waits for the next message.
+      if let target = model.replyTarget, [.ready, .chattingAboutQuestion].contains(state) {
         ReplyQuoteBar(quote: target.quote, agentName: model.agentName) { model.cancelReply() }
       }
       if !model.attachments.isEmpty {

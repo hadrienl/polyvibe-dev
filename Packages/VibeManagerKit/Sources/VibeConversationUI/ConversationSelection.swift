@@ -310,7 +310,7 @@ final class ConversationSelection {
 
   /// The blocks numbered in the conversation's order; without a conversation, in the order on
   /// screen.
-  private func blockOrder(_ shown: [Shown]) -> [String: Int] {
+  func blockOrder(_ shown: [Shown]) -> [String: Int] {
     var order: [String: Int] = [:]
     if let source {
       for (index, block) in source.blocks().enumerated() { order[block] = index }
@@ -319,7 +319,7 @@ final class ConversationSelection {
     return order
   }
 
-  private func key(_ place: SelectionPlace, _ order: [String: Int]) -> SelectionKey {
+  func key(_ place: SelectionPlace, _ order: [String: Int]) -> SelectionKey {
     SelectionKey(block: order[place.block] ?? Int.max, segment: place.segment, offset: place.offset)
   }
 

@@ -421,6 +421,8 @@ final class CompanionRemoteServer {
     // What the user left in the composer on the Mac is put aside, never sent with the phone's.
     let keptFiles = model.attachments
     keptFiles.forEach(model.removeAttachment)
+    // So is the passage it would have replied to (#565).
+    let keptReply = model.setReplyAside()
     let written = saved(files)
     if !written.isEmpty { model.attach(written, focusing: false) }
     model.draft = text
@@ -428,6 +430,7 @@ final class CompanionRemoteServer {
     model.attachments.filter(written.contains).forEach(model.removeAttachment)
     if !keptFiles.isEmpty { model.attach(keptFiles, focusing: false) }
     if model.draft == text || sent { model.draft = kept }
+    model.restoreReply(keptReply)
     if !sent { send(peer, .failure(.messageNotSent)) }
   }
 

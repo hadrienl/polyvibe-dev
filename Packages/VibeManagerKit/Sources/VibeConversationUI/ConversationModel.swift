@@ -1215,6 +1215,8 @@ public final class ConversationModel {
       distanceToBottom: contentFrame.maxY - viewportHeight, contentMovedDown: movedDown)
     // Read on every frame of a scroll: only a change should reach the views that observe it.
     if next != scroll { scroll = next }
+    // Back at the end, the way back to a reply is no longer needed (#565).
+    if returnBlockID != nil, next.isFollowing { returnBlockID = nil }
     lastGeometry = (contentFrame, viewportHeight)
     repositionIfPastTheEnd(contentFrame: contentFrame, viewportHeight: viewportHeight)
   }

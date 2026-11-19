@@ -191,22 +191,22 @@ extension ConversationSelection {
     let shown = shown
     for item in shown { item.view.hideReplyButton() }
     guard hasSelection, let anchor, let focus else { return }
-    let order = Dictionary(
-      shown.enumerated().map { ($0.element.block, $0.offset) },
-      uniquingKeysWith: { first, _ in first })
-    func rank(_ place: SelectionPlace) -> (Int, Int, Int) {
-      (order[place.block] ?? Int.max, place.segment, place.offset)
+    // In the conversation's order, the messages scrolled away included.
+    let order = blockOrder(shown)
+    let (first, last) = key(anchor, order) <= key(focus, order) ? (anchor, focus) : (focus, anchor)
+    func view(at place: SelectionPlace) -> SegmentTextView? {
+      shown.first { $0.block == place.block && $0.segment == place.segment }?.view
     }
-    let (first, last) = rank(anchor) < rank(focus) ? (anchor, focus) : (focus, anchor)
-    let starting = shown.first { $0.block == first.block && $0.view.replyAction != nil }
-    guard
-      let ending = shown.first(where: { $0.block == last.block && $0.segment == last.segment }),
-      let reply = starting?.view.replyAction ?? ending.view.replyAction
-    else { return }
+    // At the selection's end, or at its start when the end has scrolled away.
+    let (ending, offset): (SegmentTextView?, Int) =
+      view(at: last).map { ($0, last.offset) } ?? (view(at: first), first.offset)
+    // The message it starts in is the one replied to.
+    let starting = shown.first { $0.block == first.block && $0.view.replyAction != nil }?.view
+    guard let ending, let reply = starting?.replyAction ?? ending.replyAction else { return }
     let passage = SelectionText.plain(selectedPieces)
       .trimmingCharacters(in: .whitespacesAndNewlines)
     guard !passage.isEmpty else { return }
-    ending.view.offerSelectionReply(endingAt: last.offset, passage: passage, reply: reply)
+    ending.offerSelectionReply(endingAt: offset, passage: passage, reply: reply)
   }
 }
 

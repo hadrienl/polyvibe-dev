@@ -133,7 +133,13 @@ public struct ReplyQuote: Hashable, Sendable {
     let passage = Self.letters(of: excerpt.hasSuffix("…") ? String(excerpt.dropLast()) : excerpt)
     guard !passage.isEmpty else { return false }
     // Its start is enough, and holds less of what the Markdown could break — a link's address.
-    return Self.letters(of: text).contains(String(passage.prefix(160)))
+    return Self.letters(of: Self.withoutLinkTargets(text)).contains(String(passage.prefix(160)))
+  }
+
+  /// `[Foo.swift](Sources/Foo.swift:12)` as it is shown: `Foo.swift`.
+  static func withoutLinkTargets(_ text: String) -> String {
+    text.replacingOccurrences(
+      of: #"\]\([^)\s]*(\s+"[^"]*")?\)"#, with: "]", options: .regularExpression)
   }
 
   static func letters(of text: String) -> String {

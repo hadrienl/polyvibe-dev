@@ -99,6 +99,31 @@ struct ReplyTests {
     #expect(links.replies == ["a1": ["r1"]])
   }
 
+  @Test("Behind what the application put in front of it, a reply still knows its message")
+  func behindPreface() {
+    let quote = ReplyQuote(excerpt: "the plan", author: .agent, time: nil)
+    let blocks: [ConversationBlock] = [
+      .entry(answer("a", "the plan")),
+      .entry(
+        prompt(
+          "r",
+          CoordinatorInstructions.turnedOn + "\n\n" + ReplyQuote.compose(quote, message: "Go."))),
+    ]
+    var links = ReplyLinks()
+    links.update(blocks, from: 0)
+    #expect(links.sources == ["r": "a"])
+  }
+
+  @Test("A message sent from the phone takes no passage, which stays for the Mac's next one")
+  func setAside() {
+    let (model, _) = model()
+    model.reply(to: "passage", author: .agent, date: nil, blockID: "a")
+    let kept = model.setReplyAside()
+    #expect(model.replyTarget == nil)
+    model.restoreReply(kept)
+    #expect(model.replyTarget?.quote.excerpt == "passage")
+  }
+
   @Test("A reply to one's own message finds it, without the passage it quoted itself")
   func ownMessage() {
     let first = ReplyQuote(excerpt: "the plan", author: .agent, time: nil)
@@ -140,6 +165,12 @@ struct ReplyTests {
     let bottom = model.scrollToBottomRequest
     model.returnToReply()
     #expect(model.scrollToBottomRequest == bottom + 1)
+    // Scrolled back to the end by hand, the way back goes.
+    model.showSource(of: quote, replyID: "r")
+    #expect(model.returnBlockID == "r")
+    model.scrollGeometryChanged(
+      contentFrame: CGRect(x: 0, y: -500, width: 400, height: 1_000), viewportHeight: 500)
+    #expect(model.returnBlockID == nil)
   }
 }
 

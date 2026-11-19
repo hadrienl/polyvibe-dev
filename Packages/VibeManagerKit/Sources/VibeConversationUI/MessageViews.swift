@@ -31,7 +31,8 @@ struct UserPromptView: View {
     let written = AttachedPaths.displayText(
       text, joinedCount: attachments.filter(\.isWrittenInText).count)
     // A reply shows the passage it quotes over the user's own words (#565).
-    let replied = ReplyQuote.split(written)
+    // Behind what the application put in front of it (#352), if anything.
+    let replied = ReplyQuote.split(CoordinatorInstructions.userText(of: written) ?? written)
     let shown = replied?.message ?? written
     Group {
       if appearance.userMessageStyle == .bubbles {
@@ -204,6 +205,8 @@ struct AgentTextView: View {
   /// The replies to it (#565), and what brings one into view.
   var replies: [String] = []
   var showReply: ((String) -> Void)?
+  /// Replies to the whole answer, from its menu: the keyboard's and VoiceOver's way (#565).
+  var reply: ((String) -> Void)?
   @Environment(\.openSettings) private var openSettings
 
   var body: some View {
@@ -214,6 +217,13 @@ struct AgentTextView: View {
             copy(text)
           } label: {
             Text("Copy Message", bundle: .module)
+          }
+          if let reply {
+            Button {
+              reply(text)
+            } label: {
+              Text("Reply", bundle: .module)
+            }
           }
           if let readAloud {
             let isReading = readAloud.isReading(id ?? text)
