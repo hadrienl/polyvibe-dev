@@ -58,9 +58,32 @@ struct RelayedMessageTests {
     #expect(message.body == "Rebase.")
   }
 
+  @Test("A coordinator's message without words is still the coordinator's")
+  func emptyCoordinatorMessage() throws {
+    let message = try #require(
+      RelayedMessage(CoordinationPolicy.fromCoordinator("  ", coordinatorName: "Plan")))
+    #expect(message.sender == .coordinator("Plan"))
+    #expect(message.body.isEmpty)
+  }
+
+  @Test("Quotes in a wake-up's reason name no child, and a question's indent is not code")
+  func freeText() throws {
+    let news = CoordinationInbox.message(for: [
+      .wake("check “deploy” then ping", at: .now),
+      CoordinationEvent(
+        childID: childID, childName: "V2", kind: .awaitingUser("Choose one:\n\n    A) keep"),
+        date: .now),
+    ])
+    let message = try #require(RelayedMessage(news))
+    #expect(message.children == ["V2"])
+    #expect(message.body.hasSuffix("\n\n" + #"A\) keep\. It is the user\'s to answer\."#))
+  }
+
   @Test func theUsersWordsAreNotRelayed() {
     #expect(RelayedMessage("Fix the tests") == nil)
     #expect(RelayedMessage("[Coordinator] not a mark") == nil)
+    // The mark pasted by the user, without the news it titles.
+    #expect(RelayedMessage("[Vibe Manager] why did you say that?") == nil)
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\nPlan milestone V2") == nil)
     // Files alone, sent once coordination was turned on.
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\n") == nil)

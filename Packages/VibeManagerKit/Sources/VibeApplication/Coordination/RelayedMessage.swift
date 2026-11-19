@@ -31,7 +31,8 @@ public struct RelayedMessage: Equatable, Sendable {
     else { return nil }
     if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) {
       let rest = trimmed.dropFirst(CoordinationPolicy.coordinatorMark.count)
-      guard let close = rest.range(of: CoordinationPolicy.coordinatorMarkEnd) else { return nil }
+      // Without its space: a message with no words was trimmed of it.
+      guard let close = rest.range(of: CoordinationPolicy.coordinatorMarkClose) else { return nil }
       sender = .coordinator(String(rest[..<close.lowerBound]))
       children = []
       body = rest[close.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
@@ -40,12 +41,12 @@ public struct RelayedMessage: Equatable, Sendable {
     guard trimmed.hasPrefix(CoordinatorInstructions.applicationMark) else { return nil }
     let rest = trimmed.dropFirst(CoordinatorInstructions.applicationMark.count)
       .trimmingCharacters(in: .whitespaces)
-    sender = .application
     var lines = rest.split(separator: "\n", omittingEmptySubsequences: false)
-    // « 2 events: », over the news to a coordinator: the list says as much.
-    if let first = lines.first, first.wholeMatch(of: /\d+ events?:/) != nil {
-      lines.removeFirst()
-    }
+    // « 2 events: », the title of Vibe Manager's only message of its own: the list says as much.
+    // Without it, words the user pasted after the mark.
+    guard let first = lines.first, first.wholeMatch(of: /\d+ events?:/) != nil else { return nil }
+    lines.removeFirst()
+    sender = .application
     body = lines.map { Self.shown(String($0)) }.joined(separator: "\n")
     var named: [String] = []
     for match in rest.matches(of: Self.child()) where !named.contains(String(match.1)) {
@@ -62,17 +63,20 @@ public struct RelayedMessage: Equatable, Sendable {
 
   /// « “name” (identifier) », as Vibe Manager names a child to its coordinator.
   private static func child() -> Regex<(Substring, Substring)> {
-    /“(.+?)” \([0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\)/
+    /“([^“”\n]+?)” \([0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\)/
   }
 
-  /// A line of Vibe Manager's in Markdown that shows it as written: its list mark kept, each
-  /// child's name in bold.
+  /// A line of Vibe Manager's in Markdown that shows it as written: an event's list mark kept,
+  /// each child's name in bold. A line that goes on a child's question loses its indent, which
+  /// Markdown would take for code.
   static func shown(_ line: String) -> String {
-    var rest = Substring(line)
     var result = ""
+    var rest = Substring(line)
     if rest.hasPrefix("- ") {
       result = "- "
       rest = rest.dropFirst(2)
+    } else {
+      rest = rest.drop(while: \.isWhitespace)
     }
     for match in rest.matches(of: child()) {
       result += escaped(rest[rest.startIndex..<match.range.lowerBound])

@@ -496,7 +496,9 @@ private struct RelayedRow: View {
         HStack(alignment: .top, spacing: 10) {
           Capsule().fill(palette.secondaryText.opacity(0.3)).frame(width: 2)
           VStack(alignment: .leading, spacing: 10) {
-            let segments = RemoteMarkdown.segments(Self.bulleted(relayed.body))
+            // Vibe Manager's news is escaped prose; a coordinator's Markdown is kept as written.
+            let body = relayed.coordinator == nil ? Self.bulleted(relayed.body) : relayed.body
+            let segments = RemoteMarkdown.segments(body)
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
               switch segment {
               case .prose(let prose):

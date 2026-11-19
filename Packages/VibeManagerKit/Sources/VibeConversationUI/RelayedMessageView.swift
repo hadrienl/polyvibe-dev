@@ -50,7 +50,10 @@ struct RelayedMessageView: View {
       if isExpanded {
         HStack(alignment: .top, spacing: 10) {
           Rectangle().fill(theme.border.color).frame(width: 2)
-          MarkdownView(text: message.body)
+          // Copied as the agent read it, not as the escapes that show it.
+          MarkdownBlocksView(blocks: MarkdownCache.shared.blocks(for: message.body), markdown: text)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .modifier(MessageSelectionScope())
             .opacity(0.85)
         }
         .padding(.leading, 18)
