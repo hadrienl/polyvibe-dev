@@ -1327,7 +1327,9 @@ public final class ConversationModel {
         // alike.
         let shown = ReplyLinks.shown(prompt, attachments: attachments).message
         text = CoordinatorInstructions.userText(of: shown) ?? shown
-      case .agentText(let answer), .reasoning(let answer?): text = answer
+      case .agentText(let answer), .reasoning(let answer?):
+        // As it reads, without its Markdown: only its start is shown, only its start is read.
+        text = plainText(ofMarkdown: String(answer.prefix(2000)))
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:

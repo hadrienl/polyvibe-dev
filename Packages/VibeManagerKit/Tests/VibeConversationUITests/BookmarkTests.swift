@@ -436,4 +436,15 @@ struct BookmarkTests {
     #expect(style.headingFont == theme.interfaceFont(size: 18 * 0.86, weight: .semibold))
     #expect(style.eventFont == theme.interfaceFont(size: 18))
   }
+
+  @Test("An answer's bookmark reads as the answer does, without its Markdown")
+  func answerWithoutMarkdown() {
+    let answer = ConversationBlock.entry(
+      ConversationEntry(
+        id: "a", content: .agentText("## Plan\n\n- **Rebase** on `main`\n\nThen ship.")))
+    #expect(ConversationModel.bookmarkLabel(of: answer) == "Plan Rebase on main Then ship.")
+    let reasoning = ConversationBlock.entry(
+      ConversationEntry(id: "r", content: .reasoning("*Check* the tests.")))
+    #expect(ConversationModel.bookmarkExcerpt(of: reasoning) == "Check the tests.")
+  }
 }
