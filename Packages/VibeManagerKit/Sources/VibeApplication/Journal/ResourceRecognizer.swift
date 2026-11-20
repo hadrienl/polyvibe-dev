@@ -297,25 +297,81 @@ public enum ResourceRecognizer {
 
   // MARK: git
 
+  /// A `git` command line, its global options read: `git -C <dir> -c key=value <command>`.
+  struct GitCommand {
+    let subcommand: String
+    /// What follows the subcommand.
+    let rest: [String?]
+    /// Where it runs, `nil` when the shell alone knows.
+    let directory: String?
+
+    init?(_ invocation: Invocation, directory: String?) {
+      var arguments = invocation.arguments
+      var directory = directory
+      while let first = arguments.first, let option = first, option.hasPrefix("-") {
+        arguments.removeFirst()
+        if option == "-C" {
+          let target = arguments.first ?? nil
+          directory = target.flatMap { ResourceRecognizer.resolve($0, from: directory) }
+          if !arguments.isEmpty { arguments.removeFirst() }
+        } else if option == "-c", !arguments.isEmpty {
+          arguments.removeFirst()
+        }
+      }
+      guard let subcommand = arguments.first ?? nil else { return nil }
+      self.subcommand = subcommand
+      rest = Array(arguments.dropFirst())
+      self.directory = directory
+    }
+
+    private init(subcommand: String, rest: [String?], directory: String?) {
+      self.subcommand = subcommand
+      self.rest = rest
+      self.directory = directory
+    }
+
+    /// The same command, run in `directory`.
+    func running(in directory: String) -> GitCommand {
+      GitCommand(subcommand: subcommand, rest: rest, directory: directory)
+    }
+
+    /// The arguments that are not options; an unknown word counts as one.
+    var positional: [String?] { rest.filter { $0.map { !$0.hasPrefix("-") } ?? true } }
+
+    /// The value of an option, the first time it is given: `-m x`, `-am x`, `--message x`,
+    /// `--message=x`, `-mx`. `.some(nil)` when the shell alone knows it.
+    func value(of short: Character, _ long: String) -> String?? {
+      for (index, argument) in rest.enumerated() {
+        guard let argument, argument.hasPrefix("-"), argument != "--" else { continue }
+        if argument == long
+          || (!argument.hasPrefix("--") && argument.last == short
+            && argument.dropFirst().allSatisfy(\.isLetter))
+        {
+          return index + 1 < rest.count ? .some(rest[index + 1]) : nil
+        }
+        if argument.hasPrefix(long + "=") { return String(argument.dropFirst(long.count + 1)) }
+        if argument.count > 2, argument.dropFirst().first == short, !argument.hasPrefix("--") {
+          return String(argument.dropFirst(2))
+        }
+      }
+      return nil
+    }
+  }
+
   static func gitSightings(
     _ invocation: Invocation, directory: String?, branch current: String?, at: Date
   ) -> [ResourceSighting] {
-    var arguments = invocation.arguments
-    var directory = directory
-    // `git -C <dir> -c key=value <command>`
-    while let first = arguments.first, let option = first, option.hasPrefix("-") {
-      arguments.removeFirst()
-      if option == "-C" {
-        let target = arguments.first ?? nil
-        directory = target.flatMap { resolve($0, from: directory) }
-        if !arguments.isEmpty { arguments.removeFirst() }
-      } else if option == "-c", !arguments.isEmpty {
-        arguments.removeFirst()
-      }
-    }
-    guard let directory, let subcommand = arguments.first ?? nil else { return [] }
-    let rest = Array(arguments.dropFirst())
-    let positional = rest.filter { $0.map { !$0.hasPrefix("-") } ?? true }
+    guard let command = GitCommand(invocation, directory: directory) else { return [] }
+    return gitSightings(command, branch: current, at: at)
+  }
+
+  static func gitSightings(
+    _ command: GitCommand, branch current: String?, at: Date
+  ) -> [ResourceSighting] {
+    guard let directory = command.directory else { return [] }
+    let subcommand = command.subcommand
+    let rest = command.rest
+    let positional = command.positional
     func branch(_ name: String?, _ involvement: SessionResource.Involvement) -> [ResourceSighting] {
       guard let name, let normalized = normalizedBranch(name) else { return [] }
       return [.branch(name: normalized, directory: directory, involvement: involvement, at: at)]
