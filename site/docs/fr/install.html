@@ -10,6 +10,7 @@
       <tbody>
         <tr><td>Claude Code</td><td><code>claude</code></td><td>2.1.0</td><td><code>claude auth login</code></td></tr>
         <tr><td>Codex CLI</td><td><code>codex</code></td><td>0.153.0</td><td><code>codex login</code></td></tr>
+        <tr><td>Antigravity</td><td><code>agy</code></td><td>1.5.5</td><td><code>agy</code>, la première fois</td></tr>
       </tbody>
     </table>
   </li>
@@ -26,7 +27,7 @@
 <p>Les mises à jour sont ensuite proposées par l’app elle-même : voir <a href="settings.html#updates">Réglages › Mises à jour</a>.</p>
 
 <h2 id="agents-detected">Comment les agents sont trouvés</h2>
-<p>Au lancement, et chaque fois que vous cliquez sur <strong>Relancer la détection</strong>, Polyvibe cherche <code>claude</code> et <code>codex</code> aux emplacements habituels — <code>/opt/homebrew/bin</code>, <code>/usr/local/bin</code>, <code>~/.local/bin</code>, <code>~/.bun/bin</code>, <code>~/.npm-global/bin</code>, <code>~/.volta/bin</code>, les shims d’asdf et de mise, <code>~/.claude/local</code>, <code>~/.codex/bin</code>… — puis dans votre <code>PATH</code>, et enfin dans le <code>PATH</code> de votre shell de connexion. Une version native est préférée à une version qui tourne sous Rosetta.</p>
+<p>Au lancement, et chaque fois que vous cliquez sur <strong>Relancer la détection</strong>, Polyvibe cherche <code>claude</code>, <code>codex</code> et <code>agy</code> aux emplacements habituels — <code>/opt/homebrew/bin</code>, <code>/usr/local/bin</code>, <code>~/.local/bin</code>, <code>~/.bun/bin</code>, <code>~/.npm-global/bin</code>, <code>~/.volta/bin</code>, les shims d’asdf et de mise, <code>~/.claude/local</code>, <code>~/.codex/bin</code>… — puis dans votre <code>PATH</code>, et enfin dans le <code>PATH</code> de votre shell de connexion. Une version native est préférée à une version qui tourne sous Rosetta.</p>
 <p>Quand un agent est inutilisable, le formulaire de nouvelle session en donne la raison : non installé, non exécutable, trop ancien ou non connecté. Corrigez-le dans un terminal, puis cliquez sur <strong>Relancer la détection</strong>.</p>
 
 <h2 id="full-disk-access">Accès complet au disque</h2>

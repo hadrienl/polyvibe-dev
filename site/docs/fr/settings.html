@@ -22,6 +22,7 @@
   <dt>Thème</dt><dd>Voir <a href="personalize.html#themes">Thèmes et avatars</a>.</dd>
   <dt>Affichage</dt><dd>Couleur d’accent, police des messages, police du code, taille du texte (de Petit à Très grand, aussi celle des terminaux, et que <kbd>⌘+</kbd> <kbd>⌘−</kbd> <kbd>⌘0</kbd> changent depuis n’importe où), densité (Compacte ou Confortable), vos messages en Bulles ou en Lignes.</dd>
   <dt>Détails techniques</dt><dd>Regrouper les appels consécutifs de même nature ; déplier un appel en échec ; déplier les modifications de fichiers ; afficher les rangées de raisonnement ; retour à la ligne dans les blocs de code ; numéros de ligne dans les diffs.</dd>
+  <dt>Afficher la vue d’ensemble à côté de la conversation</dt><dd>Activé par défaut : la conversation dessinée en petit à la place de la barre de défilement, avec ses signets. Voir <a href="conversation.html#bookmarks">Signets et vue d’ensemble</a>.</dd>
 </dl>
 
 <h2 id="badges">Badges</h2>
@@ -34,7 +35,7 @@
   <dt>Notifications</dt>
   <dd><strong>Me notifier des demandes</strong>, en montrant <strong>Le type de demande</strong> ou <strong>La commande ou la question</strong>. Indisponible tant que le panneau flottant est actif, puisqu’il les signale déjà.</dd>
   <dt id="sound">Son</dt>
-  <dd>Le son joué quand une session que vous ne regardez pas a besoin de vous, avec ▶ pour l’écouter. <strong>Gérer les sons…</strong> ouvre la page <strong>Sons</strong> : décrivez un son à un agent pour qu’il le compose, ou importez un fichier audio de 30 secondes au plus.</dd>
+  <dd>Le son joué quand une session que vous ne regardez pas a besoin de vous, avec ▶ pour l’écouter. <strong>Gérer les sons…</strong> ouvre la page <strong>Sons</strong> : décrivez un son à un agent pour qu’il le compose, ou importez un fichier audio de 30 secondes au plus. <strong>Accompagner le son d’un rythme sur le trackpad</strong>, activé par défaut, tape le rythme du son sur le trackpad pendant qu’il joue, ressenti avec un doigt posé dessus ; il est grisé quand le son est Aucun.</dd>
   <dt>Palette</dt>
   <dd>Afficher le nombre de demandes sur l’icône du Dock ; déplier la palette à l’arrivée d’une demande.</dd>
   <dt>Gérer les avatars…</dt>
@@ -42,15 +43,17 @@
 </dl>
 
 <h2 id="agents">Agents</h2>
-<p>Une page par agent : Claude Code, Codex. Le point de la barre latérale dit s’il est prêt (vert), utilisable avec quelque chose à régler, trop ancien ou pas connecté (orange), ou introuvable (rouge). La page montre où son outil en ligne de commande a été trouvé et sa version ; <strong>Relancer la détection</strong> le cherche à nouveau, après une installation ou une mise à jour.</p>
+<p>Une page par agent : Claude Code, Codex, Antigravity. Le point de la barre latérale dit s’il est prêt (vert), utilisable avec quelque chose à régler, trop ancien ou pas connecté (orange), ou introuvable (rouge). La page montre où son outil en ligne de commande a été trouvé et sa version ; <strong>Relancer la détection</strong> le cherche à nouveau, après une installation ou une mise à jour.</p>
 <dl>
   <dt>Suivre l’activité de …</dt>
-  <dd>Pour un agent qui fait approuver ses hooks, comme Codex. Activé, les hooks signalent quand il travaille, demande ou termine, ce dont la barre latérale et les demandes ont besoin. La première fois, une feuille montre les commandes qu’exécutent les hooks, et vous les approuvez une fois pour toutes. Claude Code n’a pas ce réglage : ses hooks n’ont pas à être approuvés.</dd>
+  <dd>Pour un agent qui fait approuver ses hooks, comme Codex. Activé, les hooks signalent quand il travaille, demande ou termine, ce dont la barre latérale et les demandes ont besoin. La première fois, une feuille montre les commandes qu’exécutent les hooks, et vous les approuvez une fois pour toutes. Claude Code n’a pas ce réglage : ses hooks n’ont pas à être approuvés.</dd>
+  <dt>Mode d’autorisation</dt>
+  <dd>Codex, ses comptes et les endpoints qu’il pilote, et Antigravity : <strong>Manuel</strong> ou <strong>Automatique</strong>. Voir <a href="agents.html#approval">Mode d’autorisation</a>.</dd>
 </dl>
 <p><strong>Ajouter un compte…</strong>, sous les agents, fait tourner Claude Code ou Codex sur un autre compte, avec son propre dossier de configuration. La page d’un compte le renomme, change son dossier ou le supprime. Voir <a href="agents.html#accounts">Plusieurs comptes</a>.</p>
 
 <h2 id="endpoints">Endpoints</h2>
-<p>Chaque serveur de modèles déclaré a sa page, et le point de la barre latérale dit le résultat de son dernier test. Voir <a href="agents.html#endpoints">Agents sur un endpoint</a>. <strong>Ajouter un endpoint…</strong> part d’Ollama, de LM Studio, d’OpenRouter ou d’un <strong>Autre serveur</strong> : un serveur connu remplit l’adresse, la clé attendue et le protocole ; seul un autre serveur demande son protocole. Voir <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>Chaque serveur de modèles déclaré a sa page, et le point de la barre latérale dit le résultat de son dernier test. <strong>Piloté par</strong> choisit l’agent qui fait tourner ses modèles : Automatique, Claude Code, Codex ou Antigravity. Voir <a href="agents.html#endpoints">Agents sur un endpoint</a>. <strong>Ajouter un endpoint…</strong> part d’Ollama, de LM Studio, d’OpenRouter ou d’un <strong>Autre serveur</strong> : un serveur connu remplit l’adresse, la clé attendue et le protocole ; seul un autre serveur demande son protocole. Voir <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="web-view">Vue web</h2>
 <dl>

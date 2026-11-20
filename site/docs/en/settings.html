@@ -22,6 +22,7 @@
   <dt>Theme</dt><dd>See <a href="personalize.html#themes">Themes and avatars</a>.</dd>
   <dt>Display</dt><dd>Accent colour, message font, code font, text size (Small to Extra Large, the terminals' too, and changed from anywhere with <kbd>⌘+</kbd> <kbd>⌘−</kbd> <kbd>⌘0</kbd>), density (Compact or Comfortable), your messages as Bubbles or Lines.</dd>
   <dt>Technical details</dt><dd>Group consecutive calls of the same kind; unfold a failed call; unfold file edits; show reasoning rows; wrap lines in code blocks; line numbers in diffs.</dd>
+  <dt>Show the overview beside the conversation</dt><dd>On by default: the conversation drawn in small in place of the scroll bar, with its bookmarks. See <a href="conversation.html#bookmarks">Bookmarks and overview</a>.</dd>
 </dl>
 
 <h2 id="badges">Badges</h2>
@@ -34,7 +35,7 @@
   <dt>Notifications</dt>
   <dd><strong>Notify me of requests</strong>, showing <strong>The kind of request</strong> or <strong>The command or the question</strong>. Unavailable while the floating panel is on, which already signals them.</dd>
   <dt id="sound">Sound</dt>
-  <dd>The sound played when a session you are not looking at needs you, with ▶ to hear it. <strong>Manage Sounds…</strong> opens the <strong>Sounds</strong> page: describe a sound to an agent for it to compose, or import an audio file of 30 seconds at most.</dd>
+  <dd>The sound played when a session you are not looking at needs you, with ▶ to hear it. <strong>Manage Sounds…</strong> opens the <strong>Sounds</strong> page: describe a sound to an agent for it to compose, or import an audio file of 30 seconds at most. <strong>Accompany the sound with a rhythm on the trackpad</strong>, on by default, taps the sound's rhythm on the trackpad as it plays, felt with a finger resting on it; it is greyed out when the sound is None.</dd>
   <dt>Palette</dt>
   <dd>Show the number of requests on the Dock icon; unfold the palette when a request arrives.</dd>
   <dt>Manage Avatars…</dt>
@@ -42,15 +43,17 @@
 </dl>
 
 <h2 id="agents">Agents</h2>
-<p>One page per agent: Claude Code, Codex. The dot in the sidebar says whether it is ready (green), usable with something to fix, too old or not signed in (orange), or not found (red). The page shows where its command-line tool was found and its version; <strong>Detect Again</strong> looks for it again, after an installation or an update.</p>
+<p>One page per agent: Claude Code, Codex, Antigravity. The dot in the sidebar says whether it is ready (green), usable with something to fix, too old or not signed in (orange), or not found (red). The page shows where its command-line tool was found and its version; <strong>Detect Again</strong> looks for it again, after an installation or an update.</p>
 <dl>
   <dt>Track … activity</dt>
   <dd>For an agent that has its hooks approved, such as Codex. On, the hooks report when it works, asks or finishes, which the sidebar and the requests need. The first time, a sheet shows the commands the hooks run, and you approve them once. Claude Code has no such setting: its hooks need no approval.</dd>
+  <dt>Approval mode</dt>
+  <dd>Codex, its accounts and the endpoints it drives, and Antigravity: <strong>Manual</strong> or <strong>Automatic</strong>. See <a href="agents.html#approval">Approval mode</a>.</dd>
 </dl>
 <p><strong>Add an Account…</strong>, below the agents, runs Claude Code or Codex on another account, with its own configuration folder. An account's page renames it, changes its folder or deletes it. See <a href="agents.html#accounts">Several accounts</a>.</p>
 
 <h2 id="endpoints">Endpoints</h2>
-<p>Each model server you declared has its page, and the dot in the sidebar gives the result of its last test. See <a href="agents.html#endpoints">Agents on an endpoint</a>. <strong>Add an Endpoint…</strong> starts from Ollama, LM Studio, OpenRouter or an <strong>Other Server</strong>: a known server fills in the address, the key it expects and the protocol; only another server asks for its protocol. See <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>Each model server you declared has its page, and the dot in the sidebar gives the result of its last test. <strong>Driven by</strong> chooses the agent that runs its models: Automatic, Claude Code, Codex or Antigravity. See <a href="agents.html#endpoints">Agents on an endpoint</a>. <strong>Add an Endpoint…</strong> starts from Ollama, LM Studio, OpenRouter or an <strong>Other Server</strong>: a known server fills in the address, the key it expects and the protocol; only another server asks for its protocol. See <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="web-view">Web View</h2>
 <dl>

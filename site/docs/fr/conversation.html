@@ -13,6 +13,7 @@
   <li>Le <strong>raisonnement</strong>, quand l’agent le partage, est une ligne repliée.</li>
   <li>Les <strong>sous-agents</strong> lancés par l’agent apparaissent sous forme de blocs avec leur mission, leur activité et leur résultat ; un bandeau liste ceux qui tournent encore.</li>
   <li>Les images générées par l’agent s’affichent sur place.</li>
+  <li>Les <strong>messages entre sessions</strong> — ce que Polyvibe dit à une coordinatrice, ce qu’une coordinatrice écrit à une enfant — sont repliés sous une ligne qui dit qui les a écrits : voir <a href="coordination.html#messages">Messages entre sessions</a>.</li>
   <li>L’<strong>heure</strong> s’affiche sous chacun de vos messages et de ceux de l’agent, pas sous les appels d’outils. Survolez-la pour voir la date complète. À chaque changement de jour, un séparateur indique <strong>Aujourd’hui</strong>, <strong>Hier</strong> ou la date.</li>
 </ul>
 <p>Quand vous remontez, une pastille <strong>nouveaux messages</strong> vous ramène à la fin. <strong>Édition › Copier en Markdown</strong> (<kbd>⌥⇧⌘C</kbd>) copie la sélection avec sa mise en forme. Ce qui est replié ou déplié se règle dans <a href="settings.html#conversation">Réglages › Conversation › Détails techniques</a>.</p>
@@ -48,10 +49,34 @@
   <li><code>/</code> en début de message ouvre la liste des <strong>skills et des commandes</strong> de l’agent, que la CLI elle-même fournit. La saisie la filtre ; <kbd>↑</kbd> <kbd>↓</kbd> choisissent, <kbd>⇥</kbd> ou un clic insère, <kbd>Esc</kbd> ferme. <kbd>Return</kbd> complète un nom commencé, et envoie tel quel un nom tapé en entier. Une commande qui répond par un panneau, comme <code>/mcp</code> ou <code>/model</code>, montre le vrai terminal au-dessus de la zone de saisie le temps de s’en servir.</li>
   <li>Un message qui commence par <code>!</code> est une <strong>commande shell</strong>, exécutée par le mode shell de l’agent lui-même ; la zone de saisie prend la couleur d’avertissement. Tapez <code>\!</code> pour envoyer un message qui commence par un point d’exclamation.</li>
 </ul>
+<p>Dans les réponses de l’agent, un bloc de code d’une ligne qui commence par <code>!</code> — une commande qu’il vous laisse lancer, comme <code>! gcloud auth login</code> — a un bouton <strong>Exécuter</strong> à côté de <strong>Copier</strong> : il envoie la commande comme si vous l’aviez tapée, puis remet en place le brouillon que vous aviez dans la zone de saisie. Un lien vers un script <code>.command</code> local devient lui aussi un bouton <strong>Exécuter</strong> : son chemin s’affiche au survol, et une confirmation vous est demandée avant de l’ouvrir dans la session. Exécuter est proposé avec Claude Code et Codex, qui ont un mode shell. Pendant un tour, Claude Code garde la commande jusqu’à la fin du tour ; avec Codex, Exécuter reste grisé jusque-là.</p>
 <p>Le micro à côté du <strong>+</strong> dicte un message, et ▶ sous une réponse la lit à voix haute : voir <a href="voice.html">Dictée et lecture à voix haute</a>.</p>
 <p>Dans la barre d’état, le menu <strong>Effort</strong> règle l’effort de raisonnement de l’agent pour cette session : de faible à maximal pour Claude Code, les niveaux du modèle pour Codex. Il est grisé pendant un tour ou une question, et absent pour un agent sur un endpoint.</p>
 <p id="usage">À côté, le bouton <strong>Utilisation</strong> montre la part de la fenêtre de contexte du modèle occupée par la conversation, en rouge au-delà de 80 %, et ce qu’a coûté la session : « ◔ 55 % · 4,82 $ ». Un clic montre tous les chiffres : le contexte et son dernier compactage, le coût de chaque modèle, le temps d’exécution et les exécutions, les jetons lus dans les transcripts de l’agent et ses réponses. Le coût est un équivalent API, marqué <code>≈</code> : les jetons au tarif public de chaque modèle, ce que la session aurait coûté à l’usage. Un modèle sans tarif connu est signalé et laissé hors du total. Voir <a href="#usage-window">la fenêtre Utilisation</a> pour les tarifs, et <a href="settings.html#usage">Réglages › Confidentialité</a> pour couper le suivi.</p>
 <p>Tant que l’agent attend une réponse dans son terminal — une autorisation, une question —, la zone de saisie est fermée et la demande s’affiche à sa place : voir <a href="requests.html">Répondre à vos agents</a>.</p>
+
+<h2 id="reply">Répondre à un passage</h2>
+<p>Comme dans un fil de discussion, vous pouvez répondre à un paragraphe de l’agent, ou à quelques mots sélectionnés, plutôt qu’à tout son message. L’agent reçoit le passage mot pour mot, avant votre message.</p>
+<vm-shot name="reply" alt="Une réponse dans la conversation : le paragraphe cité en haut de la bulle de l’utilisateur, et en dessous le bandeau de la zone de saisie, Réponse à Claude Code, avec le passage suivant.">Le passage cité coiffe la réponse, et la zone de saisie montre celui auquel vous répondez.</vm-shot>
+<ul>
+  <li>Posez le pointeur sur un paragraphe de l’agent : <strong>Répondre</strong> apparaît à sa fin.</li>
+  <li>Sélectionnez du texte : <strong>Répondre à la sélection</strong> apparaît au bout de la sélection.</li>
+  <li>Sur votre propre message, <strong>Répondre</strong> apparaît à côté de son heure.</li>
+  <li>Le menu contextuel d’un message propose aussi <strong>Répondre</strong>, et le cite en entier : c’est le chemin au clavier ou avec VoiceOver.</li>
+</ul>
+<p>Un bandeau au-dessus de la zone de saisie affiche <strong>Réponse à …</strong>, l’heure et le passage ; ✕ ou <kbd>Esc</kbd> le retire. Le passage est envoyé comme une citation, présentée comme n’étant pas une consigne, de 1 000 caractères au plus. Une commande <code>/</code> ou une commande shell <code>!</code> ne le prend jamais : il attend votre message suivant.</p>
+<p>Dans le fil, la réponse reste à sa place, le passage en haut de sa bulle. Cliquez sur le passage pour y aller — il s’éclaire un instant —, puis sur <strong>Revenir à ta réponse</strong> pour revenir. Sous le message d’origine, <strong>N réponses</strong> mène à la dernière.</p>
+
+<h2 id="bookmarks">Signets et vue d’ensemble</h2>
+<p>Posez le pointeur sur un message : un signet pâle apparaît dans la marge de gauche, à hauteur de sa première ligne. Cliquez dessus pour marquer le message, une seconde fois pour retirer le signet. Un message de vous, une réponse de l’agent ou un appel d’outil peuvent être marqués.</p>
+<vm-shot name="bookmarks" alt="Une conversation avec deux signets dans la marge de gauche, et à droite la vue d’ensemble : toute la conversation dessinée en petit, le cadre de ce qui est à l’écran, et les signets en traits de couleur d’accent.">Les signets dans la marge, et la vue d’ensemble à la place de la barre de défilement.</vm-shot>
+<p>La <strong>vue d’ensemble</strong>, à droite à la place de la barre de défilement, dessine toute la conversation en petit : bulles, texte, appels d’outils, échecs en rouge. Un cadre montre ce qui est à l’écran : cliquez pour aller ailleurs, faites-le glisser ou utilisez la molette pour défiler. Chaque signet y est un trait de la couleur d’accent ; survolez-le pour lire le début de son message, cliquez pour y aller. La vue d’ensemble prend la marge à droite du texte ; désactivez-la dans <a href="settings.html#conversation">Réglages › Conversation</a> pour retrouver la barre de défilement habituelle.</p>
+<ul>
+  <li><strong>Présentation › Poser ou retirer un signet</strong> (<kbd>⌘B</kbd>) marque le message sélectionné, ou celui en haut de l’écran.</li>
+  <li><strong>Signet suivant</strong> (<kbd>⌥⌘J</kbd>) et <strong>Signet précédent</strong> (<kbd>⌥⌘K</kbd>) passent de l’un à l’autre, avec un bip aux deux bouts.</li>
+  <li>VoiceOver les liste dans un rotor <strong>Signets</strong>.</li>
+</ul>
+<p>Les signets sont gardés sur ce Mac, à côté des notes de la session.</p>
 
 <h2 id="files">Joindre des fichiers</h2>
 <p>Déposez des fichiers sur la conversation, cliquez sur <strong>+</strong> dans la zone de saisie ou choisissez <strong>Session › Joindre des fichiers…</strong> (<kbd>⌘O</kbd>) : ils deviennent des pastilles dans la zone de saisie et sont envoyés sous forme de chemins avec votre message. Déposé sur le terminal, le chemin d’un fichier est saisi, échappé comme le fait Terminal, sans appuyer sur Retour. Vous pouvez aussi déposer des fichiers sur la ligne d’une session dans la barre latérale.</p>

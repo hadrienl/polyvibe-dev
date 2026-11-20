@@ -6,6 +6,9 @@
 <h3 id="diagnostics">Exporter les diagnostics</h3>
 <p><strong>Aide › Exporter les diagnostics…</strong> rassemble le journal local de l’app et montre le fichier en entier avant que vous l’enregistriez. Le journal se compose de types d’événements, sans place pour du texte libre : il ne contient aucun prompt, aucune note, aucun nom de session ou de dossier, aucun contenu de terminal. Il est conservé dans <code>~/Library/Logs/Vibe Manager</code> deux semaines au plus, et rien n’est jamais envoyé.</p>
 
+<h3 id="interaction-reports">Les réponses qui ne sont pas passées</h3>
+<p>Quand une réponse à une demande ne peut pas être transmise ou confirmée (voir <a href="requests.html#palette">Répondre à vos agents</a>), Polyvibe ouvre la session en vue Terminal et crée un ticket <code>bug</code> dans <a href="https://github.com/hadrienl/vibe-manager/issues">hadrienl/vibe-manager</a>, par l’outil en ligne de commande de GitHub <code>gh</code> et le compte auquel il est connecté ; sans <code>gh</code>, rien n’est envoyé. Le ticket est public. Il contient la demande, la réponse choisie, les touches tapées (sans le texte libre), le texte du terminal avant et après, l’heure et les versions de l’app et de macOS. Les identifiants courants — clés, jetons, en-têtes d’autorisation — sont masqués. Un signalement qui échoue est retenté chaque minute et au lancement suivant, et une même demande n’est jamais signalée deux fois.</p>
+
 <h2 id="common">Problèmes courants</h2>
 <dl>
   <dt>Un agent est introuvable</dt>
@@ -29,7 +32,7 @@
 
 <h2 id="privacy">Ce qui reste sur votre Mac</h2>
 <ul>
-  <li><strong>Pas de compte, pas de télémétrie, rien d’envoyé.</strong> Les seules requêtes réseau que l’app fait d’elle-même sont la recherche de mises à jour et les pages que vous, ou vos agents, ouvrez dans la vue web.</li>
+  <li><strong>Pas de compte, pas de télémétrie.</strong> Les seules requêtes réseau que l’app fait d’elle-même sont la recherche de mises à jour, les pages que vous, ou vos agents, ouvrez dans la vue web, et le <a href="#interaction-reports">signalement d’une réponse qui n’est pas passée</a>, avec votre <code>gh</code>.</li>
   <li><strong>Aucun identifiant n’est lu.</strong> Les agents utilisent leur propre connexion ; Polyvibe ne voit jamais de clé d’API.</li>
   <li><strong>Les conversations sont lues, pas copiées.</strong> La vue conversation lit les transcripts des agents en mémoire ; le suivi de l’utilisation ne lit que leurs compteurs.</li>
   <li>Les résumés, les thèmes et les avatars sont générés par vos agents, avec votre compte, seulement quand vous les activez ou les demandez.</li>
@@ -42,6 +45,8 @@
   <tbody>
     <tr><td>Les sessions et leur sauvegarde</td><td><code>~/Library/Application Support/com.hadrienl.VibeManager/sessions.json</code></td></tr>
     <tr><td>Les notes</td><td><code>…/com.hadrienl.VibeManager/Notes/</code></td></tr>
+    <tr><td>Les signets</td><td><code>…/com.hadrienl.VibeManager/Bookmarks/</code></td></tr>
+    <tr><td>Les transcripts copiés pour un changement d’agent</td><td><code>…/com.hadrienl.VibeManager/Handovers/</code></td></tr>
     <tr><td>L’historique des terminaux annexes</td><td><code>…/com.hadrienl.VibeManager/Terminals/</code></td></tr>
     <tr><td>Les gabarits de session</td><td><code>…/com.hadrienl.VibeManager/templates.json</code></td></tr>
     <tr><td>Les thèmes et les avatars</td><td><code>…/com.hadrienl.VibeManager/Themes/</code>, <code>Avatars/</code></td></tr>
@@ -50,7 +55,7 @@
     <tr><td>Les préférences</td><td><code>~/Library/Preferences/eu.hadrien.VibeManager.plist</code></td></tr>
   </tbody>
 </table>
-<p>Les fichiers propres aux agents — <code>~/.claude</code>, <code>~/.codex</code> — leur appartiennent et ne sont jamais modifiés.</p>
+<p>Les fichiers propres aux agents — <code>~/.claude</code>, <code>~/.codex</code>, <code>~/.gemini</code> — leur appartiennent et ne sont jamais modifiés.</p>
 
 <h2 id="limits">Limites connues</h2>
 <ul>
