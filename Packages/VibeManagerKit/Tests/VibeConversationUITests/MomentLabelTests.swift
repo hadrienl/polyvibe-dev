@@ -12,7 +12,7 @@ struct MomentLabelTests {
   @Test("What happened, the tests' outcome agreeing with their number")
   func labels() {
     let subject = "fix(cart): round VAT per line"
-    #expect(french("Commit “\(subject)”") == "Commit « fix(cart): round VAT per line »")
+    #expect(french("Commit “\(subject)”") == "Commit «\u{00A0}fix(cart): round VAT per line\u{00A0}»")
     let label = "#48"
     #expect(french("Pull request \(label) opened") == "PR #48 ouverte")
     let failed = 1

@@ -11243,7 +11243,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Réponse : %@"
+            "value" : "Réponse : %@"
           }
         },
         "hi" : {
@@ -14153,7 +14153,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Commit « %@ »"
+            "value" : "Commit « %@ »"
           }
         },
         "hi" : {
