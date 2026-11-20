@@ -83,14 +83,28 @@ struct OverviewWidthTests {
     return window.contentView.flatMap(find).map { Double($0.frame.width) }
   }
 
+  /// Where the overview, the composer's field and the messages' texts are, in the window.
+  private func frames(in window: NSWindow) -> (
+    overview: CGRect?, composer: CGRect?, texts: [CGRect]
+  ) {
+    func all(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(all) }
+    let views = window.contentView.map(all) ?? []
+    func frame(_ view: NSView) -> CGRect { view.convert(view.bounds, to: nil) }
+    let overview = views.first { String(describing: type(of: $0)).contains("Forwarder") }
+    let composer = views.first { ($0 as? NSTextView)?.isEditable == true }
+    let texts = views.compactMap { $0 as? SegmentTextView }.filter { !$0.bounds.isEmpty }
+    return (overview.map(frame), composer.map(frame), texts.map(frame))
+  }
+
   /// The overview's width in a pane that wide, the conversation's theme and margins as they are.
-  private func nominal(_ paneWidth: Double) -> Double {
+  private func nominal(_ paneWidth: Double) -> Double { placement(paneWidth).width }
+
+  private func placement(_ paneWidth: Double) -> ConversationOverviewLayout.Placement {
     let layout = ConversationTheme.systemDark.layout.at(ConversationAppearance().density)
     return ConversationOverviewLayout.placement(
       paneWidth: paneWidth, contentWidth: layout.contentWidth,
       leadingMargin: max(layout.sideMargin, BookmarkGutter.reach),
-      trailingMargin: layout.sideMargin
-    ).width
+      trailingMargin: layout.sideMargin)
   }
 
   @Test("Wide, then narrowed by the web view held over it and let go, it keeps to the margin")
@@ -125,5 +139,25 @@ struct OverviewWidthTests {
     try await waitUntil("wide", window, overviewIs: nominal(1700))
     window.setContentSize(NSSize(width: 850, height: 800))
     try await waitUntil("narrowed", window, overviewIs: nominal(850))
+  }
+
+  @Test("Held wide then let go in a narrow pane, the messages and the composer leave it its room")
+  func narrowPaneLeavesTheOverviewItsRoom() async throws {
+    let (window, slot) = host(width: 850)
+    defer { window.close() }
+    // Narrow enough that the messages give up part of their width to the overview.
+    #expect(placement(850).reserved > 0)
+    slot.held = 1700
+    try await waitUntil("held wide", window, overviewIs: nominal(1700))
+    slot.held = nil
+    try await waitUntil("let go", window, overviewIs: nominal(850))
+    let laidOut = frames(in: window)
+    let overview = try #require(laidOut.overview)
+    let composer = try #require(laidOut.composer)
+    #expect(composer.maxX <= overview.minX)
+    #expect(!laidOut.texts.isEmpty)
+    for text in laidOut.texts {
+      #expect(text.maxX <= overview.minX)
+    }
   }
 }
