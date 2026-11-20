@@ -36,7 +36,12 @@ enum UsagePresentation {
   }
   static var privacyNote: String {
     String(
-      localized: "Usage is recorded on this Mac only. Nothing is sent anywhere.", bundle: .module)
+      localized:
+        "Usage is recorded on this Mac only. Only the public list of prices is downloaded.",
+      bundle: .module,
+      comment:
+        "What stays on the Mac, under the usage figures: only the public list of model prices is fetched (#574)."
+    )
   }
 
   /// “≈ 4,82 $”: dollars written the way the language writes them, never converted (#574). A cost

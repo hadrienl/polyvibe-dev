@@ -186550,102 +186550,104 @@
         }
       }
     },
-    "Usage is recorded on this Mac only. Nothing is sent anywhere." : {
+    "Usage is recorded on this Mac only. Only the public list of prices is downloaded." : {
+      "comment" : "What stays on the Mac, under the usage figures: only the public list of model prices is fetched (#574).",
+      "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يُسجَّل الاستخدام على هذا الـ Mac فقط. لا يُرسل أي شيء إلى أي مكان."
+            "value" : "يُسجَّل الاستخدام على هذا الـ Mac فقط. لا يُنزَّل سوى قائمة الأسعار العامة."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Nutzung wird nur auf diesem Mac erfasst. Nichts wird irgendwohin gesendet."
+            "value" : "Die Nutzung wird nur auf diesem Mac erfasst. Nur die öffentliche Preisliste wird heruntergeladen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El uso se registra solo en este Mac. No se envía nada a ningún sitio."
+            "value" : "El uso se registra solo en este Mac. Solo se descarga la lista pública de precios."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L’utilisation est enregistrée sur ce Mac uniquement. Rien n’est envoyé nulle part."
+            "value" : "L’utilisation est enregistrée sur ce Mac uniquement. Seule la liste publique des tarifs est téléchargée."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "उपयोग केवल इस Mac पर दर्ज होता है। कुछ भी कहीं नहीं भेजा जाता।"
+            "value" : "उपयोग केवल इस Mac पर दर्ज होता है। केवल कीमतों की सार्वजनिक सूची डाउनलोड की जाती है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "L’utilizzo viene registrato solo su questo Mac. Non viene inviato nulla."
+            "value" : "L’utilizzo viene registrato solo su questo Mac. Viene scaricato solo l’elenco pubblico dei prezzi."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用状況はこのMacにのみ記録されます。どこにも送信されません。"
+            "value" : "使用状況はこのMacにのみ記録されます。ダウンロードされるのは公開されている料金表だけです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "사용량은 이 Mac에만 기록됩니다. 어디에도 전송되지 않습니다."
+            "value" : "사용량은 이 Mac에만 기록됩니다. 공개 가격 목록만 다운로드됩니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gebruik wordt alleen op deze Mac vastgelegd. Er wordt niets verstuurd."
+            "value" : "Gebruik wordt alleen op deze Mac vastgelegd. Alleen de openbare prijslijst wordt gedownload."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Użycie jest zapisywane wyłącznie na tym Macu. Nic nie jest nigdzie wysyłane."
+            "value" : "Użycie jest zapisywane wyłącznie na tym Macu. Pobierana jest tylko publiczna lista cen."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O uso é registrado somente neste Mac. Nada é enviado a lugar algum."
+            "value" : "O uso é registrado somente neste Mac. Apenas a lista pública de preços é baixada."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Использование записывается только на этом Mac. Ничего никуда не отправляется."
+            "value" : "Использование записывается только на этом Mac. Загружается только публичный список цен."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kullanım yalnızca bu Mac’e kaydedilir. Hiçbir yere hiçbir şey gönderilmez."
+            "value" : "Kullanım yalnızca bu Mac’e kaydedilir. Yalnızca herkese açık fiyat listesi indirilir."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Використання записується лише на цьому Mac. Нічого нікуди не надсилається."
+            "value" : "Використання записується лише на цьому Mac. Завантажується лише публічний список цін."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用量仅记录在这台 Mac 上。不会发送到任何地方。"
+            "value" : "用量仅记录在这台 Mac 上。只会下载公开的价格表。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用量只記錄在此 Mac 上。不會傳送到任何地方。"
+            "value" : "用量只記錄在此 Mac 上。只會下載公開的價格表。"
           }
         }
       }
