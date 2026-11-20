@@ -50,6 +50,7 @@
 </ul>
 <p>The microphone beside the <strong>+</strong> dictates a message, and ▶ under a reply reads it aloud: see <a href="voice.html">Dictation and reading aloud</a>.</p>
 <p>In the status bar, the <strong>Effort</strong> menu sets the agent's reasoning effort for this session: from low to maximum for Claude Code, the model's levels for Codex. It is greyed out during a turn or a question, and absent for an agent on an endpoint.</p>
+<p id="usage">Beside it, the <strong>Usage</strong> button shows how much of the model's context window the conversation fills, in red beyond 80 %, and what the session cost: “◔ 55 % · $4.82”. Click it for every figure: the context and its last compaction, the cost of each model, the running time and runs, the tokens read from the agent's transcripts and its responses. The cost is an API equivalent, marked <code>≈</code>: the tokens at each model's public price, what the session would have cost paid by the token. A model without a known price is flagged and left out of the total. See <a href="inspector.html#usage-window">the Usage window</a> for the prices, and <a href="settings.html#usage">Settings › Privacy</a> to turn tracking off.</p>
 <p>While the agent waits for an answer in its terminal — a permission, a question — the composer is closed, and the request is shown instead: see <a href="requests.html">Answer your agents</a>.</p>
 
 <h2 id="files">Attaching files</h2>

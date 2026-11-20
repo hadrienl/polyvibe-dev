@@ -7615,108 +7615,6 @@
         }
       }
     },
-    "%@ · context %lld%%" : {
-      "comment" : "The folded usage section: running time, then the share of the window used.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · السياق %2$lld%%"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · Kontext %2$lld %%"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · contexto %2$lld %%"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · contexte %2$lld %%"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · संदर्भ %2$lld%%"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · contesto %2$lld%%"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · コンテキスト %2$lld%%"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · 컨텍스트 %2$lld%%"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · context %2$lld%%"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · kontekst %2$lld %%"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · contexto %2$lld%%"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · контекст %2$lld %%"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · bağlam %%%2$lld"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · контекст %2$lld %%"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · 上下文 %2$lld%%"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ · 上下文 %2$lld%%"
-          }
-        }
-      }
-    },
     "%@ · “%@”" : {
       "comment" : "When a session would be archived, and by which rule.",
       "localizations" : {
@@ -64021,106 +63919,6 @@
         }
       }
     },
-    "Cost: not available — neither CLI reports a reliable cost." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "التكلفة: غير متوفرة — لا تقدّم أي من واجهتي CLI تكلفة موثوقة."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kosten: nicht verfügbar – keine der beiden CLIs liefert verlässliche Kosten."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coste: no disponible — ninguna de las dos CLI ofrece un coste fiable."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coût : non disponible — aucune des deux CLI ne fournit un coût fiable."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "लागत: उपलब्ध नहीं — कोई भी CLI विश्वसनीय लागत नहीं बताता।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Costo: non disponibile — nessuna delle due CLI fornisce un costo affidabile."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コスト：利用不可 — どちらのCLIも信頼できるコストを報告しません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "비용: 사용할 수 없음 — 두 CLI 모두 신뢰할 수 있는 비용을 제공하지 않습니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kosten: niet beschikbaar — geen van beide CLI's geeft betrouwbare kosten op."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Koszt: niedostępny — żadne z CLI nie podaje wiarygodnego kosztu."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Custo: indisponível — nenhuma das duas CLIs informa um custo confiável."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Стоимость: недоступна — ни один из CLI не сообщает надёжную стоимость."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maliyet: kullanılamıyor — iki CLI de güvenilir bir maliyet bildirmiyor."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вартість: недоступна — жоден із CLI не надає надійних даних про вартість."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "费用：不可用 — 两个 CLI 都不提供可靠的费用数据。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "費用：無法提供 — 兩種 CLI 都未回報可靠的費用。"
-          }
-        }
-      }
-    },
     "Could not switch to %@: %@" : {
       "comment" : "An agent's name, then why it could not be started.",
       "localizations" : {
@@ -100565,106 +100363,6 @@
         }
       }
     },
-    "Neither CLI reports a cost that holds together: Claude Code's running totals go down as well as up, and Codex reports none. A price list shipped with the application would be wrong within weeks, and means nothing on a subscription." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا تقدّم أي من واجهتي CLI تكلفة متسقة: إجماليات Claude Code التراكمية تنخفض كما ترتفع، وCodex لا يقدّم أي تكلفة. وقائمة أسعار مضمّنة في التطبيق ستصبح خاطئة خلال أسابيع، ولا معنى لها مع الاشتراك."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keine der beiden CLIs liefert stimmige Kosten: Die laufenden Summen von Claude Code sinken ebenso, wie sie steigen, und Codex liefert gar keine. Eine mitgelieferte Preisliste wäre nach wenigen Wochen falsch und bei einem Abo bedeutungslos."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ninguna de las dos CLI ofrece un coste coherente: los totales acumulados de Claude Code bajan tanto como suben y Codex no ofrece ninguno. Una lista de precios incluida en la app quedaría desfasada en semanas y no tiene sentido con una suscripción."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aucune des deux CLI ne fournit un coût cohérent : les totaux cumulés de Claude Code baissent autant qu’ils montent, et Codex n’en fournit aucun. Une grille de prix livrée avec l’application serait fausse en quelques semaines, et n’a aucun sens avec un abonnement."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "कोई भी CLI सुसंगत लागत नहीं बताता: Claude Code के संचयी योग घटते भी हैं और बढ़ते भी, और Codex कुछ नहीं बताता। ऐप के साथ दी गई मूल्य सूची कुछ ही हफ़्तों में गलत हो जाएगी, और सब्सक्रिप्शन पर उसका कोई अर्थ नहीं है।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nessuna delle due CLI fornisce un costo coerente: i totali cumulativi di Claude Code scendono oltre che salire, e Codex non ne fornisce alcuno. Un listino prezzi incluso nell’applicazione sarebbe sbagliato nel giro di settimane e non ha senso con un abbonamento."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "どちらのCLIも整合性のあるコストを報告しません。Claude Codeの累計は増えることも減ることもあり、Codexはコストを報告しません。アプリケーションに価格表を同梱しても数週間で古くなり、サブスクリプションでは意味がありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "두 CLI 모두 일관된 비용을 제공하지 않습니다. Claude Code의 누적 합계는 늘기도 하고 줄기도 하며, Codex는 비용을 제공하지 않습니다. 앱에 포함된 가격표는 몇 주 안에 맞지 않게 되며, 구독 중이라면 의미가 없습니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Geen van beide CLI's geeft samenhangende kosten op: de lopende totalen van Claude Code gaan zowel omlaag als omhoog, en Codex geeft er geen. Een prijslijst in de app zou binnen enkele weken niet meer kloppen, en zegt niets bij een abonnement."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Żadne z CLI nie podaje spójnego kosztu: sumy bieżące Claude Code zarówno rosną, jak i maleją, a Codex nie podaje żadnych. Cennik dołączony do aplikacji byłby nieaktualny w ciągu kilku tygodni i nie ma sensu przy subskrypcji."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nenhuma das duas CLIs informa um custo coerente: os totais acumulados do Claude Code tanto sobem quanto descem, e o Codex não informa nenhum. Uma tabela de preços incluída no aplicativo estaria errada em poucas semanas, e não faz sentido em uma assinatura."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ни один из CLI не сообщает согласованную стоимость: накопленные итоги Claude Code то растут, то уменьшаются, а Codex не сообщает ничего. Встроенный в приложение прейскурант устарел бы за несколько недель и не имеет смысла при подписке."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "İki CLI de tutarlı bir maliyet bildirmiyor: Claude Code’un kümülatif toplamları hem artıyor hem azalıyor, Codex ise hiç bildirmiyor. Uygulamayla gelen bir fiyat listesi birkaç hafta içinde yanlış olur ve abonelikte hiçbir anlam taşımaz."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Жоден CLI не надає узгодженої вартості: накопичені суми Claude Code і зменшуються, і збільшуються, а Codex взагалі їх не надає. Прайс-лист, вбудований у програму, застарів би за кілька тижнів і не має сенсу для передплати."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "两个 CLI 都不提供前后一致的费用数据：Claude Code 的累计总额时增时减，而 Codex 完全不提供。随应用附带的价格表几周内就会过时，而且对订阅用户毫无意义。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "兩種 CLI 都未回報前後一致的費用：Claude Code 的累計總額會不升反降，Codex 則完全不回報。隨應用程式附帶的價目表幾週內就會過時，對訂閱方案也毫無意義。"
-          }
-        }
-      }
-    },
     "Network" : {
       "comment" : "A session's symbol.",
       "localizations" : {
@@ -109757,107 +109455,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不是 Git 儲存庫。代理程式在其中工作的儲存庫會顯示在上方。"
-          }
-        }
-      }
-    },
-    "Not available" : {
-      "comment" : "A session's cost is unknown.\nWhy a usage figure is missing.",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "غير متوفر"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht verfügbar"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No disponible"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non disponible"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "उपलब्ध नहीं"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Non disponibile"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "利用不可"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "사용할 수 없음"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niet beschikbaar"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Niedostępne"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Indisponível"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Недоступно"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kullanılamıyor"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Недоступно"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不可用"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法提供"
           }
         }
       }
@@ -212643,6 +212240,821 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "手指放在觸控式軌跡板上時可感受到。"
+          }
+        }
+      }
+    },
+    "Session usage" : {
+      "comment" : "Help of the status bar's Usage button.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استخدام الجلسة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nutzung der Sitzung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uso de la sesión"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisation de la session"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेशन का उपयोग"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizzo della sessione"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セッションの使用状況"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세션 사용량"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruik van de sessie"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Użycie sesji"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uso da sessão"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Использование сессии"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oturum kullanımı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Використання сеансу"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "会话用量"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "工作階段用量"
+          }
+        }
+      }
+    },
+    "cost about %@" : {
+      "comment" : "The status bar's Usage button, for VoiceOver: the session's cost, such as “4.82 US dollars”.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التكلفة نحو %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kosten etwa %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "coste de unos %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "coût d’environ %@"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लागत लगभग %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "costo di circa %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コスト 約%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비용 약 %@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "kosten ongeveer %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "koszt około %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "custo de cerca de %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "стоимость около %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "maliyet yaklaşık %@"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "вартість близько %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "费用约 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "費用約 %@"
+          }
+        }
+      }
+    },
+    "API equivalent, at public prices" : {
+      "comment" : "Under a session's cost: what the tokens would have cost paid by the token.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ما يعادل API، بالأسعار العامة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API-Äquivalent, zu öffentlichen Preisen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equivalente API, a precios públicos"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Équivalent API, aux tarifs publics"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API के बराबर, सार्वजनिक दरों पर"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equivalente API, a prezzi pubblici"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API換算、公開価格"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 환산, 공개 가격 기준"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API-equivalent, tegen publieke prijzen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Równowartość API, według cen publicznych"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equivalente de API, a preços públicos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эквивалент API по публичным ценам"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API karşılığı, herkese açık fiyatlarla"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Еквівалент API за публічними цінами"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 等价费用，按公开价格"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 等值費用，依公開價格"
+          }
+        }
+      }
+    },
+    "Unknown price" : {
+      "comment" : "A model whose public price per token is not known: its cost is not counted.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السعر غير معروف"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis unbekannt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precio desconocido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarif inconnu"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दर अज्ञात"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prezzo sconosciuto"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "価格不明"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가격 알 수 없음"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prijs onbekend"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cena nieznana"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preço desconhecido"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цена неизвестна"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fiyat bilinmiyor"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ціна невідома"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "价格未知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "價格未知"
+          }
+        }
+      }
+    },
+    "Models without a known price are left out of the total." : {
+      "comment" : "Under a cost, when a model has no known price.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النماذج التي لا يُعرف سعرها مستبعدة من الإجمالي."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelle ohne bekannten Preis sind nicht in der Summe enthalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los modelos sin precio conocido quedan fuera del total."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les modèles sans tarif connu sont laissés hors du total."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जिन मॉडलों की दर ज्ञात नहीं है, वे कुल में शामिल नहीं हैं।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I modelli senza un prezzo noto sono esclusi dal totale."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "価格が不明なモデルは合計に含まれません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가격을 알 수 없는 모델은 합계에서 제외됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modellen zonder bekende prijs tellen niet mee in het totaal."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modele bez znanej ceny są pomijane w sumie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelos sem preço conhecido ficam fora do total."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Модели без известной цены не входят в итог."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fiyatı bilinmeyen modeller toplama dahil edilmez."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Моделі без відомої ціни не входять до підсумку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "价格未知的模型不计入总额。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "價格未知的模型不計入總額。"
+          }
+        }
+      }
+    },
+    "Public prices from LiteLLM, read on %@." : {
+      "comment" : "Where the prices of the costs come from, and the day they were read.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الأسعار العامة من LiteLLM، قُرئت في %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffentliche Preise von LiteLLM, gelesen am %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precios públicos de LiteLLM, leídos el %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tarifs publics de LiteLLM, relus le %@."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLM की सार्वजनिक दरें, %@ को पढ़ी गईं।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prezzi pubblici di LiteLLM, letti il %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLMの公開価格（%@に取得）。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLM 공개 가격, %@에 읽음."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Publieke prijzen van LiteLLM, gelezen op %@."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ceny publiczne z LiteLLM, odczytane %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preços públicos da LiteLLM, lidos em %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Публичные цены LiteLLM, получены %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLM'in herkese açık fiyatları, %@ tarihinde okundu."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Публічні ціни LiteLLM, отримані %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLM 公开价格，读取于 %@。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LiteLLM 公開價格，讀取於 %@。"
+          }
+        }
+      }
+    },
+    "Costs (≈) are an API equivalent: the tokens at the models' public prices." : {
+      "comment" : "The Usage window's footer, about its Cost column.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التكاليف (≈) ما يعادل API: الرموز بالأسعار العامة للنماذج."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kosten (≈) sind ein API-Äquivalent: die Tokens zu den öffentlichen Preisen der Modelle."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los costes (≈) son un equivalente API: los tokens a los precios públicos de los modelos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les coûts (≈) sont un équivalent API : les jetons aux tarifs publics des modèles."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लागत (≈) API के बराबर है: मॉडलों की सार्वजनिक दरों पर टोकन।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I costi (≈) sono un equivalente API: i token ai prezzi pubblici dei modelli."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コスト（≈）はAPI換算です：各モデルの公開価格でのトークン料金です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비용(≈)은 API 환산값입니다: 모델별 공개 가격으로 계산한 토큰 비용입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De kosten (≈) zijn een API-equivalent: de tokens tegen de publieke prijzen van de modellen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koszty (≈) to równowartość API: tokeny według publicznych cen modeli."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os custos (≈) são um equivalente de API: os tokens aos preços públicos dos modelos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стоимость (≈) — эквивалент API: токены по публичным ценам моделей."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maliyetler (≈) bir API karşılığıdır: modellerin herkese açık fiyatlarıyla tokenlar."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вартість (≈) — еквівалент API: токени за публічними цінами моделей."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "费用（≈）为 API 等价费用：按各模型公开价格计算的Token费用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "費用（≈）為 API 等值費用：依各模型公開價格計算的Token費用。"
+          }
+        }
+      }
+    },
+    "The cost is an API equivalent: the tokens each model reported, at its public price per token for input, cache reads, cache writes and output. On a subscription, it is what the work would have cost paid by the token, not what was paid. The prices come from LiteLLM's public list, read again once a day; nothing about you is sent. Cache writes are counted at the five-minute price and long-context prices are left aside, hence the ≈. A model without a known price is left out of the total, never counted as free." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "التكلفة ما يعادل API: الرموز التي أبلغ عنها كل نموذج، بسعره العام لكل رمز للإدخال وقراءات ذاكرة التخزين المؤقت وكتاباتها والإخراج. مع الاشتراك، هي ما كان سيكلّفه العمل لو دُفع لكل رمز، لا ما دُفع فعلًا. تأتي الأسعار من القائمة العامة لـ LiteLLM، وتُقرأ مجددًا مرة في اليوم؛ ولا يُرسل أي شيء عنك. تُحتسب كتابات ذاكرة التخزين المؤقت بسعر الدقائق الخمس، وتُترك أسعار السياق الطويل جانبًا، ومن هنا علامة ≈. النموذج الذي لا يُعرف سعره يُستبعد من الإجمالي، ولا يُحتسب أبدًا مجانًا."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kosten sind ein API-Äquivalent: die Tokens, die jedes Modell gemeldet hat, zu seinem öffentlichen Preis pro Token für Eingabe, Cache-Lesen, Cache-Schreiben und Ausgabe. Bei einem Abonnement ist es das, was die Arbeit bei Abrechnung pro Token gekostet hätte, nicht das, was bezahlt wurde. Die Preise stammen aus der öffentlichen Liste von LiteLLM und werden einmal täglich neu gelesen; nichts über Sie wird gesendet. Cache-Schreibvorgänge werden zum Fünf-Minuten-Preis gezählt und Preise für lange Kontexte bleiben außen vor, daher das ≈. Ein Modell ohne bekannten Preis bleibt außerhalb der Summe und wird nie als kostenlos gezählt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El coste es un equivalente API: los tokens que indicó cada modelo, a su precio público por token de entrada, lecturas de caché, escrituras de caché y salida. Con una suscripción, es lo que habría costado el trabajo pagado por token, no lo que se pagó. Los precios vienen de la lista pública de LiteLLM, que se vuelve a leer una vez al día; no se envía nada sobre ti. Las escrituras de caché se cuentan al precio de cinco minutos y los precios de contexto largo se dejan de lado, de ahí el ≈. Un modelo sin precio conocido queda fuera del total, nunca se cuenta como gratuito."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le coût est un équivalent API : les jetons indiqués par chaque modèle, à son tarif public par jeton pour l’entrée, les lectures du cache, les écritures du cache et la sortie. Avec un abonnement, c’est ce que le travail aurait coûté payé au jeton, pas ce qui a été payé. Les tarifs viennent de la liste publique de LiteLLM, relue une fois par jour ; rien n’est envoyé sur vous. Les écritures du cache sont comptées au tarif à cinq minutes et les tarifs de long contexte sont laissés de côté, d’où le ≈. Un modèle sans tarif connu est laissé hors du total, jamais compté comme gratuit."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "लागत API के बराबर है: हर मॉडल द्वारा बताए गए टोकन, इनपुट, कैश रीड, कैश राइट और आउटपुट के लिए प्रति टोकन उसकी सार्वजनिक दर पर। सदस्यता पर, यह वह है जो काम का खर्च प्रति टोकन भुगतान करने पर होता, न कि जो भुगतान किया गया। दरें LiteLLM की सार्वजनिक सूची से आती हैं, जिसे दिन में एक बार फिर से पढ़ा जाता है; आपके बारे में कुछ भी नहीं भेजा जाता। कैश राइट पाँच मिनट की दर पर गिने जाते हैं और लंबे संदर्भ की दरें छोड़ दी जाती हैं, इसलिए ≈। जिस मॉडल की दर ज्ञात नहीं है, उसे कुल से बाहर रखा जाता है, कभी मुफ़्त नहीं गिना जाता।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il costo è un equivalente API: i token indicati da ogni modello, al suo prezzo pubblico per token per input, letture della cache, scritture della cache e output. Con un abbonamento, è quanto sarebbe costato il lavoro pagato a token, non quanto è stato pagato. I prezzi provengono dall'elenco pubblico di LiteLLM, riletto una volta al giorno; non viene inviato nulla su di te. Le scritture della cache sono conteggiate al prezzo a cinque minuti e i prezzi a contesto lungo sono tralasciati, da cui il ≈. Un modello senza un prezzo noto è escluso dal totale, mai conteggiato come gratuito."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コストはAPI換算です：各モデルが報告したトークンを、入力、キャッシュ読み取り、キャッシュ書き込み、出力それぞれのトークン単価（公開価格）で計算したものです。サブスクリプションの場合、トークン単位で支払った場合の金額であり、実際に支払った金額ではありません。価格はLiteLLMの公開リストから取得し、1日に1回読み直します。あなたに関する情報は何も送信されません。キャッシュ書き込みは5分間の価格で計算し、長いコンテキストの価格は考慮していないため、≈ を付けています。価格が不明なモデルは合計から除外され、無料として計算されることはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비용은 API 환산값입니다: 각 모델이 보고한 토큰을 입력, 캐시 읽기, 캐시 쓰기, 출력별 토큰당 공개 가격으로 계산한 것입니다. 구독 중이라면 토큰 단위로 지불했을 때의 금액이며, 실제로 지불한 금액이 아닙니다. 가격은 LiteLLM의 공개 목록에서 가져오며 하루에 한 번 다시 읽습니다. 사용자에 관한 정보는 전송되지 않습니다. 캐시 쓰기는 5분 가격으로 계산하고 긴 컨텍스트 가격은 제외하므로 ≈ 를 붙입니다. 가격을 알 수 없는 모델은 합계에서 제외되며 무료로 계산되지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De kosten zijn een API-equivalent: de tokens die elk model meldde, tegen de publieke prijs per token voor invoer, cachelezingen, cacheschrijvingen en uitvoer. Met een abonnement is het wat het werk per token betaald zou hebben gekost, niet wat er betaald is. De prijzen komen uit de publieke lijst van LiteLLM, die één keer per dag opnieuw wordt gelezen; er wordt niets over jou verstuurd. Cacheschrijvingen worden geteld tegen de prijs voor vijf minuten en prijzen voor lange context blijven buiten beschouwing, vandaar de ≈. Een model zonder bekende prijs telt niet mee in het totaal en wordt nooit als gratis geteld."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koszt to równowartość API: tokeny zgłoszone przez każdy model, według jego publicznej ceny za token dla wejścia, odczytów z pamięci podręcznej, zapisów do niej i wyjścia. Przy subskrypcji to tyle, ile kosztowałaby praca płatna za token, a nie tyle, ile zapłacono. Ceny pochodzą z publicznej listy LiteLLM, odczytywanej ponownie raz dziennie; nic o Tobie nie jest wysyłane. Zapisy do pamięci podręcznej są liczone według ceny pięciominutowej, a ceny długiego kontekstu są pomijane, stąd ≈. Model bez znanej ceny jest pomijany w sumie i nigdy nie jest liczony jako darmowy."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O custo é um equivalente de API: os tokens informados por cada modelo, ao seu preço público por token de entrada, leituras de cache, gravações de cache e saída. Em uma assinatura, é quanto o trabalho teria custado pago por token, não o que foi pago. Os preços vêm da lista pública da LiteLLM, lida novamente uma vez por dia; nada sobre você é enviado. As gravações de cache são contadas pelo preço de cinco minutos e os preços de contexto longo são deixados de lado, daí o ≈. Um modelo sem preço conhecido fica fora do total, nunca é contado como gratuito."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стоимость — это эквивалент API: токены, о которых сообщила каждая модель, по её публичной цене за токен для ввода, чтения кэша, записи в кэш и вывода. При подписке это то, во что обошлась бы работа при оплате за токены, а не то, что было уплачено. Цены берутся из публичного списка LiteLLM и перечитываются раз в день; ничего о вас не отправляется. Запись в кэш считается по пятиминутной цене, а цены длинного контекста не учитываются, отсюда ≈. Модель без известной цены не входит в итог и никогда не считается бесплатной."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maliyet bir API karşılığıdır: her modelin bildirdiği tokenlar; girdi, önbellek okuma, önbellek yazma ve çıktı için token başına herkese açık fiyatıyla. Abonelikte bu, işin token başına ödenseydi tutacağı bedeldir, ödenen tutar değil. Fiyatlar LiteLLM'in herkese açık listesinden gelir ve günde bir kez yeniden okunur; sizinle ilgili hiçbir şey gönderilmez. Önbellek yazmaları beş dakikalık fiyattan sayılır ve uzun bağlam fiyatları dikkate alınmaz, ≈ işareti bu yüzdendir. Fiyatı bilinmeyen bir model toplama dahil edilmez, asla ücretsiz sayılmaz."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вартість — це еквівалент API: токени, про які повідомила кожна модель, за її публічною ціною за токен для введення, читання кешу, запису в кеш і виведення. За підписки це те, скільки коштувала б робота з оплатою за токени, а не те, що було сплачено. Ціни беруться з публічного списку LiteLLM і перечитуються раз на день; нічого про вас не надсилається. Запис у кеш рахується за п’ятихвилинною ціною, а ціни довгого контексту не враховуються, звідси ≈. Модель без відомої ціни не входить до підсумку й ніколи не вважається безкоштовною."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "费用为 API 等价费用：各模型报告的Token，按其输入、缓存读取、缓存写入和输出的每Token公开价格计算。对于订阅用户，这是按Token付费时工作的花费，而不是实际支付的金额。价格来自 LiteLLM 的公开列表，每天重新读取一次；不会发送任何关于你的信息。缓存写入按五分钟价格计算，长上下文价格未计入，因此标有 ≈。价格未知的模型不计入总额，绝不会被算作免费。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "費用為 API 等值費用：各模型回報的Token，依其輸入、快取讀取、快取寫入與輸出的每Token公開價格計算。對於訂閱使用者，這是按Token付費時工作的花費，而不是實際支付的金額。價格來自 LiteLLM 的公開清單，每天重新讀取一次；不會傳送任何關於你的資訊。快取寫入以五分鐘價格計算，長上下文價格未計入，因此標有 ≈。價格未知的模型不計入總額，絕不會被算作免費。"
           }
         }
       }
