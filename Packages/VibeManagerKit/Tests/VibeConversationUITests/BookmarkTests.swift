@@ -423,4 +423,17 @@ struct BookmarkTests {
     #expect(model.moments(of: model.blocks[1]).map(\.kind) == [.git])
     #expect(model.moments(of: model.blocks[2]).isEmpty)
   }
+
+  @Test("A bookmark's preview reads in the messages' own font and size, a serif theme's included")
+  func previewType() {
+    var theme = ConversationTheme.systemDark
+    theme.fontStyle = .serif
+    var appearance = ConversationAppearance()
+    appearance.textSize = .extraLarge
+    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
+    #expect(style.textSize == 18)
+    #expect(style.excerptFont == theme.messageFont(size: 18))
+    #expect(style.headingFont == theme.interfaceFont(size: 18 * 0.86, weight: .semibold))
+    #expect(style.eventFont == theme.interfaceFont(size: 18))
+  }
 }

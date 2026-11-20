@@ -210,7 +210,8 @@ struct ConversationOverview: View {
           BookmarkPreviewPlacement(
             lineY: hovered.y,
             width: ConversationOverviewLayout.previewWidth(
-              textSize: appearance.textSize.scaled(13), room: room)
+              textSize: MomentPreviewStyle(theme: theme, appearance: appearance).textSize,
+              room: room)
           ) {
             MomentPreview(model: model, moments: Array(model.shownMoments[range]), theme: theme)
           }
@@ -617,8 +618,30 @@ private struct BookmarkPreviewPlacement: Layout {
   }
 }
 
+/// The type of the moments' preview, the conversation's own: a bookmark's words as the messages
+/// read them — the theme's font, at the conversation's size —, who wrote them as a relayed
+/// message's summary does.
+struct MomentPreviewStyle {
+  let textSize: Double
+  let headingFont: Font
+  /// A bookmark's message.
+  let excerptFont: Font
+  /// What happened, for the other moments.
+  let eventFont: Font
+  /// What the user answered a question.
+  let answerFont: Font
+
+  init(theme: ConversationTheme, appearance: ConversationAppearance) {
+    textSize = appearance.textSize.pointSize
+    headingFont = theme.interfaceFont(size: textSize * 0.86, weight: .semibold)
+    excerptFont = theme.messageFont(size: textSize)
+    eventFont = theme.interfaceFont(size: textSize)
+    answerFont = theme.interfaceFont(size: textSize * 0.86)
+  }
+}
+
 /// What the moments under the pointer are, beside the overview: a bookmark's message — who
-/// wrote it, when, its start —, or what happened and when, in the conversation's own text size.
+/// wrote it, when, its start —, or what happened and when, in the conversation's own type.
 private struct MomentPreview: View {
   let model: ConversationModel
   let moments: [ConversationMoments.Placed]
@@ -642,23 +665,24 @@ private struct MomentPreview: View {
       model.blocks.indices.contains(placed.blockIndex)
       ? model.blocks[placed.blockIndex] : nil
     let moment = placed.moment
+    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
     return VStack(alignment: .leading, spacing: 3) {
       if let heading = heading(of: moment, block: block) {
         Text(heading)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(11.5), weight: .semibold))
+          .font(style.headingFont)
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(1)
       }
       let label = MomentPresentation.label(of: moment, block: block)
       if !label.isEmpty {
         Text(label)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
+          .font(moment.kind == .bookmark ? style.excerptFont : style.eventFont)
           .foregroundStyle(theme.text.color)
           .lineLimit(3)
       }
       if let answer = MomentPresentation.answer(of: moment) {
         Text(answer)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(12.5)))
+          .font(style.answerFont)
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(2)
       }
