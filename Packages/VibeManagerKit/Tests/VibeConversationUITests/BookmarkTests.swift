@@ -293,4 +293,29 @@ struct BookmarkTests {
       ConversationModel.plainText(ofMarkdown: "```swift\nlet x = 1\n```\n\nThen ship.")
         == "let x = 1 Then ship.")
   }
+
+  @Test("Lines moved by a new layout or scale take the preview with them; one unmarked has none")
+  func previewFollowsTheLayout() {
+    let model = Self.model()
+    let metrics = ConversationOverviewLayout.Metrics(
+      columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8)
+    let before = ConversationOverviewLayout(
+      blocks: model.blocks,
+      measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
+      metrics: metrics, shapes: ConversationOverviewShapes())
+    let line = ConversationOverview.lineY(of: "m2", marked: [2], layout: before, scale: 0.1)
+    #expect(line == ConversationOverview.bookmarkY(top: 240, scale: 0.1))
+    // The first row measured 200 points taller: the line moves down 20 points.
+    let after = before.remeasured(
+      Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, $0.id == "m0" ? 300.0 : 100.0) }))
+    #expect(
+      ConversationOverview.lineY(of: "m2", marked: [2], layout: after, scale: 0.1)
+        == ConversationOverview.bookmarkY(top: 440, scale: 0.1))
+    // A longer conversation drawn smaller.
+    #expect(
+      ConversationOverview.lineY(of: "m2", marked: [2], layout: after, scale: 0.05)
+        == ConversationOverview.bookmarkY(top: 440, scale: 0.05))
+    #expect(ConversationOverview.lineY(of: "m2", marked: [], layout: after, scale: 0.1) == nil)
+    #expect(ConversationOverview.lineY(of: "gone", marked: [2], layout: after, scale: 0.1) == nil)
+  }
 }

@@ -132,10 +132,11 @@ struct ConversationOverview: View {
 
   private var layout: ConversationOverviewLayout { box.layout }
 
+  /// What the pointer is on: a bookmark's line, or the rest of the overview. The line's height is
+  /// read again from each layout, not kept: lines move as rows are measured and as the scale
+  /// changes, the pointer standing still.
   private struct Hover: Equatable {
     var bookmark: String?
-    /// The bookmark's line, not the pointer: its preview stays put while the pointer moves near.
-    var y: Double
   }
 
   /// Left of the drawing, where the bookmarks' tags are.
@@ -165,7 +166,7 @@ struct ConversationOverview: View {
         case .active(let point):
           let line = Self.bookmarkLine(
             nearY: point.y, marked: model.bookmarkedIndices, layout: layout, scale: scale)
-          let hover = Hover(bookmark: line?.id, y: line?.y ?? point.y)
+          let hover = Hover(bookmark: line?.id)
           if hover != hovered { hovered = hover }
         case .ended:
           hovered = nil
@@ -173,9 +174,12 @@ struct ConversationOverview: View {
       }
       // Left of the overview, level with the line, over the messages.
       .overlay {
-        if let hovered, let id = hovered.bookmark {
+        if let id = hovered?.bookmark,
+          let lineY = Self.lineY(
+            of: id, marked: model.bookmarkedIndices, layout: layout, scale: scale)
+        {
           BookmarkPreviewPlacement(
-            lineY: hovered.y,
+            lineY: lineY,
             width: ConversationOverviewLayout.previewWidth(
               textSize: BookmarkPreviewStyle(theme: theme, appearance: appearance).textSize,
               room: room)
@@ -187,6 +191,13 @@ struct ConversationOverview: View {
       }
     }
     .background(WheelForwarder(pager: pager))
+    // A bookmark taken away under the pointer is no longer hovered.
+    .onChange(of: model.bookmarkedIndices) {
+      guard let id = hovered?.bookmark,
+        layout.index(of: id).map({ !model.bookmarkedIndices.contains($0) }) ?? true
+      else { return }
+      hovered = Hover(bookmark: nil)
+    }
     .overlay(alignment: .leading) {
       Rectangle().fill(theme.border.color.opacity(0.6)).frame(width: 1)
     }
@@ -221,6 +232,15 @@ struct ConversationOverview: View {
   /// The bookmark whose line is within a few points of that height in the overview.
   private func bookmark(atY y: Double, scale: Double) -> String? {
     Self.bookmarkLine(nearY: y, marked: model.bookmarkedIndices, layout: layout, scale: scale)?.id
+  }
+
+  /// Where a bookmark's line is in the overview as it is laid out now; `nil` once it is no longer
+  /// marked.
+  static func lineY(
+    of id: String, marked: [Int], layout: ConversationOverviewLayout, scale: Double
+  ) -> Double? {
+    guard let index = layout.index(of: id), marked.contains(index) else { return nil }
+    return bookmarkY(top: layout.tops[index], scale: scale)
   }
 
   /// The bookmark whose line is nearest that height, within a few points, and where its line is.
