@@ -295,6 +295,29 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     return Placement(width: minimumWidth, reserved: reserved)
   }
 
+  // MARK: - Moments (#572)
+
+  /// Moments drawn closer than that in the overview share one icon.
+  public static let clusterGap = 13.0
+
+  /// The moments grouped as the overview draws them: each group from a moment to those less than
+  /// `minimumGap` points below it once drawn small, in order. Only the first one's icon is drawn.
+  ///
+  /// - Parameter tops: where each moment's block starts in the conversation, in order.
+  public static func clusters(
+    _ tops: [Double], scale: Double, minimumGap: Double = clusterGap
+  ) -> [Range<Int>] {
+    var clusters: [Range<Int>] = []
+    var start = 0
+    for index in tops.indices.dropFirst()
+    where (tops[index] - tops[start]) * scale >= minimumGap {
+      clusters.append(start..<index)
+      start = index
+    }
+    if !tops.isEmpty { clusters.append(start..<tops.count) }
+    return clusters
+  }
+
   // MARK: - Bookmark preview
 
   /// Kept between a bookmark's preview and the overview.

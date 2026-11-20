@@ -248,4 +248,15 @@ struct ConversationOverviewLayoutTests {
       lineY: 300, previewWidth: width, previewHeight: 60, overviewHeight: 700)
     #expect(origin.x == -room + ConversationOverviewLayout.previewMargin)
   }
+
+  @Test("Moments drawn close share the first one's icon; the next group starts past the gap (#572)")
+  func clusters() {
+    // At a tenth: 0, 5, 12.9 and 13 points down, then 40 and 41.
+    let tops = [0.0, 50, 129, 130, 400, 410]
+    #expect(
+      ConversationOverviewLayout.clusters(tops, scale: 0.1) == [0..<3, 3..<4, 4..<6])
+    #expect(ConversationOverviewLayout.clusters(tops, scale: 1) == [0..<1, 1..<2, 2..<4, 4..<6])
+    #expect(ConversationOverviewLayout.clusters([], scale: 0.1).isEmpty)
+    #expect(ConversationOverviewLayout.clusters([7], scale: 0.1) == [0..<1])
+  }
 }
