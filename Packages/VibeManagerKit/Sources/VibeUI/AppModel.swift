@@ -334,7 +334,6 @@ public final class AppModel {
     didSet {
       fileOpeningPreferences.editor = fileEditor
       gitInspector.editor = fileEditor
-      journal?.editor = fileEditor
     }
   }
   /// The screen state of the inspector's Git pane, kept per session for the length of the run.
@@ -343,7 +342,7 @@ public final class AppModel {
   public let notes: NotesModel
   /// The titles of the tickets a new session names, read in its web view for its notes (#89).
   public let ticketTitles: TicketTitlesModel
-  /// Every session's journal: its summary and its resources (#36). Absent in a workspace
+  /// Every session's journal: its resources (#36). Absent in a workspace
   /// assembled without it.
   public let journal: SessionJournalModel?
   /// Open Quickly, ⌘P (#37): every session, found by a ticket, a request, a branch or a folder.
@@ -900,7 +899,6 @@ public final class AppModel {
     self.appearancePalette = SessionAppearancePaletteModel(store: appearancePalette)
     self.dropStore = dropStore
     self.journal = journal
-    journal?.editor = fileOpeningPreferences.editor
     folderLabelStore = folderLabels
     self.projectIcons = projectIcons
     self.iconStore = iconStore
@@ -1012,7 +1010,6 @@ public final class AppModel {
         return (endpoint.name, endpoint.models.first(where: { $0.id == model })?.contextWindow)
       })
 
-    journal?.showSettingsTab = { [weak self] in self?.settingsPage = .general }
     quickOpen.opened = { [weak self] result in self?.goToSession(result.sessionID) }
     journal?.journalDidChange = { [quickOpen] id, journal in
       quickOpen.journalChanged(journal, for: id)
@@ -3738,17 +3735,9 @@ extension AppModel {
     if !layout.columns.isInspectorVisible {
       layout.setInspectorVisible(true)
     }
-    // The first of the two lists the user left unfolded; Git, unfolded, when neither is.
-    let lists: [InspectorSectionID] = journal == nil ? [.git] : [.activity, .git]
-    let arrangement = layout.inspectorSections
-    let target =
-      arrangement.order(of: lists).first { !arrangement.isCollapsed($0) } ?? .git
-    layout.setSectionCollapsed(target, false)
-    if target == .activity, let journal {
-      journal.requestFocus()
-    } else {
-      gitInspector.requestFocus()
-    }
+    // Git's list, unfolded: the Activity section is gone (#572).
+    layout.setSectionCollapsed(.git, false)
+    gitInspector.requestFocus()
   }
 
   /// Read Last Output, ⌃⌥⌘O: VoiceOver says the agent's last message when the session is shown as

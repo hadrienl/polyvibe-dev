@@ -7,12 +7,16 @@ import Testing
 struct InspectorArrangementTests {
   private let six: [InspectorSectionID] = [.activity, .git, .notes, .agent, .usage, .prompt]
 
-  @Test("By default: activity, Git and notes unfolded, the rest folded under them")
+  /// The default arrangement before #572, Activity first: six sections to move about.
+  private static let withActivity = InspectorArrangement(
+    entries: [.init(id: .activity, isCollapsed: false)] + InspectorArrangement.default.entries)
+
+  @Test("By default: Git and notes unfolded, the rest folded under them; no Activity (#572)")
   func defaults() {
     let arrangement = InspectorArrangement.default
 
-    #expect(arrangement.order(of: six) == six)
-    #expect(!arrangement.isCollapsed(.activity))
+    #expect(arrangement.entry(.activity) == nil)
+    #expect(arrangement.order(of: Array(six.dropFirst())) == Array(six.dropFirst()))
     #expect(!arrangement.isCollapsed(.git))
     #expect(!arrangement.isCollapsed(.notes))
     #expect(arrangement.isCollapsed(.agent))
@@ -56,7 +60,7 @@ struct InspectorArrangementTests {
 
   @Test("A header dropped before another, after another, or last")
   func moveToTarget() {
-    var arrangement = InspectorArrangement.default
+    var arrangement = Self.withActivity
 
     arrangement.move(.prompt, before: .activity)
     #expect(arrangement.order(of: six) == [.prompt, .activity, .git, .notes, .agent, .usage])
@@ -86,7 +90,7 @@ struct InspectorArrangementTests {
 
   @Test("Resizing rewrites the weights it is given, and scales the others to the same unit")
   func resizing() {
-    var arrangement = InspectorArrangement.default
+    var arrangement = Self.withActivity
 
     arrangement.resize(to: [.git: 280, .notes: 200, .agent: .nan, .usage: -4])
 

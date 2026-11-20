@@ -28,6 +28,8 @@ public struct InspectorSectionID: RawRepresentable, Hashable, Codable, Sendable,
 
   public var description: String { rawValue }
 
+  /// The journal's summary and resources, removed (#572): kept so that arrangements written
+  /// before, and the column older than #66 they were migrated from, still name it.
   public static let activity = Self("activity")
   public static let git = Self("git")
   public static let notes = Self("notes")
@@ -86,10 +88,9 @@ public struct InspectorArrangement: Equatable, Codable, Sendable {
     case entries
   }
 
-  /// Activity, Git and the notes unfolded, in that order; the agent, its usage and the prompt it
-  /// started from folded under them. Git takes a little more of the height: it is the longest.
+  /// Git and the notes unfolded, in that order; the agent, its usage and the prompt it started
+  /// from folded under them. Git takes a little more of the height: it is the longest.
   public static let `default` = InspectorArrangement(entries: [
-    Entry(id: .activity, isCollapsed: false, weight: 1),
     Entry(id: .git, isCollapsed: false, weight: 1.4),
     Entry(id: .notes, isCollapsed: false, weight: 1),
     Entry(id: .agent, isCollapsed: true),

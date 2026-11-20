@@ -38,10 +38,6 @@ extension AppModel {
     }
     launcher?.hasWebView = { [weak self] id in self?.hasWebView(id) ?? false }
     terminals?.hasWebView = { [weak self] id in self?.hasWebView(id) ?? false }
-    journal?.route = { [weak self] url, gesture, id in
-      self?.openLink(url, from: id, gesture: gesture)
-    }
-    journal?.hasWebView = { [weak self] id in self?.hasWebView(id) ?? false }
     notes.route = { [weak self] url, gesture, id in
       self?.openLink(url, from: id, gesture: gesture)
     }

@@ -10,8 +10,8 @@ public enum QuickOpenPresentation {
     switch reason {
     case .resource(let kind, let label, let context, let involvement):
       let resource = described(kind: kind, label: label, context: context, involvement: involvement)
-      var parts = [ActivityPresentation.spokenName(resource), context].compactMap { $0 }
-      if involvement != nil { parts.append(ActivityPresentation.involvement(resource)) }
+      var parts = [ResourceNaming.spokenName(resource), context].compactMap { $0 }
+      if involvement != nil { parts.append(ResourceNaming.involvement(resource)) }
       return parts.joined(separator: " · ")
     case .title:
       return String(
@@ -41,10 +41,10 @@ public enum QuickOpenPresentation {
     }
     let resource = described(kind: kind, label: label, context: context, involvement: involvement)
     guard involvement != nil else {
-      return [ActivityPresentation.spokenName(resource), context].compactMap { $0 }
+      return [ResourceNaming.spokenName(resource), context].compactMap { $0 }
         .joined(separator: ", ")
     }
-    return ActivityPresentation.spokenLabel(resource)
+    return ResourceNaming.spokenLabel(resource)
   }
 
   /// A resource the palette describes with the words of the Activity pane. A GitLab merge request
@@ -105,7 +105,7 @@ public enum QuickOpenPresentation {
   static func unused(_ reason: QuickOpenReason) -> String? {
     guard case .resource(let kind, let label, let context, _) = reason else { return nil }
     let resource = described(kind: kind, label: label, context: context, involvement: nil)
-    let name = [ActivityPresentation.spokenName(resource), context].compactMap { $0 }.joined(
+    let name = [ResourceNaming.spokenName(resource), context].compactMap { $0 }.joined(
       separator: " · ")
     return String(
       localized: "No session used \(name).", bundle: .module,

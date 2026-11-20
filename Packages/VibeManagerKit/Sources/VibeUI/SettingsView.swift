@@ -472,13 +472,6 @@ struct GeneralSettingsPage: View {
       } header: {
         Text("Sessions", bundle: .module, comment: "A section of the Settings window.")
       }
-      if let journal = model.journal {
-        Section {
-          SummaryRow(journal: journal)
-        } header: {
-          Text("Summary", bundle: .module, comment: "The heading of a session's summary.")
-        }
-      }
       if let terminals = model.terminals {
         Section {
           SideTerminalsRow(terminals: terminals)
@@ -1215,24 +1208,6 @@ private struct SideTerminalsRow: View {
         What each side terminal showed is written to disk, so that it is still there when its \
         session is reopened or Vibe Manager relaunched. It stays on this Mac, readable by you \
         alone and out of backups. Turned off, the histories already kept are erased.
-        """,
-        bundle: .module)
-    }
-  }
-}
-
-/// Whether each session's agent writes the summary of what it did (#36).
-private struct SummaryRow: View {
-  @Bindable var journal: SessionJournalModel
-
-  var body: some View {
-    Toggle(isOn: $journal.summariesEnabled) {
-      Text("Summarize sessions automatically", bundle: .module)
-      Text(
-        """
-        After each turn, the session's agent writes a short summary of what it did, with the same \
-        account, the lightest model it offers and at most one summary every five minutes. The \
-        tickets, requests, branches and worktrees used are listed either way.
         """,
         bundle: .module)
     }

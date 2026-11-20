@@ -186,98 +186,17 @@ struct SessionJournalReaderTests {
   }
 }
 
-@Suite("The commands that write a summary")
-struct SummaryCommandTests {
-  private let request = SummaryRequest(digest: "## Turn 1", turnCount: 2, language: "fr-FR")
-
-  @Test("Claude Code: no tools, no MCP, no hooks, no persistence, a schema")
-  func claudeArguments() throws {
-    let arguments = try ClaudeCodeSummaryCommand().arguments(
-      for: request, in: URL(fileURLWithPath: "/tmp"), models: [])
-    #expect(arguments.prefix(4) == ["-p", "--model", "haiku", "--tools"])
-    #expect(arguments[4] == "")
-    for flag in [
-      "--strict-mcp-config", "--no-session-persistence", "--setting-sources", "--settings",
-      "--system-prompt", "--json-schema",
-    ] {
-      #expect(arguments.contains(flag))
-    }
-    #expect(!arguments.contains("--bare"))
-    let settings = try #require(arguments.firstIndex(of: "--settings"))
-    #expect(arguments[settings + 1] == #"{"disableAllHooks":true}"#)
-    #expect(
-      ClaudeCodeSummaryCommand().additionalEnvironment["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] == "1")
-  }
-
-  @Test("Claude Code: the answer is its structured output, checked")
-  func claudeAnswer() throws {
-    let command = ClaudeCodeSummaryCommand()
-    let good = BoundedProcessResult(
-      termination: .exited(0),
-      standardOutput: Data(
-        #"{"type":"result","is_error":false,"structured_output":{"entries":[{"text":"Revu la MR","turn":1},{"text":"Poussé","turn":9}]}}"#
-          .utf8))
-    let entries = try command.entries(
-      from: good, in: URL(fileURLWithPath: "/tmp"), request: request)
-    #expect(
-      entries == [SummaryEntry(text: "Revu la MR", turn: 1), SummaryEntry(text: "Poussé", turn: 2)])
-
-    let empty = BoundedProcessResult(
-      termination: .exited(0),
-      standardOutput: Data(#"{"is_error":false,"structured_output":{"entries":[]}}"#.utf8))
-    #expect(throws: SummaryError.self) {
-      try command.entries(from: empty, in: URL(fileURLWithPath: "/tmp"), request: request)
-    }
-    let tooLong = BoundedProcessResult(
-      termination: .exited(0),
-      standardOutput: Data(
-        #"{"structured_output":{"entries":[{"text":"\#(String(repeating: "a", count: 300))","turn":1}]}}"#
-          .utf8))
-    #expect(throws: SummaryError.self) {
-      try command.entries(from: tooLong, in: URL(fileURLWithPath: "/tmp"), request: request)
-    }
-  }
-
-  @Test("An error output tells an old CLI and a signed-out one from a failed pass")
+@Suite("Why a one-shot run of an agent's CLI failed")
+struct OneShotAgentRunFailureTests {
+  @Test("An error output tells an old CLI and a signed-out one from a failed run")
   func failures() {
     let old = BoundedProcessResult(
       termination: .exited(2), standardError: Data("error: unknown option '--json-schema'".utf8))
-    #expect(CommandLineSummarizer.failure(of: old) == .unavailable(.outdated))
+    #expect(OneShotAgentRun.ExitFailure(old) == .outdated)
     let signedOut = BoundedProcessResult(
       termination: .exited(1), standardOutput: Data("Invalid API key · Please run /login".utf8))
-    #expect(CommandLineSummarizer.failure(of: signedOut) == .unavailable(.signedOut))
+    #expect(OneShotAgentRun.ExitFailure(signedOut) == .signedOut)
     let other = BoundedProcessResult(termination: .exited(1))
-    #expect(CommandLineSummarizer.failure(of: other) == .failed("exit 1"))
-  }
-
-  @Test("Codex: ephemeral, read only, its schema and answer in files, the lightest model")
-  func codex() throws {
-    let workspace = FileManager.default.temporaryDirectory.appendingPathComponent(
-      "VibeSummary-\(UUID().uuidString)")
-    try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: workspace) }
-    let command = CodexSummaryCommand()
-    let arguments = try command.arguments(
-      for: request, in: workspace,
-      models: [
-        AgentModel(id: "gpt-5", displayName: "GPT-5", isDefault: true),
-        AgentModel(id: "gpt-5-mini", displayName: "mini", isDefault: false),
-      ])
-    #expect(
-      arguments == [
-        "exec", "--ephemeral", "--skip-git-repo-check", "-s", "read-only",
-        "--disable", "hooks", "--disable", "apps", "--disable", "plugins",
-        "-c", "mcp_servers={}", "-c", "tools.web_search=false", "-m", "gpt-5-mini",
-        "--output-schema", workspace.appendingPathComponent("schema.json").path,
-        "-o", workspace.appendingPathComponent("answer.json").path, "-",
-      ])
-    #expect(
-      FileManager.default.fileExists(atPath: workspace.appendingPathComponent("schema.json").path))
-    #expect(String(decoding: command.input(for: request), as: UTF8.self).hasSuffix("## Turn 1"))
-    try Data(#"{"entries":[{"text":"Corrigé le test","turn":2}]}"#.utf8).write(
-      to: workspace.appendingPathComponent("answer.json"))
-    let entries = try command.entries(
-      from: BoundedProcessResult(termination: .exited(0)), in: workspace, request: request)
-    #expect(entries == [SummaryEntry(text: "Corrigé le test", turn: 2)])
+    #expect(OneShotAgentRun.ExitFailure(other) == .failed("exit 1"))
   }
 }

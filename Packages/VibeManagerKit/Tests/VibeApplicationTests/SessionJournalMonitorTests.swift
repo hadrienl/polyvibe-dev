@@ -25,43 +25,6 @@ actor QueuedJournalReader: SessionJournalReading {
   func transcriptDirectories(for session: WorkSession) -> [String] { ["/t"] }
 }
 
-/// Answers with what the test says, and remembers what it was asked.
-actor ScriptedSummarizer: SessionSummarizing, SessionSummarizerResolving {
-  var answers: [Result<[SummaryEntry], SummaryError>] = []
-  private(set) var requests: [SummaryRequest] = []
-  private(set) var running = 0
-  private(set) var mostRunning = 0
-  var hold: Duration = .zero
-  var supported: Set<String> = ["claude-code", "codex"]
-  /// The requests held until the test lets them go; `nil` when they are answered at once.
-  private var held: [CheckedContinuation<Void, Never>]?
-
-  func setAnswers(_ answers: [Result<[SummaryEntry], SummaryError>]) { self.answers = answers }
-  func setHold(_ hold: Duration) { self.hold = hold }
-  func holdAll() { held = held ?? [] }
-  func release() {
-    let waiting = held ?? []
-    held = nil
-    for request in waiting { request.resume() }
-  }
-
-  func summarizer(for providerID: String) -> (any SessionSummarizing)? {
-    supported.contains(providerID) ? self : nil
-  }
-
-  func summarize(_ request: SummaryRequest) async throws -> [SummaryEntry] {
-    requests.append(request)
-    running += 1
-    mostRunning = max(mostRunning, running)
-    defer { running -= 1 }
-    if held != nil { await withCheckedContinuation { held?.append($0) } }
-    if hold > .zero { try await Task.sleep(for: hold) }
-    let answer =
-      answers.isEmpty ? .success([SummaryEntry(text: "Did it", turn: 1)]) : answers.removeFirst()
-    return try answer.get()
-  }
-}
-
 /// The store the monitor asks, when a session it follows has not named its conversation yet.
 actor OneSessionRepository: SessionRepository {
   var stored: WorkSession
@@ -72,12 +35,6 @@ actor OneSessionRepository: SessionRepository {
   func save(_ session: WorkSession) { stored = session }
 }
 
-/// The journal a wait saw, kept for the test to look at.
-actor SeenJournal {
-  private(set) var journal: SessionJournal?
-  func set(_ journal: SessionJournal) { self.journal = journal }
-}
-
 struct NoRepositories: RepositoryIdentityResolving {
   func identity(ofDirectory path: String) async -> RepositoryIdentity? { nil }
 }
@@ -85,8 +42,7 @@ struct NoRepositories: RepositoryIdentityResolving {
 @Suite("Keeping the journal of every active session")
 struct SessionJournalMonitorTests {
   private let fast = SessionJournalMonitor.Timing(
-    quiet: .milliseconds(50), minimumInterval: .milliseconds(50),
-    retries: [.milliseconds(50)], readDelay: .milliseconds(10), saveDelay: .milliseconds(10))
+    readDelay: .milliseconds(10), saveDelay: .milliseconds(10))
 
   private func session(_ provider: String = "claude-code", status: SessionStatus = .active)
     -> WorkSession
@@ -106,286 +62,129 @@ struct SessionJournalMonitorTests {
     ]
   }
 
-  /// The session's journal as soon as it matches, taken as it was then: what follows may change it.
-  private func firstJournal(
-    of monitor: SessionJournalMonitor, _ id: SessionID,
-    where predicate: @escaping @Sendable (SessionJournal) -> Bool
-  ) async -> SessionJournal? {
-    let seen = SeenJournal()
-    let found = await eventually {
-      guard let journal = await monitor.journal(for: id), predicate(journal) else { return false }
-      await seen.set(journal)
-      return true
-    }
-    return found ? await seen.journal : nil
-  }
-
   private func make(
-    reader: QueuedJournalReader, summarizer: ScriptedSummarizer,
+    reader: QueuedJournalReader,
     store: InMemorySessionJournalStore = InMemorySessionJournalStore(),
-    events: ManualFileChanges? = nil, timing: SessionJournalMonitor.Timing? = nil,
-    concurrent: Int = 2
+    events: ManualFileChanges? = nil, timing: SessionJournalMonitor.Timing? = nil
   ) -> SessionJournalMonitor {
     SessionJournalMonitor(
-      store: store, reader: reader, repositories: NoRepositories(), summarizers: summarizer,
-      events: events, timing: timing ?? fast, maximumConcurrentPasses: concurrent,
-      language: "fr-FR")
+      store: store, reader: reader, repositories: NoRepositories(), events: events,
+      timing: timing ?? fast)
   }
 
-  @Test("A turn that ends is summarized, without anyone asking, and the entry dated by its turn")
-  func summarizesAfterTurn() async throws {
+  private func closed(_ session: WorkSession) -> WorkSession {
+    WorkSession(
+      id: session.id, name: "S", agent: session.agent, status: .closed,
+      createdAt: session.createdAt)
+  }
+
+  @Test("Resources are listed as the transcript names them, and kept")
+  func resources() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
     let store = InMemorySessionJournalStore()
-    let monitor = make(reader: reader, summarizer: summarizer, store: store)
-    let session = session()
-    await reader.queue(session.id, turn("Review https://github.com/o/r/pull/3"))
-    await monitor.track([session])
-    #expect(await eventually { await monitor.journal(for: session.id)?.entries.count == 1 })
-    let journal = try #require(await monitor.journal(for: session.id))
-    #expect(journal.entries.first?.text == "Did it")
-    #expect(journal.pending.isEmpty)
-    #expect(journal.resources.map(\.label) == ["#3"])
-    let request = try #require(await summarizer.requests.first)
-    #expect(request.language == "fr-FR")
-    #expect(request.digest.contains("Bash: git status"))
-    #expect(request.digest.contains("https://github.com/o/r/pull/3"))
-    #expect(await eventually { await store.journal(for: session.id)?.entries.count == 1 })
-    await monitor.stop()
-  }
-
-  @Test("Resources are listed during the turn, without waiting for its end")
-  func resourcesBeforeTurnEnds() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let monitor = make(reader: reader, summarizer: summarizer)
+    let monitor = make(reader: reader, store: store)
     let session = session()
     await reader.queue(session.id, [.prompt("see https://gitlab.com/g/p/-/issues/4", at: nil)])
     await monitor.track([session])
     #expect(await eventually { await monitor.journal(for: session.id)?.resources.count == 1 })
-    try await Task.sleep(for: .milliseconds(200))
-    #expect(await summarizer.requests.isEmpty)
+    #expect(await eventually { await store.journal(for: session.id)?.resources.count == 1 })
     await monitor.stop()
   }
 
-  @Test("A failed pass adds nothing, keeps the turns, says so, and is tried again")
-  func failureKeepsTurns() async throws {
+  @Test("No summary is written any more: a turn that ends adds no line, old lines are kept (#572)")
+  func noSummary() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    await summarizer.setAnswers([.failure(.failed("boom"))])
-    let monitor = make(reader: reader, summarizer: summarizer)
+    let old = JournalEntry(text: "Reviewed the PR", at: Date(), providerID: "claude-code")
     let session = session()
-    await reader.queue(session.id, turn("fix"))
+    let store = InMemorySessionJournalStore(journals: [session.id: SessionJournal(entries: [old])])
+    let monitor = make(reader: reader, store: store)
+    await reader.queue(session.id, turn("Review https://github.com/o/r/pull/3"))
     await monitor.track([session])
-    let failed = try #require(
-      await firstJournal(of: monitor, session.id) {
-        if case .failed = $0.summary { return true }
-        return false
-      })
-    #expect(failed.pending.count == 1)
-    #expect(failed.entries.isEmpty)
-    // The retry succeeds, with the same turn.
-    #expect(await eventually { await monitor.journal(for: session.id)?.entries.count == 1 })
-    #expect(await monitor.journal(for: session.id)?.summary == .ready)
+    #expect(await eventually { await monitor.journal(for: session.id)?.resources.count == 1 })
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(await monitor.journal(for: session.id)?.entries == [old])
     await monitor.stop()
   }
 
-  @Test("An agent that cannot summarize is said so, and the resources are still read")
-  func unsupported() async throws {
+  @Test("A session that stops is read one last time, and its journal written")
+  func lastReading() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let monitor = make(reader: reader, summarizer: summarizer)
-    let session = session("mock")
-    await reader.queue(
-      session.id, [.prompt("https://github.com/o/r/issues/1", at: nil)] + turn("x"))
-    await monitor.track([session])
-    #expect(
-      await eventually {
-        await monitor.journal(for: session.id)?.summary == .unavailable(.unsupported)
-      })
-    #expect(await monitor.journal(for: session.id)?.resources.count == 1)
-    await monitor.stop()
-  }
-
-  @Test("Turns that end close together make one pass, and passes are spaced by the interval")
-  func grouping() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let timing = SessionJournalMonitor.Timing(
-      quiet: .milliseconds(100), minimumInterval: .seconds(60), retries: [],
-      readDelay: .milliseconds(10), saveDelay: .milliseconds(10))
-    let monitor = make(reader: reader, summarizer: summarizer, timing: timing)
-    let session = session()
-    await reader.queue(session.id, turn("one") + turn("two"))
-    await monitor.track([session])
-    #expect(await eventually { await summarizer.requests.count == 1 })
-    #expect(await summarizer.requests.first?.turnCount == 2)
-    await reader.queue(session.id, turn("three"))
-    await monitor.refresh()
-    // Once the turn is read, its pass is scheduled; well past the calm, still none.
-    #expect(await eventually { await monitor.journal(for: session.id)?.pending.count == 1 })
-    try await Task.sleep(for: .milliseconds(400))
-    #expect(await summarizer.requests.count == 1)
-    #expect(await monitor.journal(for: session.id)?.pending.count == 1)
-    await monitor.stop()
-  }
-
-  @Test("At most two passes at once in the whole application")
-  func concurrency() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    // Held until let go, so that the first two are surely running together, however slow the
-    // runner.
-    await summarizer.holdAll()
-    let monitor = make(reader: reader, summarizer: summarizer)
-    let sessions = (0..<4).map { _ in session() }
-    for session in sessions { await reader.queue(session.id, turn("go")) }
-    await monitor.track(sessions)
-    #expect(await eventually { await summarizer.requests.count == 2 })
-    // Well past the calm of the other two, still two.
-    try await Task.sleep(for: .milliseconds(200))
-    #expect(await summarizer.requests.count == 2)
-    await summarizer.release()
-    #expect(await eventually { await summarizer.requests.count == 4 })
-    #expect(await summarizer.mostRunning == 2)
-    await monitor.stop()
-  }
-
-  @Test("A session that stops is summarized one last time, its unfinished turn included")
-  func finalPass() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
     let store = InMemorySessionJournalStore()
     let timing = SessionJournalMonitor.Timing(
-      quiet: .seconds(60), minimumInterval: .seconds(60), retries: [],
       readDelay: .milliseconds(10), saveDelay: .seconds(60))
-    let monitor = make(reader: reader, summarizer: summarizer, store: store, timing: timing)
+    let monitor = make(reader: reader, store: store, timing: timing)
     let session = session()
-    await reader.queue(session.id, [.prompt("half done", at: nil)])
     await monitor.track([session])
     #expect(await eventually { await reader.readCount >= 1 })
-    let closed = WorkSession(
-      id: session.id, name: "S", agent: session.agent, status: .closed, createdAt: session.createdAt
-    )
-    await monitor.track([closed])
-    #expect(await eventually { await store.journal(for: session.id)?.entries.count == 1 })
-    #expect(await summarizer.requests.first?.digest.contains("half done") == true)
+    await reader.queue(session.id, [.prompt("https://github.com/o/r/issues/5", at: nil)])
+    await monitor.track([closed(session)])
+    #expect(await eventually { await store.journal(for: session.id)?.resources.count == 1 })
     await monitor.stop()
   }
 
-  @Test("A session restarted while its last pass runs stays followed")
+  @Test("A session restarted while it is read a last time stays followed")
   func restartedWhileFinishing() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    await summarizer.setHold(.milliseconds(300))
-    let monitor = make(reader: reader, summarizer: summarizer)
+    let monitor = make(reader: reader)
     let session = session()
     await reader.queue(session.id, [.prompt("half done", at: nil)])
     await monitor.track([session])
     #expect(await eventually { await reader.readCount >= 1 })
-    let closed = WorkSession(
-      id: session.id, name: "S", agent: session.agent, status: .closed,
-      createdAt: session.createdAt)
-    await monitor.track([closed])
-    #expect(await eventually { await summarizer.requests.count == 1 })
+    await monitor.track([closed(session)])
     await monitor.track([session])
-    #expect(await eventually { await monitor.journal(for: session.id)?.entries.count == 1 })
     await reader.queue(session.id, [.prompt("https://github.com/o/r/issues/5", at: nil)])
     await monitor.refresh()
     #expect(await eventually { await monitor.journal(for: session.id)?.resources.count == 1 })
     await monitor.stop()
   }
 
-  @Test("A session that stops is let go once finished: no more reads, no more passes")
+  @Test("A session that stops is let go once finished: no more reads")
   func stoppedIsDropped() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let monitor = make(reader: reader, summarizer: summarizer)
+    let monitor = make(reader: reader)
     let session = session()
     await reader.queue(session.id, [.prompt("half done", at: nil)])
     await monitor.track([session])
     #expect(await eventually { await reader.readCount >= 1 })
-    let closed = WorkSession(
-      id: session.id, name: "S", agent: session.agent, status: .closed,
-      createdAt: session.createdAt)
-    await monitor.track([closed])
-    #expect(await eventually { await summarizer.requests.count == 1 })
+    await monitor.track([closed(session)])
+    #expect(await eventually { await reader.readCount >= 2 })
     try await Task.sleep(for: .milliseconds(200))
     let reads = await reader.readCount
-    await monitor.track([closed])
+    await monitor.track([closed(session)])
     await monitor.refresh()
     try await Task.sleep(for: .milliseconds(200))
     #expect(await reader.readCount == reads)
-    #expect(await summarizer.requests.count == 1)
     await monitor.stop()
-  }
-
-  @Test("Turns left pending by the last launch are summarized without waiting for a new one")
-  func pendingAfterRelaunch() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let store = InMemorySessionJournalStore()
-    let session = session()
-    let first = make(reader: reader, summarizer: summarizer, store: store)
-    await first.setSummariesEnabled(false)
-    await reader.queue(session.id, turn("x"))
-    await first.track([session])
-    #expect(await eventually { await first.journal(for: session.id)?.hasEndedTurn == true })
-    await first.stop()
-    #expect(await summarizer.requests.isEmpty)
-    let second = make(reader: reader, summarizer: summarizer, store: store)
-    await second.track([session])
-    #expect(await eventually { await second.journal(for: session.id)?.entries.count == 1 })
-    await second.stop()
   }
 
   @Test("The journal is found again by a new monitor: nothing read twice, nothing lost")
   func relaunch() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
     let store = InMemorySessionJournalStore()
     let session = session()
-    let first = make(reader: reader, summarizer: summarizer, store: store)
-    await reader.queue(session.id, turn("x"))
+    let first = make(reader: reader, store: store)
+    await reader.queue(session.id, turn("https://github.com/o/r/issues/1"))
     await first.track([session])
-    #expect(await eventually { await first.journal(for: session.id)?.entries.count == 1 })
+    #expect(await eventually { await first.journal(for: session.id)?.resources.count == 1 })
     await first.stop()
-    let second = make(reader: reader, summarizer: summarizer, store: store)
+    let second = make(reader: reader, store: store)
     await second.track([session])
     let journal = await second.journal(for: session.id)
-    #expect(journal?.entries.count == 1)
+    #expect(journal?.resources.count == 1)
     #expect(journal?.cursors["/t/\(session.id).jsonl"]?.offset == 4)
     await second.stop()
-  }
-
-  @Test("Off, no pass starts; turned back on, the waiting turns are summarized")
-  func disabled() async throws {
-    let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
-    let monitor = make(reader: reader, summarizer: summarizer)
-    await monitor.setSummariesEnabled(false)
-    let session = session()
-    await reader.queue(session.id, turn("x"))
-    await monitor.track([session])
-    #expect(await eventually { await monitor.journal(for: session.id)?.hasEndedTurn == true })
-    try await Task.sleep(for: .milliseconds(200))
-    #expect(await summarizer.requests.isEmpty)
-    await monitor.setSummariesEnabled(true)
-    #expect(await eventually { await summarizer.requests.count == 1 })
-    await monitor.stop()
   }
 
   @Test("A session started before its agent named its conversation is watched and read anyway")
   func conversationNamedLater() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
     let events = ManualFileChanges()
     let unnamed = WorkSession(
       name: "S", agent: SessionAgentConfiguration(providerID: "claude-code"), status: .active)
     let repository = OneSessionRepository(unnamed)
     let monitor = SessionJournalMonitor(
       store: InMemorySessionJournalStore(), reader: reader, repositories: NoRepositories(),
-      summarizers: summarizer, events: events, repository: repository, timing: fast)
+      events: events, repository: repository, timing: fast)
     await monitor.track([unnamed])
     #expect(await eventually { events.watchedPaths == ["/t"] })
     // The CLI names its conversation in the store, then writes.
@@ -403,9 +202,8 @@ struct SessionJournalMonitorTests {
   @Test("A transcript that moved is read for the session it belongs to")
   func watch() async throws {
     let reader = QueuedJournalReader()
-    let summarizer = ScriptedSummarizer()
     let events = ManualFileChanges()
-    let monitor = make(reader: reader, summarizer: summarizer, events: events)
+    let monitor = make(reader: reader, events: events)
     let session = session()
     await monitor.track([session])
     #expect(await eventually { events.watchedPaths == ["/t"] })

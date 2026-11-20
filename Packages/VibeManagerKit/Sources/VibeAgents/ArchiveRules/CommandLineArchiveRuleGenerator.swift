@@ -68,10 +68,9 @@ public struct CommandLineArchiveRuleGenerator: ArchiveRuleGenerating {
   }
 
   static func failure(of result: BoundedProcessResult) -> ArchiveRuleGenerationError {
-    switch CommandLineSummarizer.failure(of: result) {
-    case .unavailable(.outdated): .unavailable(.outdated)
-    case .unavailable(.signedOut): .unavailable(.signedOut)
-    case .unavailable: .unavailable(.missing)
+    switch OneShotAgentRun.ExitFailure(result) {
+    case .outdated: .unavailable(.outdated)
+    case .signedOut: .unavailable(.signedOut)
     case .failed(let reason): .failed(reason)
     }
   }

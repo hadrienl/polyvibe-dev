@@ -2,10 +2,24 @@ import Foundation
 import VibeApplication
 import VibeProcess
 
+/// Runs a one-shot command. `BoundedProcess` in the application, a double in the tests.
+public protocol SummaryProcessRunning: Sendable {
+  func run(_ request: BoundedProcessRequest) async throws -> BoundedProcessResult
+}
+
+public struct BoundedSummaryProcessRunner: SummaryProcessRunning {
+  public init() {}
+
+  public func run(_ request: BoundedProcessRequest) async throws -> BoundedProcessResult {
+    try await BoundedProcess.run(request)
+  }
+}
+
 /// One pass of an agent's CLI outside any session: its own executable and environment — the same
 /// account — in a process without a terminal, run from an empty temporary folder that only its
 /// owner reads and that is removed afterwards, so that no `CLAUDE.md` or `AGENTS.md` of a project
-/// is found. What the journal's summaries (#36) and the avatars (#41) are drawn with.
+/// is found. What the avatars (#41), the themes, the alert sounds and the archive rules are drawn
+/// with.
 struct OneShotAgentRun: Sendable {
   /// What to run, given the folder: files the command needs are written there first.
   struct Invocation {
@@ -19,6 +33,31 @@ struct OneShotAgentRun: Sendable {
     case unavailable(AgentAvailabilityState)
     case noLaunchPlan
     case couldNotStart
+  }
+
+  /// Why a CLI that exited in error did, as far as its error output tells.
+  enum ExitFailure: Equatable {
+    /// An option it does not know: it is too old.
+    case outdated
+    /// A word about logging in.
+    case signedOut
+    case failed(String)
+
+    init(_ result: BoundedProcessResult) {
+      let error = String(decoding: result.standardError + result.standardOutput, as: UTF8.self)
+        .lowercased()
+      if error.contains("unknown option") || error.contains("unexpected argument")
+        || error.contains("unrecognized") || error.contains("unknown feature flag")
+      {
+        self = .outdated
+      } else if error.contains("/login") || error.contains("not logged in")
+        || error.contains("log in") || error.contains("invalid api key")
+      {
+        self = .signedOut
+      } else {
+        self = .failed("exit \(result.exitCode)")
+      }
+    }
   }
 
   let provider: any AgentProvider
