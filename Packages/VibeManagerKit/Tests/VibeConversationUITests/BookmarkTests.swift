@@ -285,4 +285,12 @@ struct BookmarkTests {
       ConversationEntry(id: "r", content: .reasoning("*Check* the tests.")))
     #expect(ConversationModel.bookmarkExcerpt(of: reasoning) == "Check the tests.")
   }
+
+  @Test("A rule says nothing, and a block of code leaves one space before what follows")
+  func plainTextBetweenBlocks() {
+    #expect(ConversationModel.plainText(ofMarkdown: "Before\n\n---\n\nAfter") == "Before After")
+    #expect(
+      ConversationModel.plainText(ofMarkdown: "```swift\nlet x = 1\n```\n\nThen ship.")
+        == "let x = 1 Then ship.")
+  }
 }
