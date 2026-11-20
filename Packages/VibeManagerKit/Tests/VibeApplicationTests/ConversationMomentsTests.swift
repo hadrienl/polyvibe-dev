@@ -77,6 +77,8 @@ struct ConversationMomentsTests {
       ])
     #expect(details("git push") == [.push(branch: nil)])
     #expect(details("git push --delete origin old").isEmpty)
+    #expect(details("git push origin :old").isEmpty)
+    #expect(details("git push -o ci.skip origin feat") == [.push(branch: "feat")])
     #expect(details("git push --tags").isEmpty)
   }
 
@@ -132,6 +134,11 @@ struct ConversationMomentsTests {
       details("gh pr merge --merge", output: "✓ Merged pull request acme/shop#48 (Title)") == [
         .merged(label: "#48")
       ])
+    // Queued until its checks pass: not merged yet.
+    #expect(details("gh pr merge 48 --auto --squash").isEmpty)
+    #expect(
+      details("glab mr merge 12", output: "Merge request !12 will merge when the pipeline succeeds")
+        .isEmpty)
     #expect(details("gh pr view 48").isEmpty)
     #expect(details("gh issue close 12").isEmpty)
   }

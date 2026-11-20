@@ -273,7 +273,6 @@ private struct InitialPromptView: View {
   }
 }
 
-/// What the activity holds, said once the section is folded.
 /// Repositories and changed files, said once the Git section is folded.
 private struct GitSummary: View {
   let session: WorkSession

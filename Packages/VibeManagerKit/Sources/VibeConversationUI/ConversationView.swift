@@ -647,7 +647,7 @@ struct BlockRow: View {
       .onHover { isHovered = $0 }
       .overlay(alignment: .topLeading) {
         HStack(alignment: .top, spacing: 0) {
-          let moments = ConversationMoments.moments(of: block).filter { appearance.shows($0.kind) }
+          let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
           if moments.isEmpty {
             Color.clear.frame(width: MomentGutterMark.width, height: 1)
           } else {

@@ -278,10 +278,15 @@ struct ConversationOverview: View {
   ) -> (moments: Range<Int>, y: Double)? {
     var nearest: (moments: Range<Int>, y: Double, distance: Double)?
     for cluster in clusters(of: moments, layout: layout, scale: scale) {
-      let distance = abs(cluster.y - point.y)
-      let onIcon = point.x <= tagMargin + 2 && distance <= iconSize / 2 + 1.5
-      let onLine =
-        distance <= 5 && moments[cluster.moments].contains { $0.moment.kind == .bookmark }
+      let iconDistance = abs(cluster.y - point.y)
+      let onIcon = point.x <= tagMargin + 2 && iconDistance <= iconSize / 2 + 1.5
+      // Each bookmark's line is drawn at its own block, the first of its cluster or not.
+      let lineDistance = moments[cluster.moments]
+        .filter { $0.moment.kind == .bookmark }
+        .map { abs(iconY(top: layout.tops[$0.blockIndex], scale: scale) - point.y) }
+        .min()
+      let onLine = lineDistance.map { $0 <= 5 } ?? false
+      let distance = onIcon ? iconDistance : lineDistance ?? iconDistance
       if onIcon || onLine, nearest.map({ distance < $0.distance }) ?? true {
         nearest = (cluster.moments, cluster.y, distance)
       }

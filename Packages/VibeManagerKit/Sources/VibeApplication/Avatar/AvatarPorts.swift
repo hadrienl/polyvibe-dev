@@ -41,7 +41,7 @@ public protocol AvatarGenerating: Sendable {
   func generate(_ request: AvatarGenerationRequest) async throws -> Data
 }
 
-/// An agent provider that can draw, on the model of `SessionSummarizingProviding`.
+/// An agent provider that can draw, on the model of `AgentLaunchObserverProviding`.
 public protocol AvatarGeneratingProviding: Sendable {
   func avatarGenerator() -> any AvatarGenerating
 }

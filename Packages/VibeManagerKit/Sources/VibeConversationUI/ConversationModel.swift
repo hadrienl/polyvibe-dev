@@ -1095,6 +1095,10 @@ public final class ConversationModel {
   public private(set) var bookmarkedIndices: [Int] = []
   /// The moments of each block, bookmarks aside, read as the blocks are laid out (#572).
   @ObservationIgnored private var blockMoments: [[ConversationMoment]] = []
+  /// The same, by block, for those that have some: what a row's margin shows, read without
+  /// parsing its commands again at each of its redraws. Not observed: a block whose moments change
+  /// is a new block, which redraws its row anyway.
+  @ObservationIgnored private var momentsByBlock: [String: [ConversationMoment]] = [:]
   /// Every moment, bookmarks included, in the conversation's order.
   public private(set) var moments: [ConversationMoments.Placed] = []
   /// Those of the kinds shown: the overview's icons, the rotor's entries, where Next and Previous
@@ -1142,6 +1146,11 @@ public final class ConversationModel {
     bookmarkedIndices.filter(blocks.indices.contains).map { blocks[$0] }
   }
 
+  /// A block's moments, bookmarks aside, as they were read at its layout.
+  public func moments(of block: ConversationBlock) -> [ConversationMoment] {
+    momentsByBlock[block.id] ?? []
+  }
+
   /// The blocks that show a moment of a kind shown, in order, with their moments: the rotor's
   /// entries.
   public var momentBlocks: [(block: ConversationBlock, moments: [ConversationMoment])] {
@@ -1185,19 +1194,21 @@ public final class ConversationModel {
     let start = min(start, blockMoments.count, blocks.count)
     blockMoments.replaceSubrange(
       start..., with: blocks[start...].map(ConversationMoments.moments(of:)))
+    // Made again whole: the identifiers of the blocks laid out again are gone with them.
+    var byBlock: [String: [ConversationMoment]] = [:]
+    for (index, found) in blockMoments.enumerated() where !found.isEmpty {
+      byBlock[blocks[index].id] = found
+    }
+    momentsByBlock = byBlock
     var placed: [ConversationMoments.Placed] = []
     var marked = indices.makeIterator()
     var nextMarked = marked.next()
     for (index, found) in blockMoments.enumerated() {
       if index == nextMarked {
         nextMarked = marked.next()
-        let block = blocks[index]
-        if let entry = ConversationBookmarks.entryIDs(of: block).first(where: bookmarks.contains) {
-          placed.append(
-            .init(
-              blockIndex: index,
-              moment: ConversationMoment(
-                .bookmark, entryID: entry, date: Self.date(of: entry, in: block))))
+        if let bookmark = ConversationMoments.bookmark(of: blocks[index], at: index, in: bookmarks)
+        {
+          placed.append(bookmark)
         }
       }
       for moment in found { placed.append(.init(blockIndex: index, moment: moment)) }
@@ -1205,14 +1216,6 @@ public final class ConversationModel {
     if placed != moments {
       moments = placed
       updateShownMoments()
-    }
-  }
-
-  private static func date(of entryID: String, in block: ConversationBlock) -> Date? {
-    switch block {
-    case .entry(let entry): return entry.date
-    case .toolGroup(_, let entries), .subagentGroup(_, let entries):
-      return entries.first { $0.id == entryID }?.date
     }
   }
 

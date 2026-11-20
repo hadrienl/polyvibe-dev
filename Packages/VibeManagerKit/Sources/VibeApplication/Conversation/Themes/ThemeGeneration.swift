@@ -68,7 +68,7 @@ public protocol ConversationThemeGenerating: Sendable {
   func generate(_ request: ThemeGenerationRequest) async throws -> Data
 }
 
-/// An agent provider that can draw a theme, on the model of `SessionSummarizingProviding`.
+/// An agent provider that can draw a theme, on the model of `AgentLaunchObserverProviding`.
 public protocol ConversationThemeGeneratingProviding: Sendable {
   func themeGenerator() -> any ConversationThemeGenerating
 }

@@ -107,18 +107,23 @@ public enum ConversationMoments {
     var placed: [Placed] = []
     for index in blocks.indices.dropFirst(max(start, 0)) {
       let block = blocks[index]
-      let entries = ConversationBookmarks.entryIDs(of: block)
-      if let marked = entries.first(where: bookmarks.contains) {
-        let date = entry(marked, of: block)?.date
-        placed.append(
-          Placed(
-            blockIndex: index, moment: ConversationMoment(.bookmark, entryID: marked, date: date)))
-      }
+      if let bookmark = bookmark(of: block, at: index, in: bookmarks) { placed.append(bookmark) }
       for moment in moments(of: block) {
         placed.append(Placed(blockIndex: index, moment: moment))
       }
     }
     return placed
+  }
+
+  /// The block's bookmark, named after its first entry marked; `nil` when it has none.
+  public static func bookmark(
+    of block: ConversationBlock, at index: Int, in bookmarks: Set<String>
+  ) -> Placed? {
+    guard let marked = ConversationBookmarks.entryIDs(of: block).first(where: bookmarks.contains)
+    else { return nil }
+    let date = entry(marked, of: block)?.date
+    return Placed(
+      blockIndex: index, moment: ConversationMoment(.bookmark, entryID: marked, date: date))
   }
 
   /// Those of the kinds shown.
@@ -202,11 +207,14 @@ public enum ConversationMoments {
     guard line.contains("git") || line.contains("gh") || line.contains("glab") else { return [] }
     let line = ResourceRecognizer.withoutHereDocuments(line)
     var found: [ConversationMoment.Detail] = []
-    var commits = CommitLines(output)
+    // Read only once a commit is found: `git log`, `git diff` print much and commit nothing.
+    var commits: CommitLines?
     for words in ShellWords.commands(in: line) {
       guard let invocation = Invocation(words) else { continue }
       switch invocation.program {
-      case "git": found += gitMoments(invocation, output: output, commits: &commits)
+      case "git":
+        if commits == nil, invocation.arguments.contains("commit") { commits = CommitLines(output) }
+        found += gitMoments(invocation, output: output, commits: &commits)
       case "gh", "glab": found += forgeMoments(invocation, output: output)
       default: break
       }
@@ -215,7 +223,7 @@ public enum ConversationMoments {
   }
 
   private static func gitMoments(
-    _ invocation: Invocation, output: String, commits: inout CommitLines
+    _ invocation: Invocation, output: String, commits: inout CommitLines?
   ) -> [ConversationMoment.Detail] {
     guard let command = ResourceRecognizer.GitCommand(invocation, directory: "/") else {
       return []
@@ -225,7 +233,7 @@ public enum ConversationMoments {
       guard !command.rest.contains("--dry-run") else { return [] }
       let message = command.value(of: "m", "--message").flatMap { $0.flatMap(firstLine) }
       // Read in order even when the message is known: the next commit's line is the next one.
-      let printed = commits.next()
+      let printed = commits?.next()
       return [.commit(subject: message ?? printed)]
     case "push":
       if command.rest.contains(where: {
@@ -233,7 +241,10 @@ public enum ConversationMoments {
       }) {
         return []
       }
-      return [.push(branch: pushedBranch(command) ?? pushedBranch(in: output))]
+      let refspec = pushedRefspec(command)
+      // `git push origin :old` deletes a branch.
+      if refspec?.hasPrefix(":") == true { return [] }
+      return [.push(branch: refspec.flatMap(destination(of:)) ?? pushedBranch(in: output))]
     case "checkout", "switch", "branch", "worktree":
       // The branches and worktrees it created, as the journal reads them.
       // Wherever it ran: a folder only the shell knows still had its branch made.
@@ -253,15 +264,33 @@ public enum ConversationMoments {
     }
   }
 
-  /// `git push origin feature`, `git push -u origin HEAD:feature`.
-  private static func pushedBranch(_ command: ResourceRecognizer.GitCommand) -> String? {
-    let positional = command.positional
+  /// Options of `git push` that take a value, which is then neither the remote nor a refspec.
+  private static let pushValueOptions: Set<String> = [
+    "-o", "--push-option", "--repo", "--receive-pack", "--exec",
+  ]
+
+  /// The first refspec of `git push origin feature`, `git push -u origin +HEAD:feature`.
+  private static func pushedRefspec(_ command: ResourceRecognizer.GitCommand) -> String? {
+    var positional: [String?] = []
+    var index = 0
+    while index < command.rest.count {
+      let argument = command.rest[index]
+      if let option = argument, pushValueOptions.contains(option) {
+        index += 2
+        continue
+      }
+      if argument?.hasPrefix("-") != true { positional.append(argument) }
+      index += 1
+    }
     guard positional.count >= 2, var refspec = positional[1] else { return nil }
     if refspec.hasPrefix("+") { refspec.removeFirst() }
-    guard let destination = refspec.split(separator: ":").last.map(String.init) else {
-      return nil
-    }
-    return ResourceRecognizer.normalizedBranch(destination)
+    return refspec
+  }
+
+  /// Where a refspec pushes: `HEAD:feature` to `feature`.
+  private static func destination(of refspec: String) -> String? {
+    let destination = refspec.split(separator: ":", omittingEmptySubsequences: false).last
+    return destination.flatMap { ResourceRecognizer.normalizedBranch(String($0)) }
   }
 
   private static let pushedPattern = try? NSRegularExpression(
@@ -290,12 +319,22 @@ public enum ConversationMoments {
     case "create":
       return [.created(isRequest ? .pullRequest : .issue, label: printed?.label)]
     case "merge" where isRequest:
+      // Queued until checks pass: not merged yet.
+      guard !Self.isQueuedMerge(invocation, output: output) else { return [] }
       let number = invocation.forgeNumber(after: verb)
       let label = number.map { "\(invocation.program == "gh" ? "#" : "!")\($0)" }
       return [.merged(label: label ?? printed?.label ?? mergedLabel(in: output))]
     default:
       return []
     }
+  }
+
+  static func isQueuedMerge(_ invocation: Invocation, output: String) -> Bool {
+    let queued = ["--auto", "--when-pipeline-succeeds", "--auto-merge"]
+    if invocation.arguments.contains(where: { queued.contains($0 ?? "") }) { return true }
+    let printed = output.lowercased()
+    return printed.contains("will merge") || printed.contains("will be automatically merged")
+      || printed.contains("when the pipeline succeeds")
   }
 
   private static let mergedPattern = try? NSRegularExpression(

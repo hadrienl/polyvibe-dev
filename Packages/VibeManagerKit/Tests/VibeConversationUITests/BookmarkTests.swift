@@ -396,4 +396,27 @@ struct BookmarkTests {
         near: CGPoint(x: 40, y: icon), moments: model.shownMoments, layout: layout,
         scale: 0.05) == nil)
   }
+
+  @Test("A bookmark's line is found where it is drawn, though another moment heads its group")
+  func bookmarkLineInsideAGroup() {
+    let model = Self.momentsModel()
+    model.toggleBookmark(model.blocks[2])
+    let layout = Self.evenLayout(model)
+    // At a twentieth: the commit of m1 at 6 points, the bookmark of m2 at 12, the error of m3 at
+    // 18: one icon, the commit's.
+    let clusters = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(clusters.first?.moments == 0..<3)
+    let line = ConversationOverview.iconY(top: 240, scale: 0.05)
+    let found = ConversationOverview.cluster(
+      near: CGPoint(x: 40, y: line), moments: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(found?.moments == 0..<3)
+  }
+
+  @Test("A row's margin reads the moments of its block as they were laid out")
+  func rowMoments() {
+    let model = Self.momentsModel()
+    #expect(model.moments(of: model.blocks[1]).map(\.kind) == [.git])
+    #expect(model.moments(of: model.blocks[2]).isEmpty)
+  }
 }
