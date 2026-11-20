@@ -17,9 +17,12 @@ enum UsagePresentation {
   static var costExplanation: String {
     String(
       localized: """
-        Neither CLI reports a cost that holds together: Claude Code's running totals go down as \
-        well as up, and Codex reports none. A price list shipped with the application would be \
-        wrong within weeks, and means nothing on a subscription.
+        The cost is an API equivalent: the tokens each model reported, at its public price per \
+        token for input, cache reads, cache writes and output. On a subscription, it is what the \
+        work would have cost paid by the token, not what was paid. The prices come from \
+        LiteLLM's public list, read again once a day; nothing about you is sent. Cache writes are \
+        counted at the five-minute price and long-context prices are left aside, hence the ≈. A \
+        model without a known price is left out of the total, never counted as free.
         """,
       bundle: .module)
   }
@@ -34,6 +37,40 @@ enum UsagePresentation {
   static var privacyNote: String {
     String(
       localized: "Usage is recorded on this Mac only. Nothing is sent anywhere.", bundle: .module)
+  }
+
+  /// “≈ 4,82 $”: dollars written the way the language writes them, never converted (#574). A cost
+  /// that rounds to nothing without being nothing is “< 0,01 $”, never a zero.
+  static func cost(_ amount: Decimal, approximate: Bool = true, locale: Locale = .current)
+    -> String
+  {
+    let style = Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.narrow)
+    if amount > 0, amount < Decimal(5) / 1_000 {
+      return "< " + (Decimal(1) / 100).formatted(style)
+    }
+    return (approximate ? "≈ " : "") + amount.formatted(style)
+  }
+
+  /// Said of a model without a known price, whose tokens are left out of a cost.
+  static func unknownPrice(locale: Locale = .current) -> String {
+    String(
+      localized: LocalizedStringResource(
+        "Unknown price", locale: locale, bundle: .module,
+        comment: "A model whose public price per token is not known: its cost is not counted."))
+  }
+
+  /// Under a cost some of whose models have no price.
+  static func unpricedModelsLeftOut(locale: Locale = .current) -> String {
+    String(
+      localized: LocalizedStringResource(
+        "Models without a known price are left out of the total.", locale: locale,
+        bundle: .module, comment: "Under a cost, when a model has no known price."))
+  }
+
+  /// “4.82 US dollars”: the cost as VoiceOver reads it.
+  static func spokenCost(_ amount: Decimal, locale: Locale = .current) -> String {
+    amount.formatted(
+      Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.fullName))
   }
 
   static func duration(_ seconds: TimeInterval) -> String {
@@ -169,11 +206,6 @@ enum UsagePresentation {
       return String(
         localized: LocalizedStringResource(
           "No transcript found", locale: locale, bundle: .module,
-          comment: "Why a usage figure is missing."))
-    case .notReliable:
-      return String(
-        localized: LocalizedStringResource(
-          "Not available", locale: locale, bundle: .module,
           comment: "Why a usage figure is missing."))
     case .trackingOff:
       return String(

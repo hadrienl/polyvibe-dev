@@ -5,8 +5,8 @@ import VibeDomain
 
 /// The right column: what this session works on, and with what (#66).
 ///
-/// A stack of sections — the activity, Git, the notes, the agent, its usage, the prompt it started
-/// from — that the user folds, orders and sizes; `InspectorSectionStack` does all of that. This
+/// A stack of sections — the activity, Git, the notes, the agent, the prompt it started from —
+/// that the user folds, orders and sizes; `InspectorSectionStack` does all of that. This
 /// view only declares them: adding one is adding a descriptor, never touching the layout.
 ///
 /// Everything in the Git section is what Git and the agent's transcript say, in Git's order: the
@@ -27,7 +27,6 @@ struct SessionContextInspector: View {
   private let notes: NotesModel?
   private let ticketTitles: TicketTitlesModel?
   private let leaveNotes: () -> Void
-  private let usage: UsageModel?
   /// The workspace, for the coordination section (#352): a coordinator's children, a child's
   /// coordinator.
   private let coordination: AppModel?
@@ -48,7 +47,6 @@ struct SessionContextInspector: View {
     notes: NotesModel? = nil,
     ticketTitles: TicketTitlesModel? = nil,
     leaveNotes: @escaping () -> Void = {},
-    usage: UsageModel? = nil,
     coordination: AppModel? = nil
   ) {
     self.session = session
@@ -56,7 +54,6 @@ struct SessionContextInspector: View {
     self.notes = notes
     self.ticketTitles = ticketTitles
     self.leaveNotes = leaveNotes
-    self.usage = usage
     self.resolution = resolution
     self.branchReport = branchReport
     self.branchReportCheckedAt = branchReportCheckedAt
@@ -78,9 +75,9 @@ struct SessionContextInspector: View {
     InspectorSectionStack(sections: sections, layout: layout)
   }
 
-  /// In their default order. A section with nothing to show in this window — no usage — is left
-  /// out, and keeps its place in the arrangement for when it comes back. Activity is gone (#572):
-  /// an arrangement that holds it keeps it, unshown.
+  /// In their default order. A section with nothing to show in this window is left out, and keeps
+  /// its place in the arrangement for when it comes back. Activity is gone (#572), and the usage is
+  /// in the status bar (#574): an arrangement that holds them keeps them, unshown.
   private var sections: [InspectorSectionDescriptor] {
     var sections: [InspectorSectionDescriptor] = []
     if let coordination, session.coordination != nil || coordination.showsAsCoordinator(session) {
@@ -91,9 +88,6 @@ struct SessionContextInspector: View {
       sections.append(notesSection(notes))
     }
     sections.append(agentSection)
-    if let usage {
-      sections.append(usageSection(usage))
-    }
     sections.append(promptSection)
     return sections
   }
@@ -198,19 +192,6 @@ extension SessionContextInspector {
             AgentHistoryList(session: session, names: agentNames)
           }
         })
-    )
-  }
-
-  fileprivate func usageSection(_ usage: UsageModel) -> InspectorSectionDescriptor {
-    InspectorSectionDescriptor(
-      id: .usage,
-      title: String(localized: "Usage", bundle: .module, comment: "A session's usage, heading."),
-      systemImage: "chart.bar",
-      sizing: .fitting(minimum: 60),
-      summary: AnyView(UsageSummary(session: session.id, usage: usage)),
-      // Always in the header, folded or not: the figures of the summary need watching too.
-      accessory: AnyView(UsageWatcher(session: session.id, usage: usage)),
-      content: AnyView(SessionUsageSection(session: session, usage: usage, agentNames: agentNames))
     )
   }
 
@@ -351,53 +332,6 @@ private struct NotesSummary: View {
       Text(verbatim: String(line))
     } else if document.isLoaded {
       Text("Empty", bundle: .module, comment: "Said of a session's notes that hold nothing.")
-    }
-  }
-}
-
-/// What the agent ran for, said once the usage is folded.
-private struct UsageSummary: View {
-  let session: SessionID
-  let usage: UsageModel
-
-  var body: some View {
-    let percent = usage.contextWindows[session]?.percentUsed
-    if let figures = usage.sessionUsage[session] {
-      if let percent {
-        Text(
-          "\(UsagePresentation.duration(figures.total.runningTime)) · context \(percent)%",
-          bundle: .module,
-          comment: "The folded usage section: running time, then the share of the window used.")
-      } else {
-        Text(UsagePresentation.duration(figures.total.runningTime))
-      }
-    } else if let percent {
-      Text("context \(percent)%", bundle: .module, comment: "The share of the window used.")
-    }
-  }
-}
-
-/// Keeps the usage of the session read while its section is shown, folded or not, and says when
-/// it is being read.
-private struct UsageWatcher: View {
-  let session: SessionID
-  let usage: UsageModel
-
-  var body: some View {
-    Group {
-      if usage.isReading {
-        ProgressView().controlSize(.mini)
-          .accessibilityLabel(Text("Reading transcripts", bundle: .module))
-      } else {
-        Color.clear.frame(width: 0, height: 0)
-      }
-    }
-    .onAppear { usage.startWatching(session) }
-    .onDisappear { usage.stopWatching(session) }
-    // The inspector keeps this view when another session is selected.
-    .onChange(of: session) { previous, next in
-      usage.stopWatching(previous)
-      usage.startWatching(next)
     }
   }
 }

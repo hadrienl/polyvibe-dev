@@ -254,8 +254,6 @@ public enum UsageUnavailability: Hashable, Sendable {
   case notReportedByAgent
   /// The agent does, but no transcript of this session was found and nothing was kept of one.
   case noTranscript
-  /// Neither CLI reports a cost that holds together.
-  case notReliable
   case trackingOff
 }
 

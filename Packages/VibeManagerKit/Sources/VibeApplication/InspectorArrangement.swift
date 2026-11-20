@@ -34,6 +34,7 @@ public struct InspectorSectionID: RawRepresentable, Hashable, Codable, Sendable,
   public static let git = Self("git")
   public static let notes = Self("notes")
   public static let agent = Self("agent")
+  /// In the status bar since #574: kept for the arrangements saved with it.
   public static let usage = Self("usage")
   public static let prompt = Self("prompt")
   /// A coordinator's children, or the coordinator of a child and what it did there (#352). Not in
@@ -88,13 +89,13 @@ public struct InspectorArrangement: Equatable, Codable, Sendable {
     case entries
   }
 
-  /// Git and the notes unfolded, in that order; the agent, its usage and the prompt it started
-  /// from folded under them. Git takes a little more of the height: it is the longest.
+  /// Git and the notes unfolded, in that order; the agent and the prompt it started from folded
+  /// under them. Git takes a little more of the height: it is the longest. The usage left for the
+  /// status bar (#574): an arrangement saved with it keeps it, and shows nothing.
   public static let `default` = InspectorArrangement(entries: [
     Entry(id: .git, isCollapsed: false, weight: 1.4),
     Entry(id: .notes, isCollapsed: false, weight: 1),
     Entry(id: .agent, isCollapsed: true),
-    Entry(id: .usage, isCollapsed: true),
     Entry(id: .prompt, isCollapsed: true),
   ])
 
