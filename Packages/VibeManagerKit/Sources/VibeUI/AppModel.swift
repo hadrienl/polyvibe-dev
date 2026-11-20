@@ -1002,6 +1002,7 @@ public final class AppModel {
 
     usage?.connect(
       sessions: { [weak self] in self?.sessions ?? [] },
+      storedSession: { [repository] id in try? await repository.session(id: id) },
       endpointWindow: { [weak self] agent in
         guard let id = EndpointID(providerID: agent.providerID),
           let endpoint = self?.endpoints?.endpoints.first(where: { $0.id == id })

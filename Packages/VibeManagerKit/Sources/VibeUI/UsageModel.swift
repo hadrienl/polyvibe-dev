@@ -38,6 +38,11 @@ public final class UsageModel {
 
   private let service: UsageService
   private var sessions: () -> [WorkSession] = { [] }
+  /// A session as the store holds it. The agent writes its conversation's identifier there, and
+  /// the workspace's list only learns it at its next reload.
+  private var storedSession: (SessionID) async -> WorkSession? = { _ in nil }
+  /// The sessions shown whose conversation the store told before the list did, until it does.
+  private var learnedSessions: [SessionID: WorkSession] = [:]
   /// The name and declared window of the endpoint a conversation went through, if any.
   private var endpointWindow: (SessionAgentConfiguration) -> (name: String, window: Int?)? = {
     _ in nil
@@ -59,11 +64,13 @@ public final class UsageModel {
   /// Where the sessions come from: the workspace's own list, archived ones included.
   public func connect(
     sessions: @escaping () -> [WorkSession],
+    storedSession: @escaping (SessionID) async -> WorkSession? = { _ in nil },
     endpointWindow: @escaping (SessionAgentConfiguration) -> (name: String, window: Int?)? = {
       _ in nil
     }
   ) {
     self.sessions = sessions
+    self.storedSession = storedSession
     self.endpointWindow = endpointWindow
   }
 
@@ -114,6 +121,7 @@ public final class UsageModel {
     if let session {
       let count = (sessionWatchers[session] ?? 0) - 1
       sessionWatchers[session] = count > 0 ? count : nil
+      if count <= 0 { learnedSessions[session] = nil }
     } else {
       everythingWatchers = max(everythingWatchers - 1, 0)
     }
@@ -123,24 +131,49 @@ public final class UsageModel {
   }
 
   /// The sessions whose transcripts are worth reading now.
-  private var watchedSessions: [WorkSession] {
+  private func watchedSessions() async -> [WorkSession] {
     let all = sessions()
-    guard everythingWatchers == 0 else { return all }
-    return all.filter { sessionWatchers[$0.id] != nil }
+    let watched = everythingWatchers == 0 ? all.filter { sessionWatchers[$0.id] != nil } : all
+    var result: [WorkSession] = []
+    for session in watched {
+      result.append(sessionWatchers[session.id] == nil ? session : await knowing(session))
+    }
+    return result
+  }
+
+  /// The session with its conversation. A session just launched has none in the list yet: its
+  /// agent wrote the identifier in the store, and the list catches up at its next reload, which
+  /// may not come while the session is all that changes. The store is asked meanwhile — only
+  /// for a session shown, launched, without a conversation.
+  private func knowing(_ session: WorkSession) async -> WorkSession {
+    guard session.conversations.isEmpty, session.agent != nil, session.startedAt != nil else {
+      learnedSessions[session.id] = nil
+      return session
+    }
+    if let learned = learnedSessions[session.id] { return learned }
+    guard let stored = await storedSession(session.id), !stored.conversations.isEmpty else {
+      return session
+    }
+    learnedSessions[session.id] = stored
+    return stored
   }
 
   /// Reads the transcripts again, then the figures.
   public func refresh() async {
     guard !isReading else { return }
     isReading = true
-    await service.refreshTokens(for: watchedSessions)
+    await service.refreshTokens(for: await watchedSessions())
     isReading = false
     // At most once a day, checked here so that it waits for something to show a cost; the
     // figures do not wait for it, and are computed again when new prices arrive.
     Task { [service] in
       if await service.updatePricesIfDue() { await self.recompute() }
     }
-    await refreshContexts(sessions().filter { sessionWatchers[$0.id] != nil })
+    var shown: [WorkSession] = []
+    for session in sessions() where sessionWatchers[session.id] != nil {
+      shown.append(await knowing(session))
+    }
+    await refreshContexts(shown)
     await recompute()
   }
 
@@ -148,7 +181,7 @@ public final class UsageModel {
   public func agentTurnEnded(_ id: SessionID) {
     guard sessionWatchers[id] != nil, let session = sessions().first(where: { $0.id == id })
     else { return }
-    Task { await refreshContexts([session]) }
+    Task { await refreshContexts([await knowing(session)]) }
   }
 
   private func refreshContexts(_ shown: [WorkSession]) async {
