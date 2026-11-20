@@ -119,6 +119,13 @@ struct ModelPriceListTests {
     #expect(list.price(for: "claude-haiku-4-5-20240101", providerID: "claude-code") == nil)
     #expect(ModelPriceList.withoutDate("gpt-5-2025-08-07") == "gpt-5")
     #expect(ModelPriceList.withoutDate("claude-opus-4-5-20251101") == "claude-opus-4-5")
+    for undated in [
+      "claude-sonnet-4-5", "gpt-5.1-codex", "model-1234567", "gpt-5-2025-08-0x", "-20251101",
+      "20251101", "",
+    ] {
+      #expect(ModelPriceList.withoutDate(undated) == undated)
+    }
+    #expect(ModelPriceList.withoutDate("é-2025-08-07") == "é")
   }
 
   @Test("The provider's prefix, for a list that only knows the model under it")

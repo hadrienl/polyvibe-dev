@@ -21,9 +21,11 @@ struct SessionUsageButton: View {
   @Environment(\.locale) private var locale
 
   var body: some View {
+    // The hidden bars of the other sessions read no figure: each refresh would draw them all
+    // again. Shown, the bar reads them at once.
     let summary = SessionUsageSummary(
-      figures: usage.sessionUsage[session.id],
-      percent: usage.contextWindows[session.id]?.percentUsed)
+      figures: isShown ? usage.sessionUsage[session.id] : nil,
+      percent: isShown ? usage.contextWindows[session.id]?.percentUsed : nil)
     Button {
       isPresented.toggle()
     } label: {
@@ -69,7 +71,13 @@ struct SessionUsageSummary: Equatable {
     figures.flatMap { $0.cost.hasPrice ? $0.cost.total : nil }
   }
 
-  /// “context 55%, cost about 4.82 US dollars”: the figures of the label, whole, for VoiceOver.
+  /// Whether the cost leaves out models without a price: said wherever the whole value is.
+  var leavesModelsOut: Bool {
+    cost != nil && figures?.cost.unpriced.isEmpty == false
+  }
+
+  /// “context 55%, cost about 4.82 US dollars”: the figures of the label, whole, for VoiceOver —
+  /// then that models without a price are left out of the cost, when some are.
   func spoken(locale: Locale) -> String {
     var parts: [String] = []
     if let percent {
@@ -91,12 +99,21 @@ struct SessionUsageSummary: Equatable {
               "The status bar's Usage button, for VoiceOver: the session's cost, such as “4.82 US dollars”."
           )))
     }
-    return parts.isEmpty ? "—" : parts.joined(separator: ", ")
+    guard !parts.isEmpty else { return "—" }
+    let value = parts.joined(separator: ", ")
+    guard leavesModelsOut else { return value }
+    return value + ". " + UsagePresentation.unpricedModelsLeftOut(locale: locale)
   }
 
   /// “Context 55% · ≈ $4.82 (API equivalent)”: the whole value of the label, on hover, whichever
-  /// form it takes.
+  /// form it takes — and, under it, that models without a price are left out of the cost.
   func help(locale: Locale) -> String {
+    let value = value(locale: locale)
+    guard leavesModelsOut else { return value }
+    return value + "\n" + UsagePresentation.unpricedModelsLeftOut(locale: locale)
+  }
+
+  private func value(locale: Locale) -> String {
     let cost = cost.map { UsagePresentation.cost($0, locale: locale) }
     switch (percent, cost) {
     case (let percent?, let cost?):

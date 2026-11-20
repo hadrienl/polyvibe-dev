@@ -114,12 +114,23 @@ public struct ModelPriceList: Hashable, Codable, Sendable {
     "antigravity": "gemini",
   ]
 
-  /// `claude-opus-4-5-20251101` and `gpt-5-2025-08-07` lose their date.
+  /// `claude-opus-4-5-20251101` and `gpt-5-2025-08-07` lose their date. Read from the last
+  /// characters, without a regular expression: it runs for every model of every refresh.
   static func withoutDate(_ model: String) -> String {
-    for pattern in [#"-\d{8}$"#, #"-\d{4}-\d{2}-\d{2}$"#] {
-      if let range = model.range(of: pattern, options: .regularExpression) {
-        return String(model[..<range.lowerBound])
+    let characters = Array(model.utf8)
+    func isDigit(_ index: Int) -> Bool { (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(characters[index]) }
+    func isDash(_ index: Int) -> Bool { characters[index] == UInt8(ascii: "-") }
+    func matches(_ suffix: String) -> Bool {
+      // `D` a digit, `-` a dash, after one more dash.
+      let shape = Array("-" + suffix)
+      guard characters.count > shape.count else { return false }
+      let start = characters.count - shape.count
+      return shape.enumerated().allSatisfy { offset, kind in
+        kind == "D" ? isDigit(start + offset) : isDash(start + offset)
       }
+    }
+    for suffix in ["DDDDDDDD", "DDDD-DD-DD"] where matches(suffix) {
+      return String(decoding: characters.dropLast(suffix.count + 1), as: UTF8.self)
     }
     return model
   }

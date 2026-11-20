@@ -50,7 +50,8 @@ enum UsagePresentation {
     -> String
   {
     let style = Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.narrow)
-    if amount > 0, amount < Decimal(5) / 1_000 {
+    // Below a cent, never a rounding: half a cent rounds to the even “0,00 $”.
+    if amount > 0, amount < Decimal(1) / 100 {
       return "< " + (Decimal(1) / 100).formatted(style)
     }
     return (approximate ? "≈ " : "") + amount.formatted(style)

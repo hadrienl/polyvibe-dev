@@ -161,7 +161,16 @@ struct SessionUsageButtonTests {
   func spokenValue() {
     let summary = SessionUsageSummary(figures: SessionUsageLayoutTests.figures(), percent: 55)
     #expect(summary.cost == Decimal(string: "1234.61"))
-    #expect(summary.spoken(locale: en) == "context 55%, cost about 1,234.61 US dollars")
+    // The default model has no price: said after the cost, never in the label (#574).
+    #expect(
+      summary.spoken(locale: en)
+        == "context 55%, cost about 1,234.61 US dollars. Models without a known price are left out of the total."
+    )
+    var priced = SessionUsageLayoutTests.figures()
+    priced.cost.unpriced = []
+    #expect(
+      SessionUsageSummary(figures: priced, percent: 55).spoken(locale: en)
+        == "context 55%, cost about 1,234.61 US dollars")
   }
 
   @Test("Without any price, the button says no cost; without a window, the running time")
@@ -178,12 +187,18 @@ struct SessionUsageButtonTests {
   @Test("The tooltip always gives the whole value, whichever form the label takes")
   func help() {
     let figures = SessionUsageLayoutTests.figures()
+    let leftOut = "\nModels without a known price are left out of the total."
     #expect(
       SessionUsageSummary(figures: figures, percent: 55).help(locale: en)
-        == "Context 55% · ≈ $1,234.61 (API equivalent)")
+        == "Context 55% · ≈ $1,234.61 (API equivalent)" + leftOut)
     #expect(
       SessionUsageSummary(figures: figures, percent: nil).help(locale: en)
-        == "Running time 3 h 12 min · ≈ $1,234.61 (API equivalent)")
+        == "Running time 3 h 12 min · ≈ $1,234.61 (API equivalent)" + leftOut)
+    var priced = figures
+    priced.cost.unpriced = []
+    #expect(
+      SessionUsageSummary(figures: priced, percent: 55).help(locale: en)
+        == "Context 55% · ≈ $1,234.61 (API equivalent)")
     var unpriced = figures
     unpriced.cost = UsageCost.Estimate()
     #expect(
@@ -228,6 +243,10 @@ struct SessionUsageButtonTests {
     #expect(UsagePresentation.cost(Decimal(string: "0.0042")!, locale: en) == "< $0.01")
     #expect(plain(UsagePresentation.cost(Decimal(string: "0.0042")!, locale: fr)) == "< 0,01 $")
     #expect(UsagePresentation.cost(0, locale: en) == "≈ $0.00")
+    // Half a cent, and just under a cent, are not rounded to a zero or up to a cent (#574).
+    #expect(UsagePresentation.cost(Decimal(string: "0.005")!, locale: en) == "< $0.01")
+    #expect(UsagePresentation.cost(Decimal(string: "0.0099")!, locale: en) == "< $0.01")
+    #expect(UsagePresentation.cost(Decimal(string: "0.01")!, locale: en) == "≈ $0.01")
   }
 
   /// How wide the Usage label is drawn in a status bar of `width`, in French, with a state text
