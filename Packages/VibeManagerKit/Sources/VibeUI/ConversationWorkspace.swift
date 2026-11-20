@@ -191,6 +191,10 @@ public final class ConversationWorkspace {
     } else {
       model = ConversationModel(sessionID: session.id)
       model.appearance = appearance
+      // The filters of the overview are the same for every session (#572).
+      model.setMomentKindShown = { [weak self] kind, shown in
+        self?.appearance.setShows(shown, kind)
+      }
       connectBookmarks(of: model)
       if let follow {
         let id = session.id

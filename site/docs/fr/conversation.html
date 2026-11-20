@@ -18,6 +18,26 @@
 <p>Quand vous remontez, une pastille <strong>nouveaux messages</strong> vous ramène à la fin. <strong>Édition › Copier en Markdown</strong> (<kbd>⌥⇧⌘C</kbd>) copie la sélection avec sa mise en forme. Ce qui est replié ou déplié se règle dans <a href="settings.html#conversation">Réglages › Conversation › Détails techniques</a>.</p>
 <div class="callout"><p>La conversation est lue dans les fichiers de transcript qu’écrivent Claude Code et Codex, et gardée en mémoire seulement. Vibe Manager ne l’écrit nulle part, ne la journalise pas et ne l’envoie jamais. Les liens se limitent à <code>http</code>, <code>https</code> et <code>mailto</code>, et aucune image distante n’est chargée.</p></div>
 
+<h2 id="moments">Moments clés</h2>
+<p>À côté des messages, à la place de la barre de défilement, la <strong>vue d’ensemble</strong> dessine toute la conversation en petit : cliquez ou faites-la glisser pour aller n’importe où. Elle se désactive dans <a href="settings.html#conversation">Réglages › Conversation</a>.</p>
+<p>Dans sa marge de gauche, une icône marque chaque <strong>moment clé</strong>, à la hauteur de son message. Ils sont lus dans la conversation elle-même, sans aucun modèle : une session ancienne a les siens dès qu’on l’ouvre.</p>
+<dl>
+  <dt>Signets</dt>
+  <dd>Posés par vous : cliquez l’étiquette à gauche d’un message, ou <strong>Présentation › Poser ou retirer un signet</strong> (<kbd>⌘B</kbd>).</dd>
+  <dt>Git</dt>
+  <dd>Un <code>git commit</code>, un <code>git push</code>, une branche ou un worktree créés, seulement quand la commande a réussi.</dd>
+  <dt>Tickets et PR</dt>
+  <dd>Créés avec <code>gh</code> ou <code>glab</code>, ou une pull request fusionnée, avec leur numéro.</dd>
+  <dt>Tests</dt>
+  <dd>Chaque suite de tests dont le résultat est reconnu : en vert quand tout passe, en rouge avec le nombre d’échecs sinon.</dd>
+  <dt>Questions</dt>
+  <dd>Une question de l’agent, avec votre réponse, ou un plan qu’il propose.</dd>
+  <dt>Incidents</dt>
+  <dd>Une erreur renvoyée par le fournisseur, un tour que vous avez interrompu.</dd>
+</dl>
+<p>Le pointeur sur une icône dit ce qui s’est passé et quand ; un clic amène le message et l’éclaire. Les moments trop proches pour être distingués partagent l’icône du premier, avec leur nombre. La même icône figure dans la marge à gauche du message, à côté de son signet.</p>
+<p>Les boutons en haut de la vue d’ensemble affichent ou masquent chaque type, dans la vue d’ensemble et dans la marge, pour toutes les sessions. <strong>Moment suivant</strong> (<kbd>⌥⌘J</kbd>) et <strong>Moment précédent</strong> (<kbd>⌥⌘K</kbd>) vont d’un moment affiché au suivant, quel que soit son type.</p>
+
 <h2 id="composer">Écrire à l’agent</h2>
 <p>La zone de saisie en bas écrit dans le terminal de l’agent comme si vous tapiez vous-même.</p>
 <ul>

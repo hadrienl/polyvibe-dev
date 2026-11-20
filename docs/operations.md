@@ -14,7 +14,7 @@ saved, and it holds no prompt, note, session name, folder name or terminal conte
 | What the last run was running | `…/com.hadrienl.VibeManager/runtime.json` |
 | Notes | `…/com.hadrienl.VibeManager/Notes/<session>.txt` |
 | Side terminals of each session: tabs, and what each showed (#43) | `…/com.hadrienl.VibeManager/Terminals/<session>/drawer.json`, `<terminal>.scrollback` — out of backups; Settings › Terminals turns the histories off and erases them |
-| Session journals: summary, resources, transcript cursors | `…/com.hadrienl.VibeManager/Journal/<session>.json` |
+| Session journals: resources, transcript cursors, summary lines written before #572 | `…/com.hadrienl.VibeManager/Journal/<session>.json` |
 | Names given to groups of the sidebar | `…/com.hadrienl.VibeManager/folders.json` |
 | Project icons of the sessions | `…/com.hadrienl.VibeManager/Icons/<sha256>.png` |
 | Prompt templates | `…/com.hadrienl.VibeManager/templates.json` |

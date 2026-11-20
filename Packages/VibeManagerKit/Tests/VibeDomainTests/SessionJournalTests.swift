@@ -53,60 +53,12 @@ struct SessionJournalTests {
     #expect(journal.overflowResourceCount == 1)
   }
 
-  @Test("Past the bound, the oldest entries fold into one that says how many")
-  func entryBound() {
-    var journal = SessionJournal()
-    journal.append(
-      (0..<(SessionJournal.entryLimit + 10)).map {
-        JournalEntry(text: "e\($0)", at: start.addingTimeInterval(Double($0)), providerID: nil)
-      })
-    #expect(journal.entries.count == SessionJournal.entryLimit)
-    #expect(journal.entries.first?.foldedCount == 11)
-    #expect(journal.entries.last?.text == "e\(SessionJournal.entryLimit + 9)")
-    journal.append([JournalEntry(text: "more", at: start, providerID: nil)])
-    #expect(journal.entries.first?.foldedCount == 12)
-  }
-
-  @Test("A turn ends once, and only a turn in which something happened")
-  func turns() {
-    var journal = SessionJournal()
-    journal.endTurn(at: start)
-    #expect(!journal.hasEndedTurn)
-    journal.withOpenTurn(providerID: "claude-code") { $0.prompts.append("fix it") }
-    journal.withOpenTurn(providerID: "claude-code") { $0.actions.append("Bash: swift test") }
-    journal.endTurn(at: start)
-    journal.endTurn(at: start.addingTimeInterval(5))
-    #expect(journal.pending.count == 1)
-    #expect(journal.pending[0].endedAt == start)
-    journal.withOpenTurn(providerID: "claude-code") { $0.prompts.append("push") }
-    #expect(journal.endedTurns.count == 1)
-    journal.summarized([journal.pending[0].id], at: start)
-    #expect(journal.pending.map(\.prompts) == [["push"]])
-    #expect(journal.hasEndedTurn)
-  }
-
-  @Test("A pass removes the turns it summarized, not those that came or went meanwhile")
-  func summarizedByIdentity() {
-    var journal = SessionJournal()
-    journal.withOpenTurn(providerID: nil) { $0.prompts.append("one") }
-    journal.endTurn(at: start)
-    let summarizing = Set(journal.endedTurns.map(\.id))
-    for index in 0..<SessionJournal.pendingTurnLimit {
-      journal.withOpenTurn(providerID: nil) { $0.prompts.append("later \(index)") }
-      journal.endTurn(at: start)
-    }
-    journal.summarized(summarizing, at: start)
-    #expect(journal.pending.count == SessionJournal.pendingTurnLimit)
-    #expect(journal.pending.first?.prompts == ["later 0"])
-  }
-
   @Test("A journal survives a round trip through JSON")
   func codable() throws {
     var journal = SessionJournal()
     journal.record([resource("a", .branch, label: "x")])
     journal.resources[0].target = .branch(repositoryPath: "/r", webURL: nil)
-    journal.append([JournalEntry(text: "Pushed", at: start, providerID: "codex")])
-    journal.summary = .failed(at: start, attempts: 2)
+    journal.entries = [JournalEntry(text: "Pushed", at: start, providerID: "codex")]
     journal.cursors["/t.jsonl"] = TranscriptCursor(offset: 12, inode: 3)
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
@@ -114,5 +66,23 @@ struct SessionJournalTests {
     decoder.dateDecodingStrategy = .iso8601
     let decoded = try decoder.decode(SessionJournal.self, from: encoder.encode(journal))
     #expect(decoded == journal)
+  }
+
+  @Test("A journal written while summaries were made is read: its lines kept, the rest left aside")
+  func journalOfBefore() throws {
+    // As #36 wrote it, with turns waiting and the state of the summary.
+    let json = """
+      {"schema":1,"entries":[{"id":"0B3C8E59-0F3F-4F63-9C3B-2E8C7A5D9B11","text":"Pushed the branch",\
+      "at":"2027-01-15T08:00:00Z","providerID":"claude-code"}],"resources":[],\
+      "overflowResourceCount":0,"cursors":{"/t.jsonl":{"offset":12}},\
+      "pending":[{"id":"6D1C9A1E-1B6B-4F0A-8B9E-6D5F2E3A4B7C","prompts":["fix"],"actions":[],\
+      "omittedActions":0}],"summary":{"failed":{"at":"2027-01-15T08:00:00Z","attempts":2}},\
+      "hasEndedTurn":true,"summarizedAt":"2027-01-15T08:00:00Z"}
+      """
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    let journal = try decoder.decode(SessionJournal.self, from: Data(json.utf8))
+    #expect(journal.entries.map(\.text) == ["Pushed the branch"])
+    #expect(journal.cursors["/t.jsonl"]?.offset == 12)
   }
 }

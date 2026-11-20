@@ -295,6 +295,54 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
     return Placement(width: minimumWidth, reserved: reserved)
   }
 
+  // MARK: - Moments (#572)
+
+  /// Moments drawn closer than that in the overview share one icon.
+  public static let clusterGap = 13.0
+
+  /// The moments grouped as the overview draws them: each group from a moment to those less than
+  /// `minimumGap` points below it once drawn small, in order. Only the first one's icon is drawn.
+  ///
+  /// - Parameter tops: where each moment's block starts in the conversation, in order.
+  public static func clusters(
+    _ tops: [Double], scale: Double, minimumGap: Double = clusterGap
+  ) -> [Range<Int>] {
+    var clusters: [Range<Int>] = []
+    var start = 0
+    for index in tops.indices.dropFirst()
+    where (tops[index] - tops[start]) * scale >= minimumGap {
+      clusters.append(start..<index)
+      start = index
+    }
+    if !tops.isEmpty { clusters.append(start..<tops.count) }
+    return clusters
+  }
+
+  // MARK: - Bookmark preview
+
+  /// Kept between a bookmark's preview and the overview.
+  public static let previewGap = 8.0
+  /// Kept between a bookmark's preview and the ends of the overview.
+  public static let previewMargin = 4.0
+
+  /// Where the start of a bookmarked message shows while the pointer is on its line, in the
+  /// overview's points: left of the overview, centred on the line — moved down or up just enough
+  /// to stay level with the overview, so that a bookmark near an end neither slips it under the
+  /// toolbar nor lays it over the composer. Taller than the overview, it starts at its top.
+  public static func previewOrigin(
+    lineY: Double, previewWidth: Double, previewHeight: Double, overviewHeight: Double
+  ) -> (x: Double, y: Double) {
+    let centred = lineY - previewHeight / 2
+    let lowest = overviewHeight - previewMargin - previewHeight
+    return (-previewWidth - previewGap, max(min(centred, lowest), previewMargin))
+  }
+
+  /// How wide a bookmark's preview may be: wider as the text is larger, never wider than the
+  /// room left of the overview — narrower then, never past the pane's edge.
+  public static func previewWidth(textSize: Double, room: Double) -> Double {
+    min(max(260, textSize * 20), max(room - previewGap - previewMargin, 0))
+  }
+
   // MARK: - Shapes
 
   static func shape(of block: ConversationBlock) -> Shape {

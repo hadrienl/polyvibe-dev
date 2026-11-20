@@ -518,6 +518,24 @@ struct ConversationPreferencesTests {
     #expect(!hidden.showsOverview)
   }
 
+  @Test("Every kind of moment is shown by default, and one a later build knows is kept (#572)")
+  func hiddenMomentKinds() throws {
+    let old = try JSONDecoder().decode(
+      ConversationAppearance.self, from: Data(#"{"density":"compact"}"#.utf8))
+    #expect(old.hiddenMomentKinds.isEmpty)
+    #expect(ConversationMomentKind.allCases.allSatisfy(old.shows))
+
+    var appearance = try JSONDecoder().decode(
+      ConversationAppearance.self, from: Data(#"{"hiddenMomentKinds":["git","deploys"]}"#.utf8))
+    #expect(!appearance.shows(.git))
+    #expect(appearance.shows(.tests))
+    appearance.setShows(true, .git)
+    appearance.setShows(false, .incident)
+    let again = try JSONDecoder().decode(
+      ConversationAppearance.self, from: JSONEncoder().encode(appearance))
+    #expect(again.hiddenMomentKinds == ["deploys", "incident"])
+  }
+
   @Test("The dark theme applies in dark mode only while the system is followed")
   func themeChoice() {
     var appearance = ConversationAppearance(lightTheme: "paper", darkTheme: "night")

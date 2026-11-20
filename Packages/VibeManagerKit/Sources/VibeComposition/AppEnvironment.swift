@@ -402,20 +402,16 @@ public final class AppEnvironment {
       events: FSEventsFileChangeObserver(),
       transcripts: transcripts
     )
-    // Each session's journal (#36): read from the transcripts of every active session, summarized
-    // by its own agent, kept in a file per session beside the notes.
-    let journalPreferences = UserDefaultsJournalPreferences(suiteName: data.defaultsSuite)
+    // Each session's journal (#36): the resources read from the transcripts of every active
+    // session, kept in a file per session beside the notes. No summary any more (#572).
     let journal = SessionJournalModel(
       monitor: SessionJournalMonitor(
         store: FileSessionJournalStore(directory: data.journal),
         reader: SessionJournalReader(homes: agentHomes),
         repositories: GitRepositoryIdentityResolver(
           git: ProcessGitCommandRunner(timeout: .seconds(10), diagnostics: diagnostics.log)),
-        summarizers: AgentSessionSummarizers(agents: registry),
         events: FSEventsFileChangeObserver(),
-        repository: repository,
-        summariesEnabled: journalPreferences.summariesEnabled),
-      preferences: journalPreferences)
+        repository: repository))
     // The conversation view (#38): the same transcripts, read to be shown and never kept.
     let conversations = ConversationWorkspace(
       follow: FollowConversation(

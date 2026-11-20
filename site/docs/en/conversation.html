@@ -18,6 +18,26 @@
 <p>When you scroll up, a <strong>new messages</strong> pill takes you back to the end. <strong>Edit › Copy as Markdown</strong> (<kbd>⌥⇧⌘C</kbd>) copies the selection with its formatting. How much is folded or unfolded is set in <a href="settings.html#conversation">Settings › Conversation › Technical details</a>.</p>
 <div class="callout"><p>The conversation is read from the transcript files Claude Code and Codex write, and kept in memory only. Vibe Manager never writes it anywhere, never logs it, never sends it. Links are only <code>http</code>, <code>https</code> and <code>mailto</code>, and no remote image is loaded.</p></div>
 
+<h2 id="moments">Key moments</h2>
+<p>Beside the messages, in place of the scroll bar, the <strong>overview</strong> draws the whole conversation small: click or drag it to go anywhere. It can be turned off in <a href="settings.html#conversation">Settings › Conversation</a>.</p>
+<p>In its left margin, an icon marks each <strong>key moment</strong>, at the height of its message. They are read from the conversation itself, without any model, so an old session has them as soon as it is opened:</p>
+<dl>
+  <dt>Bookmarks</dt>
+  <dd>Set by you: click the tag left of a message, or <strong>View › Toggle Bookmark</strong> (<kbd>⌘B</kbd>).</dd>
+  <dt>Git</dt>
+  <dd>A <code>git commit</code>, a <code>git push</code>, a branch or a worktree created — only when the command succeeded.</dd>
+  <dt>Tickets and pull requests</dt>
+  <dd>Created with <code>gh</code> or <code>glab</code>, or a pull request merged, with its number.</dd>
+  <dt>Tests</dt>
+  <dd>Each test suite whose result is recognized: green when everything passed, red with the number of failures otherwise.</dd>
+  <dt>Questions</dt>
+  <dd>A question the agent asked, with your answer, or a plan it proposed.</dd>
+  <dt>Incidents</dt>
+  <dd>An error returned by the provider, a turn you interrupted.</dd>
+</dl>
+<p>The pointer on an icon tells what happened and when; a click brings the message up and lights it. Moments too close to be told apart share the first one's icon, with their number. The same icon stands in the margin left of the message, next to its bookmark.</p>
+<p>The buttons at the top of the overview show or hide each kind, in the overview and in the margin, for every session. <strong>Next Moment</strong> (<kbd>⌥⌘J</kbd>) and <strong>Previous Moment</strong> (<kbd>⌥⌘K</kbd>) go from one moment shown to the next, whatever its kind.</p>
+
 <h2 id="composer">Writing to the agent</h2>
 <p>The composer at the bottom writes into the agent's terminal as if you typed it.</p>
 <ul>

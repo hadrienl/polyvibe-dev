@@ -852,9 +852,7 @@ extension AppModel {
       let why = coordination.outboxWaits[child.id]?.block.map { ": \($0.reason)" } ?? ""
       parts.append("\(messages) to be typed\(why).")
     }
-    if let journal = journal?.journals.value(for: child.id) {
-      let summary = journal.entries.suffix(5).map { "- \($0.text)" }
-      if !summary.isEmpty { parts.append("Activity summary:\n" + summary.joined(separator: "\n")) }
+    if let journal = journal?.journal(for: child.id) {
       let resources = journal.resources.filter { $0.kind == .pullRequest || $0.kind == .branch }
         .map { "- \($0.kind.rawValue) \($0.label)" }
       if !resources.isEmpty { parts.append("Mentioned:\n" + resources.joined(separator: "\n")) }

@@ -92,10 +92,9 @@ public struct CodexAvatarGenerator: AvatarGenerating {
   }
 
   static func failure(of result: BoundedProcessResult) -> AvatarGenerationError {
-    switch CommandLineSummarizer.failure(of: result) {
-    case .unavailable(.outdated): return .unavailable(.outdated)
-    case .unavailable(.signedOut): return .unavailable(.signedOut)
-    case .unavailable: return .unavailable(.missing)
+    switch OneShotAgentRun.ExitFailure(result) {
+    case .outdated: return .unavailable(.outdated)
+    case .signedOut: return .unavailable(.signedOut)
     case .failed(let reason): return .failed(reason)
     }
   }

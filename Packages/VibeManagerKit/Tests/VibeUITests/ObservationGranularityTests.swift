@@ -29,10 +29,6 @@ private struct NoTranscripts: SessionJournalReading {
   func transcriptDirectories(for session: WorkSession) -> [String] { [] }
 }
 
-private struct NoSummaries: SessionSummarizerResolving {
-  func summarizer(for providerID: String) async -> (any SessionSummarizing)? { nil }
-}
-
 private struct NoRepositories: RepositoryIdentityResolving {
   func identity(ofDirectory path: String) async -> RepositoryIdentity? { nil }
 }
@@ -146,29 +142,23 @@ struct ObservationGranularityTests {
     #expect(model.pendingRequestCount == 0)
   }
 
-  @Test("Another session's journal wakes neither this session's journal nor its summary's state")
+  @Test("Another session's journal does not wake this session's")
   func journalOfAnother() {
     let journal = SessionJournalModel(
       monitor: SessionJournalMonitor(
         store: InMemorySessionJournalStore(), reader: NoTranscripts(),
-        repositories: NoRepositories(), summarizers: NoSummaries()),
-      preferences: InMemoryJournalPreferences(), opener: FakeOpener())
+        repositories: NoRepositories()))
     let first = SessionID()
     let second = SessionID()
 
     #expect(
       !notifies(reading: { _ = journal.journal(for: first) }) {
-        journal.summarizing.set(true, for: second)
+        journal.journals.set(SessionJournal(overflowResourceCount: 1), for: second)
       })
     #expect(
-      !notifies(reading: { _ = journal.isSummarizing(first) }) {
-        journal.summarizing.set(true, for: second)
+      notifies(reading: { _ = journal.journal(for: first) }) {
+        journal.journals.set(SessionJournal(overflowResourceCount: 1), for: first)
       })
-    #expect(
-      notifies(reading: { _ = journal.isSummarizing(first) }) {
-        journal.summarizing.set(true, for: first)
-      })
-    #expect(journal.isSummarizing(first))
   }
 
   @Test("A drag of the web view's divider wakes neither the sidebar nor the requests' palette")

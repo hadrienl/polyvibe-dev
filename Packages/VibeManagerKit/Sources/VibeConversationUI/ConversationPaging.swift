@@ -82,5 +82,10 @@ struct ConversationPagerProbe: NSViewRepresentable {
     func attach() {
       if let scrollView = enclosingScrollView { pager?.scrollView = scrollView }
     }
+
+    /// Never under the pointer: behind the messages, it took the clicks and the hovers wherever a
+    /// view of theirs drew nothing — the hollow of a moment's icon in the margin, the box around a
+    /// bookmark's tag —, whatever shape that view said it had (#572).
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
   }
 }

@@ -200,4 +200,63 @@ struct ConversationOverviewLayoutTests {
     #expect(placement(920) == .init(width: 56, reserved: 36))
     #expect(placement(700) == .init(width: 56, reserved: 36))
   }
+
+  @Test("A bookmark's preview stands left of the overview, centred on the line it is shown for")
+  func previewBesideTheLine() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 300, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    // The gap between the preview and the overview, left of it; half its height above the line.
+    #expect(origin.x == -288)
+    #expect(origin.y == 270)
+  }
+
+  @Test("Near the top of the overview, the preview moves down to stay within it")
+  func previewAtTheTop() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 2, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.y == ConversationOverviewLayout.previewMargin)
+    #expect(origin.x == -288)
+  }
+
+  @Test("Near the bottom of the overview, the preview moves up to stay within it")
+  func previewAtTheBottom() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 698, previewWidth: 280, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.y + 60 == 700 - ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("Taller than the overview, the preview starts at its top")
+  func previewTallerThanTheOverview() {
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 40, previewWidth: 280, previewHeight: 120, overviewHeight: 100)
+    #expect(origin.y == ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("The preview grows with the text, and never wider than the messages left of the overview")
+  func previewWidth() {
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 13, room: 1000) == 260)
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 1000) == 320)
+    #expect(ConversationOverviewLayout.previewWidth(textSize: 16, room: 200) == 188)
+  }
+
+  @Test("In a narrow pane, the preview narrows rather than reach past the pane's left edge")
+  func previewInANarrowPane() {
+    let room = 100.0
+    let width = ConversationOverviewLayout.previewWidth(textSize: 13, room: room)
+    #expect(width == 88)
+    let origin = ConversationOverviewLayout.previewOrigin(
+      lineY: 300, previewWidth: width, previewHeight: 60, overviewHeight: 700)
+    #expect(origin.x == -room + ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("Moments drawn close share the first one's icon; the next group starts past the gap (#572)")
+  func clusters() {
+    // At a tenth: 0, 5, 12.9 and 13 points down, then 40 and 41.
+    let tops = [0.0, 50, 129, 130, 400, 410]
+    #expect(
+      ConversationOverviewLayout.clusters(tops, scale: 0.1) == [0..<3, 3..<4, 4..<6])
+    #expect(ConversationOverviewLayout.clusters(tops, scale: 1) == [0..<1, 1..<2, 2..<4, 4..<6])
+    #expect(ConversationOverviewLayout.clusters([], scale: 0.1).isEmpty)
+    #expect(ConversationOverviewLayout.clusters([7], scale: 0.1) == [0..<1])
+  }
 }

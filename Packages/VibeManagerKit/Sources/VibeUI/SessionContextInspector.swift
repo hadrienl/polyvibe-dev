@@ -28,7 +28,6 @@ struct SessionContextInspector: View {
   private let ticketTitles: TicketTitlesModel?
   private let leaveNotes: () -> Void
   private let usage: UsageModel?
-  private let journal: SessionJournalModel?
   /// The workspace, for the coordination section (#352): a coordinator's children, a child's
   /// coordinator.
   private let coordination: AppModel?
@@ -50,12 +49,10 @@ struct SessionContextInspector: View {
     ticketTitles: TicketTitlesModel? = nil,
     leaveNotes: @escaping () -> Void = {},
     usage: UsageModel? = nil,
-    journal: SessionJournalModel? = nil,
     coordination: AppModel? = nil
   ) {
     self.session = session
     self.coordination = coordination
-    self.journal = journal
     self.notes = notes
     self.ticketTitles = ticketTitles
     self.leaveNotes = leaveNotes
@@ -81,15 +78,13 @@ struct SessionContextInspector: View {
     InspectorSectionStack(sections: sections, layout: layout)
   }
 
-  /// In their default order. A section with nothing to show in this window — no journal, no
-  /// usage — is left out, and keeps its place in the arrangement for when it comes back.
+  /// In their default order. A section with nothing to show in this window — no usage — is left
+  /// out, and keeps its place in the arrangement for when it comes back. Activity is gone (#572):
+  /// an arrangement that holds it keeps it, unshown.
   private var sections: [InspectorSectionDescriptor] {
     var sections: [InspectorSectionDescriptor] = []
     if let coordination, session.coordination != nil || coordination.showsAsCoordinator(session) {
       sections.append(coordinationSection(coordination))
-    }
-    if let journal {
-      sections.append(activitySection(journal))
     }
     sections.append(gitSection)
     if let notes {
@@ -107,26 +102,6 @@ struct SessionContextInspector: View {
 // MARK: - The sections
 
 extension SessionContextInspector {
-  fileprivate func activitySection(_ journal: SessionJournalModel) -> InspectorSectionDescriptor {
-    InspectorSectionDescriptor(
-      id: .activity,
-      title: String(localized: "Activity", bundle: .module, comment: "A section of the inspector."),
-      systemImage: "waveform.path.ecg",
-      sizing: .fill(minimum: 90),
-      summary: AnyView(ActivitySummary(session: session.id, journal: journal)),
-      summaryText: { [session] in
-        ActivityPresentation.resourceSummary(journal.journal(for: session.id))
-      },
-      content: AnyView(
-        ActivityPane(
-          session: session,
-          agentName: session.agent.map { AgentNaming.name(of: $0.providerID, names: agentNames) }
-            ?? "",
-          journal: journal)),
-      accessibilityIdentifier: "inspector-activity-section"
-    )
-  }
-
   fileprivate func coordinationSection(_ model: AppModel) -> InspectorSectionDescriptor {
     let isCoordinator = model.showsAsCoordinator(session)
     return InspectorSectionDescriptor(
@@ -294,18 +269,6 @@ private struct InitialPromptView: View {
           .textSelection(.enabled)
           .fixedSize(horizontal: false, vertical: true)
       }
-    }
-  }
-}
-
-/// What the activity holds, said once the section is folded.
-private struct ActivitySummary: View {
-  let session: SessionID
-  let journal: SessionJournalModel
-
-  var body: some View {
-    if let summary = ActivityPresentation.resourceSummary(journal.journal(for: session)) {
-      Text(verbatim: summary)
     }
   }
 }

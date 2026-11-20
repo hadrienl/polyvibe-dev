@@ -5,46 +5,30 @@ import VibeDomain
 public struct SessionJournalUpdate: Hashable, Sendable {
   public let sessionID: SessionID
   public let journal: SessionJournal
-  /// A summary pass is under way.
-  public let isSummarizing: Bool
 
-  public init(sessionID: SessionID, journal: SessionJournal, isSummarizing: Bool) {
+  public init(sessionID: SessionID, journal: SessionJournal) {
     self.sessionID = sessionID
     self.journal = journal
-    self.isSummarizing = isSummarizing
   }
 }
 
-/// Keeps the journal of every active session (#36): the resources as soon as a line names them,
-/// the summary once a turn has ended.
+/// Keeps the journal of every active session (#36): the resources as soon as a line names them.
+/// No summary is written any more (#572): the conversation's key moments say what happened.
 ///
-/// Every active session, not only the one on screen — a session in the background must summarize
-/// itself — through one watch of the agents' transcript folders, comparing the names of what moved
-/// with the sessions followed. Only the files that grew are read, from where they were left.
+/// Every active session, not only the one on screen, through one watch of the agents' transcript
+/// folders, comparing the names of what moved with the sessions followed. Only the files that grew
+/// are read, from where they were left.
 ///
-/// Nothing here goes through the terminal, the terminal host or the main thread: a summary is an
-/// ordinary process of the session's CLI, and only a changed journal is published.
+/// Nothing here goes through the terminal, the terminal host or the main thread: only a changed
+/// journal is published.
 public actor SessionJournalMonitor {
   public struct Timing: Sendable {
-    /// Calm after a turn ends before a pass starts: a turn followed by another is one pass.
-    public var quiet: Duration
-    /// At most one pass per session in this time.
-    public var minimumInterval: Duration
-    /// After a failed pass, the next attempts; then only the next turn tries again.
-    public var retries: [Duration]
     /// Events of the file system gathered before reading.
     public var readDelay: Duration
     /// Changes gathered before the journal is written.
     public var saveDelay: Duration
 
-    public init(
-      quiet: Duration = .seconds(10), minimumInterval: Duration = .seconds(300),
-      retries: [Duration] = [.seconds(60), .seconds(300), .seconds(900)],
-      readDelay: Duration = .milliseconds(500), saveDelay: Duration = .seconds(2)
-    ) {
-      self.quiet = quiet
-      self.minimumInterval = minimumInterval
-      self.retries = retries
+    public init(readDelay: Duration = .milliseconds(500), saveDelay: Duration = .seconds(2)) {
       self.readDelay = readDelay
       self.saveDelay = saveDelay
     }
@@ -57,63 +41,44 @@ public actor SessionJournalMonitor {
     var isActive = true
     var isReading = false
     var readAgain = false
-    var scheduledPass: Task<Void, Never>?
-    var runningPass: Task<Void, Never>?
-    var passAgain = false
-    var lastPassAt: Date?
-    var failures = 0
     var pendingSave: Task<Void, Never>?
   }
 
   private let store: any SessionJournalStore
   private let reader: any SessionJournalReading
   private let resolution: ResourceResolution
-  private let summarizers: any SessionSummarizerResolving
   private let events: (any FileChangeObserving)?
   private let repository: (any SessionRepository)?
   private let timing: Timing
   private let now: @Sendable () -> Date
   private let sleep: @Sendable (Duration) async throws -> Void
-  private let language: String
-  private let maximumConcurrentPasses: Int
 
   private var followed: [SessionID: Followed] = [:]
-  /// Sessions no longer active, being read and summarized one last time.
+  /// Sessions no longer active, being read one last time.
   private var finishing: [SessionID: Task<Void, Never>] = [:]
   private var continuations: [UUID: AsyncStream<SessionJournalUpdate>.Continuation] = [:]
   private var watchedDirectories: [String] = []
   private var watchTask: Task<Void, Never>?
   private var pendingReads: Set<SessionID> = []
   private var readTask: Task<Void, Never>?
-  private var runningPasses = 0
-  private var passWaiters: [CheckedContinuation<Void, Never>] = []
-  private var summariesEnabled: Bool
   private var isStopped = false
 
   public init(
     store: any SessionJournalStore,
     reader: any SessionJournalReading,
     repositories: any RepositoryIdentityResolving,
-    summarizers: any SessionSummarizerResolving,
     events: (any FileChangeObserving)? = nil,
     repository: (any SessionRepository)? = nil,
-    summariesEnabled: Bool = true,
     timing: Timing = Timing(),
-    maximumConcurrentPasses: Int = 2,
-    language: String = Locale.preferredLanguages.first ?? "en",
     now: @escaping @Sendable () -> Date = { Date() },
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
   ) {
     self.store = store
     self.reader = reader
     resolution = ResourceResolution(repositories: repositories)
-    self.summarizers = summarizers
     self.events = events
     self.repository = repository
-    self.summariesEnabled = summariesEnabled
     self.timing = timing
-    self.maximumConcurrentPasses = maximumConcurrentPasses
-    self.language = language
     self.now = now
     self.sleep = sleep
   }
@@ -136,12 +101,7 @@ public actor SessionJournalMonitor {
 
   private func publish(_ id: SessionID) {
     guard let state = followed[id] else { return }
-    publish(id, state.journal, isSummarizing: state.runningPass != nil)
-  }
-
-  private func publish(_ id: SessionID, _ journal: SessionJournal, isSummarizing: Bool) {
-    let update = SessionJournalUpdate(
-      sessionID: id, journal: journal, isSummarizing: isSummarizing)
+    let update = SessionJournalUpdate(sessionID: id, journal: state.journal)
     for continuation in continuations.values { continuation.yield(update) }
   }
 
@@ -156,7 +116,7 @@ public actor SessionJournalMonitor {
   // MARK: - Which sessions
 
   /// The sessions as the store has them now. The active ones are followed; one that stopped being
-  /// active is read and summarized a last time, without waiting for the interval.
+  /// active is read a last time.
   public func track(_ sessions: [WorkSession]) async {
     guard !isStopped else { return }
     let active = sessions.filter { $0.status == .active }
@@ -167,50 +127,18 @@ public actor SessionJournalMonitor {
     }
     for session in active {
       if var state = followed[session.id] {
-        if state.session.agent?.providerID != session.agent?.providerID,
-          case .unavailable = state.journal.summary
-        {
-          // Another agent may well be able to.
-          state.journal.summary = .ready
-        }
         state.session = session
         state.isActive = true
         followed[session.id] = state
         continue
       }
-      var journal = (try? await store.journal(for: session.id)) ?? SessionJournal()
-      // Each launch asks again whether the agent can summarize: it may have been updated.
-      if case .unavailable = journal.summary { journal.summary = .ready }
+      let journal = (try? await store.journal(for: session.id)) ?? SessionJournal()
       guard followed[session.id] == nil, !isStopped else { continue }
       followed[session.id] = Followed(session: session, journal: journal)
       publish(session.id)
       requestRead(session.id)
-      // Turns left pending by the last launch — quit during a pass, or after one failed.
-      schedulePass(session.id)
     }
     await refreshWatch()
-  }
-
-  /// Summaries on or off. Off, no pass starts; the resources are still read.
-  public func setSummariesEnabled(_ enabled: Bool) {
-    summariesEnabled = enabled
-    guard enabled else {
-      for id in followed.keys {
-        followed[id]?.scheduledPass?.cancel()
-        followed[id]?.scheduledPass = nil
-      }
-      return
-    }
-    for id in followed.keys { schedulePass(id) }
-  }
-
-  /// Retry: a pass now, whatever the interval says.
-  public func retry(_ id: SessionID) {
-    guard var state = followed[id] else { return }
-    state.failures = 0
-    if case .unavailable = state.journal.summary { state.journal.summary = .ready }
-    followed[id] = state
-    schedulePass(id, after: .zero)
   }
 
   /// Reads everything once more: the application came back to the front, events may have been
@@ -219,22 +147,17 @@ public actor SessionJournalMonitor {
     for id in followed.keys { requestRead(id) }
   }
 
-  /// Stops for good: passes under way are called off — their process killed — and what changed is
-  /// written. The turns they were summarizing stay pending for the next launch.
+  /// Stops for good: what changed is written.
   public func stop() async {
     isStopped = true
     watchTask?.cancel()
     watchTask = nil
     readTask?.cancel()
     for (id, state) in followed {
-      state.scheduledPass?.cancel()
-      state.runningPass?.cancel()
       state.pendingSave?.cancel()
       try? await store.save(state.journal, for: id)
     }
     for task in finishing.values { task.cancel() }
-    for waiter in passWaiters { waiter.resume() }
-    passWaiters = []
     for continuation in continuations.values { continuation.finish() }
     continuations = [:]
   }
@@ -305,8 +228,8 @@ public actor SessionJournalMonitor {
 
   // MARK: - Reading the transcripts
 
-  /// Reads what the session's transcripts gained, takes the resources out of it, and asks for a
-  /// summary when a turn ended. One reading of a session at a time.
+  /// Reads what the session's transcripts gained, and takes the resources out of it. One reading
+  /// of a session at a time.
   private func read(_ id: SessionID) async {
     guard var state = followed[id] else { return }
     if state.isReading {
@@ -325,7 +248,6 @@ public actor SessionJournalMonitor {
       followed[id]?.session = fresh
     }
 
-    var turnEnded = false
     repeat {
       followed[id]?.readAgain = false
       guard let current = followed[id] else { return }
@@ -339,193 +261,18 @@ public actor SessionJournalMonitor {
       guard var latest = followed[id] else { return }
       let before = latest.journal
       latest.journal.cursors = reading.cursors
-      for (providerID, event) in reading.events {
-        if Self.apply(event, providerID: providerID, to: &latest.journal, now: date) {
-          turnEnded = true
-        }
-      }
       latest.journal.record(resources)
       followed[id] = latest
       if latest.journal != before {
         scheduleSave(id)
-        if latest.journal.entries != before.entries || latest.journal.resources != before.resources
-          || latest.journal.hasEndedTurn != before.hasEndedTurn
-        {
-          publish(id)
-        }
+        if latest.journal.resources != before.resources { publish(id) }
       }
     } while followed[id]?.readAgain == true
-
-    if turnEnded { schedulePass(id) }
   }
 
   /// Whether the store already says which conversation the session's current agent writes.
   static func namesItsConversation(_ session: WorkSession) -> Bool {
     !(session.agent?.resumeIdentifier?.trimmingCharacters(in: .whitespaces).isEmpty ?? true)
-  }
-
-  /// What an event adds to the turns waiting for a summary. Returns whether a turn ended.
-  static func apply(
-    _ event: TranscriptEvent, providerID: String, to journal: inout SessionJournal, now: Date
-  ) -> Bool {
-    switch event {
-    case .prompt(let text, _):
-      journal.withOpenTurn(providerID: providerID) {
-        $0.prompts.append(TurnDigest.clip(text, to: TurnDigest.promptLimit))
-        if $0.prompts.count > SessionJournal.promptLimit { $0.prompts.removeFirst() }
-      }
-    case .toolCall(let call):
-      journal.withOpenTurn(providerID: providerID) {
-        if $0.actions.count < SessionJournal.actionLimit {
-          $0.actions.append(
-            TurnDigest.clip(TurnDigest.firstLine(call.summary), to: TurnDigest.actionLimit))
-        } else {
-          $0.omittedActions += 1
-        }
-      }
-    case .agentText(let text, _):
-      journal.withOpenTurn(providerID: providerID) {
-        $0.agentText = TurnDigest.clip(text, to: TurnDigest.agentTextLimit)
-      }
-    case .creationOutput:
-      break
-    case .turnEnded(let at):
-      let wasEnded = journal.pending.last?.endedAt != nil
-      journal.endTurn(at: at ?? now)
-      return !wasEnded && journal.pending.last?.endedAt != nil
-    }
-    return false
-  }
-
-  // MARK: - Summaries
-
-  private func schedulePass(_ id: SessionID, after delay: Duration? = nil) {
-    guard summariesEnabled, !isStopped, var state = followed[id],
-      !state.journal.endedTurns.isEmpty
-    else { return }
-    if case .unavailable = state.journal.summary { return }
-    if state.runningPass != nil {
-      state.passAgain = true
-      followed[id] = state
-      return
-    }
-    state.scheduledPass?.cancel()
-    var wait = delay ?? timing.quiet
-    if delay == nil, let last = state.lastPassAt {
-      let sinceLast = Duration.seconds(now().timeIntervalSince(last))
-      wait = max(wait, timing.minimumInterval - sinceLast)
-    }
-    let pause = wait
-    state.scheduledPass = Task { [weak self, sleep] in
-      do { try await sleep(pause) } catch { return }
-      await self?.startPass(id)
-    }
-    followed[id] = state
-  }
-
-  private func startPass(_ id: SessionID) {
-    guard var state = followed[id], state.runningPass == nil, !isStopped else { return }
-    state.scheduledPass = nil
-    state.passAgain = false
-    state.runningPass = Task { [weak self] in
-      await self?.pass(id)
-    }
-    followed[id] = state
-  }
-
-  /// One pass: the turns that ended, condensed, handed to the session's agent. What it answers is
-  /// appended; a failure leaves the turns pending and says so.
-  private func pass(_ id: SessionID) async {
-    await acquirePassSlot()
-    defer { releasePassSlot() }
-    guard let state = followed[id], !Task.isCancelled else {
-      followed[id]?.runningPass = nil
-      return
-    }
-    let turns = state.journal.endedTurns
-    guard !turns.isEmpty, let providerID = state.session.agent?.providerID else {
-      followed[id]?.runningPass = nil
-      return
-    }
-    guard let summarizer = await summarizers.summarizer(for: providerID) else {
-      followed[id]?.journal.summary = .unavailable(.unsupported)
-      finishPass(id)
-      return
-    }
-    publish(id)
-    let since = state.journal.summarizedAt ?? .distantPast
-    let digest = TurnDigest.make(
-      turns: turns,
-      resources: state.journal.resources.filter { $0.lastSeenAt >= since },
-      recentEntries: Array(state.journal.entries.suffix(TurnDigest.recentEntryCount)))
-    let request = SummaryRequest(digest: digest, turnCount: turns.count, language: language)
-    let result: Result<[SummaryEntry], any Error>
-    do {
-      result = .success(try await summarizer.summarize(request))
-    } catch {
-      result = .failure(error)
-    }
-    guard !Task.isCancelled, var latest = followed[id] else {
-      followed[id]?.runningPass = nil
-      return
-    }
-    let date = now()
-    switch result {
-    case .success(let entries):
-      latest.journal.append(
-        entries.map { entry in
-          JournalEntry(
-            text: entry.text,
-            at: turns[min(entry.turn, turns.count) - 1].endedAt ?? date,
-            providerID: providerID)
-        })
-      latest.journal.summarized(Set(turns.map(\.id)), at: date)
-      latest.failures = 0
-      latest.lastPassAt = date
-    case .failure(SummaryError.unavailable(let reason)):
-      latest.journal.summary = .unavailable(reason)
-    case .failure:
-      latest.failures += 1
-      latest.journal.summary = .failed(at: date, attempts: latest.failures)
-      latest.lastPassAt = date
-    }
-    followed[id] = latest
-    finishPass(id)
-  }
-
-  private func finishPass(_ id: SessionID) {
-    guard var state = followed[id] else { return }
-    state.runningPass = nil
-    let again = state.passAgain
-    state.passAgain = false
-    followed[id] = state
-    scheduleSave(id, immediately: true)
-    publish(id)
-    if case .failed(_, let attempts) = state.journal.summary {
-      if attempts <= timing.retries.count {
-        schedulePass(id, after: timing.retries[attempts - 1])
-      } else if again {
-        schedulePass(id)
-      }
-    } else if again {
-      schedulePass(id)
-    }
-  }
-
-  private func acquirePassSlot() async {
-    if runningPasses < maximumConcurrentPasses {
-      runningPasses += 1
-      return
-    }
-    await withCheckedContinuation { passWaiters.append($0) }
-  }
-
-  private func releasePassSlot() {
-    if passWaiters.isEmpty {
-      runningPasses -= 1
-    } else {
-      passWaiters.removeFirst().resume()
-    }
   }
 
   // MARK: - A session that stopped
@@ -540,29 +287,13 @@ public actor SessionJournalMonitor {
   private func finishNow(_ id: SessionID) async {
     defer { finishing[id] = nil }
     // A reading under way when the session stopped is waited for: its last lines belong in the
-    // last pass.
+    // journal.
     while followed[id]?.isReading == true {
       try? await Task.sleep(for: .milliseconds(20))
     }
     await read(id)
-    guard var state = followed[id] else { return }
-    state.scheduledPass?.cancel()
-    state.scheduledPass = nil
-    // What the agent was doing when it stopped is a turn too.
-    state.journal.endTurn(at: now())
-    followed[id] = state
-    if summariesEnabled, !isStopped, !state.journal.endedTurns.isEmpty,
-      !Self.isUnavailable(state.journal.summary)
-    {
-      if let running = state.runningPass {
-        await running.value
-      }
-      startPass(id)
-      await followed[id]?.runningPass?.value
-    }
     guard let final = followed[id] else { return }
     final.pendingSave?.cancel()
-    final.scheduledPass?.cancel()
     try? await store.save(final.journal, for: id)
     // Made active again while it was being finished — restarted: it stays followed.
     if final.isActive {
@@ -573,21 +304,14 @@ public actor SessionJournalMonitor {
     await refreshWatch()
   }
 
-  private static func isUnavailable(_ state: JournalSummaryState) -> Bool {
-    if case .unavailable = state { return true }
-    return false
-  }
-
   // MARK: - Writing
 
-  private func scheduleSave(_ id: SessionID, immediately: Bool = false) {
+  private func scheduleSave(_ id: SessionID) {
     guard var state = followed[id] else { return }
     state.pendingSave?.cancel()
-    let delay = immediately ? Duration.zero : timing.saveDelay
+    let delay = timing.saveDelay
     state.pendingSave = Task { [weak self, sleep] in
-      if delay > .zero {
-        do { try await sleep(delay) } catch { return }
-      }
+      do { try await sleep(delay) } catch { return }
       await self?.save(id)
     }
     followed[id] = state

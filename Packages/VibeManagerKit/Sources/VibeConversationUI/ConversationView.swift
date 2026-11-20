@@ -34,17 +34,15 @@ public struct ConversationView: View {
   @State private var contentFrame = CGRect.zero
   @State private var viewportHeight = 0.0
   @State private var pager = ConversationPager()
-  /// Where a page leads, in the messages: a mark that SwiftUI scrolls to (#227).
-  @State private var pageTarget = 0.0
-  /// A page asked for, scrolled to once the mark has been laid out where it leads.
-  @State private var pagePending = false
+  /// Where a page or the overview leads, in the messages: a mark that SwiftUI scrolls to (#227).
+  @State private var pageMark = PageMark()
   /// One selection from one message to the next (#381).
   @State private var selection = ConversationSelection()
   /// The width of the messages' pane, which the overview takes its margin from (#567).
   @State private var paneWidth = 0.0
 
   private static let bottomID = "conversation.bottom"
-  private static let pageTargetID = "conversation.page"
+  static let pageTargetID = "conversation.page"
   /// The messages' own coordinates: where each row says it is (#567).
   static let contentSpace = "conversation.content"
 
@@ -186,8 +184,11 @@ public struct ConversationView: View {
 
   // MARK: - Overview and bookmarks (#567)
 
-  /// Left of the messages: room for their bookmarks, whatever margin the theme gives.
-  private var leadingMargin: Double { max(layout.sideMargin, BookmarkGutter.reach) }
+  /// Left of the messages: room for their moments and bookmarks, whatever margin the theme gives
+  /// (#572).
+  private var leadingMargin: Double {
+    max(layout.sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
+  }
 
   private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }
 
@@ -214,18 +215,6 @@ public struct ConversationView: View {
   private func trackReadablePart() {
     guard let readable = pager.readableRange() else { return }
     model.overview.scrolled(readableTop: readable.top, readableHeight: readable.height)
-  }
-
-  /// Scrolls so that this point of the messages is at the top of what is read, through the mark
-  /// the pages use (#227).
-  private func scrollMark(to top: Double, proxy: ScrollViewProxy) {
-    // A mark already there is not laid out again.
-    guard max(top, 0) != max(pageTarget, 0) else {
-      proxy.scrollTo(Self.pageTargetID, anchor: .top)
-      return
-    }
-    pagePending = true
-    pageTarget = top
   }
 
   private var conversation: some View {
@@ -272,26 +261,13 @@ public struct ConversationView: View {
         // (#228).
         .frame(minHeight: viewportHeight, alignment: .bottom)
         .coordinateSpace(name: Self.contentSpace)
+        // Behind the messages rather than over them: SwiftUI looks for what it scrolls to in the
+        // order the views come, and would read the identifier of every block before it.
+        .background(alignment: .topLeading) {
+          PageMarkView(mark: pageMark, model: model, proxy: proxy)
+        }
         // Inside the scroll view of the messages: the pager finds it from here (#227).
         .background(ConversationPagerProbe(pager: pager).accessibilityHidden(true))
-        .overlay(alignment: .topLeading) {
-          // Laid out there, not drawn there: an offset would leave it where SwiftUI scrolls to.
-          Color.clear
-            .frame(width: 1, height: 1)
-            .id(Self.pageTargetID)
-            .padding(.top, max(pageTarget, 0))
-            // Scrolled to once laid out there: asked any sooner — on the next turn of the main
-            // loop, on a machine that lags —, SwiftUI scrolls to where it was, and the page does
-            // not move.
-            .onGeometryChange(for: Double.self) {
-              $0.size.height
-            } action: { _ in
-              guard pagePending else { return }
-              pagePending = false
-              proxy.scrollTo(Self.pageTargetID, anchor: .top)
-            }
-            .accessibilityHidden(true)
-        }
         .onGeometryChange(for: CGRect.self) {
           $0.frame(in: .scrollView)
         } action: { frame in
@@ -315,19 +291,15 @@ public struct ConversationView: View {
       .modifier(ToolbarVeil())
       .overlay(alignment: .trailing) {
         if showsOverview {
-          ConversationOverview(
-            model: model, theme: theme, metrics: overviewMetrics, pager: pager
-          )
+          // Its filters over it (#572): hidden with it, the margin keeps its icons.
+          VStack(spacing: 0) {
+            OverviewFilterBar(model: model)
+            ConversationOverview(
+              model: model, theme: theme, metrics: overviewMetrics, pager: pager,
+              room: paneWidth - overviewPlacement.width
+            )
+          }
           .frame(width: overviewPlacement.width)
-        }
-      }
-      .onChange(of: model.overviewScroll) {
-        guard let target = model.overviewScroll else { return }
-        if let top = model.overview.top(of: target.blockID) {
-          scrollMark(to: top + target.offset, proxy: proxy)
-        } else {
-          // Not built: brought up first, the next move of the drag lands to the point.
-          proxy.scrollTo(target.blockID, anchor: .top)
         }
       }
       .onAppear {
@@ -344,7 +316,7 @@ public struct ConversationView: View {
       }
       .onChange(of: model.pageRequest) {
         guard let top = pager.readableTop(after: model.pageRequest.page) else { return }
-        scrollMark(to: top, proxy: proxy)
+        pageMark.lead(to: top, proxy: proxy)
       }
       .onChange(of: model.revealRequest) {
         guard let id = model.revealedBlockID else { return }
@@ -393,10 +365,12 @@ public struct ConversationView: View {
             Text(verbatim: ToolBlockView.accessibilityTitle(of: block)), id: block.id)
         }
       }
-      .accessibilityRotor(Text("Bookmarks", bundle: .module)) {
-        ForEach(model.bookmarkedBlocks) { block in
+      // Bookmarks included, as the filters show them (#572).
+      .accessibilityRotor(Text("Moments", bundle: .module)) {
+        ForEach(model.momentBlocks, id: \.block.id) { item in
           AccessibilityRotorEntry(
-            Text(verbatim: ConversationModel.bookmarkLabel(of: block)), id: block.id)
+            Text(verbatim: MomentPresentation.rotorLabel(of: item.moments, block: item.block)),
+            id: item.block.id)
         }
       }
       .accessibilityRotor(Text("Sub-agents", bundle: .module)) {
@@ -575,6 +549,64 @@ public struct ConversationView: View {
   }
 }
 
+/// Where a page or the overview leads (#227, #567). Its own object, read by its own view: moved at
+/// each step of a drag in the overview, it would otherwise have the whole conversation evaluated
+/// again, and SwiftUI compare the identifiers of its thousands of blocks, at every frame.
+@MainActor
+@Observable
+final class PageMark {
+  private(set) var top = 0.0
+  /// Asked for, scrolled to once the mark has been laid out where it leads.
+  @ObservationIgnored var isPending = false
+
+  /// Scrolls so that this point of the messages is at the top of what is read.
+  func lead(to top: Double, proxy: ScrollViewProxy) {
+    // A mark already there is not laid out again.
+    guard max(top, 0) != max(self.top, 0) else {
+      proxy.scrollTo(ConversationView.pageTargetID, anchor: .top)
+      return
+    }
+    isPending = true
+    self.top = top
+  }
+}
+
+/// The mark itself: laid out there, not drawn there — an offset would leave it where SwiftUI
+/// scrolls to. It follows the overview too: read anywhere in the list, each step of a drag would
+/// have it all made again.
+private struct PageMarkView: View {
+  let mark: PageMark
+  let model: ConversationModel
+  let proxy: ScrollViewProxy
+
+  var body: some View {
+    Color.clear
+      .frame(width: 1, height: 1)
+      .id(ConversationView.pageTargetID)
+      .padding(.top, max(mark.top, 0))
+      // Scrolled to once laid out there: asked any sooner — on the next turn of the main loop, on
+      // a machine that lags —, SwiftUI scrolls to where it was, and the page does not move.
+      .onGeometryChange(for: Double.self) {
+        $0.size.height
+      } action: { _ in
+        guard mark.isPending else { return }
+        mark.isPending = false
+        proxy.scrollTo(ConversationView.pageTargetID, anchor: .top)
+      }
+      .onChange(of: model.overviewScroll) {
+        guard let target = model.overviewScroll else { return }
+        if let top = target.top ?? model.overview.top(of: target.blockID) {
+          mark.lead(to: top + target.offset, proxy: proxy)
+        } else {
+          // Far from any row built: brought up first, the next move of the drag lands to the
+          // point.
+          proxy.scrollTo(target.blockID, anchor: .top)
+        }
+      }
+      .accessibilityHidden(true)
+  }
+}
+
 /// A block of the conversation and, above the first message of a day, its separator: one element
 /// of the list, so that scrolling to the message shows the day it opens (#458).
 struct BlockRow: View {
@@ -606,20 +638,29 @@ struct BlockRow: View {
   }
 
   /// The block, its bookmark in the margin left of it, and the light a bookmark brings it up
-  /// with (#567).
+  /// with (#567). Left of the bookmark, the icon of its moments (#572), in a box of the same
+  /// height at the same top: both are centred on its first line.
   private var bookmarkable: some View {
     BlockView(block: block, model: model)
       // A message's own view lights it already (#565): the others, here.
       .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
       .onHover { isHovered = $0 }
       .overlay(alignment: .topLeading) {
-        BookmarkGutter(
-          isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
-        ) {
-          model.toggleBookmark(block)
+        HStack(alignment: .top, spacing: 0) {
+          let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
+          if moments.isEmpty {
+            Color.clear.frame(width: MomentGutterMark.width, height: 1)
+          } else {
+            MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
+          }
+          BookmarkGutter(
+            isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+          ) {
+            model.toggleBookmark(block)
+          }
         }
         .padding(.top, firstLineTop)
-        .offset(x: -BookmarkGutter.reach)
+        .offset(x: -(BookmarkGutter.reach + MomentGutterMark.width))
       }
   }
 

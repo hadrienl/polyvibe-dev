@@ -434,6 +434,7 @@ public final class ConversationModel {
       {
         rebuild(changedFrom: 0)
       }
+      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds { updateShownMoments() }
     }
   }
 
@@ -850,7 +851,7 @@ public final class ConversationModel {
     blocks = rebuilt
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
-    updateBookmarkedIndices(from: restart)
+    updateMoments(from: restart)
     blocksChangedFrom = min(blocksChangedFrom ?? .max, restart)
     blocksRevision += 1
     // Written only when they differ: every row reads them, and a write redraws them all (#462).
@@ -1080,7 +1081,7 @@ public final class ConversationModel {
       setSubagentActivityExpanded(true, callID: ancestor)
     }
     setExpanded(true, for: Self.rowToggleID(callID))
-    scroll.jumpedAway()
+    jumpAway()
     revealedBlockID = block.id
     revealRequest += 1
   }
@@ -1090,13 +1091,31 @@ public final class ConversationModel {
   /// The entries the user marked, by identifier: kept by the session's store, never sent to the
   /// agent.
   public private(set) var bookmarks: Set<String> = []
-  /// The blocks that hold one, in order: the overview's lines and the rotor's entries.
+  /// The blocks that hold one, in order: the overview's lines.
   public private(set) var bookmarkedIndices: [Int] = []
+  /// The moments of each block, bookmarks aside, read as the blocks are laid out (#572).
+  @ObservationIgnored private var blockMoments: [[ConversationMoment]] = []
+  /// The same, by block, for those that have some: what a row's margin shows, read without
+  /// parsing its commands again at each of its redraws. Not observed: a block whose moments change
+  /// is a new block, which redraws its row anyway.
+  @ObservationIgnored private var momentsByBlock: [String: [ConversationMoment]] = [:]
+  /// Every moment, bookmarks included, in the conversation's order.
+  public private(set) var moments: [ConversationMoments.Placed] = []
+  /// Those of the kinds shown: the overview's icons, the rotor's entries, where Next and Previous
+  /// go.
+  public private(set) var shownMoments: [ConversationMoments.Placed] = []
+  /// The blocks that show one of those, each once, in order.
+  public private(set) var momentIndices: [Int] = []
+  /// Bumped when the moments shown change: what the overview draws them again for.
+  public private(set) var momentsRevision = 0
   /// Keeps the bookmarks once they change.
   @ObservationIgnored public var saveBookmarks: ((Set<String>) -> Void)?
-  /// The last bookmark brought up: Next and Previous go on from it while it is on screen, where
+  /// Shows or hides the moments of a kind, in every session (#572): the settings change, and come
+  /// back through `appearance`.
+  @ObservationIgnored public var setMomentKindShown: ((ConversationMomentKind, Bool) -> Void)?
+  /// The last moment brought up: Next and Previous go on from it while it is on screen, where
   /// the top of what is read may not reach it — near the end, the view cannot scroll that far.
-  @ObservationIgnored private var lastRevealedBookmark: String?
+  @ObservationIgnored private var lastRevealedMoment: String?
   /// Bumped at each layout of the blocks: what the overview lays out again for.
   public private(set) var blocksRevision = 0
   /// The first block that may have changed since the overview last asked.
@@ -1116,6 +1135,9 @@ public final class ConversationModel {
   public struct OverviewScroll: Hashable, Sendable {
     public var blockID: String
     public var offset: Double
+    /// Where the block starts in the messages, as the overview places it from the rows built
+    /// near it: `nil` when none is, and SwiftUI finds the block itself.
+    public var top: Double?
     public var count: Int
   }
   public private(set) var overviewScroll: OverviewScroll?
@@ -1124,13 +1146,33 @@ public final class ConversationModel {
     bookmarkedIndices.filter(blocks.indices.contains).map { blocks[$0] }
   }
 
+  /// A block's moments, bookmarks aside, as they were read at its layout.
+  public func moments(of block: ConversationBlock) -> [ConversationMoment] {
+    momentsByBlock[block.id] ?? []
+  }
+
+  /// The blocks that show a moment of a kind shown, in order, with their moments: the rotor's
+  /// entries.
+  public var momentBlocks: [(block: ConversationBlock, moments: [ConversationMoment])] {
+    var found: [(block: ConversationBlock, moments: [ConversationMoment])] = []
+    for placed in shownMoments where blocks.indices.contains(placed.blockIndex) {
+      let block = blocks[placed.blockIndex]
+      if found.last?.block.id == block.id {
+        found[found.count - 1].moments.append(placed.moment)
+      } else {
+        found.append((block, [placed.moment]))
+      }
+    }
+    return found
+  }
+
   /// The bookmarks read from the store: added to any set before they arrived, which are kept
   /// again with them.
   public func loadBookmarks(_ entries: Set<String>) {
     guard !entries.isSubset(of: bookmarks) else { return }
     let setBefore = !bookmarks.isEmpty
     bookmarks.formUnion(entries)
-    updateBookmarkedIndices()
+    updateMoments(from: blocks.count)
     if setBefore { saveBookmarks?(bookmarks) }
   }
 
@@ -1140,16 +1182,51 @@ public final class ConversationModel {
 
   public func toggleBookmark(_ block: ConversationBlock) {
     bookmarks = ConversationBookmarks.toggled(bookmarks, on: block)
-    updateBookmarkedIndices()
+    updateMoments(from: blocks.count)
     saveBookmarks?(bookmarks)
   }
 
-  /// The marked blocks, those before `start` kept as they were.
-  private func updateBookmarkedIndices(from start: Int = 0) {
-    let indices =
-      bookmarkedIndices.prefix { $0 < start }
-      + ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks, from: start)
+  /// The marked blocks and the moments, those of the blocks before `start` kept as they were:
+  /// only the bookmarks are read again for them.
+  private func updateMoments(from start: Int) {
+    let indices = ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks)
     if indices != bookmarkedIndices { bookmarkedIndices = indices }
+    let start = min(start, blockMoments.count, blocks.count)
+    blockMoments.replaceSubrange(
+      start..., with: blocks[start...].map(ConversationMoments.moments(of:)))
+    // Made again whole: the identifiers of the blocks laid out again are gone with them.
+    var byBlock: [String: [ConversationMoment]] = [:]
+    for (index, found) in blockMoments.enumerated() where !found.isEmpty {
+      byBlock[blocks[index].id] = found
+    }
+    momentsByBlock = byBlock
+    var placed: [ConversationMoments.Placed] = []
+    var marked = indices.makeIterator()
+    var nextMarked = marked.next()
+    for (index, found) in blockMoments.enumerated() {
+      if index == nextMarked {
+        nextMarked = marked.next()
+        if let bookmark = ConversationMoments.bookmark(of: blocks[index], at: index, in: bookmarks)
+        {
+          placed.append(bookmark)
+        }
+      }
+      for moment in found { placed.append(.init(blockIndex: index, moment: moment)) }
+    }
+    if placed != moments {
+      moments = placed
+      updateShownMoments()
+    }
+  }
+
+  /// The moments of the kinds the settings show.
+  private func updateShownMoments() {
+    let shown = ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds)
+    guard shown != shownMoments else { return }
+    shownMoments = shown
+    let indices = ConversationMoments.blockIndices(of: shown)
+    if indices != momentIndices { momentIndices = indices }
+    momentsRevision += 1
   }
 
   /// Toggle Bookmark, ⌘B: on the message the selection of text is in, on the one at the top of
@@ -1163,35 +1240,36 @@ public final class ConversationModel {
     return true
   }
 
-  /// Next Bookmark, ⌥⌘J: the first bookmark below the top of what is read. `false` past the last.
+  /// Next Moment, ⌥⌘J: the first moment shown below the top of what is read, whatever its kind
+  /// (#572). `false` past the last.
   @discardableResult
-  public func revealNextBookmark() -> Bool {
+  public func revealNextMoment() -> Bool {
     var index = topIndex ?? -1
     if let last = lastRevealedOnScreen { index = max(index, last) }
-    guard let next = ConversationBookmarks.next(after: index, in: bookmarkedIndices) else {
+    guard let next = ConversationBookmarks.next(after: index, in: momentIndices) else {
       return false
     }
-    revealBookmark(blocks[next].id)
+    revealMoment(blocks[next].id)
     return true
   }
 
-  /// Previous Bookmark, ⌥⌘K. `false` before the first.
+  /// Previous Moment, ⌥⌘K. `false` before the first.
   @discardableResult
-  public func revealPreviousBookmark() -> Bool {
+  public func revealPreviousMoment() -> Bool {
     guard var index = topIndex else { return false }
     var offset = overview.top?.offset ?? 0
     if let last = lastRevealedOnScreen, last > index { (index, offset) = (last, 0) }
     guard
       let previous = ConversationBookmarks.previous(
-        before: index, offset: offset, in: bookmarkedIndices)
+        before: index, offset: offset, in: momentIndices)
     else { return false }
-    revealBookmark(blocks[previous].id)
+    revealMoment(blocks[previous].id)
     return true
   }
 
-  /// The last bookmark brought up, while it is still in what is read.
+  /// The last moment brought up, while it is still in what is read.
   private var lastRevealedOnScreen: Int? {
-    guard let id = lastRevealedBookmark, overview.isRead(id) else { return nil }
+    guard let id = lastRevealedMoment, overview.isRead(id) else { return nil }
     return blocks.firstIndex { $0.id == id }
   }
 
@@ -1201,37 +1279,89 @@ public final class ConversationModel {
     return blocks.firstIndex { $0.id == id }
   }
 
-  /// Brings a bookmarked block to the top of what is read, and lights it a moment, as a reply
+  /// Brings the block of a moment to the top of what is read, and lights it a moment, as a reply
   /// lights the message it answers (#565).
-  public func revealBookmark(_ blockID: String) {
-    lastRevealedBookmark = blockID
+  public func revealMoment(_ blockID: String) {
+    lastRevealedMoment = blockID
     reveal(blockID)
   }
 
   /// Scrolls to where the overview was clicked or dragged.
-  public func scrollOverview(to blockID: String, offset: Double) {
-    scroll.jumpedAway()
+  public func scrollOverview(to blockID: String, offset: Double, top: Double? = nil) {
+    jumpAway()
     overviewScroll = OverviewScroll(
-      blockID: blockID, offset: offset, count: (overviewScroll?.count ?? 0) + 1)
+      blockID: blockID, offset: offset, top: top, count: (overviewScroll?.count ?? 0) + 1)
   }
 
-  /// What a bookmark says of its message: the start of its text, or what the tools did.
+  /// What a bookmark says of its message, as the rotor reads it: the start of its text, or what
+  /// the tools did. A message Vibe Manager or a coordinator sent (#568) says who wrote it, as it
+  /// does folded, before its words.
   public static func bookmarkLabel(of block: ConversationBlock) -> String {
+    guard let relayed = relayedMessage(of: block) else { return bookmarkExcerpt(of: block) }
+    // Vibe Manager's summary names the sessions already, when there are any.
+    let summary = RelayedMessageView.summary(of: relayed)
+    if case .application = relayed.sender, !relayed.children.isEmpty { return oneLine(summary) }
+    let words = bookmarkExcerpt(of: block)
+    return words.isEmpty ? summary : oneLine(summary + " · " + words)
+  }
+
+  /// The start of a bookmarked message, under who wrote it in its preview: for Vibe Manager's
+  /// news, the sessions it is about, never their identifiers — its words when it names none —;
+  /// for a coordinator's message, its words as they read; for the user's, their words as the
+  /// conversation shows them.
+  public static func bookmarkExcerpt(of block: ConversationBlock) -> String {
+    if let relayed = relayedMessage(of: block) {
+      if case .application = relayed.sender, !relayed.children.isEmpty {
+        return oneLine(relayed.children.joined(separator: ", "))
+      }
+      return oneLine(plainText(ofMarkdown: relayed.body))
+    }
     let text: String
     switch block {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let prompt, let attachments):
-        text = AttachedPaths.displayText(
-          prompt, joinedCount: attachments.filter(\.isWrittenInText).count)
+        // As its bubble shows it — a reply's own words (#565), without the paths that became
+        // attachments —, and without the note Vibe Manager put in front once coordination was
+        // turned on or off (#352): the bubble keeps it, but it would name every such message
+        // alike.
+        let shown = ReplyLinks.shown(prompt, attachments: attachments).message
+        text = CoordinatorInstructions.userText(of: shown) ?? shown
       case .agentText(let answer), .reasoning(let answer?): text = answer
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:
       text = ToolBlockView.accessibilityTitle(of: block)
     }
+    return oneLine(text)
+  }
+
+  /// A message Vibe Manager or the session's coordinator sent it.
+  static func relayedMessage(of block: ConversationBlock) -> RelayedMessage? {
+    guard case .entry(let entry) = block,
+      case .userPrompt(let text, let attachments) = entry.content
+    else { return nil }
+    return RelayedMessage(text, attachments: attachments)
+  }
+
+  private static func oneLine(_ text: String) -> String {
     let flat = text.split(whereSeparator: \.isNewline).joined(separator: " ")
     return flat.count > 120 ? String(flat.prefix(119)) + "…" : flat
+  }
+
+  /// Markdown as it reads, without its marks — a list's, a heading's, a quote's included —, its
+  /// blocks one after the other.
+  static func plainText(ofMarkdown markdown: String) -> String {
+    guard let parsed = try? AttributedString(markdown: markdown) else { return markdown }
+    var text = ""
+    var block: PresentationIntent?
+    for run in parsed.runs {
+      // Parsed whole, blocks lose what stood between them: a space between each.
+      if !text.isEmpty, run.presentationIntent != block { text += " " }
+      block = run.presentationIntent
+      text += String(parsed[run.range].characters)
+    }
+    return text
   }
 
   /// Whether a sub-agent's block is unfolded, wherever it is shown: on its own, as a line of a
@@ -1377,6 +1507,15 @@ public final class ConversationModel {
     if returnBlockID != nil, next.isFollowing { returnBlockID = nil }
     lastGeometry = (contentFrame, viewportHeight)
     repositionIfPastTheEnd(contentFrame: contentFrame, viewportHeight: viewportHeight)
+  }
+
+  /// The reader went to something above: the end is no longer followed. Written only when that
+  /// changes — mutated in place, an observed property tells its views even when nothing changed,
+  /// and a drag in the overview would have the whole list made again at each step (#567).
+  func jumpAway() {
+    var next = scroll
+    next.jumpedAway()
+    if next != scroll { scroll = next }
   }
 
   /// The view went where `scrollToBottomRequest` asked: where it landed is read again, without

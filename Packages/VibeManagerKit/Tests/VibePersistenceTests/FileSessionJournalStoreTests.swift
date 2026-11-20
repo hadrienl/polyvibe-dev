@@ -23,10 +23,10 @@ struct FileSessionJournalStoreTests {
     let id = SessionID()
     #expect(try await store.journal(for: id) == nil)
     var journal = SessionJournal()
-    journal.append([
+    journal.entries = [
       JournalEntry(
         text: "Pushed", at: Date(timeIntervalSince1970: 1_800_000_000), providerID: "codex")
-    ])
+    ]
     try await store.save(journal, for: id)
     #expect(try await store.journal(for: id) == journal)
     let file = store.fileURL(for: id)

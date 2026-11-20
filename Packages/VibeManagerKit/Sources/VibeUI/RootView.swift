@@ -847,7 +847,6 @@ public struct RootView: View {
       ticketTitles: model.ticketTitles,
       leaveNotes: { model.focusSession() },
       usage: model.usage,
-      journal: model.journal,
       coordination: model
     )
   }

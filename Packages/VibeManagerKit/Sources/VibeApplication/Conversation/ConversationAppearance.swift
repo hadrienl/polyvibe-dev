@@ -81,6 +81,9 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
   public var showsDiffLineNumbers: Bool
   /// The whole conversation drawn small beside it, in place of the scroll bar (#567).
   public var showsOverview: Bool
+  /// The kinds of key moments hidden, by their raw value (#572): the same for every session. A
+  /// kind a later build knows is kept as it is.
+  public var hiddenMomentKinds: Set<String>
 
   public static let defaultLightTheme = "system-light"
   public static let defaultDarkTheme = "system-dark"
@@ -103,7 +106,8 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
     showsReasoning: Bool = true,
     wrapsCode: Bool = false,
     showsDiffLineNumbers: Bool = true,
-    showsOverview: Bool = true
+    showsOverview: Bool = true,
+    hiddenMomentKinds: Set<String> = []
   ) {
     self.defaultPresentation = defaultPresentation
     self.followsSystemAppearance = followsSystemAppearance
@@ -123,6 +127,7 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
     self.wrapsCode = wrapsCode
     self.showsDiffLineNumbers = showsDiffLineNumbers
     self.showsOverview = showsOverview
+    self.hiddenMomentKinds = hiddenMomentKinds
   }
 
   public init(from decoder: any Decoder) throws {
@@ -149,8 +154,23 @@ public struct ConversationAppearance: Codable, Hashable, Sendable {
       showsReasoning: value(.showsReasoning, fallback.showsReasoning),
       wrapsCode: value(.wrapsCode, fallback.wrapsCode),
       showsDiffLineNumbers: value(.showsDiffLineNumbers, fallback.showsDiffLineNumbers),
-      showsOverview: value(.showsOverview, fallback.showsOverview)
+      showsOverview: value(.showsOverview, fallback.showsOverview),
+      hiddenMomentKinds: value(.hiddenMomentKinds, fallback.hiddenMomentKinds)
     )
+  }
+
+  /// Whether the moments of that kind are shown.
+  public func shows(_ kind: ConversationMomentKind) -> Bool {
+    !hiddenMomentKinds.contains(kind.rawValue)
+  }
+
+  /// The moments of that kind shown or hidden.
+  public mutating func setShows(_ shows: Bool, _ kind: ConversationMomentKind) {
+    if shows {
+      hiddenMomentKinds.remove(kind.rawValue)
+    } else {
+      hiddenMomentKinds.insert(kind.rawValue)
+    }
   }
 
   /// The theme in force for the system's current appearance.
