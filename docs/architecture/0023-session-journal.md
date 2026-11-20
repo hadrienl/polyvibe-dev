@@ -138,3 +138,34 @@ Settings, and no journal for a session older than this feature.
 
 - Titles and states of issues and requests, which would need the forges' network and credentials.
 - A per-setting choice of model for the summary.
+
+## Amendment — no more summary, key moments in the conversation (#572)
+
+Decided on 2026-11-20. The Activity section was no longer looked at: it had to be opened, and its
+lines led nowhere in the conversation. The summary cost a call of the agent's CLI at the end of each
+turn, with its failures, its retries and an "unavailable" state to explain.
+
+- **The summary is gone.** `SessionSummarizing`, `AgentSessionSummarizers`, `CommandLineSummarizer`,
+  `TurnDigest`, the pending turns (`DigestTurn`), `JournalSummaryState`, the passes, their retries,
+  and the Settings switch with its `JournalPreferences` are removed. The defaults key stays, unread.
+  How a one-shot run of a CLI failed — too old, signed out — which the themes, avatars, alert sounds
+  and archive rules read, moves to `OneShotAgentRun.ExitFailure`.
+- **The journal keeps its resources.** `SessionJournalMonitor` still reads every active session's
+  transcripts, only for them: Open Quickly, a coordinator's `session_read` and the archive reports
+  read them. `SessionJournal` keeps its `entries`, read only: the lines written before still serve
+  the search and the archives of older sessions. The `pending`, `summary`, `hasEndedTurn` and
+  `summarizedAt` keys of an older file are left aside. `session_read` no longer says an
+  "Activity summary".
+- **The Activity section leaves the inspector.** `InspectorSectionID.activity` leaves the default
+  arrangement; an arrangement that holds it keeps it, unshown, as any section this build does not
+  show.
+- **What happened is shown where it happened.** `ConversationMoments` reads key moments from the
+  conversation's blocks, without a model nor storage — commits, pushes, branches and worktrees
+  created, tickets and pull requests created or merged, test suites, questions and plans, errors
+  and interruptions — beside the bookmarks of #567. Only what succeeded counts, tests aside; a
+  sub-agent's work stays inside it. They are icons in the overview and in the messages' margin,
+  filtered by kind (`ConversationAppearance.hiddenMomentKinds`), walked by ⌥⌘J and ⌥⌘K. The
+  commands are read with the journal's own `ShellWords` and `ResourceRecognizer`.
+
+The resources' rules above stand. The summary's — its commands, digest, timing and pane — no longer
+apply.
