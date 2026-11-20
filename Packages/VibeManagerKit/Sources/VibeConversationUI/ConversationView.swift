@@ -193,6 +193,10 @@ public struct ConversationView: View {
   private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }
 
   private var overviewPlacement: ConversationOverviewLayout.Placement {
+    overviewPlacement(paneWidth: paneWidth)
+  }
+
+  private func overviewPlacement(paneWidth: Double) -> ConversationOverviewLayout.Placement {
     guard showsOverview, paneWidth > 0 else { return .init(width: 0, reserved: 0) }
     return ConversationOverviewLayout.placement(
       paneWidth: paneWidth, contentWidth: layout.contentWidth, leadingMargin: leadingMargin,
@@ -291,15 +295,22 @@ public struct ConversationView: View {
       .modifier(ToolbarVeil())
       .overlay(alignment: .trailing) {
         if showsOverview {
-          // Its filters over it (#572): hidden with it, the margin keeps its icons.
-          VStack(spacing: 0) {
-            OverviewFilterBar(model: model)
-            ConversationOverview(
-              model: model, theme: theme, metrics: overviewMetrics, pager: pager,
-              room: paneWidth - overviewPlacement.width
-            )
+          // Its width from the pane as it is laid out now, never from the width last told: a
+          // width told before the web view came beside the messages once stayed, and the
+          // overview took half of the pane, over the text, its blocks drawn in long streaks.
+          GeometryReader { pane in
+            let placement = overviewPlacement(paneWidth: pane.size.width)
+            // Its filters over it (#572): hidden with it, the margin keeps its icons.
+            VStack(spacing: 0) {
+              OverviewFilterBar(model: model)
+              ConversationOverview(
+                model: model, theme: theme, metrics: overviewMetrics, pager: pager,
+                room: pane.size.width - placement.width
+              )
+            }
+            .frame(width: placement.width)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
           }
-          .frame(width: overviewPlacement.width)
         }
       }
       .onAppear {
