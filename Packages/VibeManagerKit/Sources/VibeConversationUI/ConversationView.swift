@@ -195,8 +195,10 @@ public struct ConversationView: View {
 
   /// Left of the messages: room for their moments and bookmarks, whatever margin the theme gives
   /// (#572).
-  private var leadingMargin: Double {
-    max(layout.sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
+  private var leadingMargin: Double { Self.leadingMargin(sideMargin: layout.sideMargin) }
+
+  static func leadingMargin(sideMargin: Double) -> Double {
+    max(sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
   }
 
   private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }

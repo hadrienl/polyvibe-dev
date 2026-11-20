@@ -103,7 +103,7 @@ struct OverviewWidthTests {
     let layout = ConversationTheme.systemDark.layout.at(ConversationAppearance().density)
     return ConversationOverviewLayout.placement(
       paneWidth: paneWidth, contentWidth: layout.contentWidth,
-      leadingMargin: max(layout.sideMargin, BookmarkGutter.reach),
+      leadingMargin: ConversationView.leadingMargin(sideMargin: layout.sideMargin),
       trailingMargin: layout.sideMargin)
   }
 
