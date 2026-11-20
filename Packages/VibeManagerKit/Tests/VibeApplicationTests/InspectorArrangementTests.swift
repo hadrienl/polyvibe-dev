@@ -26,6 +26,15 @@ struct InspectorArrangementTests {
     #expect(arrangement.isCollapsed(.prompt))
   }
 
+  @Test("An arrangement saved with the Agent section is still the default one (#575)")
+  func retiredSectionsDoNotCount() {
+    var saved = InspectorArrangement(
+      entries: InspectorArrangement.default.entries + [.init(id: .agent, isCollapsed: true)])
+    #expect(saved.isDefault)
+    saved.setCollapsed(.git, true)
+    #expect(!saved.isDefault)
+  }
+
   @Test("Move Up and Move Down stop at the ends")
   func moveByOne() {
     var arrangement = InspectorArrangement.default

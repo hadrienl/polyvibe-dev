@@ -13,7 +13,8 @@ public enum StatusBarDensity: Int, CaseIterable, Comparable, Sendable {
   case model
   /// The effort's level alone, and the context without the cost.
   case level
-  /// The usage's gauge alone.
+  /// The usage's gauge alone. Kept for the usage's button (#574): the agent and the effort draw
+  /// it as `.level`.
   case gauge
   /// The agent and the effort as icons too.
   case icons

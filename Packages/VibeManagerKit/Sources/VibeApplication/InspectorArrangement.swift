@@ -37,6 +37,8 @@ public struct InspectorSectionID: RawRepresentable, Hashable, Codable, Sendable,
   public static let agent = Self("agent")
   /// In the status bar since #574: kept for the arrangements saved with it.
   public static let usage = Self("usage")
+  /// Sections no build shows any more: kept in a saved arrangement, and of no account in it.
+  public static let retired: Set<Self> = [.agent, .usage]
   public static let prompt = Self("prompt")
   /// A coordinator's children, or the coordinator of a child and what it did there (#352). Not in
   /// the default arrangement: it comes first, unfolded, the first time a coordination is shown.
@@ -99,6 +101,12 @@ public struct InspectorArrangement: Equatable, Codable, Sendable {
     Entry(id: .notes, isCollapsed: false, weight: 1),
     Entry(id: .prompt, isCollapsed: true),
   ])
+
+  /// Whether the column is arranged as it is by default: a retired section still saved in it
+  /// changes nothing on screen, and nothing to reset.
+  public var isDefault: Bool {
+    entries.filter { !InspectorSectionID.retired.contains($0.id) } == Self.default.entries
+  }
 
   public func entry(_ id: InspectorSectionID) -> Entry? {
     entries.first { $0.id == id }

@@ -11,7 +11,8 @@ public struct AgentSwitchChoices: Equatable, Sendable {
   public struct Agent: Equatable, Sendable, Identifiable {
     public let descriptor: AgentDescriptor
     public let availability: AgentAvailability
-    /// Empty when the catalogue has not answered, or lists nothing.
+    /// Empty when the catalogue has not answered, or lists nothing — and for an agent that cannot
+    /// run, whose catalogue is not read.
     public let models: [AgentModel]
 
     public init(descriptor: AgentDescriptor, availability: AgentAvailability, models: [AgentModel])
@@ -50,17 +51,27 @@ public struct AgentSwitchChoices: Equatable, Sendable {
     self.agents = agents
   }
 
-  /// Reads the registry: its agents, whether each can run, and each one's models.
+  /// Reads the registry: its agents, whether each can run, and the models of each one that can.
+  /// The catalogues are read side by side: one that is slow to answer — a CLI asked for its
+  /// models — holds the list back no longer than itself.
   public static func read(
     from registry: any AgentProviderResolving, forceRefresh: Bool = false
   ) async -> AgentSwitchChoices {
     let descriptors = await registry.descriptors()
     let availabilities = await registry.availabilities(forceRefresh: forceRefresh)
-    var agents: [Agent] = []
-    for descriptor in descriptors {
-      guard let availability = availabilities[descriptor.id] else { continue }
-      let models = await registry.provider(id: descriptor.id)?.models() ?? []
-      agents.append(Agent(descriptor: descriptor, availability: availability, models: models))
+    let usable = descriptors.filter { availabilities[$0.id]?.isUsable == true }.map(\.id)
+    let catalogues = await withTaskGroup(of: (AgentProviderID, [AgentModel]).self) { group in
+      for id in usable {
+        group.addTask { (id, await registry.provider(id: id)?.models() ?? []) }
+      }
+      var catalogues: [AgentProviderID: [AgentModel]] = [:]
+      for await (id, models) in group { catalogues[id] = models }
+      return catalogues
+    }
+    let agents = descriptors.compactMap { descriptor in
+      availabilities[descriptor.id].map {
+        Agent(descriptor: descriptor, availability: $0, models: catalogues[descriptor.id] ?? [])
+      }
     }
     return AgentSwitchChoices(agents: agents)
   }

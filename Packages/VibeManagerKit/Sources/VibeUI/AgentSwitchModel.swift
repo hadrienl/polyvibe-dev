@@ -131,7 +131,8 @@ public final class AgentSwitchModel {
     self.planner = planner
     self.context = context
     providerID = preselected?.providerID ?? current.providerID
-    modelID = preselected?.modelID ?? current.modelID
+    // A target's model exactly as given: `nil` is that agent's default, never the current model.
+    modelID = preselected.map(\.modelID) ?? current.modelID
   }
 
   // MARK: - What is picked
@@ -362,7 +363,13 @@ public final class AgentSwitchModel {
     agents = choices.agents.map {
       AgentOption(descriptor: $0.descriptor, availability: $0.availability)
     }
-    currentModels = choices.agent(current.providerID)?.models ?? []
+    // The current agent's catalogue, read here when it cannot run and the list left it out.
+    if let models = choices.agent(current.providerID)?.models, !models.isEmpty {
+      currentModels = models
+    } else {
+      currentModels =
+        await registry.provider(id: AgentProviderID(current.providerID))?.models() ?? []
+    }
     await loadModels()
     regenerateUnlessEdited()
   }

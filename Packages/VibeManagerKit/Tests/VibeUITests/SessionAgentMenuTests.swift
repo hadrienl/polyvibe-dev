@@ -60,6 +60,20 @@ struct SessionAgentMenuTests {
     #expect(sheet.changesSomething)
   }
 
+  @Test("Another agent's default model opens the sheet on that default, not on the current model")
+  func defaultModelIsKept() async throws {
+    let subject = session()
+    let (model, _) = await workspace(subject)
+
+    SessionAgentMenu.open(
+      AgentSwitchChoices.Choice(
+        target: AgentTarget(providerID: "other"), modelName: nil, isCurrent: false),
+      of: subject.id, in: model)
+
+    let sheet = try #require(model.pendingSwitch)
+    #expect(sheet.target == AgentTarget(providerID: "other"))
+  }
+
   @Test("Other Settings… opens the sheet on the session's own agent")
   func otherSettingsPreselectsNothing() async throws {
     let subject = session()
