@@ -262,4 +262,16 @@ struct BookmarkTests {
       ConversationOverview.bookmarkLine(nearY: line + 6, marked: [2], layout: layout, scale: 0.1)
         == nil)
   }
+
+  @Test("A bookmark's preview reads in the messages' own font and size, a serif theme's included")
+  func previewType() {
+    var theme = ConversationTheme.systemDark
+    theme.fontStyle = .serif
+    var appearance = ConversationAppearance()
+    appearance.textSize = .extraLarge
+    let style = BookmarkPreviewStyle(theme: theme, appearance: appearance)
+    #expect(style.textSize == 18)
+    #expect(style.excerptFont == theme.messageFont(size: 18))
+    #expect(style.headingFont == theme.interfaceFont(size: 18 * 0.86, weight: .semibold))
+  }
 }

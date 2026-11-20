@@ -177,7 +177,8 @@ struct ConversationOverview: View {
           BookmarkPreviewPlacement(
             lineY: hovered.y,
             width: ConversationOverviewLayout.previewWidth(
-              textSize: appearance.textSize.scaled(13), room: room)
+              textSize: BookmarkPreviewStyle(theme: theme, appearance: appearance).textSize,
+              room: room)
           ) {
             BookmarkPreview(model: model, blockID: id, theme: theme)
           }
@@ -474,8 +475,22 @@ private struct BookmarkPreviewPlacement: Layout {
   }
 }
 
+/// The type of a bookmark's preview: its words as the messages read them — the theme's font, at
+/// the conversation's size —, who wrote them as a relayed message's summary does.
+struct BookmarkPreviewStyle {
+  let textSize: Double
+  let excerptFont: Font
+  let headingFont: Font
+
+  init(theme: ConversationTheme, appearance: ConversationAppearance) {
+    textSize = appearance.textSize.pointSize
+    excerptFont = theme.messageFont(size: textSize)
+    headingFont = theme.interfaceFont(size: textSize * 0.86, weight: .semibold)
+  }
+}
+
 /// The start of a bookmarked message, beside the overview, while the pointer is on its line: in
-/// the conversation's own text size, as the messages read.
+/// the conversation's own type, as the messages read.
 private struct BookmarkPreview: View {
   let model: ConversationModel
   let blockID: String
@@ -484,17 +499,18 @@ private struct BookmarkPreview: View {
 
   var body: some View {
     let block = model.blocks.first { $0.id == blockID }
+    let style = BookmarkPreviewStyle(theme: theme, appearance: appearance)
     VStack(alignment: .leading, spacing: 3) {
       if let block, let heading = Self.heading(of: block, agent: model.agentName) {
         Text(heading)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(11.5), weight: .semibold))
+          .font(style.headingFont)
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(1)
       }
       let excerpt = block.map(ConversationModel.bookmarkExcerpt(of:)) ?? ""
       if !excerpt.isEmpty {
         Text(excerpt)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
+          .font(style.excerptFont)
           .foregroundStyle(theme.text.color)
           .lineLimit(3)
       }
