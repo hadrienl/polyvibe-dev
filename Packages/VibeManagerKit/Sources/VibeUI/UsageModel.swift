@@ -29,6 +29,8 @@ public final class UsageModel {
   public private(set) var isTrackingEnabled = true
   /// When the first run was recorded: running time and runs start there, tokens do not.
   public private(set) var runsRecordedSince: Date?
+  /// When the prices the costs are computed with were read (#574); `nil` without any.
+  public private(set) var pricesFetchedAt: Date?
   public private(set) var trackingOffSince: Date?
   /// The providers whose CLI writes usage the application can read; `nil` until the registry
   /// has answered, when no agent is said not to report any.
@@ -133,6 +135,11 @@ public final class UsageModel {
     isReading = true
     await service.refreshTokens(for: watchedSessions)
     isReading = false
+    // At most once a day, checked here so that it waits for something to show a cost; the
+    // figures do not wait for it, and are computed again when new prices arrive.
+    Task { [service] in
+      if await service.updatePricesIfDue() { await self.recompute() }
+    }
     await refreshContexts(sessions().filter { sessionWatchers[$0.id] != nil })
     await recompute()
   }
@@ -173,6 +180,7 @@ public final class UsageModel {
     report = overview.report
     sessionUsage = overview.sessions
     runsRecordedSince = overview.runsRecordedSince
+    pricesFetchedAt = overview.pricesFetchedAt
   }
 
   private func loadTracking() async {

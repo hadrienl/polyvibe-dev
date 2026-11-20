@@ -2,7 +2,8 @@ import Foundation
 import VibeDomain
 
 /// What the interface reads usage through: the journal of runs, the tokens the transcripts
-/// reported, and the tracking switch. Nothing here reaches the network.
+/// reported, and the tracking switch. The one request it makes is for the public list of model
+/// prices (#574): nothing about the user or the sessions is sent.
 public actor UsageService {
   public nonisolated let recorder: UsageRecorder
   private let ledger: any UsageLedger
@@ -10,6 +11,7 @@ public actor UsageService {
   private let tokenStore: any TokenUsageStore
   private let reader: (any TokenUsageReading)?
   private let contextReader: (any ContextWindowReading)?
+  private let prices: ModelPriceUpdater?
   private let clock: any SessionClock
 
   /// Where each current conversation's transcript was left, for its context (#407). In memory
@@ -32,9 +34,11 @@ public actor UsageService {
     tokenStore: any TokenUsageStore,
     reader: (any TokenUsageReading)?,
     contextReader: (any ContextWindowReading)? = nil,
+    prices: ModelPriceUpdater? = nil,
     clock: any SessionClock = SystemSessionClock()
   ) {
     self.contextReader = contextReader
+    self.prices = prices
     self.recorder = recorder
     self.ledger = ledger
     self.tracking = tracking
@@ -83,6 +87,16 @@ public actor UsageService {
     return usage
   }
 
+  /// Fetches the public prices again when they are a day old. Not while tracking is off — the
+  /// cost is part of what is tracked — nor from a copy that only reads the data.
+  @discardableResult
+  public func updatePricesIfDue() async -> Bool {
+    guard let prices, await !recorder.isReadOnly(), await recorder.isTracking() else {
+      return false
+    }
+    return await prices.updateIfDue()
+  }
+
   public func tokens() async -> TokenUsageSnapshot {
     await loadedSnapshot()
   }
@@ -104,10 +118,11 @@ public actor UsageService {
     period: UsagePeriod, grouping: UsageGrouping, calendar: Calendar = .current
   ) async -> UsageReport {
     let now = clock.now()
+    let list = await prices?.current()
     return UsageAggregator.report(
       runs: await runs(), tokens: await loadedSnapshot().buckets,
       period: period.interval(now: now, calendar: calendar), grouping: grouping, now: now,
-      calendar: calendar)
+      calendar: calendar, cost: Self.cost(at: list))
   }
 
   /// The whole usage of one session.
@@ -138,9 +153,10 @@ public actor UsageService {
     let runs = await runs()
     let tokens = await loadedSnapshot()
     let buckets = tokens.buckets
+    let list = await prices?.current()
     let report = UsageAggregator.report(
       runs: runs, tokens: buckets, period: period.interval(now: now, calendar: calendar),
-      grouping: grouping, now: now, calendar: calendar)
+      grouping: grouping, now: now, calendar: calendar, cost: Self.cost(at: list))
     let wanted = Set(sessions)
     let runsBySession = Dictionary(grouping: runs.filter { wanted.contains($0.sessionID) }) {
       $0.sessionID
@@ -156,12 +172,27 @@ public actor UsageService {
       let models = UsageAggregator.report(
         runs: [], tokens: bucketsBySession[id] ?? [], period: nil, grouping: .model, now: now,
         calendar: calendar)
+      let cost = UsageCost.estimate(
+        models.rows.compactMap { row in
+          guard case .model(let providerID, let model) = row.key else { return nil }
+          return (UsageModelKey(providerID: providerID, model: model), row.tokens)
+        }, prices: list)
       perSession[id] = UsageOverview.Session(
         total: whole.total, models: models.rows, hasTranscript: tokens.hasTranscript(for: id),
-        transcriptMissingSince: tokens.missingSince(for: id))
+        transcriptMissingSince: tokens.missingSince(for: id), cost: cost)
     }
     return UsageOverview(
-      report: report, sessions: perSession, runsRecordedSince: runs.map(\.startedAt).min())
+      report: report, sessions: perSession, runsRecordedSince: runs.map(\.startedAt).min(),
+      pricesFetchedAt: list?.fetchedAt)
+  }
+
+  /// The cost of a bucket at its model's price, `nil` without one.
+  private static func cost(at list: ModelPriceList?) -> (TokenUsageBucket) -> Decimal? {
+    { bucket in
+      list?.price(for: bucket.model, providerID: bucket.providerID).map {
+        UsageCost.cost(of: bucket.tokens, at: $0)
+      }
+    }
   }
 
   public func trackingIntervals() async -> [UsageTrackingInterval] {
@@ -206,10 +237,14 @@ public struct UsageOverview: Sendable {
     public var hasTranscript: Bool
     /// When a transcript of this session stopped being found, the last time it was read.
     public var transcriptMissingSince: Date?
+    /// What its tokens would have cost at the public prices (#574).
+    public var cost = UsageCost.Estimate()
   }
 
   public var report: UsageReport
   public var sessions: [SessionID: Session]
   /// When the first run was recorded: running time and runs start there, tokens do not.
   public var runsRecordedSince: Date?
+  /// When the prices the costs were computed with were read; `nil` without any.
+  public var pricesFetchedAt: Date?
 }

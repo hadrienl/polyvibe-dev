@@ -236,13 +236,22 @@ public final class AppEnvironment {
     let usageTracking = FileUsageTrackingStore(directory: data.usage)
     let usageRecorder = UsageRecorder(ledger: usageLedger, tracking: usageTracking)
     let usageReader = AgentUsageReader(locator: AgentTranscriptLocator(homes: agentHomes))
+    // The public prices the costs are computed with (#574), kept beside the store; the copy
+    // shipped with the application until a list is fetched.
+    let modelPrices = ModelPriceUpdater(
+      fetcher: URLSessionModelPriceFetcher(),
+      store: FileModelPriceStore(
+        directory: data.store.deletingLastPathComponent()
+          .appendingPathComponent("Prices", isDirectory: true)),
+      bundled: FileModelPriceStore.bundled())
     let usage = UsageService(
       recorder: usageRecorder,
       ledger: usageLedger,
       tracking: usageTracking,
       tokenStore: FileTokenUsageStore(directory: data.usage),
       reader: usageReader,
-      contextReader: usageReader
+      contextReader: usageReader,
+      prices: modelPrices
     )
     // What each agent is doing (#45): its hooks append to a log per session, beside the store.
     let dataFolder = data.store.deletingLastPathComponent()
