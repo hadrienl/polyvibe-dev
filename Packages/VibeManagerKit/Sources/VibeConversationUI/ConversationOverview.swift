@@ -196,8 +196,11 @@ struct ConversationOverview: View {
             near: point, moments: model.shownMoments, layout: layout, scale: scale)
           let hover = Hover(moments: cluster?.moments, y: cluster?.y ?? point.y)
           if hover != hovered { hovered = hover }
+          // A moment is a link: the hand over the whole square of its icon, or its line.
+          (cluster == nil ? NSCursor.arrow : NSCursor.pointingHand).set()
         case .ended:
           hovered = nil
+          NSCursor.arrow.set()
         }
       }
       // Left of the overview, level with the icon, over the messages.
@@ -279,7 +282,8 @@ struct ConversationOverview: View {
     var nearest: (moments: Range<Int>, y: Double, distance: Double)?
     for cluster in clusters(of: moments, layout: layout, scale: scale) {
       let iconDistance = abs(cluster.y - point.y)
-      let onIcon = point.x <= tagMargin + 2 && iconDistance <= iconSize / 2 + 1.5
+      // The whole square of the icon, its hollows included, not only its strokes.
+      let onIcon = iconSquare(y: cluster.y).contains(point)
       // Each bookmark's line is drawn at its own block, the first of its cluster or not.
       let lineDistance = moments[cluster.moments]
         .filter { $0.moment.kind == .bookmark }
@@ -292,6 +296,11 @@ struct ConversationOverview: View {
       }
     }
     return nearest.map { ($0.moments, $0.y) }
+  }
+
+  /// What answers the pointer for an icon centred at `y`: the margin's width, as tall.
+  static func iconSquare(y: Double) -> CGRect {
+    CGRect(x: 0, y: y - tagMargin / 2, width: tagMargin, height: tagMargin)
   }
 
   /// Where a moment's icon is centred, and a bookmark's line: at the top of its block.
