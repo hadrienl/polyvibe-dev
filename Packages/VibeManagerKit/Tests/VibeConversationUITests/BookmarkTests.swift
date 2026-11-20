@@ -261,6 +261,35 @@ struct BookmarkTests {
         == "Plan Rebase on main Open the PR Not before CI.")
   }
 
+  /// The blocks laid out 100 points tall, 20 apart: block `i` starts at `i × 120`.
+  private static func evenLayout(_ model: ConversationModel) -> ConversationOverviewLayout {
+    ConversationOverviewLayout(
+      blocks: model.blocks,
+      measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
+      metrics: .init(
+        columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8),
+      shapes: ConversationOverviewShapes())
+  }
+
+  @Test("A block not built is placed from the row built nearest it, as the overview lays them")
+  func blockNotBuiltPlacedFromItsNeighbour() {
+    let model = Self.model()
+    let layout = Self.evenLayout(model)
+    // Only blocks 2 and 3 are built, lower in the messages than the overview lays them.
+    model.overview.rowLaidOut("m2", frame: CGRect(x: 0, y: 1000, width: 600, height: 100))
+    model.overview.rowLaidOut("m3", frame: CGRect(x: 0, y: 1120, width: 600, height: 100))
+    let tracker = model.overview
+    // Built: where its row is.
+    #expect(tracker.documentTop(of: 3, in: layout, reach: 300) == 1120)
+    // Just above what is built, where a drag upwards goes: one block above block 2.
+    #expect(tracker.documentTop(of: 1, in: layout, reach: 300) == 880)
+    // Below: from block 3, the nearest.
+    #expect(tracker.documentTop(of: 5, in: layout, reach: 300) == 1360)
+    // Further than the reach: left to the list, which finds the block itself.
+    #expect(tracker.documentTop(of: 5, in: layout, reach: 200) == nil)
+    #expect(tracker.documentTop(of: 9, in: layout, reach: 300) == nil)
+  }
+
   @Test("Near a bookmark's line, the preview stands at the line, wherever the pointer is")
   func previewKeepsToTheLine() {
     let model = Self.model()

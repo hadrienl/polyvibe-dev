@@ -67,6 +67,25 @@ public final class ConversationOverviewTracker {
     updateTop()
   }
 
+  /// Where a block starts in the messages: where its row is, if it is built; else as far from
+  /// the row built nearest it as the overview lays them apart, within `reach` — rows the list has
+  /// not built yet are given heights of its own, which nothing tells, so a block further away is
+  /// left to it. A drag upwards, where the block is the one just above what is built, lands there
+  /// rather than at the block's start and then back in it at the next move (#567).
+  func documentTop(of index: Int, in layout: ConversationOverviewLayout, reach: Double) -> Double? {
+    guard layout.ids.indices.contains(index) else { return nil }
+    if let frame = frames[layout.ids[index]] { return Double(frame.minY) }
+    var nearest: (distance: Double, top: Double)?
+    for (id, frame) in frames {
+      guard let built = layout.index(of: id) else { continue }
+      let distance = layout.tops[index] - layout.tops[built]
+      if abs(distance) <= reach, nearest.map({ abs(distance) < abs($0.distance) }) ?? true {
+        nearest = (distance, Double(frame.minY) + distance)
+      }
+    }
+    return nearest?.top
+  }
+
   /// Whether a block built now shows in what is read.
   func isRead(_ id: String) -> Bool {
     guard let frame = frames[id] else { return false }
@@ -129,6 +148,8 @@ struct ConversationOverview: View {
   @State private var box = OverviewLayoutBox()
   @State private var dragGrab: Double?
   @State private var hovered: Hover?
+  /// Heights measured while the frame was dragged, laid out once it is let go.
+  @State private var remeasureHeld = false
 
   private var layout: ConversationOverviewLayout { box.layout }
 
@@ -209,10 +230,21 @@ struct ConversationOverview: View {
         layout = self.layout.replacing(
           from: changedFrom ?? 0, blocks: model.blocks, measured: tracker.measured,
           shapes: tracker.shapes)
+      } else if dragGrab != nil {
+        // Held while the frame is dragged: the drawing would move under the pointer, and the
+        // frame with it. Laid out again once it is let go.
+        remeasureHeld = true
+        return
       } else {
         layout = self.layout.remeasured(tracker.measured)
       }
       box = OverviewLayoutBox(layout, blocksRevision: key.blocksRevision)
+    }
+    .onChange(of: dragGrab == nil) { _, released in
+      guard released, remeasureHeld else { return }
+      remeasureHeld = false
+      box = OverviewLayoutBox(
+        layout.remeasured(model.overview.measured), blocksRevision: box.blocksRevision)
     }
     .accessibilityHidden(true)
   }
@@ -262,7 +294,11 @@ struct ConversationOverview: View {
         guard let grab = dragGrab, grab.isFinite, scale > 0,
           let position = layout.position(atY: (value.location.y - grab) / scale)
         else { return }
-        model.scrollOverview(to: layout.ids[position.index], offset: position.offset)
+        let tracker = model.overview
+        model.scrollOverview(
+          to: layout.ids[position.index], offset: position.offset,
+          top: tracker.documentTop(
+            of: position.index, in: layout, reach: tracker.readableHeight * 2))
       }
       .onEnded { _ in dragGrab = nil }
   }
