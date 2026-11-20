@@ -316,6 +316,27 @@ struct BookmarkTests {
         scale: 0.1) == nil)
   }
 
+  @Test("Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
+  func previewFollowsTheLayout() {
+    let model = Self.model()
+    model.loadBookmarks(["m2"])
+    let before = Self.evenLayout(model)
+    let moment = model.shownMoments[0].moment
+    func y(_ layout: ConversationOverviewLayout, scale: Double) -> Double? {
+      ConversationOverview.cluster(
+        starting: moment, moments: model.shownMoments, layout: layout, scale: scale)?.y
+    }
+    #expect(y(before, scale: 0.1) == ConversationOverview.iconY(top: 240, scale: 0.1))
+    // The first row measured 200 points taller, as the wheel builds it: the icon moves down.
+    let after = before.remeasured(
+      Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, $0.id == "m0" ? 300.0 : 100.0) }))
+    #expect(y(after, scale: 0.1) == ConversationOverview.iconY(top: 440, scale: 0.1))
+    // A longer conversation drawn smaller.
+    #expect(y(after, scale: 0.05) == ConversationOverview.iconY(top: 440, scale: 0.05))
+    model.toggleBookmark(model.blocks[2])
+    #expect(y(after, scale: 0.1) == nil)
+  }
+
   // MARK: - Moments (#572)
 
   private static func shell(_ id: String, _ command: String) -> ConversationEntry {

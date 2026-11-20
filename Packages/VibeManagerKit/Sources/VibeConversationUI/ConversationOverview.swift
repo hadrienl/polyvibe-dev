@@ -157,11 +157,11 @@ struct ConversationOverview: View {
 
   private var layout: ConversationOverviewLayout { box.layout }
 
+  /// What the pointer is on: the first moment of an icon, or the rest of the overview. Its icon —
+  /// the moments drawn with it, and where — is found again in each layout, not kept: icons move
+  /// as rows are measured and as the scale changes, the pointer standing still.
   private struct Hover: Equatable {
-    /// The moments under the pointer, among those shown.
-    var moments: Range<Int>?
-    /// Their icon, not the pointer: their preview stays put while the pointer moves near.
-    var y: Double
+    var moment: ConversationMoment?
   }
 
   /// Left of the drawing, where the moments' icons are.
@@ -186,7 +186,7 @@ struct ConversationOverview: View {
         .equatable()
         OverviewViewport(
           tracker: model.overview, box: box, scale: scale, colors: .init(theme),
-          isActive: frameDrag.isDragging || (hovered != nil && hovered?.moments == nil))
+          isActive: frameDrag.isDragging || (hovered != nil && hovered?.moment == nil))
       }
       .contentShape(Rectangle())
       .gesture(drag(scale: scale))
@@ -195,7 +195,7 @@ struct ConversationOverview: View {
         case .active(let point):
           let cluster = Self.cluster(
             near: point, moments: model.shownMoments, layout: layout, scale: scale)
-          let hover = Hover(moments: cluster?.moments, y: cluster?.y ?? point.y)
+          let hover = Hover(moment: cluster.map { model.shownMoments[$0.moments.lowerBound].moment })
           if hover != hovered { hovered = hover }
           // A moment is a link: the hand over the whole square of its icon, or its line.
           (cluster == nil ? NSCursor.arrow : NSCursor.pointingHand).set()
@@ -206,20 +206,31 @@ struct ConversationOverview: View {
       }
       // Left of the overview, level with the icon, over the messages.
       .overlay {
-        if let hovered, let range = hovered.moments, range.upperBound <= model.shownMoments.count {
+        if let moment = hovered?.moment,
+          let cluster = Self.cluster(
+            starting: moment, moments: model.shownMoments, layout: layout, scale: scale)
+        {
           BookmarkPreviewPlacement(
-            lineY: hovered.y,
+            lineY: cluster.y,
             width: ConversationOverviewLayout.previewWidth(
               textSize: MomentPreviewStyle(theme: theme, appearance: appearance).textSize,
               room: room)
           ) {
-            MomentPreview(model: model, moments: Array(model.shownMoments[range]), theme: theme)
+            MomentPreview(
+              model: model, moments: Array(model.shownMoments[cluster.moments]), theme: theme)
           }
           .allowsHitTesting(false)
         }
       }
     }
     .background(WheelForwarder(pager: pager))
+    // A moment gone under the pointer — a bookmark taken away — is no longer hovered.
+    .onChange(of: model.momentsRevision) {
+      guard let moment = hovered?.moment,
+        !model.shownMoments.contains(where: { $0.moment == moment })
+      else { return }
+      hovered = Hover(moment: nil)
+    }
     .overlay(alignment: .leading) {
       Rectangle().fill(theme.border.color.opacity(0.6)).frame(width: 1)
     }
@@ -268,6 +279,17 @@ struct ConversationOverview: View {
     let tops = placed.map { layout.tops[$0.blockIndex] }
     return ConversationOverviewLayout.clusters(tops, scale: scale).map {
       ($0, iconY(top: tops[$0.lowerBound], scale: scale))
+    }
+  }
+
+  /// The icon a moment was hovered in, as the overview is laid out now: the moments drawn with
+  /// it, and where. `nil` once the moment is gone. Laid out again, it may be drawn with others.
+  static func cluster(
+    starting moment: ConversationMoment, moments: [ConversationMoments.Placed],
+    layout: ConversationOverviewLayout, scale: Double
+  ) -> (moments: Range<Int>, y: Double)? {
+    clusters(of: moments, layout: layout, scale: scale).first { cluster in
+      moments[cluster.moments].contains { $0.moment == moment }
     }
   }
 
