@@ -72,13 +72,13 @@ struct BookmarkTests {
     model.loadBookmarks(["m4", "m5"])
     // The view at the bottom: m3 at the top, m4 and m5 below it, in what is read.
     Self.laidOut(model, top: 370)
-    #expect(model.revealNextBookmark())
+    #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m4")
     // The view could not move: the top is still m3.
-    #expect(model.revealNextBookmark())
+    #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m5")
-    #expect(!model.revealNextBookmark())
-    #expect(model.revealPreviousBookmark())
+    #expect(!model.revealNextMoment())
+    #expect(model.revealPreviousMoment())
     #expect(model.revealedBlockID == "m4")
   }
 
@@ -112,20 +112,20 @@ struct BookmarkTests {
     let model = Self.model()
     model.loadBookmarks(["m1", "m4"])
     Self.laidOut(model, top: 0)
-    #expect(model.revealNextBookmark())
+    #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m1")
     #expect(model.highlightedBlockID == "m1")
     // The view now at m1's start.
     model.overview.scrolled(readableTop: 120, readableHeight: 300)
-    #expect(model.revealNextBookmark())
+    #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m4")
     model.overview.scrolled(readableTop: 480, readableHeight: 300)
-    #expect(!model.revealNextBookmark())
-    #expect(model.revealPreviousBookmark())
+    #expect(!model.revealNextMoment())
+    #expect(model.revealPreviousMoment())
     #expect(model.revealedBlockID == "m1")
     // Inside m4, past its start: Previous goes back to its start first.
     model.overview.scrolled(readableTop: 530, readableHeight: 300)
-    #expect(model.revealPreviousBookmark())
+    #expect(model.revealPreviousMoment())
     #expect(model.revealedBlockID == "m4")
     #expect(!model.scroll.isFollowing)
   }
@@ -145,7 +145,7 @@ struct BookmarkTests {
   func nothingLaidOut() {
     let model = Self.model()
     #expect(!model.toggleBookmarkInView())
-    #expect(!model.revealPreviousBookmark())
+    #expect(!model.revealPreviousMoment())
   }
 
   @Test("A click in the overview asks for a place, again when it is the same")
@@ -194,7 +194,9 @@ struct BookmarkTests {
     .entry(ConversationEntry(id: "p", content: .userPrompt(text, attachments: [])))
   }
 
-  @Test("Vibe Manager's news is named by who sent it and the sessions it is about, not their identifiers")
+  @Test(
+    "Vibe Manager's news is named by who sent it and the sessions it is about, not their identifiers"
+  )
   func applicationNews() {
     let block = Self.prompt(
       """
@@ -203,7 +205,8 @@ struct BookmarkTests {
       - “#12 export” (0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D) stopped: its agent is no longer running.
       """)
     #expect(ConversationModel.bookmarkExcerpt(of: block) == "Revue générale, #12 export")
-    #expect(ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · Revue générale, #12 export")
+    #expect(
+      ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · Revue générale, #12 export")
   }
 
   @Test("A coordinator's message is named by its coordinator, then its words without their marks")
@@ -293,22 +296,104 @@ struct BookmarkTests {
   @Test("Near a bookmark's line, the preview stands at the line, wherever the pointer is")
   func previewKeepsToTheLine() {
     let model = Self.model()
-    let shapes = ConversationOverviewShapes()
-    let layout = ConversationOverviewLayout(
-      blocks: model.blocks, measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
-      metrics: .init(
-        columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8),
-      shapes: shapes)
+    model.loadBookmarks(["m2"])
+    let layout = Self.evenLayout(model)
     // Block 2 starts at 240 points: its line at 240 × 0.1 + 1.5.
-    let line = ConversationOverview.bookmarkY(top: 240, scale: 0.1)
+    let line = ConversationOverview.iconY(top: 240, scale: 0.1)
     for pointer in [line - 4, line, line + 4] {
-      let found = ConversationOverview.bookmarkLine(
-        nearY: pointer, marked: [2], layout: layout, scale: 0.1)
-      #expect(found?.id == "m2")
+      let found = ConversationOverview.cluster(
+        near: CGPoint(x: 40, y: pointer), moments: model.shownMoments, layout: layout, scale: 0.1)
+      #expect(found?.moments == 0..<1)
       #expect(found?.y == line)
     }
     #expect(
-      ConversationOverview.bookmarkLine(nearY: line + 6, marked: [2], layout: layout, scale: 0.1)
-        == nil)
+      ConversationOverview.cluster(
+        near: CGPoint(x: 40, y: line + 6), moments: model.shownMoments, layout: layout,
+        scale: 0.1) == nil)
+  }
+
+  // MARK: - Moments (#572)
+
+  private static func shell(_ id: String, _ command: String) -> ConversationEntry {
+    ConversationEntry(
+      id: id,
+      content: .tool(
+        ToolCall(
+          callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)])))
+  }
+
+  /// A prompt, a commit, an answer, an error, a push.
+  private static func momentsModel() -> ConversationModel {
+    let model = ConversationModel(sessionID: SessionID())
+    let entries = [
+      ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
+      shell("m1", "git commit -m one"),
+      ConversationEntry(id: "m2", content: .agentText("Done")),
+      ConversationEntry(id: "m3", content: .notice(.error("Overloaded"))),
+      shell("m4", "git push origin main"),
+    ]
+    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    return model
+  }
+
+  @Test("The moments are read from the blocks, bookmarks among them, in order")
+  func moments() {
+    let model = Self.momentsModel()
+    #expect(model.moments.map(\.moment.kind) == [.git, .incident, .git])
+    model.toggleBookmark(model.blocks[2])
+    #expect(model.moments.map(\.moment.kind) == [.git, .bookmark, .incident, .git])
+    #expect(model.momentIndices == [1, 2, 3, 4])
+    #expect(model.momentBlocks.map(\.block.id) == ["m1", "m2", "m3", "m4"])
+  }
+
+  @Test("A kind hidden leaves the overview and the way from one moment to the next")
+  func hiddenKinds() {
+    let model = Self.momentsModel()
+    let revision = model.momentsRevision
+    model.appearance.hiddenMomentKinds = ["git"]
+    #expect(model.shownMoments.map(\.moment.kind) == [.incident])
+    #expect(model.momentIndices == [3])
+    #expect(model.momentsRevision > revision)
+    // Kept, though hidden: the filter says how many there are.
+    #expect(model.moments.count == 3)
+
+    Self.laidOut(model, top: 0)
+    #expect(model.revealNextMoment())
+    #expect(model.revealedBlockID == "m3")
+    model.overview.scrolled(readableTop: 360, readableHeight: 300)
+    #expect(!model.revealNextMoment())
+    model.appearance.hiddenMomentKinds = []
+    #expect(model.revealNextMoment())
+    #expect(model.revealedBlockID == "m4")
+  }
+
+  @Test("The filters ask the workspace, which hands every session the settings back")
+  func filterAsksTheWorkspace() {
+    let model = Self.momentsModel()
+    var asked: [(ConversationMomentKind, Bool)] = []
+    model.setMomentKindShown = { asked.append(($0, $1)) }
+    model.setMomentKindShown?(.git, false)
+    #expect(asked.count == 1)
+    #expect(asked.first?.0 == .git)
+    #expect(asked.first?.1 == false)
+  }
+
+  @Test("Moments drawn close share an icon; the pointer on it finds them all")
+  func clusterUnderThePointer() {
+    let model = Self.momentsModel()
+    let layout = Self.evenLayout(model)
+    // At a twentieth, blocks are 6 points apart: m3 within 13 points of m1, m4 not.
+    let clusters = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(clusters.map(\.moments) == [0..<2, 2..<3])
+    let icon = ConversationOverview.iconY(top: 120, scale: 0.05)
+    let found = ConversationOverview.cluster(
+      near: CGPoint(x: 8, y: icon + 2), moments: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(found?.moments == 0..<2)
+    // Off the margin, an icon is not under the pointer: only a bookmark's line is.
+    #expect(
+      ConversationOverview.cluster(
+        near: CGPoint(x: 40, y: icon), moments: model.shownMoments, layout: layout,
+        scale: 0.05) == nil)
   }
 }

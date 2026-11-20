@@ -184,8 +184,11 @@ public struct ConversationView: View {
 
   // MARK: - Overview and bookmarks (#567)
 
-  /// Left of the messages: room for their bookmarks, whatever margin the theme gives.
-  private var leadingMargin: Double { max(layout.sideMargin, BookmarkGutter.reach) }
+  /// Left of the messages: room for their moments and bookmarks, whatever margin the theme gives
+  /// (#572).
+  private var leadingMargin: Double {
+    max(layout.sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
+  }
 
   private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }
 
@@ -288,10 +291,14 @@ public struct ConversationView: View {
       .modifier(ToolbarVeil())
       .overlay(alignment: .trailing) {
         if showsOverview {
-          ConversationOverview(
-            model: model, theme: theme, metrics: overviewMetrics, pager: pager,
-            room: paneWidth - overviewPlacement.width
-          )
+          // Its filters over it (#572): hidden with it, the margin keeps its icons.
+          VStack(spacing: 0) {
+            OverviewFilterBar(model: model)
+            ConversationOverview(
+              model: model, theme: theme, metrics: overviewMetrics, pager: pager,
+              room: paneWidth - overviewPlacement.width
+            )
+          }
           .frame(width: overviewPlacement.width)
         }
       }
@@ -358,10 +365,12 @@ public struct ConversationView: View {
             Text(verbatim: ToolBlockView.accessibilityTitle(of: block)), id: block.id)
         }
       }
-      .accessibilityRotor(Text("Bookmarks", bundle: .module)) {
-        ForEach(model.bookmarkedBlocks) { block in
+      // Bookmarks included, as the filters show them (#572).
+      .accessibilityRotor(Text("Moments", bundle: .module)) {
+        ForEach(model.momentBlocks, id: \.block.id) { item in
           AccessibilityRotorEntry(
-            Text(verbatim: ConversationModel.bookmarkLabel(of: block)), id: block.id)
+            Text(verbatim: MomentPresentation.rotorLabel(of: item.moments, block: item.block)),
+            id: item.block.id)
         }
       }
       .accessibilityRotor(Text("Sub-agents", bundle: .module)) {
@@ -629,20 +638,29 @@ struct BlockRow: View {
   }
 
   /// The block, its bookmark in the margin left of it, and the light a bookmark brings it up
-  /// with (#567).
+  /// with (#567). Left of the bookmark, the icon of its moments (#572), in a box of the same
+  /// height at the same top: both are centred on its first line.
   private var bookmarkable: some View {
     BlockView(block: block, model: model)
       // A message's own view lights it already (#565): the others, here.
       .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
       .onHover { isHovered = $0 }
       .overlay(alignment: .topLeading) {
-        BookmarkGutter(
-          isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
-        ) {
-          model.toggleBookmark(block)
+        HStack(alignment: .top, spacing: 0) {
+          let moments = ConversationMoments.moments(of: block).filter { appearance.shows($0.kind) }
+          if moments.isEmpty {
+            Color.clear.frame(width: MomentGutterMark.width, height: 1)
+          } else {
+            MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
+          }
+          BookmarkGutter(
+            isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+          ) {
+            model.toggleBookmark(block)
+          }
         }
         .padding(.top, firstLineTop)
-        .offset(x: -BookmarkGutter.reach)
+        .offset(x: -(BookmarkGutter.reach + MomentGutterMark.width))
       }
   }
 

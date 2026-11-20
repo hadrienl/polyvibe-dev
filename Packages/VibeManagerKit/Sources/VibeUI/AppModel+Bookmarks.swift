@@ -24,13 +24,13 @@ extension AppModel {
     guard conversationOnScreen?.toggleBookmarkInView() == true else { return beep() }
   }
 
-  /// Next Bookmark, ⌥⌘J. A beep past the last one.
-  public func revealNextBookmark() {
-    guard conversationOnScreen?.revealNextBookmark() == true else { return beep() }
+  /// Next Moment, ⌥⌘J: the next moment shown, whatever its kind (#572). A beep past the last one.
+  public func revealNextMoment() {
+    guard conversationOnScreen?.revealNextMoment() == true else { return beep() }
   }
 
-  /// Previous Bookmark, ⌥⌘K. A beep before the first one.
-  public func revealPreviousBookmark() {
-    guard conversationOnScreen?.revealPreviousBookmark() == true else { return beep() }
+  /// Previous Moment, ⌥⌘K. A beep before the first one.
+  public func revealPreviousMoment() {
+    guard conversationOnScreen?.revealPreviousMoment() == true else { return beep() }
   }
 }

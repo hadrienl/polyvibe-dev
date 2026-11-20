@@ -434,6 +434,7 @@ public final class ConversationModel {
       {
         rebuild(changedFrom: 0)
       }
+      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds { updateShownMoments() }
     }
   }
 
@@ -850,7 +851,7 @@ public final class ConversationModel {
     blocks = rebuilt
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
-    updateBookmarkedIndices(from: restart)
+    updateMoments(from: restart)
     blocksChangedFrom = min(blocksChangedFrom ?? .max, restart)
     blocksRevision += 1
     // Written only when they differ: every row reads them, and a write redraws them all (#462).
@@ -1090,13 +1091,27 @@ public final class ConversationModel {
   /// The entries the user marked, by identifier: kept by the session's store, never sent to the
   /// agent.
   public private(set) var bookmarks: Set<String> = []
-  /// The blocks that hold one, in order: the overview's lines and the rotor's entries.
+  /// The blocks that hold one, in order: the overview's lines.
   public private(set) var bookmarkedIndices: [Int] = []
+  /// The moments of each block, bookmarks aside, read as the blocks are laid out (#572).
+  @ObservationIgnored private var blockMoments: [[ConversationMoment]] = []
+  /// Every moment, bookmarks included, in the conversation's order.
+  public private(set) var moments: [ConversationMoments.Placed] = []
+  /// Those of the kinds shown: the overview's icons, the rotor's entries, where Next and Previous
+  /// go.
+  public private(set) var shownMoments: [ConversationMoments.Placed] = []
+  /// The blocks that show one of those, each once, in order.
+  public private(set) var momentIndices: [Int] = []
+  /// Bumped when the moments shown change: what the overview draws them again for.
+  public private(set) var momentsRevision = 0
   /// Keeps the bookmarks once they change.
   @ObservationIgnored public var saveBookmarks: ((Set<String>) -> Void)?
-  /// The last bookmark brought up: Next and Previous go on from it while it is on screen, where
+  /// Shows or hides the moments of a kind, in every session (#572): the settings change, and come
+  /// back through `appearance`.
+  @ObservationIgnored public var setMomentKindShown: ((ConversationMomentKind, Bool) -> Void)?
+  /// The last moment brought up: Next and Previous go on from it while it is on screen, where
   /// the top of what is read may not reach it — near the end, the view cannot scroll that far.
-  @ObservationIgnored private var lastRevealedBookmark: String?
+  @ObservationIgnored private var lastRevealedMoment: String?
   /// Bumped at each layout of the blocks: what the overview lays out again for.
   public private(set) var blocksRevision = 0
   /// The first block that may have changed since the overview last asked.
@@ -1127,13 +1142,28 @@ public final class ConversationModel {
     bookmarkedIndices.filter(blocks.indices.contains).map { blocks[$0] }
   }
 
+  /// The blocks that show a moment of a kind shown, in order, with their moments: the rotor's
+  /// entries.
+  public var momentBlocks: [(block: ConversationBlock, moments: [ConversationMoment])] {
+    var found: [(block: ConversationBlock, moments: [ConversationMoment])] = []
+    for placed in shownMoments where blocks.indices.contains(placed.blockIndex) {
+      let block = blocks[placed.blockIndex]
+      if found.last?.block.id == block.id {
+        found[found.count - 1].moments.append(placed.moment)
+      } else {
+        found.append((block, [placed.moment]))
+      }
+    }
+    return found
+  }
+
   /// The bookmarks read from the store: added to any set before they arrived, which are kept
   /// again with them.
   public func loadBookmarks(_ entries: Set<String>) {
     guard !entries.isSubset(of: bookmarks) else { return }
     let setBefore = !bookmarks.isEmpty
     bookmarks.formUnion(entries)
-    updateBookmarkedIndices()
+    updateMoments(from: blocks.count)
     if setBefore { saveBookmarks?(bookmarks) }
   }
 
@@ -1143,16 +1173,57 @@ public final class ConversationModel {
 
   public func toggleBookmark(_ block: ConversationBlock) {
     bookmarks = ConversationBookmarks.toggled(bookmarks, on: block)
-    updateBookmarkedIndices()
+    updateMoments(from: blocks.count)
     saveBookmarks?(bookmarks)
   }
 
-  /// The marked blocks, those before `start` kept as they were.
-  private func updateBookmarkedIndices(from start: Int = 0) {
-    let indices =
-      bookmarkedIndices.prefix { $0 < start }
-      + ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks, from: start)
+  /// The marked blocks and the moments, those of the blocks before `start` kept as they were:
+  /// only the bookmarks are read again for them.
+  private func updateMoments(from start: Int) {
+    let indices = ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks)
     if indices != bookmarkedIndices { bookmarkedIndices = indices }
+    let start = min(start, blockMoments.count, blocks.count)
+    blockMoments.replaceSubrange(
+      start..., with: blocks[start...].map(ConversationMoments.moments(of:)))
+    var placed: [ConversationMoments.Placed] = []
+    var marked = indices.makeIterator()
+    var nextMarked = marked.next()
+    for (index, found) in blockMoments.enumerated() {
+      if index == nextMarked {
+        nextMarked = marked.next()
+        let block = blocks[index]
+        if let entry = ConversationBookmarks.entryIDs(of: block).first(where: bookmarks.contains) {
+          placed.append(
+            .init(
+              blockIndex: index,
+              moment: ConversationMoment(
+                .bookmark, entryID: entry, date: Self.date(of: entry, in: block))))
+        }
+      }
+      for moment in found { placed.append(.init(blockIndex: index, moment: moment)) }
+    }
+    if placed != moments {
+      moments = placed
+      updateShownMoments()
+    }
+  }
+
+  private static func date(of entryID: String, in block: ConversationBlock) -> Date? {
+    switch block {
+    case .entry(let entry): return entry.date
+    case .toolGroup(_, let entries), .subagentGroup(_, let entries):
+      return entries.first { $0.id == entryID }?.date
+    }
+  }
+
+  /// The moments of the kinds the settings show.
+  private func updateShownMoments() {
+    let shown = ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds)
+    guard shown != shownMoments else { return }
+    shownMoments = shown
+    let indices = ConversationMoments.blockIndices(of: shown)
+    if indices != momentIndices { momentIndices = indices }
+    momentsRevision += 1
   }
 
   /// Toggle Bookmark, ⌘B: on the message the selection of text is in, on the one at the top of
@@ -1166,35 +1237,36 @@ public final class ConversationModel {
     return true
   }
 
-  /// Next Bookmark, ⌥⌘J: the first bookmark below the top of what is read. `false` past the last.
+  /// Next Moment, ⌥⌘J: the first moment shown below the top of what is read, whatever its kind
+  /// (#572). `false` past the last.
   @discardableResult
-  public func revealNextBookmark() -> Bool {
+  public func revealNextMoment() -> Bool {
     var index = topIndex ?? -1
     if let last = lastRevealedOnScreen { index = max(index, last) }
-    guard let next = ConversationBookmarks.next(after: index, in: bookmarkedIndices) else {
+    guard let next = ConversationBookmarks.next(after: index, in: momentIndices) else {
       return false
     }
-    revealBookmark(blocks[next].id)
+    revealMoment(blocks[next].id)
     return true
   }
 
-  /// Previous Bookmark, ⌥⌘K. `false` before the first.
+  /// Previous Moment, ⌥⌘K. `false` before the first.
   @discardableResult
-  public func revealPreviousBookmark() -> Bool {
+  public func revealPreviousMoment() -> Bool {
     guard var index = topIndex else { return false }
     var offset = overview.top?.offset ?? 0
     if let last = lastRevealedOnScreen, last > index { (index, offset) = (last, 0) }
     guard
       let previous = ConversationBookmarks.previous(
-        before: index, offset: offset, in: bookmarkedIndices)
+        before: index, offset: offset, in: momentIndices)
     else { return false }
-    revealBookmark(blocks[previous].id)
+    revealMoment(blocks[previous].id)
     return true
   }
 
-  /// The last bookmark brought up, while it is still in what is read.
+  /// The last moment brought up, while it is still in what is read.
   private var lastRevealedOnScreen: Int? {
-    guard let id = lastRevealedBookmark, overview.isRead(id) else { return nil }
+    guard let id = lastRevealedMoment, overview.isRead(id) else { return nil }
     return blocks.firstIndex { $0.id == id }
   }
 
@@ -1204,10 +1276,10 @@ public final class ConversationModel {
     return blocks.firstIndex { $0.id == id }
   }
 
-  /// Brings a bookmarked block to the top of what is read, and lights it a moment, as a reply
+  /// Brings the block of a moment to the top of what is read, and lights it a moment, as a reply
   /// lights the message it answers (#565).
-  public func revealBookmark(_ blockID: String) {
-    lastRevealedBookmark = blockID
+  public func revealMoment(_ blockID: String) {
+    lastRevealedMoment = blockID
     reveal(blockID)
   }
 
@@ -1263,7 +1335,8 @@ public final class ConversationModel {
 
   /// A message Vibe Manager or the session's coordinator sent it.
   static func relayedMessage(of block: ConversationBlock) -> RelayedMessage? {
-    guard case .entry(let entry) = block, case .userPrompt(let text, let attachments) = entry.content
+    guard case .entry(let entry) = block,
+      case .userPrompt(let text, let attachments) = entry.content
     else { return nil }
     return RelayedMessage(text, attachments: attachments)
   }

@@ -256,21 +256,21 @@ struct VibeManagerApp: App {
         .keyboardShortcut(.upArrow, modifiers: [.command, .option])
 
         // The conversation's bookmarks (#567): ⌥⌘↑↓ walk the sessions, so ⌥⌘J and ⌥⌘K, letters
-        // that every keyboard types the same way, walk the bookmarks.
+        // that every keyboard types the same way, walk its key moments, bookmarks included (#572).
         Button("Toggle Bookmark") {
           environment.appModel.toggleBookmark()
         }
         .keyboardShortcut("b", modifiers: .command)
         .disabled(!environment.appModel.canUseBookmarks)
 
-        Button("Next Bookmark") {
-          environment.appModel.revealNextBookmark()
+        Button("Next Moment") {
+          environment.appModel.revealNextMoment()
         }
         .keyboardShortcut("j", modifiers: [.command, .option])
         .disabled(!environment.appModel.canUseBookmarks)
 
-        Button("Previous Bookmark") {
-          environment.appModel.revealPreviousBookmark()
+        Button("Previous Moment") {
+          environment.appModel.revealPreviousMoment()
         }
         .keyboardShortcut("k", modifiers: [.command, .option])
         .disabled(!environment.appModel.canUseBookmarks)
