@@ -23,7 +23,8 @@ else
   list="$(mktemp -t model-prices)"
   trap 'rm -f "$list"' EXIT
   # A plain GET of a public file: a generic User-Agent, nothing about whoever runs it.
-  curl --fail --silent --show-error --location --max-time 60 --user-agent "VibeManager" \
+  curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" \
+    --max-time 60 --user-agent "VibeManager" \
     --output "$list" "$source_url"
 fi
 
