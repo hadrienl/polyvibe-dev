@@ -155,12 +155,20 @@ struct WorkspaceProvider: AgentProvider, AgentLaunchObserverProviding {
   var name = "Stub Agent"
   var catalog: [AgentModel] = []
   var takesInitialPrompt = true
+  /// The identifier the launch observer records for the session's conversation, as a real
+  /// capture does once the agent has written it down; `nil` records none.
+  var recordedIdentifier: String?
 
   func launchObserver(
-    for _: SessionID,
-    repository _: any SessionRepository
+    for sessionID: SessionID,
+    repository: any SessionRepository
   ) -> any AgentLaunchObserver {
-    WorkspaceSlowObserver(yields: observerDelayYields)
+    if let recordedIdentifier {
+      return WorkspaceRecordingObserver(
+        sessionID: sessionID, identifier: recordedIdentifier,
+        record: RecordAgentResumeIdentifier(repository: repository))
+    }
+    return WorkspaceSlowObserver(yields: observerDelayYields)
   }
 
   var descriptor: AgentDescriptor {
@@ -230,6 +238,23 @@ struct WorkspaceSlowObserver: AgentLaunchObserver {
 
   func finished() async {
     // Nothing was kept, so there is nothing to flush.
+  }
+}
+
+/// An observer that records its conversation's identifier as soon as the launch is made.
+struct WorkspaceRecordingObserver: AgentLaunchObserver {
+  let sessionID: SessionID
+  let identifier: String
+  let record: RecordAgentResumeIdentifier
+
+  func launched(plan _: AgentLaunchPlan) async {
+    _ = try? await record(sessionID: sessionID, identifier: identifier)
+  }
+
+  func observe(output _: String) async -> AgentOutputDemand { .enough }
+
+  func finished() async {
+    // The identifier was recorded at launch.
   }
 }
 

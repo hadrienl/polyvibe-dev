@@ -45,6 +45,49 @@ extension SessionRepository {
   }
 }
 
+/// The store, telling `written` of each session written through it: what an agent's launch
+/// records — its conversation's identifier above all — reaches the list on screen at once (#574).
+/// The list otherwise learns it at its next reload, which may not come for as long as the session
+/// is all that changes, and what reads the list — the usage, the effort — reads no conversation
+/// meanwhile.
+public struct WriteReportingSessionRepository: SessionRepository {
+  private let base: any SessionRepository
+  private let written: @Sendable (WorkSession) async -> Void
+
+  public init(
+    _ base: any SessionRepository, written: @escaping @Sendable (WorkSession) async -> Void
+  ) {
+    self.base = base
+    self.written = written
+  }
+
+  public func sessions() async throws -> [WorkSession] {
+    try await base.sessions()
+  }
+
+  public func session(id: SessionID) async throws -> WorkSession? {
+    try await base.session(id: id)
+  }
+
+  public func save(_ session: WorkSession) async throws {
+    try await base.save(session)
+    await written(session)
+  }
+
+  public func mutate(
+    id: SessionID,
+    _ transform: @Sendable (inout WorkSession) throws -> Void
+  ) async throws -> WorkSession? {
+    let session = try await base.mutate(id: id, transform)
+    if let session { await written(session) }
+    return session
+  }
+
+  public func reorder(_ ranks: [SessionID: Int]) async throws {
+    try await base.reorder(ranks)
+  }
+}
+
 public enum SessionStoreRecoveryStatus: Equatable, Sendable {
   case notNeeded
   case backupAvailable

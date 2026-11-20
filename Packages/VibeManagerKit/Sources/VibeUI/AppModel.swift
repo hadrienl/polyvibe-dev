@@ -1002,7 +1002,6 @@ public final class AppModel {
 
     usage?.connect(
       sessions: { [weak self] in self?.sessions ?? [] },
-      storedSession: { [repository] id in try? await repository.session(id: id) },
       endpointWindow: { [weak self] agent in
         guard let id = EndpointID(providerID: agent.providerID),
           let endpoint = self?.endpoints?.endpoints.first(where: { $0.id == id })
@@ -1025,6 +1024,7 @@ public final class AppModel {
 
     connectBrowser()
     launcher?.keyboardInput = { [weak self] id in self?.coordinationCallAnswered(id) }
+    launcher?.agentRecorded = { [weak self] session in self?.showAgent(of: session) }
 
     launcher?.sessionDidClose = { [weak self] id, state in
       guard let self else { return }
@@ -3340,6 +3340,19 @@ public final class AppModel {
     current[index].name = identity.name
     current[index].appearance = identity.appearance
     current[index].conversationTheme = identity.conversationTheme
+    state = .loaded(current)
+  }
+
+  /// Shows a session's agent as its launch just wrote it — the identifier of its conversation
+  /// above all (#574) — without waiting for the next reload, which may not come while the session
+  /// is all that changes: the usage, the effort and the Usage window read the list.
+  func showAgent(of stored: WorkSession) {
+    guard case .loaded(var current) = state,
+      let index = current.firstIndex(where: { $0.id == stored.id }),
+      let agent = stored.agent, current[index].agent?.providerID == agent.providerID,
+      current[index].agent != agent
+    else { return }
+    current[index].agent = agent
     state = .loaded(current)
   }
 

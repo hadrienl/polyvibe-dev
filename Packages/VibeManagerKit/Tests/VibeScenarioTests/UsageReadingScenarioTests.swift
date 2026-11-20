@@ -7,11 +7,9 @@ import VibePersistence
 
 @testable import VibeUI
 
-/// The usage of a session just launched (#574): its agent writes the conversation's identifier in
-/// the store, and the workspace's list only learns it at its next reload — which may never come
-/// while the session is all that changes. Its usage was read from the list, and stayed empty:
-/// “No transcript found” beside a conversation full of answers.
-@Suite("Reading the usage of a session just launched (#574)")
+/// A session's usage read end to end (#574), from its transcript to the figures of its button:
+/// the real stores, reader and prices — the copy shipped with the application.
+@Suite("Reading a session's usage, from its transcript to its cost (#574)")
 @MainActor
 struct UsageReadingScenarioTests {
   private let calendar: Calendar = {
@@ -20,7 +18,7 @@ struct UsageReadingScenarioTests {
     return calendar
   }()
 
-  @Test("The identifier the store holds and the list does not yet is read: tokens, cost, context")
+  @Test("Tokens, cost and context of a Claude Code conversation")
   func identifierOnlyInTheStore() async throws {
     let root = FileManager.default.temporaryDirectory
       .appendingPathComponent("UsageReading-\(UUID().uuidString)", isDirectory: true)
@@ -56,17 +54,12 @@ struct UsageReadingScenarioTests {
         bundled: FileModelPriceStore.bundled()))
     let model = UsageModel(service: service, refreshInterval: .seconds(3_600))
 
-    // The list as it was when the session was launched: its agent, no conversation yet.
     let launched = Date(timeIntervalSince1970: 1_800_000_000)
     let listed = WorkSession(
-      name: "Claude", agent: SessionAgentConfiguration(providerID: "claude-code"),
+      name: "Claude",
+      agent: SessionAgentConfiguration(providerID: "claude-code", resumeIdentifier: identifier),
       status: .active, createdAt: launched, updatedAt: launched, startedAt: launched)
-    var stored = listed
-    stored.agent = SessionAgentConfiguration(
-      providerID: "claude-code", resumeIdentifier: identifier)
-    let repository: any SessionRepository = InMemorySessionRepository(sessions: [stored])
-    model.connect(
-      sessions: { [listed] }, storedSession: { try? await repository.session(id: $0) })
+    model.connect(sessions: { [listed] })
     await model.settleLaunch(running: [listed.id], sessions: [listed], readOnly: false)
 
     model.startWatching(listed.id)
