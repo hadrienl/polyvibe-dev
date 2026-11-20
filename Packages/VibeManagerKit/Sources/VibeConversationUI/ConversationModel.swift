@@ -1080,7 +1080,7 @@ public final class ConversationModel {
       setSubagentActivityExpanded(true, callID: ancestor)
     }
     setExpanded(true, for: Self.rowToggleID(callID))
-    scroll.jumpedAway()
+    jumpAway()
     revealedBlockID = block.id
     revealRequest += 1
   }
@@ -1116,6 +1116,9 @@ public final class ConversationModel {
   public struct OverviewScroll: Hashable, Sendable {
     public var blockID: String
     public var offset: Double
+    /// Where the block starts in the messages, as the overview places it from the rows built
+    /// near it: `nil` when none is, and SwiftUI finds the block itself.
+    public var top: Double?
     public var count: Int
   }
   public private(set) var overviewScroll: OverviewScroll?
@@ -1209,10 +1212,10 @@ public final class ConversationModel {
   }
 
   /// Scrolls to where the overview was clicked or dragged.
-  public func scrollOverview(to blockID: String, offset: Double) {
-    scroll.jumpedAway()
+  public func scrollOverview(to blockID: String, offset: Double, top: Double? = nil) {
+    jumpAway()
     overviewScroll = OverviewScroll(
-      blockID: blockID, offset: offset, count: (overviewScroll?.count ?? 0) + 1)
+      blockID: blockID, offset: offset, top: top, count: (overviewScroll?.count ?? 0) + 1)
   }
 
   /// What a bookmark says of its message, as the rotor reads it: the start of its text, or what
@@ -1428,6 +1431,15 @@ public final class ConversationModel {
     if returnBlockID != nil, next.isFollowing { returnBlockID = nil }
     lastGeometry = (contentFrame, viewportHeight)
     repositionIfPastTheEnd(contentFrame: contentFrame, viewportHeight: viewportHeight)
+  }
+
+  /// The reader went to something above: the end is no longer followed. Written only when that
+  /// changes — mutated in place, an observed property tells its views even when nothing changed,
+  /// and a drag in the overview would have the whole list made again at each step (#567).
+  func jumpAway() {
+    var next = scroll
+    next.jumpedAway()
+    if next != scroll { scroll = next }
   }
 
   /// The view went where `scrollToBottomRequest` asked: where it landed is read again, without

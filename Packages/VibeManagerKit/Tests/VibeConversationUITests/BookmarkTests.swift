@@ -157,6 +157,26 @@ struct BookmarkTests {
     #expect(model.overviewScroll?.blockID == "m2")
     #expect(model.overviewScroll?.offset == 12)
     #expect(model.overviewScroll != first)
+    // Where the overview placed the block, in the messages, goes with it.
+    model.scrollOverview(to: "m3", offset: 12, top: 340)
+    #expect(model.overviewScroll?.top == 340)
+  }
+
+  @Test("A drag in the overview leaves the end once: its next steps tell nothing more of it")
+  func dragLeavesTheEndOnce() {
+    let model = Self.model()
+    model.scrollOverview(to: "m2", offset: 0)
+    #expect(!model.scroll.isFollowing)
+    final class Flag: @unchecked Sendable { var told = false }
+    let flag = Flag()
+    withObservationTracking {
+      _ = model.scroll
+    } onChange: {
+      flag.told = true
+    }
+    // Before, each step had the whole list, which shows how many messages arrived, made again.
+    model.scrollOverview(to: "m3", offset: 0)
+    #expect(!flag.told)
   }
 
   @Test("A bookmark's label is the start of its message on one line")
