@@ -27,15 +27,17 @@ struct SessionUsageButton: View {
     Button {
       isPresented.toggle()
     } label: {
-      SessionUsageLabel(summary: summary, isReading: usage.isReading)
+      // The hidden bars of the other sessions never spin.
+      SessionUsageLabel(summary: summary, isReading: isShown && usage.isReading)
     }
     .controlSize(.small)
-    .fixedSize()
+    // Not fixed horizontally: the label narrows when the bar runs out of room.
+    .fixedSize(horizontal: false, vertical: true)
     .popover(isPresented: $isPresented, arrowEdge: .top) {
       SessionUsagePopover(usage: usage, session: session, agentNames: agentNames)
     }
-    .instantTooltip(
-      Text("Session usage", bundle: .module, comment: "Help of the status bar's Usage button."))
+    // The whole value, whichever form the label takes.
+    .instantTooltip(summary.help(locale: locale))
     .accessibilityLabel(
       Text(
         LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading.")))
@@ -91,17 +93,81 @@ struct SessionUsageSummary: Equatable {
     }
     return parts.isEmpty ? "—" : parts.joined(separator: ", ")
   }
+
+  /// “Context 55% · ≈ $4.82 (API equivalent)”: the whole value of the label, on hover, whichever
+  /// form it takes.
+  func help(locale: Locale) -> String {
+    let cost = cost.map { UsagePresentation.cost($0, locale: locale) }
+    switch (percent, cost) {
+    case (let percent?, let cost?):
+      return String(
+        localized: LocalizedStringResource(
+          "Context \(percent)% · \(cost) (API equivalent)", locale: locale, bundle: .module,
+          comment: "Help of the status bar's Usage button: the share of the window, then the cost."
+        ))
+    case (let percent?, nil):
+      return String(
+        localized: LocalizedStringResource(
+          "Context \(percent)% used", locale: locale, bundle: .module,
+          comment: "Help of the status bar's Usage button: the share of the window used."))
+    case (nil, let cost?) where figures != nil:
+      return String(
+        localized: LocalizedStringResource(
+          "Running time \(UsagePresentation.duration(figures?.total.runningTime ?? 0)) · \(cost) (API equivalent)",
+          locale: locale, bundle: .module,
+          comment:
+            "Help of the status bar's Usage button when the window is unknown: the running time, then the cost."
+        ))
+    default:
+      return String(
+        localized: LocalizedStringResource(
+          "Session usage", locale: locale, bundle: .module,
+          comment: "Help of the status bar's Usage button."))
+    }
+  }
 }
 
 /// “◔ 55 % · 4,82 $”: the ring and share of the context — or the running time, when the window is
 /// unknown — then the cost. A dash while nothing was read.
+///
+/// Three forms, from the widest to the narrowest — “◔ 55 % · 4,82 $”, “◔ 55 %”, the ring alone —
+/// the widest that fits is shown. The status bar will choose them for all its buttons together
+/// (#575); the tooltip and VoiceOver always have the whole value.
 struct SessionUsageLabel: View {
   let summary: SessionUsageSummary
   let isReading: Bool
 
+  enum Form: CaseIterable {
+    case full
+    case withoutCost
+    case ringAlone
+  }
+
   @Environment(\.locale) private var locale
 
   var body: some View {
+    let forms = forms
+    ViewThatFits(in: .horizontal) {
+      if forms.contains(.full) { form(.full) }
+      form(.withoutCost)
+      if forms.contains(.ringAlone) { form(.ringAlone) }
+    }
+  }
+
+  /// The forms this summary has, widest first: no cost to leave out without a price, and no ring
+  /// alone without a known window.
+  var forms: [Form] {
+    Form.allCases.filter { form in
+      switch form {
+      case .full: summary.cost != nil
+      case .withoutCost: true
+      case .ringAlone: summary.percent != nil
+      }
+    }
+  }
+
+  /// One form, laid out whole.
+  func form(_ form: Form) -> some View {
     HStack(spacing: 4) {
       if isReading {
         ProgressView()
@@ -111,19 +177,22 @@ struct SessionUsageLabel: View {
       } else if let percent = summary.percent {
         ContextRing(percent: percent)
       }
-      if let percent = summary.percent {
-        Text(verbatim: (Double(percent) / 100).formatted(.percent.locale(locale)))
-      } else if let figures = summary.figures {
-        Text(verbatim: UsagePresentation.duration(figures.total.runningTime))
-      } else {
-        Text(verbatim: "—")
+      if form != .ringAlone {
+        if let percent = summary.percent {
+          Text(verbatim: (Double(percent) / 100).formatted(.percent.locale(locale)))
+        } else if let figures = summary.figures {
+          Text(verbatim: UsagePresentation.duration(figures.total.runningTime))
+        } else {
+          Text(verbatim: "—")
+        }
       }
-      if let cost = summary.cost {
+      if form == .full, let cost = summary.cost {
         Text(verbatim: "·").foregroundStyle(.secondary)
         Text(verbatim: UsagePresentation.cost(cost, approximate: false, locale: locale))
       }
     }
     .monospacedDigit()
+    .fixedSize()
   }
 }
 

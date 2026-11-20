@@ -135617,106 +135617,6 @@
         }
       }
     },
-    "Running time, runs and the tokens your agents' transcripts report, kept on this Mac only. Nothing is sent anywhere, and what the agents were asked or answered is never read." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مدة التشغيل ومرات التشغيل والرموز التي تسجّلها الـ transcript الخاصة بوكلائك، محفوظة على هذا الـ Mac فقط. لا يُرسل أي شيء إلى أي مكان، ولا تتم قراءة ما طُلب من الوكلاء أو ما أجابوا به أبدًا."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Laufzeit, Ausführungen und die Tokens, die die Transkripte deiner Agents melden – nur auf diesem Mac gespeichert. Nichts wird irgendwohin gesendet, und was die Agents gefragt wurden oder geantwortet haben, wird nie gelesen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "El tiempo de ejecución, las ejecuciones y los tokens que indican los transcripts de tus agentes, conservados solo en este Mac. No se envía nada a ningún sitio y nunca se lee lo que se pidió a los agentes ni lo que respondieron."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le temps d’exécution, les exécutions et les jetons indiqués par les transcripts de vos agents, conservés sur ce Mac uniquement. Rien n’est envoyé nulle part, et ce qui a été demandé aux agents ou ce qu’ils ont répondu n’est jamais lu."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "चलने का समय, रन और आपके एजेंटों के ट्रांसक्रिप्ट में बताए गए टोकन, केवल इस Mac पर रखे जाते हैं। कुछ भी कहीं नहीं भेजा जाता, और एजेंटों से क्या पूछा गया या उन्होंने क्या उत्तर दिया, यह कभी नहीं पढ़ा जाता।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempo di esecuzione, esecuzioni e token riportati dalle trascrizioni dei tuoi agenti, conservati solo su questo Mac. Non viene inviato nulla e ciò che è stato chiesto agli agenti o che hanno risposto non viene mai letto."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "実行時間、実行回数、エージェントのトランスクリプトが報告するトークン数を、このMac上にのみ保持します。どこにも送信されず、エージェントへの依頼内容や回答が読み取られることはありません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "에이전트 트랜스크립트에 보고된 실행 시간, 실행 횟수 및 토큰으로, 이 Mac에만 보관됩니다. 어디에도 전송되지 않으며, 에이전트에게 요청한 내용이나 에이전트의 답변은 절대 읽지 않습니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Looptijd, uitvoeringen en de tokens die de transcripts van je agents melden, alleen op deze Mac bewaard. Er wordt niets verstuurd, en wat aan de agents is gevraagd of wat ze hebben geantwoord, wordt nooit gelezen."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Czas działania, uruchomienia i tokeny podawane przez transkrypty Twoich agentów, przechowywane wyłącznie na tym Macu. Nic nie jest nigdzie wysyłane, a treść pytań do agentów i ich odpowiedzi nigdy nie jest odczytywana."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempo de execução, execuções e os tokens informados pelas transcrições dos seus agentes, mantidos somente neste Mac. Nada é enviado a lugar algum, e o que foi pedido aos agentes ou o que eles responderam nunca é lido."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Время работы, запуски и токены из транскриптов ваших агентов хранятся только на этом Mac. Ничего никуда не отправляется, а то, о чём агентов просили и что они отвечали, никогда не читается."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Çalışma süresi, çalıştırmalar ve ajanlarınızın dökümlerinde bildirilen token’lar yalnızca bu Mac’te saklanır. Hiçbir yere hiçbir şey gönderilmez; ajanlara ne sorulduğu ya da ne yanıt verdikleri asla okunmaz."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Час роботи, запуски й токени з транскриптів ваших агентів зберігаються лише на цьому Mac. Нічого нікуди не надсилається, а запитання до агентів і їхні відповіді ніколи не читаються."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "运行时间、运行次数以及智能体对话记录中报告的 token 数，仅保存在这台 Mac 上。不会发送到任何地方，也绝不会读取向智能体提出的请求或它们的回答。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "執行時間、執行次數，以及代理程式對話記錄所回報的 token，只保存在此 Mac 上。不會傳送到任何地方，也絕不讀取向代理程式提出的問題或其回答。"
-          }
-        }
-      }
-    },
     "Running times, runs and token totals recorded on this Mac will be deleted. Your agents' own transcripts are not touched." : {
       "localizations" : {
         "ar" : {
@@ -213055,6 +212955,413 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "費用為 API 等值費用：各模型回報的Token，依其輸入、快取讀取、快取寫入與輸出的每Token公開價格計算。對於訂閱使用者，這是按Token付費時工作的花費，而不是實際支付的金額。價格來自 LiteLLM 的公開清單，每天重新讀取一次；不會傳送任何關於你的資訊。快取寫入以五分鐘價格計算，長上下文價格未計入，因此標有 ≈。價格未知的模型不計入總額，絕不會被算作免費。"
+          }
+        }
+      }
+    },
+    "Context %lld%% · %@ (API equivalent)" : {
+      "comment" : "Help of the status bar's Usage button: the share of the window, then the cost.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السياق %1$lld%% · %2$@ (ما يعادل API)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontext %1$lld %% · %2$@ (API-Äquivalent)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexto %1$lld %% · %2$@ (equivalente API)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexte %1$lld %% · %2$@ (équivalent API)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "संदर्भ %1$lld%% · %2$@ (API के बराबर)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contesto %1$lld%% · %2$@ (equivalente API)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンテキスト %1$lld%% · %2$@（API換算）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "컨텍스트 %1$lld%% · %2$@ (API 환산)"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context %1$lld%% · %2$@ (API-equivalent)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontekst %1$lld%% · %2$@ (równowartość API)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexto %1$lld%% · %2$@ (equivalente de API)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Контекст %1$lld %% · %2$@ (эквивалент API)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlam %%%1$lld · %2$@ (API karşılığı)"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Контекст %1$lld %% · %2$@ (еквівалент API)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上下文 %1$lld%% · %2$@（API 等价费用）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上下文 %1$lld%% · %2$@（API 等值費用）"
+          }
+        }
+      }
+    },
+    "Running time %@ · %@ (API equivalent)" : {
+      "comment" : "Help of the status bar's Usage button when the window is unknown: the running time, then the cost.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدة التشغيل %1$@ · %2$@ (ما يعادل API)"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laufzeit %1$@ · %2$@ (API-Äquivalent)"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiempo de ejecución %1$@ · %2$@ (equivalente API)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Temps d’exécution %1$@ · %2$@ (équivalent API)"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चलने का समय %1$@ · %2$@ (API के बराबर)"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo di esecuzione %1$@ · %2$@ (equivalente API)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行時間 %1$@ · %2$@（API換算）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실행 시간 %1$@ · %2$@ (API 환산)"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Looptijd %1$@ · %2$@ (API-equivalent)"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czas działania %1$@ · %2$@ (równowartość API)"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo de execução %1$@ · %2$@ (equivalente de API)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Время работы %1$@ · %2$@ (эквивалент API)"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çalışma süresi %1$@ · %2$@ (API karşılığı)"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Час роботи %1$@ · %2$@ (еквівалент API)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运行时间 %1$@ · %2$@（API 等价费用）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "執行時間 %1$@ · %2$@（API 等值費用）"
+          }
+        }
+      }
+    },
+    "Context %lld%% used" : {
+      "comment" : "Help of the status bar's Usage button: the share of the window used.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السياق المستخدم %lld%%"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontext zu %lld %% belegt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexto usado al %lld %%"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexte utilisé à %lld %%"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "संदर्भ %lld%% उपयोग में"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contesto usato al %lld%%"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンテキスト使用率 %lld%%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "컨텍스트 %lld%% 사용"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Context voor %lld%% gebruikt"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontekst wykorzystany w %lld%%"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contexto usado em %lld%%"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Контекст заполнен на %lld %%"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlamın %%%lld kadarı kullanıldı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Контекст заповнено на %lld %%"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上下文已用 %lld%%"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上下文已用 %lld%%"
+          }
+        }
+      }
+    },
+    "Running time, runs and the tokens your agents' transcripts report, kept on this Mac only, with their cost at public prices, read once a day from LiteLLM's public list. Nothing about you is sent, and what the agents were asked or answered is never read." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مدة التشغيل وعدد مرات التشغيل والرموز التي تُبلغ عنها سجلات وكلائك، محفوظة على هذا الـ Mac فقط، مع تكلفتها بالأسعار العامة التي تُقرأ مرة في اليوم من القائمة العامة لـ LiteLLM. لا يُرسل أي شيء عنك، ولا يُقرأ أبدًا ما طُلب من الوكلاء أو ما أجابوا به."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laufzeit, Ausführungen und die Tokens, die die Transkripte deiner Agents melden – nur auf diesem Mac gespeichert –, mit ihren Kosten zu öffentlichen Preisen, einmal täglich aus der öffentlichen Liste von LiteLLM gelesen. Nichts über dich wird gesendet, und was die Agents gefragt wurden oder geantwortet haben, wird nie gelesen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tiempo de ejecución, las ejecuciones y los tokens que indican las transcripciones de tus agentes, guardados solo en este Mac, con su coste a precios públicos, leídos una vez al día de la lista pública de LiteLLM. No se envía nada sobre ti, y nunca se lee lo que se pidió a los agentes ni lo que respondieron."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le temps d’exécution, les exécutions et les jetons indiqués par les transcripts de vos agents, conservés sur ce Mac uniquement, avec leur coût aux tarifs publics, relus une fois par jour dans la liste publique de LiteLLM. Rien n’est envoyé sur vous, et ce qui a été demandé aux agents ou ce qu’ils ont répondu n’est jamais lu."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चलने का समय, रन और आपके एजेंटों की ट्रांसक्रिप्ट में बताए गए टोकन, केवल इसी Mac पर रखे जाते हैं, साथ में सार्वजनिक दरों पर उनकी लागत, जो LiteLLM की सार्वजनिक सूची से दिन में एक बार पढ़ी जाती है। आपके बारे में कुछ भी नहीं भेजा जाता, और एजेंटों से क्या पूछा गया या उन्होंने क्या जवाब दिया, यह कभी नहीं पढ़ा जाता।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il tempo di esecuzione, le esecuzioni e i token indicati dalle trascrizioni dei tuoi agenti, conservati solo su questo Mac, con il loro costo ai prezzi pubblici, letti una volta al giorno dall'elenco pubblico di LiteLLM. Non viene inviato nulla su di te e ciò che è stato chiesto agli agenti o ciò che hanno risposto non viene mai letto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行時間、実行回数、エージェントのトランスクリプトが報告するトークンはこのMacにのみ保存され、LiteLLMの公開リストから1日に1回読み込む公開価格でのコストも表示されます。あなたに関する情報は何も送信されず、エージェントへの依頼内容や回答が読まれることはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실행 시간, 실행 횟수, 에이전트 트랜스크립트가 보고하는 토큰은 이 Mac에만 저장되며, LiteLLM 공개 목록에서 하루에 한 번 읽는 공개 가격 기준 비용도 함께 표시됩니다. 사용자에 관한 정보는 전송되지 않으며, 에이전트에게 요청한 내용이나 답변은 절대 읽지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Looptijd, uitvoeringen en de tokens die de transcripten van je agents melden, alleen op deze Mac bewaard, met hun kosten tegen publieke prijzen, één keer per dag gelezen uit de publieke lijst van LiteLLM. Er wordt niets over jou verstuurd, en wat de agents gevraagd werd of antwoordden wordt nooit gelezen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Czas działania, uruchomienia i tokeny zgłaszane przez transkrypcje agentów, przechowywane tylko na tym Macu, wraz z ich kosztem według cen publicznych, odczytywanych raz dziennie z publicznej listy LiteLLM. Nic o Tobie nie jest wysyłane, a treść poleceń dla agentów i ich odpowiedzi nigdy nie jest odczytywana."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo de execução, execuções e os tokens informados pelas transcrições dos seus agentes, mantidos apenas neste Mac, com o custo a preços públicos, lidos uma vez por dia da lista pública da LiteLLM. Nada sobre você é enviado, e o que foi pedido aos agentes ou o que eles responderam nunca é lido."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Время работы, запуски и токены из транскриптов ваших агентов хранятся только на этом Mac, вместе с их стоимостью по публичным ценам, которые раз в день читаются из публичного списка LiteLLM. Ничего о вас не отправляется, а запросы к агентам и их ответы никогда не читаются."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çalışma süresi, çalıştırmalar ve ajanlarınızın dökümlerinin bildirdiği tokenlar yalnızca bu Mac'te tutulur; maliyetleri de LiteLLM'in herkese açık listesinden günde bir kez okunan herkese açık fiyatlarla hesaplanır. Sizinle ilgili hiçbir şey gönderilmez ve ajanlara ne sorulduğu ya da ne yanıt verdikleri asla okunmaz."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Час роботи, запуски й токени з транскриптів ваших агентів зберігаються лише на цьому Mac, разом з їхньою вартістю за публічними цінами, які раз на день читаються з публічного списку LiteLLM. Нічого про вас не надсилається, а запити до агентів і їхні відповіді ніколи не читаються."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运行时间、运行次数以及代理记录中报告的 Token 仅保存在这台 Mac 上，并附上按公开价格计算的费用，价格每天从 LiteLLM 的公开列表读取一次。不会发送任何关于你的信息，也绝不会读取向代理提出的请求或其回答。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "執行時間、執行次數以及代理紀錄中回報的 Token 僅儲存在這台 Mac 上，並附上依公開價格計算的費用，價格每天從 LiteLLM 的公開清單讀取一次。不會傳送任何關於你的資訊，也絕不會讀取向代理提出的請求或其回答。"
           }
         }
       }

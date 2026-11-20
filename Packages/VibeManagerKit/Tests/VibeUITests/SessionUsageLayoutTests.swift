@@ -175,6 +175,42 @@ struct SessionUsageButtonTests {
     #expect(SessionUsageSummary(figures: nil, percent: nil).spoken(locale: en) == "—")
   }
 
+  @Test("The tooltip always gives the whole value, whichever form the label takes")
+  func help() {
+    let figures = SessionUsageLayoutTests.figures()
+    #expect(
+      SessionUsageSummary(figures: figures, percent: 55).help(locale: en)
+        == "Context 55% · ≈ $1,234.61 (API equivalent)")
+    #expect(
+      SessionUsageSummary(figures: figures, percent: nil).help(locale: en)
+        == "Running time 3 h 12 min · ≈ $1,234.61 (API equivalent)")
+    var unpriced = figures
+    unpriced.cost = UsageCost.Estimate()
+    #expect(SessionUsageSummary(figures: unpriced, percent: 55).help(locale: en) == "Context 55% used")
+    #expect(SessionUsageSummary(figures: nil, percent: nil).help(locale: en) == "Session usage")
+  }
+
+  @Test("Three forms, each narrower than the one before; only those the figures allow")
+  func forms() {
+    _ = NSApplication.shared
+    let label = SessionUsageLabel(
+      summary: SessionUsageSummary(figures: SessionUsageLayoutTests.figures(), percent: 55),
+      isReading: false)
+    #expect(label.forms == [.full, .withoutCost, .ringAlone])
+    let widths = label.forms.map { form in
+      NSHostingView(rootView: label.form(form).environment(\.locale, en)).fittingSize.width
+    }
+    #expect(widths == widths.sorted(by: >))
+    #expect(Set(widths).count == 3)
+
+    var unpriced = SessionUsageLayoutTests.figures()
+    unpriced.cost = UsageCost.Estimate()
+    #expect(
+      SessionUsageLabel(
+        summary: SessionUsageSummary(figures: unpriced, percent: nil), isReading: false
+      ).forms == [.withoutCost])
+  }
+
   @Test("Dollars in the language's own way, to the cent, and never a zero for a little")
   func costFormat() {
     let fr = Locale(identifier: "fr_FR")
