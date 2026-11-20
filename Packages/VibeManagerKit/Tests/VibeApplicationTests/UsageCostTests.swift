@@ -115,6 +115,8 @@ struct ModelPriceListTests {
   func dateSuffix() {
     #expect(list.price(for: "claude-sonnet-4-5-20991231", providerID: "claude-code") == sonnet)
     #expect(list.price(for: "claude-haiku-4-5", providerID: "claude-code") == sonnet)
+    // A dated name the list does not have is not priced as another date of the model.
+    #expect(list.price(for: "claude-haiku-4-5-20240101", providerID: "claude-code") == nil)
     #expect(ModelPriceList.withoutDate("gpt-5-2025-08-07") == "gpt-5")
     #expect(ModelPriceList.withoutDate("claude-opus-4-5-20251101") == "claude-opus-4-5")
   }

@@ -146,11 +146,14 @@ struct SessionUsageFigures: View {
               "API equivalent, at public prices", locale: locale, bundle: .module,
               comment:
                 "Under a session's cost: what the tokens would have cost paid by the token.")))
-      } else {
+      } else if !estimate.unpriced.isEmpty {
         UsageLine(
           label: Text(Self.costTitle), value: unknownPrice, help: UsagePresentation.costExplanation
         )
         .foregroundStyle(Color.usageWarning)
+      } else {
+        // Only empty answers: nothing to price.
+        UsageLine(label: Text(Self.costTitle), value: "—", help: UsagePresentation.costExplanation)
       }
       ForEach(figures.models) { row in
         if case .model(let providerID, let model) = row.key, !row.tokens.isZero {

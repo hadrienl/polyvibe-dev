@@ -100,7 +100,9 @@ public struct ModelPriceList: Hashable, Codable, Sendable {
     for name in names {
       if let price = prices[name] { return price }
     }
-    // The other way round: the agent named the model without a date, the list only with one.
+    // The other way round: the agent named the model without a date, the list only with one. A
+    // dated name is never priced as another date of it.
+    guard undated == model else { return nil }
     return dated[undated].flatMap { prices[$0] }
   }
 

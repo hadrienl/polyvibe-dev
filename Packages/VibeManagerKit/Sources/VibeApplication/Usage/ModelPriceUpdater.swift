@@ -47,8 +47,12 @@ public actor ModelPriceUpdater {
   /// whichever is the more recent.
   public func current() async -> ModelPriceList? {
     if !hasLoaded {
-      kept = await store.load()
-      hasLoaded = true
+      let loaded = await store.load()
+      // A fetch may have finished during the load: its list is newer than the disk's.
+      if !hasLoaded {
+        kept = loaded
+        hasLoaded = true
+      }
     }
     guard let kept else { return bundled }
     guard let bundled else { return kept }
@@ -73,6 +77,7 @@ public actor ModelPriceUpdater {
       let list = try? ModelPriceList.parseLiteLLM(data, fetchedAt: clock.now())
     else { return false }
     kept = list
+    hasLoaded = true
     try? await store.save(list)
     return true
   }

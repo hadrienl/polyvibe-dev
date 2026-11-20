@@ -214,7 +214,8 @@ public struct UsageWindow: View {
   /// never a zero.
   private func costCell(_ row: UsageRow) -> some View {
     Group {
-      if !row.hasReportedTokens {
+      if !row.hasPricedTokens && !row.hasUnpricedTokens {
+        // No token, or only empty answers: nothing to price.
         Text(verbatim: "—")
       } else if row.hasPricedTokens {
         HStack(spacing: 4) {
