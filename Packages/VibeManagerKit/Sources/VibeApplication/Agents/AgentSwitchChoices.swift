@@ -81,6 +81,17 @@ public struct AgentSwitchChoices: Equatable, Sendable {
     agents.filter(\.availability.isUsable)
   }
 
+  /// Each agent's models by identifier, to their names: how a model the session ran is named.
+  public var modelNames: [String: [String: String]] {
+    Dictionary(
+      agents.map { agent in
+        (
+          agent.id.rawValue,
+          Dictionary(agent.models.map { ($0.id, $0.displayName) }, uniquingKeysWith: { a, _ in a })
+        )
+      }, uniquingKeysWith: { a, _ in a })
+  }
+
   public func agent(_ providerID: String) -> Agent? {
     agents.first { $0.id.rawValue == providerID }
   }

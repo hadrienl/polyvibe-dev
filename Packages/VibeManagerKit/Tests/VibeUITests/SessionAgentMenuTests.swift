@@ -115,7 +115,7 @@ struct SessionAgentMenuTests {
       handover: .resumedConversation, outcome: .failed(reason: "Unknown model."))
 
     let history = AgentHistoryPresentation(
-      session: session(history: [first, failed]), names: Self.names)
+      session: session(history: [first, failed]), names: AgentLabels(names: Self.names))
 
     #expect(history.hasChanges)
     #expect(history.entries.map(\.id) == [.change(failed.id), .change(first.id), .start])
@@ -131,9 +131,22 @@ struct SessionAgentMenuTests {
     #expect(history.entries[2].title.contains("Other Agent · o1"))
   }
 
+  @Test("Models are named as their catalogue names them, else by their identifier")
+  func catalogueNames() {
+    let labels = AgentLabels(names: Self.names, models: ["other": ["o1": "O1 Pro"]])
+    #expect(
+      labels.label(SessionAgentConfiguration(providerID: "other", modelID: "o1"))
+        == "Other Agent · O1 Pro")
+    #expect(
+      labels.label(SessionAgentConfiguration(providerID: "stub", modelID: "fast"))
+        == "Stub Agent · fast")
+    #expect(labels.label(SessionAgentConfiguration(providerID: "stub")) == "Stub Agent")
+  }
+
   @Test("A session that never switched has no history to show")
   func noHistory() {
-    let history = AgentHistoryPresentation(session: session(), names: Self.names)
+    let history = AgentHistoryPresentation(
+      session: session(), names: AgentLabels(names: Self.names))
     #expect(!history.hasChanges)
     #expect(history.entries.map(\.id) == [.start])
   }

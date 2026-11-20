@@ -19,7 +19,7 @@ struct SessionAgentMenu: View {
   @State private var choices: AgentSwitchChoices?
 
   var body: some View {
-    let names = model.agentNames
+    let names = AgentLabels(names: model.agentNames, models: choices?.modelNames ?? [:])
     let canSwitch = model.canSwitchAgent(session)
     let history = AgentHistoryPresentation(session: session, names: names)
     // The bar's step, or a narrower one when even that does not fit.
@@ -42,7 +42,7 @@ struct SessionAgentMenu: View {
     )
     .accessibilityValue(
       Text(
-        verbatim: session.agent.map { AgentNaming.label($0, names: names, separator: ", ") }
+        verbatim: session.agent.map { names.label($0, separator: ", ") }
           ?? String(localized: "No agent recorded", bundle: .module))
     )
     .task(id: session.agent) { await readChoices() }
@@ -53,14 +53,14 @@ struct SessionAgentMenu: View {
   /// The button's label at a step of the bar: "Claude Code · Opus 5.5", the model alone, or the
   /// icon.
   @ViewBuilder
-  private func label(names: [String: String], form: StatusBarDensity) -> some View {
+  private func label(names: AgentLabels, form: StatusBarDensity) -> some View {
     if let agent = session.agent {
       switch form {
       case .full:
-        Text(verbatim: AgentNaming.label(agent, names: names))
+        Text(verbatim: names.label(agent))
       case .model, .level, .gauge:
         // The agent's name when it runs its default model: there is no model to name.
-        Text(verbatim: agent.modelID ?? AgentNaming.name(of: agent.providerID, names: names))
+        Text(verbatim: names.model(of: agent) ?? names.name(of: agent.providerID))
       case .icons:
         Image(systemName: "cpu")
       }
@@ -72,11 +72,11 @@ struct SessionAgentMenu: View {
   }
 
   /// The full value, whatever the label leaves out, or why nothing can be chosen.
-  private func help(names: [String: String], canSwitch: Bool) -> String {
+  private func help(names: AgentLabels, canSwitch: Bool) -> String {
     guard let agent = session.agent else {
       return String(localized: "This session was stored without an agent.", bundle: .module)
     }
-    let label = AgentNaming.label(agent, names: names)
+    let label = names.label(agent)
     if canSwitch {
       return String(
         localized: "Agent: \(label)", bundle: .module,
@@ -101,7 +101,7 @@ struct SessionAgentMenu: View {
 
   @ViewBuilder
   private func menuContent(
-    names: [String: String], canSwitch: Bool, history: AgentHistoryPresentation
+    names: AgentLabels, canSwitch: Bool, history: AgentHistoryPresentation
   ) -> some View {
     currentAgent(names: names, history: history)
     Divider()
@@ -118,41 +118,48 @@ struct SessionAgentMenu: View {
   /// The agent the session runs and its state; the history of its switches as its submenu, when
   /// it had any. Read, never acted on.
   @ViewBuilder
-  private func currentAgent(names: [String: String], history: AgentHistoryPresentation)
+  private func currentAgent(names: AgentLabels, history: AgentHistoryPresentation)
     -> some View
   {
     let title = Text(
-      verbatim: session.agent.map { AgentNaming.label($0, names: names) }
+      verbatim: session.agent.map { names.label($0) }
         ?? String(localized: "No agent recorded", bundle: .module))
-    let state = Text(
-      verbatim: AgentHistoryPresentation.state(of: model.resolution(forID: session.id)))
+    let state = Text(verbatim: stateSentence)
     if history.hasChanges {
       Menu {
         ForEach(history.entries) { entry in
           Button {
           } label: {
-            if entry.failed {
-              Label(entry.title, systemImage: "exclamationmark.triangle")
-            } else {
-              Text(verbatim: entry.title)
-            }
+            // A failure is marked in its words: a disabled item draws no icon.
+            Text(verbatim: entry.failed ? "⚠︎ \(entry.title)" : entry.title)
             Text(verbatim: entry.detail)
           }
           .disabled(true)
           .accessibilityLabel(Text(verbatim: entry.spoken))
         }
       } label: {
+        Image(systemName: "cpu")
         title
         state
       }
     } else {
       Button {
       } label: {
+        Image(systemName: "cpu")
         title
         state
       }
       .disabled(true)
     }
+  }
+
+  /// The process's own state when it does not run — stopped, failed, starting — and otherwise
+  /// whether the agent can be resumed.
+  private var stateSentence: String {
+    if let status = model.pane(for: session.id)?.status, status != .running {
+      return status.label
+    }
+    return AgentHistoryPresentation.state(of: model.resolution(forID: session.id))
   }
 
   /// The models of each agent that can run, grouped by agent, the one the session runs checked;
@@ -236,13 +243,13 @@ struct AgentHistoryPresentation: Equatable {
   /// Whether the session ever switched, or tried to: its start alone is no history.
   let hasChanges: Bool
 
-  init(session: WorkSession, names: [String: String]) {
+  init(session: WorkSession, names: AgentLabels) {
     var entries = session.agentHistory.reversed().map { Self.entry($0, names: names) }
     // The agent that first ran: the one the first real switch left, or the current one. A switch
     // made before the session ever ran does not count — the agent it left never started.
     let first = session.agentHistory.first(where: \.leftAgentThatRan)?.previous ?? session.agent
     if let first, let start = session.startedAt {
-      let label = AgentNaming.label(first, names: names)
+      let label = names.label(first)
       entries.append(
         Entry(
           id: .start,
@@ -259,13 +266,13 @@ struct AgentHistoryPresentation: Equatable {
     hasChanges = !session.agentHistory.isEmpty
   }
 
-  private static func entry(_ change: AgentChange, names: [String: String]) -> Entry {
-    let from = AgentNaming.label(change.previous, names: names)
+  private static func entry(_ change: AgentChange, names: AgentLabels) -> Entry {
+    let from = names.label(change.previous)
     // Another model of the same agent names the model alone: the agent is already on the line.
     let to =
       change.changesProvider
-      ? AgentNaming.label(change.next, names: names)
-      : (change.next.modelID
+      ? names.label(change.next)
+      : (names.model(of: change.next)
         ?? String(
           localized: "default model", bundle: .module,
           comment: "Stands for the model an agent uses when none is chosen."))
@@ -351,5 +358,27 @@ struct AgentHistoryPresentation: Equatable {
 
   private static func spoken(_ date: Date) -> String {
     date.formatted(date: .long, time: .shortened)
+  }
+}
+
+/// How the menu names an agent and its model: the agent's name, and the model's as its catalogue
+/// gives it — "Claude Code · Opus 5.5" — or its identifier when the catalogue does not list it.
+struct AgentLabels: Equatable {
+  let names: [String: String]
+  /// Provider, then model identifier, to the model's name.
+  var models: [String: [String: String]] = [:]
+
+  func name(of providerID: String) -> String {
+    AgentNaming.name(of: providerID, names: names)
+  }
+
+  /// `nil` for the agent's default model.
+  func model(of agent: SessionAgentConfiguration) -> String? {
+    agent.modelID.map { models[agent.providerID]?[$0] ?? $0 }
+  }
+
+  func label(_ agent: SessionAgentConfiguration, separator: String = " · ") -> String {
+    let name = name(of: agent.providerID)
+    return model(of: agent).map { "\(name)\(separator)\($0)" } ?? name
   }
 }

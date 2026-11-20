@@ -245,7 +245,7 @@ extension TerminalStatusBar where Accessory == EmptyView {
 }
 
 extension TerminalPaneModel.Status {
-  var label: String {
+  public var label: String {
     switch self {
     case .starting:
       return String(localized: "Starting…", bundle: .module, comment: "A terminal's state.")
