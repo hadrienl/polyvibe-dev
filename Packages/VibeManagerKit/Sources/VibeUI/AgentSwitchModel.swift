@@ -357,8 +357,12 @@ public final class AgentSwitchModel {
     guard !isLoadingAgents else { return }
     isLoadingAgents = true
     defer { isLoadingAgents = false }
-    agents = await AgentOption.detect(in: registry, forceRefresh: forceRefresh)
-    currentModels = await registry.provider(id: AgentProviderID(current.providerID))?.models() ?? []
+    // The same list as the status bar's menu, in the same order (#575).
+    let choices = await AgentSwitchChoices.read(from: registry, forceRefresh: forceRefresh)
+    agents = choices.agents.map {
+      AgentOption(descriptor: $0.descriptor, availability: $0.availability)
+    }
+    currentModels = choices.agent(current.providerID)?.models ?? []
     await loadModels()
     regenerateUnlessEdited()
   }
