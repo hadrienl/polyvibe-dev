@@ -734,26 +734,27 @@ struct BookmarkGutter: View {
   /// The box it is centred in: the message's first line, never less than a click needs.
   static func boxHeight(lineHeight: Double) -> Double { max(lineHeight, 14) }
 
+  // A shape that takes the click rather than a button: built for every message, hidden until
+  // the pointer comes, a button cost as much as the rest of a short message to build, which a
+  // drag in the overview of a long conversation does for several messages at every frame (#567).
+  // VoiceOver still finds a button, named as it was, that it can press.
   var body: some View {
-    Button(action: toggle) {
-      BookmarkShape()
-        .fill(theme.accent.color.opacity(isMarked ? 1 : 0.35))
-        .frame(width: 18, height: Self.tagHeight)
-        .frame(width: Self.reach - 4, height: Self.boxHeight(lineHeight: lineHeight))
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
-    .onHover { isHovered = $0 }
-    .help(
+    let label =
       isMarked
-        ? Text("Remove the Bookmark", bundle: .module)
-        : Text("Add a Bookmark", bundle: .module)
-    )
-    .accessibilityLabel(
-      isMarked
-        ? Text("Remove the Bookmark", bundle: .module)
-        : Text("Add a Bookmark", bundle: .module))
+      ? Text("Remove the Bookmark", bundle: .module) : Text("Add a Bookmark", bundle: .module)
+    BookmarkShape()
+      .fill(theme.accent.color.opacity(isMarked ? 1 : 0.35))
+      .frame(width: 18, height: Self.tagHeight)
+      .frame(width: Self.reach - 4, height: Self.boxHeight(lineHeight: lineHeight))
+      .contentShape(Rectangle())
+      .onTapGesture(perform: toggle)
+      .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
+      .onHover { isHovered = $0 }
+      .help(label)
+      .accessibilityElement()
+      .accessibilityLabel(label)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction { toggle() }
   }
 }
 

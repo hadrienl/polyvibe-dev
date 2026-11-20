@@ -197,20 +197,28 @@ struct ReplyHighlight: ViewModifier {
 /// « Reply », small, under a message of the user's while the pointer is over it.
 struct ReplyButton: View {
   let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      ReplyLabel()
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+/// What « Reply » shows: also the room it keeps, empty, where it is not built yet.
+struct ReplyLabel: View {
   @Environment(\.conversationTheme) private var theme
   @Environment(\.conversationAppearance) private var appearance
 
   var body: some View {
-    Button(action: action) {
-      Label {
-        Text("Reply", bundle: .module)
-      } icon: {
-        Image(systemName: "arrowshape.turn.up.left")
-      }
-      .font(theme.interfaceFont(size: appearance.textSize.scaled(11), weight: .medium))
-      .foregroundStyle(theme.secondaryText.color)
-      .contentShape(Rectangle())
+    Label {
+      Text("Reply", bundle: .module)
+    } icon: {
+      Image(systemName: "arrowshape.turn.up.left")
     }
-    .buttonStyle(.plain)
+    .font(theme.interfaceFont(size: appearance.textSize.scaled(11), weight: .medium))
+    .foregroundStyle(theme.secondaryText.color)
+    .contentShape(Rectangle())
   }
 }
