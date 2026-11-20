@@ -186,7 +186,8 @@ struct SessionUsageButtonTests {
         == "Running time 3 h 12 min · ≈ $1,234.61 (API equivalent)")
     var unpriced = figures
     unpriced.cost = UsageCost.Estimate()
-    #expect(SessionUsageSummary(figures: unpriced, percent: 55).help(locale: en) == "Context 55% used")
+    #expect(
+      SessionUsageSummary(figures: unpriced, percent: 55).help(locale: en) == "Context 55% used")
     #expect(SessionUsageSummary(figures: nil, percent: nil).help(locale: en) == "Session usage")
   }
 
@@ -227,5 +228,60 @@ struct SessionUsageButtonTests {
     #expect(UsagePresentation.cost(Decimal(string: "0.0042")!, locale: en) == "< $0.01")
     #expect(plain(UsagePresentation.cost(Decimal(string: "0.0042")!, locale: fr)) == "< 0,01 $")
     #expect(UsagePresentation.cost(0, locale: en) == "≈ $0.00")
+  }
+
+  /// How wide the Usage label is drawn in a status bar of `width`, in French, with a state text
+  /// beside it.
+  private func labelWidth(inBarOf width: CGFloat) async throws -> CGFloat {
+    final class Drawn { var width: CGFloat = 0 }
+    let drawn = Drawn()
+    let label = SessionUsageLabel(
+      summary: SessionUsageSummary(figures: SessionUsageLayoutTests.figures(), percent: 67),
+      isReading: false)
+    // The status bar as `TerminalStatusBar` lays it out.
+    let bar = HStack(spacing: 8) {
+      Image(systemName: "play.circle")
+      Text(verbatim: "Processus en cours").font(.callout)
+      Spacer()
+      StatusAccessoryStack {
+        Menu {
+          Button("Par défaut") {}
+        } label: {
+          Text(verbatim: "Effort : par défaut")
+        }
+        .controlSize(.small)
+        .fixedSize()
+        Button {
+        } label: {
+          label.onGeometryChange(for: CGFloat.self, of: { $0.size.width }) { drawn.width = $0 }
+        }
+        .controlSize(.small)
+        .fixedSize(horizontal: false, vertical: true)
+        Button {
+        } label: {
+          Image(systemName: "terminal")
+        }
+        .controlSize(.small)
+      }
+      Button("Fermer la session…") {}.controlSize(.small)
+    }
+    .padding(.horizontal, 12)
+    .environment(\.locale, Locale(identifier: "fr_FR"))
+    let host = NSHostingView(rootView: bar)
+    host.frame = NSRect(x: 0, y: 0, width: width, height: 40)
+    host.layoutSubtreeIfNeeded()
+    try await Task.sleep(for: .milliseconds(100))
+    host.layoutSubtreeIfNeeded()
+    return drawn.width
+  }
+
+  @Test("In the status bar, the label keeps its cost while the state text has room to give")
+  func roomInTheBar() async throws {
+    _ = NSApplication.shared
+    let whole = try await labelWidth(inBarOf: 1_200)
+    // Shared evenly with the state text and the spacer, it lost its cost at 600 pt (#574).
+    #expect(try await labelWidth(inBarOf: 600) == whole)
+    // Where the bar runs out of room, it narrows rather than overlaps.
+    #expect(try await labelWidth(inBarOf: 300) < whole)
   }
 }

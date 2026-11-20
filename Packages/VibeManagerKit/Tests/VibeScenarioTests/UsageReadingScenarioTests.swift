@@ -20,7 +20,7 @@ struct UsageReadingScenarioTests {
     return calendar
   }()
 
-  @Test("The identifier the store holds and the list does not yet is read, tokens and context")
+  @Test("The identifier the store holds and the list does not yet is read: tokens, cost, context")
   func identifierOnlyInTheStore() async throws {
     let root = FileManager.default.temporaryDirectory
       .appendingPathComponent("UsageReading-\(UUID().uuidString)", isDirectory: true)
@@ -49,7 +49,11 @@ struct UsageReadingScenarioTests {
     let service = UsageService(
       recorder: UsageRecorder(ledger: ledger, tracking: tracking), ledger: ledger,
       tracking: tracking, tokenStore: FileTokenUsageStore(directory: usageDirectory),
-      reader: reader, contextReader: reader)
+      reader: reader, contextReader: reader,
+      prices: ModelPriceUpdater(
+        fetcher: NoFetch(),
+        store: FileModelPriceStore(directory: root.appendingPathComponent("Prices")),
+        bundled: FileModelPriceStore.bundled()))
     let model = UsageModel(service: service, refreshInterval: .seconds(3_600))
 
     // The list as it was when the session was launched: its agent, no conversation yet.
@@ -75,5 +79,12 @@ struct UsageReadingScenarioTests {
     #expect(model.contextWindows[listed.id]?.usedTokens == 117)
     #expect(model.tokenUnavailability(for: listed) == nil)
     #expect(model.contextUnavailability(for: listed) == nil)
+    // Priced from the copy shipped with the application, before any list is fetched.
+    #expect(usage.cost.hasPrice)
+    #expect(usage.cost.unpriced.isEmpty)
   }
+}
+
+private struct NoFetch: ModelPriceFetching {
+  func fetchPriceList() async throws -> Data { throw CancellationError() }
 }
