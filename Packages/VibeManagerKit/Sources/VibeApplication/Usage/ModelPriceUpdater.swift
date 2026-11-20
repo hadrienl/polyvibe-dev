@@ -23,6 +23,9 @@ public actor ModelPriceUpdater {
   public static let refreshInterval: TimeInterval = 24 * 3_600
   /// After a failed fetch — offline, a server down — the next waits this long.
   public static let retryInterval: TimeInterval = 3_600
+  /// A list fetched is preferred to the copy shipped with the application for this long, even
+  /// should the copy be newer: it is the whole list, the copy only six providers' chat models.
+  public static let fetchedPreference: TimeInterval = 7 * 86_400
 
   private let fetcher: any ModelPriceFetching
   private let store: any ModelPriceStore
@@ -43,8 +46,8 @@ public actor ModelPriceUpdater {
     self.clock = clock
   }
 
-  /// The prices in use: the list kept on the Mac, or the shipped copy before any was fetched —
-  /// whichever is the more recent.
+  /// The prices in use: the list kept on the Mac while it is a week old at most, else the more
+  /// recent of it and the copy shipped with the application.
   public func current() async -> ModelPriceList? {
     if !hasLoaded {
       let loaded = await store.load()
@@ -55,7 +58,9 @@ public actor ModelPriceUpdater {
       }
     }
     guard let kept else { return bundled }
-    guard let bundled else { return kept }
+    guard let bundled,
+      clock.now().timeIntervalSince(kept.fetchedAt) >= Self.fetchedPreference
+    else { return kept }
     return bundled.fetchedAt > kept.fetchedAt ? bundled : kept
   }
 

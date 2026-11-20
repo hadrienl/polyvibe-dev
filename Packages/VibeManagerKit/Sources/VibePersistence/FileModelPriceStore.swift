@@ -49,7 +49,7 @@ public actor FileModelPriceStore: ModelPriceStore {
 }
 
 /// Fetches LiteLLM's public list of prices with a plain `GET`: no cookie, no cache, a generic
-/// `User-Agent`, nothing about the user.
+/// `User-Agent`, an `Accept-Language` that is not the user's — nothing about the user.
 public struct URLSessionModelPriceFetcher: ModelPriceFetching {
   public static let source = URL(
     string:
@@ -59,9 +59,26 @@ public struct URLSessionModelPriceFetcher: ModelPriceFetching {
   static let maximumSize = 32 * 1024 * 1024
 
   private let url: URL
+  private let maximumSize: Int
+  /// The longest wait for a byte, and for the whole list: about 5 MB on a slow connection.
+  private let requestTimeout: TimeInterval
+  private let resourceTimeout: TimeInterval
+  /// For the tests, which answer in place of the network.
+  private let protocolClasses: [AnyClass]?
 
   public init(url: URL = URLSessionModelPriceFetcher.source) {
+    self.init(url: url, maximumSize: Self.maximumSize)
+  }
+
+  init(
+    url: URL, maximumSize: Int, requestTimeout: TimeInterval = 15,
+    resourceTimeout: TimeInterval = 120, protocolClasses: [AnyClass]? = nil
+  ) {
     self.url = url
+    self.maximumSize = maximumSize
+    self.requestTimeout = requestTimeout
+    self.resourceTimeout = resourceTimeout
+    self.protocolClasses = protocolClasses
   }
 
   public func fetchPriceList() async throws -> Data {
@@ -69,17 +86,33 @@ public struct URLSessionModelPriceFetcher: ModelPriceFetching {
     configuration.httpCookieStorage = nil
     configuration.httpShouldSetCookies = false
     configuration.urlCache = nil
-    configuration.timeoutIntervalForRequest = 15
-    configuration.timeoutIntervalForResource = 15
+    configuration.timeoutIntervalForRequest = requestTimeout
+    configuration.timeoutIntervalForResource = resourceTimeout
+    if let protocolClasses { configuration.protocolClasses = protocolClasses }
     let session = URLSession(configuration: configuration)
-    defer { session.finishTasksAndInvalidate() }
+    defer { session.invalidateAndCancel() }
     var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData)
     request.httpMethod = "GET"
     request.setValue("VibeManager", forHTTPHeaderField: "User-Agent")
-    let (data, response) = try await session.data(for: request)
+    // Left out, it would be filled with the user's languages.
+    request.setValue("en", forHTTPHeaderField: "Accept-Language")
+    let (bytes, response) = try await session.bytes(for: request)
     guard (response as? HTTPURLResponse)?.statusCode == 200,
-      response.expectedContentLength <= Int64(Self.maximumSize), data.count <= Self.maximumSize
+      response.expectedContentLength <= Int64(maximumSize)
     else { throw ModelPriceListError.unexpectedResponse }
+    // Read as it comes, and given up past the limit rather than held whole in memory.
+    var data = Data()
+    var chunk = [UInt8]()
+    chunk.reserveCapacity(64 * 1024)
+    for try await byte in bytes {
+      chunk.append(byte)
+      guard chunk.count == chunk.capacity else { continue }
+      data.append(contentsOf: chunk)
+      chunk.removeAll(keepingCapacity: true)
+      if data.count > maximumSize { throw ModelPriceListError.unexpectedResponse }
+    }
+    data.append(contentsOf: chunk)
+    guard data.count <= maximumSize else { throw ModelPriceListError.unexpectedResponse }
     return data
   }
 }

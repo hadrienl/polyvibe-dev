@@ -20,6 +20,8 @@ struct ModelPriceUpdaterTests {
 
     func fetchPriceList() async throws -> Data {
       calls += 1
+      // A download takes a while: another update may come meanwhile.
+      for _ in 0..<20 { await Task.yield() }
       return try answer.get()
     }
 
@@ -69,7 +71,8 @@ struct ModelPriceUpdaterTests {
   @Test("A failed fetch keeps the last list, and is not tried again at once")
   func failureKeepsTheCache() async {
     let clock = Clock()
-    let old = Self.listFetched(clock.date.addingTimeInterval(-2 * ModelPriceUpdater.refreshInterval))
+    let old = Self.listFetched(
+      clock.date.addingTimeInterval(-2 * ModelPriceUpdater.refreshInterval))
     let fetcher = FakeFetcher(.success(Data("{oops".utf8)))
     let store = MemoryStore(old)
     let updater = ModelPriceUpdater(fetcher: fetcher, store: store, bundled: nil, clock: clock)
@@ -101,6 +104,33 @@ struct ModelPriceUpdaterTests {
     let afterUpdate = ModelPriceUpdater(
       fetcher: fetcher, store: older, bundled: bundled, clock: clock)
     #expect(await afterUpdate.current() == bundled)
+  }
+
+  @Test("A list fetched this week is kept over a newer shipped copy, which only has six providers")
+  func fetchedListPreferred() async {
+    let clock = Clock()
+    let fetched = Self.listFetched(clock.date.addingTimeInterval(-3 * 86_400), model: "fetched")
+    let bundled = Self.listFetched(clock.date.addingTimeInterval(-86_400), model: "bundled")
+    let fetcher = FakeFetcher(.failure(URLError(.notConnectedToInternet)))
+    let updater = ModelPriceUpdater(
+      fetcher: fetcher, store: MemoryStore(fetched), bundled: bundled, clock: clock)
+    #expect(await updater.current() == fetched)
+    // A week on, still not fetched again: the newer copy is worth more than it.
+    clock.date.addTimeInterval(ModelPriceUpdater.fetchedPreference)
+    #expect(await updater.current() == bundled)
+  }
+
+  @Test("Two updates at the same time fetch the list once")
+  func oneFetchAtATime() async {
+    let clock = Clock()
+    let fetcher = FakeFetcher(.success(Self.good))
+    let updater = ModelPriceUpdater(
+      fetcher: fetcher, store: MemoryStore(), bundled: nil, clock: clock)
+    async let first = updater.updateIfDue()
+    async let second = updater.updateIfDue()
+    let answers = await [first, second]
+    #expect(answers.filter { $0 }.count == 1)
+    #expect(await fetcher.calls == 1)
   }
 
   @Test("No list is fetched while tracking is off")
