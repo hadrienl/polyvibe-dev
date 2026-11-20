@@ -10,7 +10,8 @@ import VibeDomain
 /// told before the web view came beside the messages once stayed, and the overview took half of
 /// the pane, over the text.
 @MainActor
-@Suite("The overview keeps to the margin of the pane it is in", .serialized)
+@Suite(
+  "The overview keeps to the margin of the pane it is in", .serialized, .timeLimit(.minutes(1)))
 struct OverviewWidthTests {
   /// What the window holds a conversation with: a width held while the web view slides over it,
   /// or while it is hidden behind another session, as the window's column does.
@@ -54,11 +55,23 @@ struct OverviewWidthTests {
     return (window, slot)
   }
 
-  private func settle(_ window: NSWindow) async {
-    for _ in 0..<30 {
+  /// A bound that only stops a test that would hang: what is waited for is a state.
+  private static let patience = Duration.seconds(10)
+
+  /// Laid out until the overview is `width` wide. Says where it stands when the bound cuts it off.
+  private func waitUntil(
+    _ step: String, _ window: NSWindow, overviewIs width: Double
+  ) async throws {
+    let deadline = ContinuousClock.now + Self.patience
+    while ContinuousClock.now < deadline {
       window.layoutIfNeeded()
-      try? await Task.sleep(for: .milliseconds(5))
+      if overviewWidth(in: window) == width { return }
+      try await Task.sleep(for: .milliseconds(10))
     }
+    Issue.record(
+      "\(step): the overview stayed \(overviewWidth(in: window).map { "\($0)" } ?? "absent"), not \(width)"
+    )
+    throw CancellationError()
   }
 
   /// The overview's width, from the view that takes its wheel: its frame is the overview's.
@@ -84,14 +97,12 @@ struct OverviewWidthTests {
   func heldThenLetGo() async throws {
     let (window, slot) = host(width: 850)
     defer { window.close() }
-    await settle(window)
-    slot.held = 1700
-    await settle(window)
-    #expect(try #require(overviewWidth(in: window)) == nominal(1700))
-    slot.held = nil
-    await settle(window)
-    #expect(try #require(overviewWidth(in: window)) == nominal(850))
     #expect(nominal(850) < nominal(1700))
+    try await waitUntil("shown", window, overviewIs: nominal(850))
+    slot.held = 1700
+    try await waitUntil("held wide", window, overviewIs: nominal(1700))
+    slot.held = nil
+    try await waitUntil("let go", window, overviewIs: nominal(850))
   }
 
   @Test(
@@ -101,21 +112,18 @@ struct OverviewWidthTests {
     defer { window.close() }
     slot.isActive = false
     slot.held = 1700
-    await settle(window)
+    try await waitUntil("hidden wide", window, overviewIs: nominal(1700))
     slot.isActive = true
     slot.held = nil
-    await settle(window)
-    #expect(try #require(overviewWidth(in: window)) == nominal(850))
+    try await waitUntil("shown narrower", window, overviewIs: nominal(850))
   }
 
   @Test("A window narrowed takes the overview down to the margin it leaves")
   func windowNarrowed() async throws {
     let (window, _) = host(width: 1700)
     defer { window.close() }
-    await settle(window)
-    #expect(try #require(overviewWidth(in: window)) == nominal(1700))
+    try await waitUntil("wide", window, overviewIs: nominal(1700))
     window.setContentSize(NSSize(width: 850, height: 800))
-    await settle(window)
-    #expect(try #require(overviewWidth(in: window)) == nominal(850))
+    try await waitUntil("narrowed", window, overviewIs: nominal(850))
   }
 }
