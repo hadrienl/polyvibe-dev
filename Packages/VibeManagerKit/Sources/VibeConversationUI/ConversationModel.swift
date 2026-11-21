@@ -1334,18 +1334,18 @@ public final class ConversationModel {
   }
 
   /// What a bookmark says of its message, as the rotor reads it: the start of its text, or what
-  /// the tools did. A message Vibe Manager or a coordinator sent (#568) says who wrote it, as it
+  /// the tools did. A message Polyvibe or a coordinator sent (#568) says who wrote it, as it
   /// does folded, before its words.
   public static func bookmarkLabel(of block: ConversationBlock) -> String {
     guard let relayed = relayedMessage(of: block) else { return bookmarkExcerpt(of: block) }
-    // Vibe Manager's summary names the sessions already, when there are any.
+    // Polyvibe's summary names the sessions already, when there are any.
     let summary = RelayedMessageView.summary(of: relayed)
     if case .application = relayed.sender, !relayed.children.isEmpty { return oneLine(summary) }
     let words = bookmarkExcerpt(of: block)
     return words.isEmpty ? summary : oneLine(summary + " · " + words)
   }
 
-  /// The start of a bookmarked message, under who wrote it in its preview: for Vibe Manager's
+  /// The start of a bookmarked message, under who wrote it in its preview: for Polyvibe's
   /// news, the sessions it is about, never their identifiers — its words when it names none —;
   /// for a coordinator's message, its words as they read; for the user's, their words as the
   /// conversation shows them.
@@ -1362,7 +1362,7 @@ public final class ConversationModel {
       switch entry.content {
       case .userPrompt(let prompt, let attachments):
         // As its bubble shows it — a reply's own words (#565), without the paths that became
-        // attachments —, and without the note Vibe Manager put in front once coordination was
+        // attachments —, and without the note Polyvibe put in front once coordination was
         // turned on or off (#352): the bubble keeps it, but it would name every such message
         // alike.
         let shown = ReplyLinks.shown(prompt, attachments: attachments).message
@@ -1378,7 +1378,7 @@ public final class ConversationModel {
     return oneLine(text)
   }
 
-  /// A message Vibe Manager or the session's coordinator sent it.
+  /// A message Polyvibe or the session's coordinator sent it.
   static func relayedMessage(of block: ConversationBlock) -> RelayedMessage? {
     guard case .entry(let entry) = block,
       case .userPrompt(let text, let attachments) = entry.content

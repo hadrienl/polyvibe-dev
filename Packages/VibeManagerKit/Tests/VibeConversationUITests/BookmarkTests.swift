@@ -195,18 +195,18 @@ struct BookmarkTests {
   }
 
   @Test(
-    "Vibe Manager's news is named by who sent it and the sessions it is about, not their identifiers"
+    "Polyvibe's news is named by who sent it and the sessions it is about, not their identifiers"
   )
   func applicationNews() {
     let block = Self.prompt(
       """
-      [Vibe Manager] 2 events:
+      [Polyvibe] 2 events:
       - “Revue générale” (B72A6790-1C2D-4E5F-8A9B-0C1D2E3F4A5B) finished its turn.
       - “#12 export” (0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D) stopped: its agent is no longer running.
       """)
     #expect(ConversationModel.bookmarkExcerpt(of: block) == "Revue générale, #12 export")
     #expect(
-      ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · Revue générale, #12 export")
+      ConversationModel.bookmarkLabel(of: block) == "Polyvibe · Revue générale, #12 export")
   }
 
   @Test("A coordinator's message is named by its coordinator, then its words without their marks")
@@ -246,13 +246,13 @@ struct BookmarkTests {
     #expect(ConversationModel.bookmarkExcerpt(of: block) == "Ship it")
   }
 
-  @Test("Vibe Manager's news that names no session is named by its words")
+  @Test("Polyvibe's news that names no session is named by its words")
   func applicationNewsWithoutSessions() {
     let block = Self.prompt(CoordinationInbox.message(for: [.wake("is #12 merged?", at: .now)]))
     let excerpt = ConversationModel.bookmarkExcerpt(of: block)
     #expect(excerpt.contains("is #12 merged?"))
     #expect(!excerpt.contains("\\"))
-    #expect(ConversationModel.bookmarkLabel(of: block) == "Vibe Manager · " + excerpt)
+    #expect(ConversationModel.bookmarkLabel(of: block) == "Polyvibe · " + excerpt)
   }
 
   @Test("A coordinator's lists, headings and quotes lose their marks")

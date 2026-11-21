@@ -27,7 +27,7 @@ public struct RelayedMessage: Equatable, Sendable {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard CoordinatorInstructions.userText(of: trimmed) == nil,
       // A preface alone: the user's message was only files.
-      trimmed != CoordinatorInstructions.turnedOn, trimmed != CoordinatorInstructions.turnedOff
+      !CoordinatorInstructions.prefaces.contains(trimmed)
     else { return nil }
     if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) {
       let rest = trimmed.dropFirst(CoordinationPolicy.coordinatorMark.count)
@@ -38,8 +38,8 @@ public struct RelayedMessage: Equatable, Sendable {
       body = rest[close.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
       return
     }
-    guard trimmed.hasPrefix(CoordinatorInstructions.applicationMark) else { return nil }
-    let rest = trimmed.dropFirst(CoordinatorInstructions.applicationMark.count)
+    guard let mark = CoordinatorInstructions.applicationMark(of: trimmed) else { return nil }
+    let rest = trimmed.dropFirst(mark.count)
       .trimmingCharacters(in: .whitespaces)
     var lines = rest.split(separator: "\n", omittingEmptySubsequences: false)
     // « 2 events: », the title of Polyvibe's only message of its own: the list says as much.

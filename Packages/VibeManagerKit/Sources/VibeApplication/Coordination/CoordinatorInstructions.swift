@@ -52,10 +52,10 @@ public enum CoordinatorInstructions {
   /// front of the user's message.
   public static func userText(of prompt: String) -> String? {
     let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-    for preface in [turnedOn, turnedOff] where trimmed.hasPrefix(preface + "\n\n") {
+    for preface in prefaces where trimmed.hasPrefix(preface + "\n\n") {
       return String(trimmed.dropFirst(preface.count + 2))
     }
-    if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) || trimmed.hasPrefix(applicationMark) {
+    if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) || applicationMark(of: trimmed) != nil {
       return nil
     }
     return prompt
@@ -63,6 +63,20 @@ public enum CoordinatorInstructions {
 
   /// What every message of Polyvibe's to an agent opens with.
   static let applicationMark = "[Polyvibe]"
+
+  /// The mark of the messages sent before the application was renamed (ADR 0046): they are
+  /// still in the conversations of the sessions created then.
+  static let formerApplicationMark = "[Vibe Manager]"
+
+  /// The mark a prompt opens with, when the application typed it, under either name.
+  static func applicationMark(of prompt: String) -> String? {
+    [applicationMark, formerApplicationMark].first { prompt.hasPrefix($0) }
+  }
+
+  /// Both prefaces, as written now and before the rename.
+  static let prefaces = [turnedOn, turnedOff].flatMap {
+    [$0, formerApplicationMark + $0.dropFirst(applicationMark.count)]
+  }
 
   /// Put in front of the user's next message once they turned coordination on while the agent
   /// runs.
