@@ -205,8 +205,9 @@ public enum ConversationMoments {
   /// What a command line did that is a moment: its `git` commits, pushes, branches and worktrees,
   /// its `gh` and `glab` tickets and pull requests.
   ///
-  /// A commit is one only when `git commit` printed its line, a push when the line succeeded or
-  /// its output shows the branch pushed: `&&`, `;` and `|| true` make the line's exit say little
+  /// A commit is one only when `git commit` printed its line, a push when what it printed under
+  /// its `To` shows a branch pushed — or, when nothing of it is shown, when the line succeeded and
+  /// says nothing was refused: `&&`, `;`, `| tail` and `|| true` make the line's exit say little
   /// of each command. The rest counts only once the whole line `succeeded`.
   static func commandMoments(
     _ line: String, output: String, succeeded: Bool = true
@@ -215,15 +216,12 @@ public enum ConversationMoments {
     guard line.contains("git") || line.contains("gh") || line.contains("glab") else { return [] }
     let line = ResourceRecognizer.withoutHereDocuments(line)
     var found: [ConversationMoment.Detail] = []
-    // Read only once a commit is found: `git log`, `git diff` print much and commit nothing.
-    var commits: CommitLines?
+    var printed = PrintedLines(output)
     for words in ShellWords.commands(in: line) {
       guard let invocation = Invocation(words) else { continue }
       switch invocation.program {
       case "git":
-        if commits == nil, invocation.arguments.contains("commit") { commits = CommitLines(output) }
-        found += gitMoments(
-          invocation, output: output, succeeded: succeeded, commits: &commits)
+        found += gitMoments(invocation, succeeded: succeeded, printed: &printed)
       // A `where` would guard only the last of the names.
       case "gh", "glab":
         if succeeded { found += forgeMoments(invocation, output: output) }
@@ -234,7 +232,7 @@ public enum ConversationMoments {
   }
 
   private static func gitMoments(
-    _ invocation: Invocation, output: String, succeeded: Bool, commits: inout CommitLines?
+    _ invocation: Invocation, succeeded: Bool, printed: inout PrintedLines
   ) -> [ConversationMoment.Detail] {
     guard let command = ResourceRecognizer.GitCommand(invocation, directory: "/") else {
       return []
@@ -245,12 +243,14 @@ public enum ConversationMoments {
       let message = command.value(of: "m", "--message").flatMap { $0.flatMap(firstLine) }
       // Read in order even when the message is known: the next commit's line is the next one.
       // None printed, none made — unless it was asked to print nothing, and the line succeeded.
-      guard let printed = commits?.next() else {
+      guard let line = printed.nextCommit() else {
         let quiet = command.rest.contains { $0 == "-q" || $0 == "--quiet" }
         return quiet && succeeded ? [.commit(subject: message)] : []
       }
-      return [.commit(subject: message ?? printed.subject)]
+      return [.commit(subject: message ?? line.subject)]
     case "push":
+      // Read in order whatever it pushes: the next push's lines are the next ones.
+      let section = printed.nextPush()
       if command.rest.contains(where: {
         ["-d", "--delete", "--tags", "--all", "--mirror", "--dry-run", "-n"].contains($0 ?? "")
       }) {
@@ -259,10 +259,16 @@ public enum ConversationMoments {
       let refspec = pushedRefspec(command)
       // `git push origin :old` deletes a branch.
       if refspec?.hasPrefix(":") == true { return [] }
-      let printed = pushedBranch(in: output)
-      // Refused, its line fails: only what it printed tells it pushed.
-      guard succeeded || printed != nil else { return [] }
-      return [.push(branch: refspec.flatMap(destination(of:)) ?? printed)]
+      let pushed: [String]
+      if let section {
+        pushed = section.pushed
+      } else {
+        // Nothing of it shown: the line's word, unless the line says something was refused.
+        guard succeeded, !printed.tellsOfARefusal else { return [] }
+        pushed = []
+      }
+      guard section == nil || !pushed.isEmpty else { return [] }
+      return [.push(branch: refspec.flatMap(destination(of:)) ?? pushed.first)]
     case "checkout", "switch", "branch", "worktree":
       guard succeeded else { return [] }
       // The branches and worktrees it created, as the journal reads them.
@@ -312,20 +318,6 @@ public enum ConversationMoments {
     return destination.flatMap { ResourceRecognizer.normalizedBranch(String($0)) }
   }
 
-  private static let pushedPattern = try? NSRegularExpression(
-    pattern: #"^\s*[*+=!-]?\s*(?:\[new branch\]|[0-9a-f]+\.\.\.?[0-9a-f]+)\s+\S+\s+->\s+(\S+)"#,
-    options: .anchorsMatchLines)
-
-  /// `   1a2b3c4..5d6e7f8  main -> main`, ` * [new branch]      feature -> feature`.
-  static func pushedBranch(in output: String) -> String? {
-    guard let pushedPattern,
-      let match = pushedPattern.firstMatch(
-        in: output, range: NSRange(output.startIndex..., in: output)),
-      let range = Range(match.range(at: 1), in: output)
-    else { return nil }
-    return ResourceRecognizer.normalizedBranch(String(output[range]))
-  }
-
   private static func forgeMoments(
     _ invocation: Invocation, output: String
   ) -> [ConversationMoment.Detail] {
@@ -367,6 +359,76 @@ public enum ConversationMoments {
       let range = Range(match.range(at: 1), in: output)
     else { return nil }
     return String(output[range])
+  }
+
+  /// What a command line printed, read by its commands in their order: each commit its line,
+  /// each push its section. Read only once a command asks: most print neither.
+  struct PrintedLines {
+    let output: String
+    private var commits: CommitLines?
+    private var pushes: PushLines?
+
+    init(_ output: String) { self.output = output }
+
+    mutating func nextCommit() -> CommitLines.Printed? {
+      if commits == nil { commits = CommitLines(output) }
+      return commits?.next()
+    }
+
+    mutating func nextPush() -> PushLines.Section? {
+      if pushes == nil { pushes = PushLines(output) }
+      return pushes?.next()
+    }
+
+    /// What `git push` says of a ref refused, even with its lines cut: `| tail` keeps its hints.
+    var tellsOfARefusal: Bool {
+      ["[rejected]", "[remote rejected]", "failed to push", "Updates were rejected"]
+        .contains { output.contains($0) }
+    }
+  }
+
+  /// What `git push` prints of its refs under `To <url>`, one section per push of the line, in
+  /// order: `   1a2b3c4..5d6e7f8  main -> main`, ` * [new branch]  feature -> feature`,
+  /// ` ! [rejected]  main -> main (fetch first)`. `git fetch` and `git pull` print theirs under
+  /// `From`: never read.
+  struct PushLines {
+    struct Section: Equatable {
+      /// The branches it pushed, refused ones aside.
+      var pushed: [String] = []
+    }
+
+    private var sections: [Section] = []
+
+    private static let refPattern = try? NSRegularExpression(
+      pattern: #"^\s*([+*=!-])?\s*(\[[^\]]+\]|[0-9a-f]+\.\.\.?[0-9a-f]+)\s+\S+\s+->\s+(\S+)"#)
+
+    init(_ output: String) {
+      guard output.contains("To "), let pattern = Self.refPattern else { return }
+      var current: Section?
+      for line in output.split(whereSeparator: \.isNewline).map(String.init) {
+        if line.hasPrefix("To ") || line.hasPrefix("From ") {
+          if let current { sections.append(current) }
+          current = line.hasPrefix("To ") ? Section() : nil
+          continue
+        }
+        guard current != nil,
+          let match = pattern.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
+          let summary = Range(match.range(at: 2), in: line),
+          let destination = Range(match.range(at: 3), in: line)
+        else { continue }
+        let flag = Range(match.range(at: 1), in: line).map { line[$0] } ?? ""
+        // Refused, up to date or deleted: nothing pushed.
+        guard !["!", "=", "-"].contains(flag), !line[summary].contains("rejected"),
+          let branch = ResourceRecognizer.normalizedBranch(String(line[destination]))
+        else { continue }
+        current?.pushed.append(branch)
+      }
+      if let current { sections.append(current) }
+    }
+
+    mutating func next() -> Section? {
+      sections.isEmpty ? nil : sections.removeFirst()
+    }
   }
 
   /// The lines `git commit` prints, `[main 1a2b3c4] Subject`, read one per commit of the line;

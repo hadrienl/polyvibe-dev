@@ -87,7 +87,7 @@ struct ConversationMomentsTests {
     // What a failed line printed of a push still tells it went.
     #expect(
       details(
-        "git push origin a; false", output: "   1a2b3c4..5d6e7f8  a -> a\n",
+        "git push origin a; false", output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  a -> a\n",
         state: .failed(exitCode: 1)) == [.push(branch: "a")])
     #expect(details("git switch -c late && false", state: .failed(exitCode: 1)).isEmpty)
     #expect(details("git checkout -b late && false", state: .failed(exitCode: 1)).isEmpty)
@@ -111,7 +111,9 @@ struct ConversationMomentsTests {
       details("git push", output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  main -> main\n")
         == [.push(branch: "main")])
     #expect(
-      details("rtk git push", output: " * [new branch]      feature -> feature\n") == [
+      details(
+        "rtk git push", output: "To github.com:a/b.git\n * [new branch]      feature -> feature\n"
+      ) == [
         .push(branch: "feature")
       ])
     #expect(details("git push") == [.push(branch: nil)])
@@ -119,6 +121,50 @@ struct ConversationMomentsTests {
     #expect(details("git push origin :old").isEmpty)
     #expect(details("git push -o ci.skip origin feat") == [.push(branch: "feat")])
     #expect(details("git push --tags").isEmpty)
+  }
+
+  /// What `git push` prints when its branch is refused.
+  private static let refused = """
+    To github.com:a/b.git
+     ! [rejected]        main -> main (fetch first)
+    error: failed to push some refs to 'github.com:a/b.git'
+    hint: Updates were rejected because the remote contains work that you do not
+    hint: have locally. This is usually caused by another repository pushing to
+    hint: the same ref. If you want to integrate the remote changes, use
+    hint: 'git pull' before pushing again.
+    hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+    """
+
+  @Test("A push refused is none: a fetch's lines, a pipe's success and another push's say nothing")
+  func refusedPushes() {
+    let pulled = """
+      From github.com:a/b
+       * branch            main       -> FETCH_HEAD
+         1a2b3c4..5d6e7f8  main       -> origin/main
+      Successfully rebased and updated refs/heads/main.
+
+      """
+    #expect(
+      details(
+        "git pull --rebase && git push", output: pulled + Self.refused,
+        state: .failed(exitCode: 1)
+      ).isEmpty)
+    // `tail` succeeds whatever the push did, and keeps only its hints.
+    let tail = Self.refused.split(separator: "\n").suffix(5).joined(separator: "\n")
+    #expect(details("git push 2>&1 | tail -5", output: tail).isEmpty)
+    let both = """
+      To github.com:a/b.git
+       * [new branch]      a -> a
+      To github.com:a/b.git
+       ! [remote rejected] b -> b (pre-receive hook declined)
+      error: failed to push some refs to 'github.com:a/b.git'
+
+      """
+    #expect(
+      details("git push origin a && git push origin b", output: both, state: .failed(exitCode: 1))
+        == [.push(branch: "a")])
+    #expect(details("git fetch && git push", output: pulled + both) == [.push(branch: "a")])
   }
 
   @Test("Branches and worktrees created, not those only switched to")
