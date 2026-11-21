@@ -250,7 +250,7 @@ struct ConversationMomentsTests {
     let entries = [
       ConversationEntry(id: "u", content: .userPrompt("Commit", attachments: [])),
       Self.shell("s1", "git status"),
-      Self.shell("s2", "git commit -m one"),
+      Self.shell("s2", "git commit -m one", output: Self.committed),
       Self.shell("s3", "git push origin main"),
     ]
     let grouped = ConversationGrouping.blocks(entries, grouping: true)
@@ -270,7 +270,10 @@ struct ConversationMomentsTests {
 
   @Test("A bookmark comes before the block's own moments, and a hidden kind is left out")
   func hidden() {
-    let entries = [Self.shell("s", "git commit -m one", tests: TestOutcome(total: 2, failed: 0))]
+    let entries = [
+      Self.shell(
+        "s", "git commit -m one", output: Self.committed, tests: TestOutcome(total: 2, failed: 0))
+    ]
     let placed = ConversationMoments.placed(
       in: ConversationGrouping.blocks(entries), bookmarks: ["s"])
     #expect(placed.map(\.moment.kind) == [.bookmark, .git, .tests])
