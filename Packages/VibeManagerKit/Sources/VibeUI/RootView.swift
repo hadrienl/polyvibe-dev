@@ -511,6 +511,10 @@ public struct RootView: View {
             DeviceMirrorToolbarButton(model: model)
           }
         }
+        // Right of the simulators: the session's notes, under the button or in their panel (#578).
+        ToolbarItem(placement: .primaryAction) {
+          NotesToolbarButton(model: model)
+        }
         ToolbarItem(placement: .primaryAction) {
           // Never disabled: with the column open and the selection gone, a disabled button
           // would be the only way to close it. The column says so itself instead.
@@ -840,9 +844,6 @@ public struct RootView: View {
         { permissions.openSystemSettings() }
       },
       agentNames: model.agentNames,
-      notes: model.notes,
-      ticketTitles: model.ticketTitles,
-      leaveNotes: { model.focusSession() },
       coordination: model
     )
   }
