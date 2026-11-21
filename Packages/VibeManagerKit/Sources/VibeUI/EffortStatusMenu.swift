@@ -3,15 +3,20 @@ import VibeConversationUI
 import VibeDomain
 
 /// What the status bar of a session's terminal and conversation shows beside its Close: the
-/// menu of reasoning effort (#411), then the button of the drawer.
+/// menu of reasoning effort (#411), the usage (#574), then the button of the drawer.
 struct SessionStatusAccessory: View {
   let model: AppModel
   let session: WorkSession
 
   var body: some View {
     let isRunning = model.launcher?.isRunning(session.id) ?? false
-    HStack(spacing: 8) {
+    StatusAccessoryStack {
       EffortStatusMenu(model: model, session: session)
+      if let usage = model.usage {
+        SessionUsageButton(
+          usage: usage, session: session, isShown: model.selectedSessionID == session.id,
+          agentNames: model.agentNames)
+      }
       if model.terminals != nil {
         DrawerStatusButton(model: model, session: session)
       }
@@ -25,6 +30,19 @@ struct SessionStatusAccessory: View {
   private struct EffortRefresh: Equatable {
     let agent: SessionAgentConfiguration?
     let isRunning: Bool
+  }
+}
+
+/// The buttons beside the status bar's Close, served before its state text. The bar shares what
+/// room is left evenly between them otherwise: the Usage label lost its cost with room to spare
+/// beside a long state (#574). The text gives way first; the label narrows only when the bar runs
+/// out of room.
+struct StatusAccessoryStack<Content: View>: View {
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    HStack(spacing: 8) { content }
+      .layoutPriority(1)
   }
 }
 

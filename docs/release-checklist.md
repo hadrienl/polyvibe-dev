@@ -13,6 +13,8 @@ GitHub.
 - [ ] `main` is where the release is cut from, pushed, and CI is green on its last commit.
 - [ ] The `ui-smoke` workflow is green on that commit (Actions → CI → Run workflow, if it has not
       run since).
+- [ ] The model prices shipped for a first launch offline are fresh: `Scripts/update-model-prices.sh`,
+      and its `model-prices.json` committed on `main` if it changed (#574).
 - [ ] The version follows the previous one: `1.2.3`, or `1.2.3-rc.1` for a release candidate.
 - [ ] A final version comes after a release candidate of the same commit whose Release workflow
       went to the end: CI builds in Release but signs nothing, so signing, notarization and the

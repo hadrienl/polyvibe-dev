@@ -254,8 +254,6 @@ public enum UsageUnavailability: Hashable, Sendable {
   case notReportedByAgent
   /// The agent does, but no transcript of this session was found and nothing was kept of one.
   case noTranscript
-  /// Neither CLI reports a cost that holds together.
-  case notReliable
   case trackingOff
 }
 
@@ -347,6 +345,14 @@ public struct UsageRow: Identifiable, Hashable, Sendable {
   public var hasReportedTokens = false
   /// The providers whose runs or tokens are in this row.
   public var providerIDs: Set<String> = []
+  /// What its tokens would have cost at their models' public prices (#574), for the models that
+  /// have one: an API equivalent.
+  public var cost: Decimal = 0
+  /// Whether tokens of a model with a known price reached this row. Without them, the cost is
+  /// unknown rather than zero.
+  public var hasPricedTokens = false
+  /// Whether tokens of a model without a known price reached it: they are left out of `cost`.
+  public var hasUnpricedTokens = false
 
   public var id: Key { key }
 
@@ -384,7 +390,8 @@ public enum UsageAggregator {
     period: DateInterval?,
     grouping: UsageGrouping,
     now: Date,
-    calendar: Calendar
+    calendar: Calendar,
+    cost: (TokenUsageBucket) -> Decimal? = { _ in nil }
   ) -> UsageReport {
     var rows: [UsageRow.Key: UsageRow] = [:]
     var total = UsageRow(key: .total)
@@ -440,6 +447,17 @@ public enum UsageAggregator {
         row.responses += bucket.responses
         row.hasReportedTokens = true
         row.providerIDs.insert(bucket.providerID)
+      }
+      if !bucket.tokens.isZero {
+        let price = cost(bucket)
+        add(key) { row in
+          if let price {
+            row.cost += price
+            row.hasPricedTokens = true
+          } else {
+            row.hasUnpricedTokens = true
+          }
+        }
       }
       let dayKey = "\(bucket.day)|\(bucket.providerID)"
       var entry =

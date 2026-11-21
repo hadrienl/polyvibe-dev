@@ -181,6 +181,14 @@ public struct UsageWindow: View {
       ) { row in
         tokenCell(row) { $0.cacheRead }
       }
+      TableColumn(
+        Text(
+          LocalizedStringResource(
+            "Cost", bundle: .module, comment: "A session's usage: what it cost."))
+      ) { row in
+        costCell(row)
+      }
+      .width(min: 70, ideal: 90)
     }
     .contextMenu(forSelectionType: UsageRow.Key.self) { _ in
     } primaryAction: { keys in
@@ -202,10 +210,39 @@ public struct UsageWindow: View {
     .monospacedDigit()
   }
 
+  /// The cost at the public prices (#574): `≈`, an API equivalent; what has no price is said,
+  /// never a zero.
+  private func costCell(_ row: UsageRow) -> some View {
+    Group {
+      if !row.hasPricedTokens && !row.hasUnpricedTokens {
+        // No token, or only empty answers: nothing to price.
+        Text(verbatim: "—")
+      } else if row.hasPricedTokens {
+        HStack(spacing: 4) {
+          Text(verbatim: UsagePresentation.cost(row.cost))
+          if row.hasUnpricedTokens {
+            Image(systemName: "exclamationmark.triangle")
+              .foregroundStyle(Color.usageWarning)
+              .accessibilityLabel(Text(verbatim: UsagePresentation.unpricedModelsLeftOut()))
+          }
+        }
+        .instantTooltip(row.hasUnpricedTokens ? UsagePresentation.unpricedModelsLeftOut() : "")
+      } else {
+        Text(verbatim: UsagePresentation.unknownPrice())
+          .foregroundStyle(Color.usageWarning)
+          .instantTooltip(UsagePresentation.costExplanation)
+      }
+    }
+    .fontWeight(row.key == .total ? .semibold : .regular)
+    .monospacedDigit()
+  }
+
   private var footer: some View {
     VStack(alignment: .leading, spacing: 4) {
       Label {
-        Text("Cost: not available — neither CLI reports a reliable cost.", bundle: .module)
+        Text(
+          "Costs (≈) are an API equivalent: the tokens at the models' public prices.",
+          bundle: .module, comment: "The Usage window's footer, about its Cost column.")
       } icon: {
         Image(systemName: "info.circle")
       }

@@ -1414,8 +1414,9 @@ private struct UsageSettingsRow: View {
       }
       Text(
         """
-        Running time, runs and the tokens your agents' transcripts report, kept on this Mac only. \
-        Nothing is sent anywhere, and what the agents were asked or answered is never read.
+        Running time, runs and the tokens your agents' transcripts report, kept on this Mac only, \
+        with their cost at public prices, read once a day from LiteLLM's public list. Nothing \
+        about you is sent, and what the agents were asked or answered is never read.
         """,
         bundle: .module
       )

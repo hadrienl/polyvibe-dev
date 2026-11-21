@@ -101,6 +101,16 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
   public var hasWebView: (@MainActor (SessionID) -> Bool)?
   /// Told of what the user types into a session's terminal, or sends from its composer (#417).
   public var keyboardInput: (@MainActor (SessionID) -> Void)?
+  /// Told of a session as an agent's launch wrote it: the identifier of its conversation, as soon
+  /// as the agent has one (#574).
+  public var agentRecorded: (@MainActor (WorkSession) -> Void)?
+
+  /// The store as a launch's observer writes to it: what it records is told to `agentRecorded`.
+  private var observedRepository: any SessionRepository {
+    WriteReportingSessionRepository(repository) { [weak self] session in
+      await self?.agentRecorded?(session)
+    }
+  }
 
   /// Told of each agent process as soon as it is known — started, or adopted from the terminal
   /// host — so that what it is can be read before its number could be given to another (#69).
@@ -784,7 +794,7 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
       let observing = await agents.provider(id: AgentProviderID(providerID))
         as? any AgentLaunchObserverProviding
     else { return nil }
-    let observer = observing.launchObserver(for: session.id, repository: repository)
+    let observer = observing.launchObserver(for: session.id, repository: observedRepository)
     if let identifier { await observer.adopted(awaitedResumeIdentifier: identifier) }
     return observer
   }
@@ -1178,7 +1188,7 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
       return
     }
 
-    let observer = observing.launchObserver(for: session.id, repository: repository)
+    let observer = observing.launchObserver(for: session.id, repository: observedRepository)
     observers[session.id] = observer
     await observer.launched(plan: plan, hooksApproved: hooksApproved)
 

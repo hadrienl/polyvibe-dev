@@ -1,35 +1,14 @@
+import AppKit
 import SwiftUI
 import VibeApplication
 import VibeConversationUI
 import VibeDomain
 
-/// The usage of the selected session: the content of the inspector's Usage section (#66).
+/// The usage of a session, from the figures alone: what the popover of the status bar's Usage
+/// button shows (#574), in three parts — the context, the cost, then the rest.
 ///
-/// What the application measured — running time, runs — is shown as is. What the CLI reported —
-/// tokens — carries `≈` and its source. What nobody knows says why, and is never a zero.
-struct SessionUsageSection: View {
-  let session: WorkSession
-  let usage: UsageModel
-  let agentNames: [String: String]
-
-  var body: some View {
-    SessionUsageFigures(
-      figures: usage.sessionUsage[session.id],
-      isTrackingEnabled: usage.isTrackingEnabled,
-      runsRecordedSince: usage.runsRecordedSince.flatMap { $0 > session.createdAt ? $0 : nil },
-      tokenUnavailability: usage.tokenUnavailability(for: session),
-      agentNames: agentNames,
-      context: usage.contextWindows[session.id],
-      contextUnavailability: usage.contextUnavailability(for: session),
-      contextAgentName: session.agent.flatMap { agentNames[$0.transcriptProviderID] })
-  }
-}
-
-/// What `SessionUsageSection` shows, from the figures alone.
-///
-/// Every line keeps its label whole, and every value ends on the right edge, from the narrowest
-/// context column up (#130): a value too long beside its label is said a part per line, then
-/// goes under its label.
+/// Every line keeps its label whole, and every value ends on the right edge (#130): a value too
+/// long beside its label is said a part per line, then goes under its label.
 struct SessionUsageFigures: View {
   let figures: SessionUsage?
   let isTrackingEnabled: Bool
@@ -51,19 +30,22 @@ struct SessionUsageFigures: View {
     VStack(alignment: .leading, spacing: 4) {
       SessionContextWindowLine(
         usage: context, unavailability: contextUnavailability, agentName: contextAgentName)
+      Divider().padding(.vertical, 4)
+      cost(figures)
+      Divider().padding(.vertical, 4)
       if !isTrackingEnabled {
-        InspectorLine(
+        UsageLine(
           label: Text(Self.usageTitle),
           value: UsagePresentation.unavailable(.trackingOff, locale: locale))
       }
-      InspectorLine(
+      UsageLine(
         label: Text(
           LocalizedStringResource(
             "Running time", bundle: .module, comment: "A session's usage: how long its agent ran.")
         ),
         value: figures.map { UsagePresentation.duration($0.total.runningTime) } ?? "—",
         help: UsagePresentation.runningTimeExplanation)
-      InspectorLine(
+      UsageLine(
         label: Text(
           LocalizedStringResource(
             "Runs", bundle: .module,
@@ -80,20 +62,16 @@ struct SessionUsageFigures: View {
         .fixedSize(horizontal: false, vertical: true)
       }
       tokens(figures)
-      InspectorLine(
-        label: Text(
-          LocalizedStringResource(
-            "Cost", bundle: .module, comment: "A session's usage: what it cost.")),
-        value: String(
-          localized: LocalizedStringResource(
-            "Not available", locale: locale, bundle: .module,
-            comment: "A session's cost is unknown.")),
-        help: UsagePresentation.costExplanation)
     }
   }
 
   private static var usageTitle: LocalizedStringResource {
     LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading.")
+  }
+
+  private static var costTitle: LocalizedStringResource {
+    LocalizedStringResource(
+      "Cost", bundle: .module, comment: "A session's usage: what it cost.")
   }
 
   private static var tokensTitle: LocalizedStringResource {
@@ -104,16 +82,16 @@ struct SessionUsageFigures: View {
   @ViewBuilder
   private func tokens(_ figures: SessionUsage?) -> some View {
     if figures == nil {
-      InspectorLine(
+      UsageLine(
         label: Text(Self.tokensTitle), value: "—", help: UsagePresentation.tokensExplanation)
     } else if let reason = tokenUnavailability {
-      InspectorLine(
+      UsageLine(
         label: Text(Self.tokensTitle),
         value: UsagePresentation.unavailable(reason, locale: locale),
         help: UsagePresentation.tokensExplanation)
     } else if let figures, figures.total.hasReportedTokens {
       let parts = UsagePresentation.tokenParts(figures.total.tokens, locale: locale)
-      InspectorLine(
+      UsageLine(
         label: Text(Self.tokensTitle),
         value: "≈ " + parts.joined(separator: " · "),
         parts: parts.enumerated().map { $0.offset == 0 ? "≈ " + $0.element : $0.element },
@@ -121,9 +99,8 @@ struct SessionUsageFigures: View {
       ForEach(figures.models) { row in
         if case .model(let providerID, let model) = row.key {
           // The model's name is never cut: two models of an agent differ only at its end.
-          InspectorLine(
-            label: Text(
-              verbatim: "\(agentNames[providerID] ?? providerID) · \(model ?? defaultModel)"),
+          UsageLine(
+            label: modelLabel(providerID: providerID, model: model),
             value: UsagePresentation.tokenSummary(row.tokens, locale: locale),
             parts: UsagePresentation.tokenParts(row.tokens, locale: locale),
             partPerLine: false,
@@ -133,7 +110,7 @@ struct SessionUsageFigures: View {
           .padding(.leading, 12)
         }
       }
-      InspectorLine(
+      UsageLine(
         label: Text(
           LocalizedStringResource(
             "Responses", bundle: .module,
@@ -149,6 +126,75 @@ struct SessionUsageFigures: View {
         .fixedSize(horizontal: false, vertical: true)
       }
     }
+  }
+
+  /// The cost at the public prices, model by model, and what has no price (#574). An estimate,
+  /// said with `≈`; a model without a price is said, never counted as free.
+  @ViewBuilder
+  private func cost(_ figures: SessionUsage?) -> some View {
+    if let figures, figures.total.hasReportedTokens {
+      let estimate = figures.cost
+      if estimate.hasPrice {
+        let total = UsagePresentation.cost(estimate.total, locale: locale)
+        UsageLine(
+          label: Text(Self.costTitle), value: total,
+          help: UsagePresentation.costExplanation,
+          accessibilityValue: UsagePresentation.spokenCost(estimate.total, locale: locale))
+        caption(
+          String(
+            localized: LocalizedStringResource(
+              "API equivalent, at public prices", locale: locale, bundle: .module,
+              comment:
+                "Under a session's cost: what the tokens would have cost paid by the token.")))
+      } else if !estimate.unpriced.isEmpty {
+        UsageLine(
+          label: Text(Self.costTitle), value: unknownPrice, help: UsagePresentation.costExplanation
+        )
+        .foregroundStyle(Color.usageWarning)
+      } else {
+        // Only empty answers: nothing to price.
+        UsageLine(label: Text(Self.costTitle), value: "—", help: UsagePresentation.costExplanation)
+      }
+      ForEach(figures.models) { row in
+        if case .model(let providerID, let model) = row.key, !row.tokens.isZero {
+          let price = estimate.priced[UsageModelKey(providerID: providerID, model: model)]
+          UsageLine(
+            label: modelLabel(providerID: providerID, model: model),
+            value: price.map { UsagePresentation.cost($0, locale: locale) } ?? unknownPrice,
+            partPerLine: false,
+            font: .caption
+          )
+          .foregroundStyle(price == nil ? Color.usageWarning : Color.secondary)
+          .padding(.leading, 12)
+        }
+      }
+      if estimate.hasPrice, !estimate.unpriced.isEmpty {
+        caption(UsagePresentation.unpricedModelsLeftOut(locale: locale))
+          .foregroundStyle(Color.usageWarning)
+      }
+    } else {
+      UsageLine(
+        label: Text(Self.costTitle),
+        value: figures == nil
+          ? "—" : UsagePresentation.unavailable(tokenUnavailability ?? .noTranscript, locale: locale),
+        help: UsagePresentation.costExplanation)
+    }
+  }
+
+  private var unknownPrice: String {
+    UsagePresentation.unknownPrice(locale: locale)
+  }
+
+  private func caption(_ text: String) -> some View {
+    Text(text)
+      .font(.caption)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+  }
+
+  /// “Claude Code · claude-opus-5-5”: the agent, then the model as its CLI named it.
+  private func modelLabel(providerID: String, model: String?) -> Text {
+    Text(verbatim: "\(agentNames[providerID] ?? providerID) · \(model ?? defaultModel)")
   }
 
   private var defaultModel: String {
@@ -175,7 +221,7 @@ struct SessionContextWindowLine: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 3) {
       if let usage, unavailability == nil {
-        InspectorLine(
+        UsageLine(
           label: Text(Self.title), value: UsagePresentation.context(usage),
           help: source(usage), accessibilityValue: spoken(usage))
         if let percent = usage.percentUsed {
@@ -208,7 +254,7 @@ struct SessionContextWindowLine: View {
           caption(compacted(compaction, now: usage))
         }
       } else {
-        InspectorLine(
+        UsageLine(
           label: Text(Self.title), value: "—",
           help: reason(unavailability ?? .noResponseYet))
         caption(reason(unavailability ?? .noResponseYet))
@@ -307,8 +353,8 @@ struct SessionContextWindowLine: View {
 ///
 /// The value goes beside its label when both fit on one line; else, when it has parts, a part per
 /// line beside its label; else under its label. It ends on the right edge in every case, so the
-/// values of a section stay aligned whichever way each line is laid out.
-struct InspectorLine: View {
+/// values of a part stay aligned whichever way each line is laid out.
+struct UsageLine: View {
   let label: Text
   let value: String
   /// The value in parts, each short enough for a line of its own: runs, tokens.
@@ -444,4 +490,15 @@ private struct DrawnWidthMeasure<Minimum: View>: ViewModifier {
       content
     }
   }
+}
+
+extension Color {
+  /// A figure that could not be counted: a model without a known price (#574). Not orange, which
+  /// says an agent waits for the user (ADR 0024); a dark yellow that stays legible on light.
+  static let usageWarning = Color(
+    nsColor: NSColor(name: nil) { appearance in
+      appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        ? NSColor(srgbRed: 0.91, green: 0.74, blue: 0.23, alpha: 1)
+        : NSColor(srgbRed: 0.68, green: 0.50, blue: 0, alpha: 1)
+    })
 }
