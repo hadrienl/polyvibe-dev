@@ -135,26 +135,13 @@ struct OverviewFilterMenu: View {
   let filters: OverviewFilters
   @Environment(\.conversationTheme) private var theme
 
+  @State private var anchor = NSView()
+
   var body: some View {
     let title = Text("Moment kinds shown", bundle: .module, comment: "The overview's filter menu.")
-    Menu {
-      ForEach(OverviewFilters.kinds, id: \.self) { kind in
-        Toggle(isOn: shown(kind)) {
-          Label {
-            Text(verbatim: MomentPresentation.name(of: kind))
-          } icon: {
-            Image(nsImage: MomentMenuIcon.image(of: kind, theme: theme))
-          }
-        }
-        .badge(filters.count(of: kind))
-      }
-      Divider()
-      Button {
-        filters.showAll(in: model)
-      } label: {
-        Text("Show All", bundle: .module, comment: "The overview's filter menu: every kind shown.")
-      }
-      .disabled(filters.showsAll)
+    Button {
+      let menu = Self.makeMenu(model: model, filters: filters, theme: theme)
+      menu.popUp(positioning: nil, at: NSPoint(x: 0, y: anchor.bounds.minY), in: anchor)
     } label: {
       HStack(spacing: 3) {
         Image(systemName: "line.3.horizontal.decrease")
@@ -173,8 +160,7 @@ struct OverviewFilterMenu: View {
       .background(theme.text.color.opacity(0.07), in: RoundedRectangle(cornerRadius: 4))
       .contentShape(Rectangle())
     }
-    .menuStyle(.button)
-    .menuIndicator(.hidden)
+    .background(MenuAnchor(view: anchor))
     .buttonStyle(.plain)
     .fixedSize()
     .instantTooltip(title)
@@ -183,12 +169,36 @@ struct OverviewFilterMenu: View {
     .accessibilityIdentifier("moment-filter-menu")
   }
 
-  private func shown(_ kind: ConversationMomentKind) -> Binding<Bool> {
-    Binding {
-      filters.shows(kind)
-    } set: { _ in
-      filters.toggle(kind, in: model)
+  /// AppKit owns the rows: SwiftUI's Toggle menu bridge can discard a Label's image.
+  static func makeMenu(
+    model: ConversationModel, filters: OverviewFilters, theme: ConversationTheme
+  ) -> NSMenu {
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    for kind in OverviewFilters.kinds {
+      let item = ClosureMenuItem(title: MomentPresentation.name(of: kind)) {
+        filters.toggle(kind, in: model)
+      }
+      item.image = MomentMenuIcon.image(of: kind, theme: theme)
+      item.state = filters.shows(kind) ? .on : .off
+      item.badge = NSMenuItemBadge(count: filters.count(of: kind))
+      menu.addItem(item)
     }
+    menu.addItem(.separator())
+    let all = ClosureMenuItem(
+      title: String(localized: "Show All", bundle: .module)
+    ) {
+      filters.showAll(in: model)
+    }
+    all.isEnabled = !filters.showsAll
+    menu.addItem(all)
+    return menu
+  }
+
+  private struct MenuAnchor: NSViewRepresentable {
+    let view: NSView
+    func makeNSView(context: Context) -> NSView { view }
+    func updateNSView(_ nsView: NSView, context: Context) {}
   }
 }
 

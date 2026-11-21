@@ -90,6 +90,51 @@ struct OverviewFilterBarTests {
     #expect(asked.isEmpty)
   }
 
+  @Test("Native menu keeps each coloured icon, checkmark and count, including hidden kinds")
+  func nativeMenu() throws {
+    // AppKit dispatches menu actions through the application, also in a command-line test host.
+    _ = NSApplication.shared
+    let model = Self.model()
+    var asked: [(ConversationMomentKind, Bool)] = []
+    model.setMomentKindShown = { asked.append(($0, $1)) }
+    let filters = OverviewFilters(
+      moments: model.moments, appearance: Self.appearance(hiding: ["git"]))
+    let menu = OverviewFilterMenu.makeMenu(model: model, filters: filters, theme: .systemDark)
+    #expect(menu.items.count == OverviewFilters.kinds.count + 2)
+    for (kind, item) in zip(OverviewFilters.kinds, menu.items) {
+      #expect(item.title == MomentPresentation.name(of: kind))
+      #expect(item.state == (kind == .git ? .off : .on))
+      #expect(item.badge?.itemCount == filters.count(of: kind))
+      let image = try #require(item.image)
+      #expect(!image.isTemplate)
+      #expect(image.size.width > 0 && image.size.height > 0)
+      let data = try #require(image.tiffRepresentation)
+      let bitmap = try #require(NSBitmapImageRep(data: data))
+      let hasColour = (0..<bitmap.pixelsWide).contains { x in
+        (0..<bitmap.pixelsHigh).contains { y in
+          guard let colour = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else {
+            return false
+          }
+          return colour.alphaComponent > 0.5
+            && max(colour.redComponent, colour.greenComponent, colour.blueComponent)
+              - min(colour.redComponent, colour.greenComponent, colour.blueComponent) > 0.1
+        }
+      }
+      #expect(hasColour)
+    }
+    let gitIndex = try #require(OverviewFilters.kinds.firstIndex(of: .git))
+    menu.performActionForItem(at: gitIndex)
+    #expect(asked.map(\.0) == [.git])
+    #expect(asked.map(\.1) == [true])
+    #expect(menu.items[OverviewFilters.kinds.count].isSeparatorItem)
+    #expect(menu.items.last?.isEnabled == true)
+    let all = OverviewFilterMenu.makeMenu(
+      model: model,
+      filters: OverviewFilters(moments: model.moments, appearance: Self.appearance()),
+      theme: .systemDark)
+    #expect(all.items.last?.isEnabled == false)
+  }
+
   // MARK: Width
 
   /// The form the bar takes at that width.
