@@ -42,6 +42,15 @@ struct ConversationMomentsTests {
       details(#"git commit --message="Third line""#, output: Self.committed) == [
         .commit(subject: "Third line")
       ])
+    // In a rebase, or a worktree on no branch.
+    #expect(
+      details("git commit -m Detached", output: "[detached HEAD 981c550c] Detached\n") == [
+        .commit(subject: "Detached")
+      ])
+    #expect(
+      details("git commit -F msg.txt", output: "[detached HEAD 981c550c] feat: from a file\n") == [
+        .commit(subject: "feat: from a file")
+      ])
     // What rtk prints of it.
     #expect(
       details("rtk git commit -m Fourth", output: "ok 8b47257\n") == [.commit(subject: "Fourth")])

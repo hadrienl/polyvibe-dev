@@ -431,8 +431,8 @@ public enum ConversationMoments {
     }
   }
 
-  /// The lines `git commit` prints, `[main 1a2b3c4] Subject`, read one per commit of the line;
-  /// `ok 1a2b3c4` when `rtk` shortened it.
+  /// The lines `git commit` prints, `[main 1a2b3c4] Subject` — `[detached HEAD 1a2b3c4]` in a
+  /// rebase —, read one per commit of the line; `ok 1a2b3c4` when `rtk` shortened it.
   struct CommitLines {
     /// A commit made, named when its line says so.
     struct Printed: Equatable {
@@ -442,7 +442,8 @@ public enum ConversationMoments {
     private var printed: [Printed]
 
     private static let pattern = try? NSRegularExpression(
-      pattern: #"^(?:\[[^\]\s]+(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)|ok [0-9a-f]{7,})$"#,
+      pattern:
+        #"^(?:\[(?:detached HEAD|[^\]\s]+)(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)|ok [0-9a-f]{7,})$"#,
       options: .anchorsMatchLines)
 
     init(_ output: String) {
