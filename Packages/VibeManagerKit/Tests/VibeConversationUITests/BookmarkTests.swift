@@ -318,12 +318,15 @@ struct BookmarkTests {
 
   // MARK: - Moments (#572)
 
-  private static func shell(_ id: String, _ command: String) -> ConversationEntry {
+  private static func shell(_ id: String, _ command: String, output: String = "")
+    -> ConversationEntry
+  {
     ConversationEntry(
       id: id,
       content: .tool(
         ToolCall(
-          callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)])))
+          callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)],
+          output: ToolOutput(text: output))))
   }
 
   /// A prompt, a commit, an answer, an error, a push.
@@ -331,7 +334,7 @@ struct BookmarkTests {
     let model = ConversationModel(sessionID: SessionID())
     let entries = [
       ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
-      shell("m1", "git commit -m one"),
+      shell("m1", "git commit -m one", output: "[main 1a2b3c4] one\n"),
       ConversationEntry(id: "m2", content: .agentText("Done")),
       ConversationEntry(id: "m3", content: .notice(.error("Overloaded"))),
       shell("m4", "git push origin main"),

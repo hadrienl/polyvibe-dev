@@ -175,9 +175,11 @@ public enum ConversationMoments {
       return [.plan(call.parameter(.plan).flatMap(firstLine))]
     case .shell:
       var found: [ConversationMoment.Detail] = []
-      // Only what was done: a commit that failed made none. A test run that failed is the point.
-      if call.state == .succeeded, let command = call.parameter(.command) {
-        found += commandMoments(command, output: call.output?.text ?? "")
+      // Only what was done, command by command: a line that failed may have committed before its
+      // push was refused. A test run that failed is the point.
+      if call.state.isFinished, let command = call.parameter(.command) {
+        found += commandMoments(
+          command, output: call.output?.text ?? "", succeeded: call.state == .succeeded)
       }
       if call.state.isFinished, let tests = call.facts.tests {
         found.append(.tests(tests))
@@ -201,8 +203,14 @@ public enum ConversationMoments {
   // MARK: - Commands
 
   /// What a command line did that is a moment: its `git` commits, pushes, branches and worktrees,
-  /// its `gh` and `glab` tickets and pull requests. Read only once it succeeded.
-  static func commandMoments(_ line: String, output: String) -> [ConversationMoment.Detail] {
+  /// its `gh` and `glab` tickets and pull requests.
+  ///
+  /// A commit is one only when `git commit` printed its line, a push when the line succeeded or
+  /// its output shows the branch pushed: `&&`, `;` and `|| true` make the line's exit say little
+  /// of each command. The rest counts only once the whole line `succeeded`.
+  static func commandMoments(
+    _ line: String, output: String, succeeded: Bool = true
+  ) -> [ConversationMoment.Detail] {
     // Most commands are neither: their line is not even cut into words.
     guard line.contains("git") || line.contains("gh") || line.contains("glab") else { return [] }
     let line = ResourceRecognizer.withoutHereDocuments(line)
@@ -214,8 +222,11 @@ public enum ConversationMoments {
       switch invocation.program {
       case "git":
         if commits == nil, invocation.arguments.contains("commit") { commits = CommitLines(output) }
-        found += gitMoments(invocation, output: output, commits: &commits)
-      case "gh", "glab": found += forgeMoments(invocation, output: output)
+        found += gitMoments(
+          invocation, output: output, succeeded: succeeded, commits: &commits)
+      case "gh",
+        "glab" where succeeded:
+        found += forgeMoments(invocation, output: output)
       default: break
       }
     }
@@ -223,7 +234,7 @@ public enum ConversationMoments {
   }
 
   private static func gitMoments(
-    _ invocation: Invocation, output: String, commits: inout CommitLines?
+    _ invocation: Invocation, output: String, succeeded: Bool, commits: inout CommitLines?
   ) -> [ConversationMoment.Detail] {
     guard let command = ResourceRecognizer.GitCommand(invocation, directory: "/") else {
       return []
@@ -233,8 +244,12 @@ public enum ConversationMoments {
       guard !command.rest.contains("--dry-run") else { return [] }
       let message = command.value(of: "m", "--message").flatMap { $0.flatMap(firstLine) }
       // Read in order even when the message is known: the next commit's line is the next one.
-      let printed = commits?.next()
-      return [.commit(subject: message ?? printed)]
+      // None printed, none made — unless it was asked to print nothing, and the line succeeded.
+      guard let printed = commits?.next() else {
+        let quiet = command.rest.contains { $0 == "-q" || $0 == "--quiet" }
+        return quiet && succeeded ? [.commit(subject: message)] : []
+      }
+      return [.commit(subject: message ?? printed.subject)]
     case "push":
       if command.rest.contains(where: {
         ["-d", "--delete", "--tags", "--all", "--mirror", "--dry-run", "-n"].contains($0 ?? "")
@@ -244,8 +259,12 @@ public enum ConversationMoments {
       let refspec = pushedRefspec(command)
       // `git push origin :old` deletes a branch.
       if refspec?.hasPrefix(":") == true { return [] }
-      return [.push(branch: refspec.flatMap(destination(of:)) ?? pushedBranch(in: output))]
-    case "checkout", "switch", "branch", "worktree":
+      let printed = pushedBranch(in: output)
+      // Refused, its line fails: only what it printed tells it pushed.
+      guard succeeded || printed != nil else { return [] }
+      return [.push(branch: refspec.flatMap(destination(of:)) ?? printed)]
+    case "checkout", "switch", "branch",
+      "worktree" where succeeded:
       // The branches and worktrees it created, as the journal reads them.
       // Wherever it ran: a folder only the shell knows still had its branch made.
       return ResourceRecognizer.gitSightings(
@@ -350,24 +369,33 @@ public enum ConversationMoments {
     return String(output[range])
   }
 
-  /// The lines `git commit` prints, `[main 1a2b3c4] Subject`, read one per commit of the line.
+  /// The lines `git commit` prints, `[main 1a2b3c4] Subject`, read one per commit of the line;
+  /// `ok 1a2b3c4` when `rtk` shortened it.
   struct CommitLines {
-    private var subjects: [String]
-
-    private static let pattern = try? NSRegularExpression(
-      pattern: #"^\[[^\]\s]+(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)$"#, options: .anchorsMatchLines)
-
-    init(_ output: String) {
-      guard output.contains("] "), let pattern = Self.pattern else {
-        subjects = []
-        return
-      }
-      subjects = pattern.matches(in: output, range: NSRange(output.startIndex..., in: output))
-        .compactMap { Range($0.range(at: 1), in: output).map { String(output[$0]) } }
+    /// A commit made, named when its line says so.
+    struct Printed: Equatable {
+      let subject: String?
     }
 
-    mutating func next() -> String? {
-      subjects.isEmpty ? nil : subjects.removeFirst()
+    private var printed: [Printed]
+
+    private static let pattern = try? NSRegularExpression(
+      pattern: #"^(?:\[[^\]\s]+(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)|ok [0-9a-f]{7,})$"#,
+      options: .anchorsMatchLines)
+
+    init(_ output: String) {
+      guard output.contains("] ") || output.contains("ok "), let pattern = Self.pattern else {
+        printed = []
+        return
+      }
+      printed = pattern.matches(in: output, range: NSRange(output.startIndex..., in: output))
+        .map { match in
+          Printed(subject: Range(match.range(at: 1), in: output).map { String(output[$0]) })
+        }
+    }
+
+    mutating func next() -> Printed? {
+      printed.isEmpty ? nil : printed.removeFirst()
     }
   }
 }

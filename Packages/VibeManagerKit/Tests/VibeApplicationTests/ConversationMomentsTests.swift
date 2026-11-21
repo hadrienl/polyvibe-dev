@@ -18,22 +18,34 @@ struct ConversationMomentsTests {
           output: ToolOutput(text: output), facts: ToolFacts(tests: tests))))
   }
 
-  private func details(_ command: String, output: String = "")
-    -> [ConversationMoment.Detail]
-  {
-    ConversationMoments.moments(in: [Self.shell("s", command, output: output)]).map(\.detail)
+  private func details(
+    _ command: String, output: String = "", state: ToolCallState = .succeeded
+  ) -> [ConversationMoment.Detail] {
+    ConversationMoments.moments(in: [Self.shell("s", command, output: output, state: state)])
+      .map(\.detail)
   }
+
+  /// What `git commit` prints.
+  private static let committed = "[main 1a2b3c4] Subject\n 1 file changed, 1 insertion(+)\n"
 
   // MARK: - Git
 
   @Test("A commit is named by its -m, or by the line git printed")
   func commits() {
     #expect(
-      details(#"git commit -m "fix(cart): round VAT per line""#) == [
+      details(#"git commit -m "fix(cart): round VAT per line""#, output: Self.committed) == [
         .commit(subject: "fix(cart): round VAT per line")
       ])
-    #expect(details(#"git commit -am "Second""#) == [.commit(subject: "Second")])
-    #expect(details(#"git commit --message="Third line""#) == [.commit(subject: "Third line")])
+    #expect(
+      details(#"git commit -am "Second""#, output: Self.committed) == [.commit(subject: "Second")])
+    #expect(
+      details(#"git commit --message="Third line""#, output: Self.committed) == [
+        .commit(subject: "Third line")
+      ])
+    // What rtk prints of it.
+    #expect(
+      details("rtk git commit -m Fourth", output: "ok 8b47257\n") == [.commit(subject: "Fourth")])
+    #expect(details("git commit -q -m Quiet") == [.commit(subject: "Quiet")])
     let heredoc = """
       git commit -m "$(cat <<'EOF'
       feat(#572): key moments
@@ -49,10 +61,35 @@ struct ConversationMomentsTests {
     #expect(details("git commit --dry-run -m x").isEmpty)
   }
 
-  @Test("A commit that failed made none")
+  @Test("A commit that failed made none, whatever the line's exit")
   func failedCommit() {
     let entry = Self.shell("s", "git commit -m x", state: .failed(exitCode: 1))
     #expect(ConversationMoments.moments(in: [entry]).isEmpty)
+    let nothing = "On branch main\nnothing to commit, working tree clean\n"
+    #expect(details("git commit -m x; true", output: nothing).isEmpty)
+    #expect(details("git commit -m x || true", output: nothing).isEmpty)
+    #expect(details("git commit -q -m x", state: .failed(exitCode: 1)).isEmpty)
+  }
+
+  @Test("A commit made before its push was refused is a moment; the push is not")
+  func refusedPush() {
+    let output = """
+      [feat/x 1a2b3c4] Fix X
+       2 files changed, 9 insertions(+)
+      To github.com:a/b.git
+       ! [rejected]        feat/x -> feat/x (fetch first)
+      error: failed to push some refs to 'github.com:a/b.git'
+      """
+    #expect(
+      details(
+        #"git add -A && git commit -m "Fix X" && git push"#, output: output,
+        state: .failed(exitCode: 1)) == [.commit(subject: "Fix X")])
+    // What a failed line printed of a push still tells it went.
+    #expect(
+      details(
+        "git push origin a; false", output: "   1a2b3c4..5d6e7f8  a -> a\n",
+        state: .failed(exitCode: 1)) == [.push(branch: "a")])
+    #expect(details("git switch -c late && false", state: .failed(exitCode: 1)).isEmpty)
   }
 
   @Test("Commands chained by && each count, their commits read in order")
