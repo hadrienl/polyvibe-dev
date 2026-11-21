@@ -447,6 +447,46 @@ struct BookmarkTests {
         clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.1) == "m1")
   }
 
+  @Test("A conversation that grows reads the moments of its end as a whole reading would")
+  func momentsReadIncrementally() {
+    var entries = [
+      ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
+      Self.shell("m1", "git commit -m one", output: "[main 1a2b3c4] one\n"),
+      ConversationEntry(id: "m2", content: .agentText("Done")),
+    ]
+    let model = ConversationModel(sessionID: SessionID())
+    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    model.toggleBookmark(model.blocks[2])
+    func expectWhole() {
+      #expect(
+        model.moments
+          == ConversationMoments.placed(in: model.blocks, bookmarks: model.bookmarks))
+      #expect(
+        model.bookmarkedIndices
+          == ConversationBookmarks.markedIndices(in: model.blocks, bookmarks: model.bookmarks))
+      for block in model.blocks {
+        #expect(model.moments(of: block) == ConversationMoments.moments(of: block))
+      }
+    }
+    // A push still running, then done; an error after it.
+    entries.append(
+      ConversationEntry(
+        id: "m3",
+        content: .tool(
+          ToolCall(
+            callID: "m3", kind: .shell, state: .running,
+            parameters: [.init(.command, "git push origin main")]))))
+    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    expectWhole()
+    entries[3] = Self.shell("m3", "git push origin main")
+    entries.append(ConversationEntry(id: "m4", content: .notice(.error("Overloaded"))))
+    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    expectWhole()
+    #expect(model.moments.map(\.moment.kind) == [.git, .bookmark, .git, .incident])
+    model.toggleBookmark(model.blocks[4])
+    expectWhole()
+  }
+
   @Test("A row's margin reads the moments of its block as they were laid out")
   func rowMoments() {
     let model = Self.momentsModel()
