@@ -415,6 +415,14 @@ struct BookmarkTests {
     let found = ConversationOverview.cluster(
       near: CGPoint(x: 40, y: line), moments: model.shownMoments, layout: layout, scale: 0.05)
     #expect(found?.moments == 0..<3)
+    // The line brings its own bookmark up; the icon, the group's first moment.
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 40, y: line), model: model, layout: layout, scale: 0.05) == "m2")
+    let icon = clusters[0].y
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.05) == "m1")
   }
 
   @Test("A row's margin reads the moments of its block as they were laid out")

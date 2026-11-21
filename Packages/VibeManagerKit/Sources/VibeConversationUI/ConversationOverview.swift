@@ -271,28 +271,46 @@ struct ConversationOverview: View {
   }
 
   /// The moments under the pointer: an icon within a few points of it, or the line of a bookmark
-  /// across the overview.
+  /// across the overview. `touched` is the moment a click brings up: the icon's first one, or
+  /// the bookmark whose line it is.
   static func cluster(
     near point: CGPoint, moments: [ConversationMoments.Placed],
     layout: ConversationOverviewLayout, scale: Double
-  ) -> (moments: Range<Int>, y: Double)? {
-    var nearest: (moments: Range<Int>, y: Double, distance: Double)?
+  ) -> (moments: Range<Int>, y: Double, touched: Int)? {
+    var nearest: (moments: Range<Int>, y: Double, touched: Int, distance: Double)?
     for cluster in clusters(of: moments, layout: layout, scale: scale) {
       let iconDistance = abs(cluster.y - point.y)
       // The whole square of the icon, its hollows included, not only its strokes.
       let onIcon = iconSquare(y: cluster.y).contains(point)
       // Each bookmark's line is drawn at its own block, the first of its cluster or not.
-      let lineDistance = moments[cluster.moments]
-        .filter { $0.moment.kind == .bookmark }
-        .map { abs(iconY(top: layout.tops[$0.blockIndex], scale: scale) - point.y) }
-        .min()
-      let onLine = lineDistance.map { $0 <= 5 } ?? false
-      let distance = onIcon ? iconDistance : lineDistance ?? iconDistance
+      func lineDistance(_ index: Int) -> Double {
+        abs(iconY(top: layout.tops[moments[index].blockIndex], scale: scale) - point.y)
+      }
+      let line = cluster.moments
+        .filter { moments[$0].moment.kind == .bookmark }
+        .map { (index: $0, distance: lineDistance($0)) }
+        .min { $0.distance < $1.distance }
+      let onLine = line.map { $0.distance <= 5 } ?? false
+      let distance = onIcon ? iconDistance : line?.distance ?? iconDistance
       if onIcon || onLine, nearest.map({ distance < $0.distance }) ?? true {
-        nearest = (cluster.moments, cluster.y, distance)
+        let touched =
+          onIcon ? cluster.moments.lowerBound : line?.index ?? cluster.moments.lowerBound
+        nearest = (cluster.moments, cluster.y, touched, distance)
       }
     }
-    return nearest.map { ($0.moments, $0.y) }
+    return nearest.map { ($0.moments, $0.y, $0.touched) }
+  }
+
+  /// The block a click at `point` brings up: that of the moment touched.
+  static func blockID(
+    clickedAt point: CGPoint, model: ConversationModel, layout: ConversationOverviewLayout,
+    scale: Double
+  ) -> String? {
+    guard
+      let cluster = cluster(
+        near: point, moments: model.shownMoments, layout: layout, scale: scale)
+    else { return nil }
+    return layout.ids[model.shownMoments[cluster.touched].blockIndex]
   }
 
   /// What answers the pointer for an icon centred at `y`: the margin's width, as tall.
@@ -317,13 +335,12 @@ struct ConversationOverview: View {
       .updating($isPressed) { _, pressed, _ in pressed = true }
       .onChanged { value in
         if frameDrag.grab == nil {
-          if let cluster = Self.cluster(
-            near: value.startLocation, moments: model.shownMoments, layout: layout, scale: scale)
+          if let blockID = Self.blockID(
+            clickedAt: value.startLocation, model: model, layout: layout, scale: scale)
           {
             // A moment clicked: nothing more until the button is released.
             frameDrag.grab = .infinity
-            model.revealMoment(
-              layout.ids[model.shownMoments[cluster.moments.lowerBound].blockIndex])
+            model.revealMoment(blockID)
             return
           }
           let thumb = OverviewViewport.thumb(
