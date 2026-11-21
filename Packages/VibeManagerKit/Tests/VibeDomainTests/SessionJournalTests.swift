@@ -68,6 +68,31 @@ struct SessionJournalTests {
     #expect(decoded == journal)
   }
 
+  /// A journal as the builds before #572 decode it: these keys required.
+  private struct EarlierJournal: Decodable {
+    enum Summary: Decodable {
+      case ready
+    }
+    let resources: [SessionResource]
+    let cursors: [String: TranscriptCursor]
+    let pending: [String]
+    let summary: Summary
+    let hasEndedTurn: Bool
+  }
+
+  @Test("A journal written now is read by the builds before #572, nothing left to summarize")
+  func readByEarlierBuilds() throws {
+    var journal = SessionJournal(cursors: ["/t.jsonl": TranscriptCursor(offset: 12)])
+    journal.record([resource("a")])
+    let data = try JSONEncoder().encode(journal)
+    let earlier = try JSONDecoder().decode(EarlierJournal.self, from: data)
+    #expect(earlier.resources.map(\.key) == ["a"])
+    #expect(earlier.cursors["/t.jsonl"]?.offset == 12)
+    #expect(earlier.pending.isEmpty)
+    #expect(!earlier.hasEndedTurn)
+    #expect(try JSONDecoder().decode(SessionJournal.self, from: data) == journal)
+  }
+
   @Test("A journal written while summaries were made is read: its lines kept, the rest left aside")
   func journalOfBefore() throws {
     // As #36 wrote it, with turns waiting and the state of the summary.

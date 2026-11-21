@@ -12625,6 +12625,107 @@
         }
       }
     },
+    "Bookmarks and key moments come with the overview. Hidden with it, they are kept, and come back with it." : {
+      "comment" : "Under the switch of the overview, in the conversation's settings: bookmarks and key moments are hidden with the overview, and kept.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تظهر الإشارات المرجعية واللحظات الرئيسية مع النظرة العامة. عند إخفائها معها تُحفظ، وتعود معها."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesezeichen und Schlüsselmomente gehören zur Übersicht. Mit ihr ausgeblendet, bleiben sie erhalten und kehren mit ihr zurück."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los marcadores y los momentos clave van con la vista general. Ocultos con ella, se conservan y vuelven con ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les signets et les moments clés vont avec la vue d’ensemble. Masqués avec elle, ils sont conservés et reviennent avec elle."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बुकमार्क और मुख्य क्षण अवलोकन के साथ दिखते हैं। उसके साथ छिपने पर वे सहेजे रहते हैं और उसके साथ लौट आते हैं।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "I segnalibri e i momenti chiave fanno parte della panoramica. Nascosti con essa, vengono conservati e tornano con essa."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブックマークと主なモーメントは概要とともに表示されます。概要と一緒に隠しても保持され、概要とともに戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "북마크와 주요 순간은 개요와 함께 표시됩니다. 개요와 함께 숨겨도 유지되며, 개요와 함께 돌아옵니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bladwijzers en belangrijke momenten horen bij het overzicht. Samen ermee verborgen, blijven ze bewaard en komen ze ermee terug."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zakładki i kluczowe momenty należą do przeglądu. Ukryte razem z nim, są zachowywane i wracają wraz z nim."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os marcadores e os momentos-chave acompanham a visão geral. Ocultos com ela, são mantidos e voltam com ela."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закладки и ключевые моменты показываются вместе с обзором. Скрытые вместе с ним, они сохраняются и возвращаются вместе с ним."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yer imleri ve önemli anlar genel bakışla birlikte gösterilir. Onunla gizlendiklerinde korunur ve onunla geri gelirler."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закладки й ключові моменти показуються разом з оглядом. Приховані разом з ним, вони зберігаються й повертаються разом з ним."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "书签和关键时刻随概览一起显示。随概览隐藏时会保留，并随概览一起恢复。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "書籤和關鍵時刻隨概覽一起顯示。隨概覽隱藏時會保留，並隨概覽一起恢復。"
+          }
+        }
+      }
+    },
     "Branch %@ created" : {
       "localizations" : {
         "ar" : {

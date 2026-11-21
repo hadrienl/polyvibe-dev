@@ -434,7 +434,11 @@ public final class ConversationModel {
       {
         rebuild(changedFrom: 0)
       }
-      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds { updateShownMoments() }
+      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds
+        || appearance.showsOverview != oldValue.showsOverview
+      {
+        updateShownMoments()
+      }
     }
   }
 
@@ -755,6 +759,9 @@ public final class ConversationModel {
   @ObservationIgnored private var echoTallies = EchoTallies()
   @ObservationIgnored private(set) var layoutCount = 0
   @ObservationIgnored private(set) var lastLayoutWork = LayoutWork()
+  /// What the last update of the moments did: the blocks whose moments it read, and those it
+  /// placed.
+  @ObservationIgnored private(set) var lastMomentsWork = (read: 0, placed: 0)
 
   /// Lays out again what changed — the entries from `changedFrom`, nothing when `nil` — now if
   /// the conversation is on screen, once it is otherwise.
@@ -1093,8 +1100,10 @@ public final class ConversationModel {
   public private(set) var bookmarks: Set<String> = []
   /// The blocks that hold one, in order: the overview's lines.
   public private(set) var bookmarkedIndices: [Int] = []
-  /// The moments of each block, bookmarks aside, read as the blocks are laid out (#572).
-  @ObservationIgnored private var blockMoments: [[ConversationMoment]] = []
+  /// The moments of each block, bookmarks aside, read as the blocks are laid out (#572), with
+  /// the block they were read from: those laid out again leave `momentsByBlock` with it.
+  @ObservationIgnored private var blockMoments: [BlockMoments] = []
+  private typealias BlockMoments = (blockID: String, moments: [ConversationMoment])
   /// The same, by block, for those that have some: what a row's margin shows, read without
   /// parsing its commands again at each of its redraws. Not observed: a block whose moments change
   /// is a new block, which redraws its row anyway.
@@ -1172,7 +1181,7 @@ public final class ConversationModel {
     guard !entries.isSubset(of: bookmarks) else { return }
     let setBefore = !bookmarks.isEmpty
     bookmarks.formUnion(entries)
-    updateMoments(from: blocks.count)
+    updateMoments(from: blocks.count, bookmarksChanged: true)
     if setBefore { saveBookmarks?(bookmarks) }
   }
 
@@ -1182,28 +1191,35 @@ public final class ConversationModel {
 
   public func toggleBookmark(_ block: ConversationBlock) {
     bookmarks = ConversationBookmarks.toggled(bookmarks, on: block)
-    updateMoments(from: blocks.count)
+    updateMoments(from: blocks.count, bookmarksChanged: true)
     saveBookmarks?(bookmarks)
   }
 
-  /// The marked blocks and the moments, those of the blocks before `start` kept as they were:
-  /// only the bookmarks are read again for them.
-  private func updateMoments(from start: Int) {
-    let indices = ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks)
-    if indices != bookmarkedIndices { bookmarkedIndices = indices }
-    let start = min(start, blockMoments.count, blocks.count)
-    blockMoments.replaceSubrange(
-      start..., with: blocks[start...].map(ConversationMoments.moments(of:)))
-    // Made again whole: the identifiers of the blocks laid out again are gone with them.
-    var byBlock: [String: [ConversationMoment]] = [:]
-    for (index, found) in blockMoments.enumerated() where !found.isEmpty {
-      byBlock[blocks[index].id] = found
+  /// The marked blocks and the moments of the blocks laid out again from `start`, those before
+  /// kept as they were: a conversation that grows reads only its end. Bookmarks changed, they
+  /// are placed again throughout, the blocks' own moments still kept.
+  private func updateMoments(from start: Int, bookmarksChanged: Bool = false) {
+    let start = min(max(start, 0), blockMoments.count, blocks.count)
+    // The blocks' own moments, and the row margins' dictionary, from `start` only.
+    for gone in blockMoments[start...] where !gone.moments.isEmpty {
+      momentsByBlock[gone.blockID] = nil
     }
-    momentsByBlock = byBlock
+    blockMoments.replaceSubrange(
+      start..., with: blocks[start...].map { ($0.id, ConversationMoments.moments(of: $0)) })
+    for found in blockMoments[start...] where !found.moments.isEmpty {
+      momentsByBlock[found.blockID] = found.moments
+    }
+    // What is placed again: the end, or everything once the bookmarks changed.
+    let placedFrom = bookmarksChanged ? 0 : start
+    let indices =
+      bookmarkedIndices.prefix { $0 < placedFrom }
+      + ConversationBookmarks.markedIndices(in: blocks, bookmarks: bookmarks, from: placedFrom)
+    if indices != bookmarkedIndices { bookmarkedIndices = indices }
+    let kept = moments.prefix { $0.blockIndex < placedFrom }.count
     var placed: [ConversationMoments.Placed] = []
-    var marked = indices.makeIterator()
+    var marked = indices.drop { $0 < placedFrom }.makeIterator()
     var nextMarked = marked.next()
-    for (index, found) in blockMoments.enumerated() {
+    for index in placedFrom..<blockMoments.count {
       if index == nextMarked {
         nextMarked = marked.next()
         if let bookmark = ConversationMoments.bookmark(of: blocks[index], at: index, in: bookmarks)
@@ -1211,17 +1227,24 @@ public final class ConversationModel {
           placed.append(bookmark)
         }
       }
-      for moment in found { placed.append(.init(blockIndex: index, moment: moment)) }
+      for moment in blockMoments[index].moments {
+        placed.append(.init(blockIndex: index, moment: moment))
+      }
     }
-    if placed != moments {
-      moments = placed
-      updateShownMoments()
-    }
+    lastMomentsWork = (blocks.count - start, blockMoments.count - placedFrom)
+    guard !moments[kept...].elementsEqual(placed) else { return }
+    moments.replaceSubrange(kept..., with: placed)
+    updateShownMoments()
   }
 
-  /// The moments of the kinds the settings show.
+  /// Whether bookmarks and moments are used: they are the overview's, and go with it. Hidden, the
+  /// bookmarks are kept, the filters too: they are all back with the overview.
+  public var usesMoments: Bool { appearance.showsOverview }
+
+  /// The moments of the kinds the settings show; none without the overview.
   private func updateShownMoments() {
-    let shown = ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds)
+    let shown =
+      usesMoments ? ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds) : []
     guard shown != shownMoments else { return }
     shownMoments = shown
     let indices = ConversationMoments.blockIndices(of: shown)
@@ -1233,7 +1256,7 @@ public final class ConversationModel {
   /// what is read otherwise. `false` when there is none.
   @discardableResult
   public func toggleBookmarkInView() -> Bool {
-    guard let id = selectedBlockID() ?? overview.top?.blockID,
+    guard usesMoments, let id = selectedBlockID() ?? overview.top?.blockID,
       let block = blocks.first(where: { $0.id == id })
     else { return false }
     toggleBookmark(block)
