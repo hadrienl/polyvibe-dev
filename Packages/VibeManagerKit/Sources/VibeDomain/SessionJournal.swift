@@ -69,6 +69,33 @@ public struct SessionJournal: Hashable, Codable, Sendable {
     self.cursors = cursors
   }
 
+  // MARK: - Builds before #572
+
+  /// What a journal is written with: its own keys, and those the builds before #572 require to
+  /// read one — empty, nothing to summarize —, so that going back a version keeps the journal.
+  /// To drop once a release has carried them.
+  private enum EncodingKeys: String, CodingKey {
+    case schema, entries, resources, overflowResourceCount, cursors
+    case pending, summary, hasEndedTurn
+  }
+
+  /// `JournalSummaryState.ready`, as those builds decode it.
+  private enum ReadySummaryKeys: String, CodingKey { case ready }
+  private struct Empty: Encodable {}
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: EncodingKeys.self)
+    try container.encode(schema, forKey: .schema)
+    try container.encode(entries, forKey: .entries)
+    try container.encode(resources, forKey: .resources)
+    try container.encode(overflowResourceCount, forKey: .overflowResourceCount)
+    try container.encode(cursors, forKey: .cursors)
+    try container.encode([Empty](), forKey: .pending)
+    var summary = container.nestedContainer(keyedBy: ReadySummaryKeys.self, forKey: .summary)
+    try summary.encode(Empty(), forKey: .ready)
+    try container.encode(false, forKey: .hasEndedTurn)
+  }
+
   // MARK: - Resources
 
   /// Adds what was seen, in the order it was first seen. A resource seen again is merged into the
