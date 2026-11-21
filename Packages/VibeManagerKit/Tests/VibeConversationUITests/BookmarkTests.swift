@@ -276,7 +276,7 @@ struct BookmarkTests {
 
   @Test("A block not built is placed from the row built nearest it, as the overview lays them")
   func blockNotBuiltPlacedFromItsNeighbour() {
-    let model = Self.model()
+    let model = Self.model(12)
     let layout = Self.evenLayout(model)
     // Only blocks 2 and 3 are built, lower in the messages than the overview lays them.
     model.overview.rowLaidOut("m2", frame: CGRect(x: 0, y: 1000, width: 600, height: 100))
@@ -288,9 +288,13 @@ struct BookmarkTests {
     #expect(tracker.documentTop(of: 1, in: layout, reach: 300) == 880)
     // Below: from block 3, the nearest.
     #expect(tracker.documentTop(of: 5, in: layout, reach: 300) == 1360)
-    // Further than the reach: left to the list, which finds the block itself.
+    // Further than the reach: left to the list, which finds the block itself. Block 9 starts
+    // 720 points below block 3.
     #expect(tracker.documentTop(of: 5, in: layout, reach: 200) == nil)
     #expect(tracker.documentTop(of: 9, in: layout, reach: 300) == nil)
+    #expect(tracker.documentTop(of: 9, in: layout, reach: 800) == 1840)
+    // Past the conversation's last block: nowhere.
+    #expect(tracker.documentTop(of: 12, in: layout, reach: .infinity) == nil)
   }
 
   @Test("Near a bookmark's line, the preview stands at the line, wherever the pointer is")

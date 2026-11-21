@@ -149,10 +149,11 @@ struct ConversationOverview: View {
   @Environment(\.conversationAppearance) private var appearance
 
   @State private var box = OverviewLayoutBox()
-  @State private var dragGrab: Double?
+  @State private var frameDrag = OverviewDrag()
+  /// Reset by SwiftUI when the drag is let go, and when it is cancelled, which `onEnded` is not
+  /// told of.
+  @GestureState private var isPressed = false
   @State private var hovered: Hover?
-  /// Heights measured while the frame was dragged, laid out once it is let go.
-  @State private var remeasureHeld = false
 
   private var layout: ConversationOverviewLayout { box.layout }
 
@@ -185,7 +186,7 @@ struct ConversationOverview: View {
         .equatable()
         OverviewViewport(
           tracker: model.overview, box: box, scale: scale, colors: .init(theme),
-          isActive: dragGrab != nil || (hovered != nil && hovered?.moments == nil))
+          isActive: frameDrag.isDragging || (hovered != nil && hovered?.moments == nil))
       }
       .contentShape(Rectangle())
       .gesture(drag(scale: scale))
@@ -241,22 +242,18 @@ struct ConversationOverview: View {
         layout = self.layout.replacing(
           from: changedFrom ?? 0, blocks: model.blocks, measured: tracker.measured,
           shapes: tracker.shapes)
-      } else if dragGrab != nil {
-        // Held while the frame is dragged: the drawing would move under the pointer, and the
-        // frame with it. Laid out again once it is let go.
-        remeasureHeld = true
+      } else if frameDrag.holdMeasures() {
+        // Held while the frame is dragged: laid out again once the drag ends.
         return
       } else {
         layout = self.layout.remeasured(tracker.measured)
       }
       box = OverviewLayoutBox(layout, blocksRevision: key.blocksRevision)
     }
-    .onChange(of: dragGrab == nil) { _, released in
-      guard released, remeasureHeld else { return }
-      remeasureHeld = false
-      box = OverviewLayoutBox(
-        layout.remeasured(model.overview.measured), blocksRevision: box.blocksRevision)
+    .onChange(of: isPressed) { _, pressed in
+      if !pressed { endDrag() }
     }
+    .onDisappear { endDrag() }
     .accessibilityHidden(true)
   }
 
@@ -308,15 +305,23 @@ struct ConversationOverview: View {
     max(top * scale + 1.5, iconSize / 2)
   }
 
+  /// The drag let go or cancelled: the frame unlit, the heights it held laid out.
+  private func endDrag() {
+    guard frameDrag.end() else { return }
+    box = OverviewLayoutBox(
+      layout.remeasured(model.overview.measured), blocksRevision: box.blocksRevision)
+  }
+
   private func drag(scale: Double) -> some Gesture {
     DragGesture(minimumDistance: 0)
+      .updating($isPressed) { _, pressed, _ in pressed = true }
       .onChanged { value in
-        if dragGrab == nil {
+        if frameDrag.grab == nil {
           if let cluster = Self.cluster(
             near: value.startLocation, moments: model.shownMoments, layout: layout, scale: scale)
           {
             // A moment clicked: nothing more until the button is released.
-            dragGrab = .infinity
+            frameDrag.grab = .infinity
             model.revealMoment(
               layout.ids[model.shownMoments[cluster.moments.lowerBound].blockIndex])
             return
@@ -325,11 +330,11 @@ struct ConversationOverview: View {
             tracker: model.overview, layout: layout, scale: scale)
           let y = value.startLocation.y
           // Held where it was taken; anywhere else, the frame centred on the click.
-          dragGrab =
+          frameDrag.grab =
             thumb.map { y >= $0.top && y <= $0.top + $0.height ? y - $0.top : $0.height / 2 }
             ?? 0
         }
-        guard let grab = dragGrab, grab.isFinite, scale > 0,
+        guard let grab = frameDrag.grab, grab.isFinite, scale > 0,
           let position = layout.position(atY: (value.location.y - grab) / scale)
         else { return }
         let tracker = model.overview
@@ -338,7 +343,7 @@ struct ConversationOverview: View {
           top: tracker.documentTop(
             of: position.index, in: layout, reach: tracker.readableHeight * 2))
       }
-      .onEnded { _ in dragGrab = nil }
+      .onEnded { _ in endDrag() }
   }
 }
 
@@ -734,26 +739,27 @@ struct BookmarkGutter: View {
   /// The box it is centred in: the message's first line, never less than a click needs.
   static func boxHeight(lineHeight: Double) -> Double { max(lineHeight, 14) }
 
+  // A shape that takes the click rather than a button: built for every message, hidden until
+  // the pointer comes, a button cost as much as the rest of a short message to build, which a
+  // drag in the overview of a long conversation does for several messages at every frame (#567).
+  // VoiceOver still finds a button, named as it was, that it can press.
   var body: some View {
-    Button(action: toggle) {
-      BookmarkShape()
-        .fill(theme.accent.color.opacity(isMarked ? 1 : 0.35))
-        .frame(width: 18, height: Self.tagHeight)
-        .frame(width: Self.reach - 4, height: Self.boxHeight(lineHeight: lineHeight))
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
-    .onHover { isHovered = $0 }
-    .help(
+    let label =
       isMarked
-        ? Text("Remove the Bookmark", bundle: .module)
-        : Text("Add a Bookmark", bundle: .module)
-    )
-    .accessibilityLabel(
-      isMarked
-        ? Text("Remove the Bookmark", bundle: .module)
-        : Text("Add a Bookmark", bundle: .module))
+      ? Text("Remove the Bookmark", bundle: .module) : Text("Add a Bookmark", bundle: .module)
+    BookmarkShape()
+      .fill(theme.accent.color.opacity(isMarked ? 1 : 0.35))
+      .frame(width: 18, height: Self.tagHeight)
+      .frame(width: Self.reach - 4, height: Self.boxHeight(lineHeight: lineHeight))
+      .contentShape(Rectangle())
+      .onTapGesture(perform: toggle)
+      .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
+      .onHover { isHovered = $0 }
+      .help(label)
+      .accessibilityElement()
+      .accessibilityLabel(label)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction { toggle() }
   }
 }
 

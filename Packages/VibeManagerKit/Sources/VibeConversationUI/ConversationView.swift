@@ -38,8 +38,6 @@ public struct ConversationView: View {
   @State private var pageMark = PageMark()
   /// One selection from one message to the next (#381).
   @State private var selection = ConversationSelection()
-  /// The width of the messages' pane, which the overview takes its margin from (#567).
-  @State private var paneWidth = 0.0
 
   private static let bottomID = "conversation.bottom"
   static let pageTargetID = "conversation.page"
@@ -66,7 +64,18 @@ public struct ConversationView: View {
 
   public var body: some View {
     let _ = BodyCounter.tick(.conversationView)
-    VStack(spacing: 0) {
+    // The pane's width as it is laid out, read once for all that leaves the overview its margin:
+    // the overview, the messages' and the composer's room beside it, its estimates (#567). A
+    // width told afterwards, by a change of geometry, once stayed that of the pane before the web
+    // view came beside it: the overview took half of the pane, over the text.
+    GeometryReader { pane in
+      page(paneWidth: pane.size.width)
+    }
+  }
+
+  private func page(paneWidth: Double) -> some View {
+    let overview = overviewPlacement(paneWidth: paneWidth)
+    return VStack(spacing: 0) {
       switch model.snapshot.availability {
       case .loading where model.blocks.isEmpty:
         placeholder {
@@ -84,7 +93,7 @@ public struct ConversationView: View {
           Text("This session has no readable conversation.", bundle: .module)
         }
       default:
-        conversation
+        conversation(paneWidth: paneWidth, overview: overview)
       }
     }
     // Over the end of the messages, which scroll under it, rather than below them (#359).
@@ -102,14 +111,14 @@ public struct ConversationView: View {
           )
           .frame(maxWidth: layout.contentWidth)
           .padding(.leading, leadingMargin)
-          .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
+          .padding(.trailing, layout.sideMargin + overview.reserved)
           .padding(.bottom, showsComposer ? 8 : 16)
           .frame(maxWidth: .infinity)
         }
         // Outside the switch: the first prompt sent turns the empty conversation into a list, and
         // a composer drawn in each case would be a new one then, the keyboard dropped with the old
         // one (#105).
-        if showsComposer { footer }
+        if showsComposer { footer(overview: overview) }
       }
     )
     .environment(\.conversationTheme, theme)
@@ -186,13 +195,15 @@ public struct ConversationView: View {
 
   /// Left of the messages: room for their moments and bookmarks, whatever margin the theme gives
   /// (#572).
-  private var leadingMargin: Double {
-    max(layout.sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
+  private var leadingMargin: Double { Self.leadingMargin(sideMargin: layout.sideMargin) }
+
+  static func leadingMargin(sideMargin: Double) -> Double {
+    max(sideMargin, BookmarkGutter.reach + MomentGutterMark.width)
   }
 
   private var showsOverview: Bool { appearance.showsOverview && !model.blocks.isEmpty }
 
-  private var overviewPlacement: ConversationOverviewLayout.Placement {
+  private func overviewPlacement(paneWidth: Double) -> ConversationOverviewLayout.Placement {
     guard showsOverview, paneWidth > 0 else { return .init(width: 0, reserved: 0) }
     return ConversationOverviewLayout.placement(
       paneWidth: paneWidth, contentWidth: layout.contentWidth, leadingMargin: leadingMargin,
@@ -201,9 +212,11 @@ public struct ConversationView: View {
 
   /// What the overview estimates the blocks never built with. The column's width by steps: a
   /// window resized does not wrap every message again at each frame.
-  private var overviewMetrics: ConversationOverviewLayout.Metrics {
+  private func overviewMetrics(
+    paneWidth: Double, overview: ConversationOverviewLayout.Placement
+  ) -> ConversationOverviewLayout.Metrics {
     let available =
-      paneWidth - leadingMargin - layout.sideMargin - overviewPlacement.reserved
+      paneWidth - leadingMargin - layout.sideMargin - overview.reserved
     let column = min(layout.contentWidth, max(available, 200))
     return ConversationOverviewLayout.Metrics(
       columnWidth: (column / 40).rounded() * 40, textSize: appearance.textSize.pointSize,
@@ -217,7 +230,9 @@ public struct ConversationView: View {
     model.overview.scrolled(readableTop: readable.top, readableHeight: readable.height)
   }
 
-  private var conversation: some View {
+  private func conversation(paneWidth: Double, overview: ConversationOverviewLayout.Placement)
+    -> some View
+  {
     // What it reads of the messages scrolled away, with the theme and the size they are shown at.
     let _ = selection.source = .of(model, theme: theme, appearance: appearance)
     return ScrollViewReader { proxy in
@@ -252,7 +267,7 @@ public struct ConversationView: View {
         .environment(\.conversationSelection, selection)
         .frame(maxWidth: layout.contentWidth)
         .padding(.leading, leadingMargin)
-        .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
+        .padding(.trailing, layout.sideMargin + overview.reserved)
         .padding(.top, layout.topPadding)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
@@ -279,7 +294,6 @@ public struct ConversationView: View {
       .onGeometryChange(for: CGSize.self) {
         $0.size
       } action: { size in
-        paneWidth = size.width
         guard size.height != viewportHeight else { return }
         viewportHeight = size.height
         model.scrollGeometryChanged(contentFrame: contentFrame, viewportHeight: size.height)
@@ -295,11 +309,12 @@ public struct ConversationView: View {
           VStack(spacing: 0) {
             OverviewFilterBar(model: model)
             ConversationOverview(
-              model: model, theme: theme, metrics: overviewMetrics, pager: pager,
-              room: paneWidth - overviewPlacement.width
+              model: model, theme: theme,
+              metrics: overviewMetrics(paneWidth: paneWidth, overview: overview), pager: pager,
+              room: paneWidth - overview.width
             )
           }
-          .frame(width: overviewPlacement.width)
+          .frame(width: overview.width)
         }
       }
       .onAppear {
@@ -385,7 +400,7 @@ public struct ConversationView: View {
     }
   }
 
-  private var footer: some View {
+  private func footer(overview: ConversationOverviewLayout.Placement) -> some View {
     VStack(alignment: .leading, spacing: 8) {
       // Out of the messages that scroll: a sub-agent in the background runs long after its block
       // has gone up (#180).
@@ -463,7 +478,7 @@ public struct ConversationView: View {
     }
     .frame(maxWidth: layout.contentWidth)
     .padding(.leading, leadingMargin)
-    .padding(.trailing, layout.sideMargin + overviewPlacement.reserved)
+    .padding(.trailing, layout.sideMargin + overview.reserved)
     .padding(.bottom, 16)
     .frame(maxWidth: .infinity)
     .modifier(PlainFooterBackground(theme: theme))

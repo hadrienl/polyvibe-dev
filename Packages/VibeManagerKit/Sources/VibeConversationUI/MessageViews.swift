@@ -132,11 +132,14 @@ struct UserPromptView: View {
   private var replyButton: some View {
     if let reply {
       let shown = ReplyLinks.shown(text, attachments: attachments).message
-      ReplyButton { reply(shown) }
-        .opacity(isHovered && !shown.isEmpty ? 1 : 0)
-        .disabled(!isHovered || shown.isEmpty)
-        // Its menu's « Reply » is VoiceOver's: not a dimmed button on every message.
-        .accessibilityHidden(!isHovered)
+      if isHovered, !shown.isEmpty {
+        ReplyButton { reply(shown) }
+      } else {
+        // Its room only: a button on every message, hidden, cost as much to build as the rest of
+        // the message, which a drag in the overview does for several at every frame (#567). Its
+        // menu's « Reply » is VoiceOver's.
+        ReplyLabel().hidden().accessibilityHidden(true)
+      }
     }
   }
 
