@@ -55,6 +55,12 @@ struct ConversationMomentsTests {
     #expect(
       details("rtk git commit -m Fourth", output: "ok 8b47257\n") == [.commit(subject: "Fourth")])
     #expect(details("git commit -q -m Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit -qm Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit -aq -m Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit --quiet -m Quiet") == [.commit(subject: "Quiet")])
+    // A q in a message is not one.
+    #expect(details("git commit -m -q").isEmpty)
+    #expect(details("git commit -mq").isEmpty)
     let heredoc = """
       git commit -m "$(cat <<'EOF'
       feat(#572): key moments

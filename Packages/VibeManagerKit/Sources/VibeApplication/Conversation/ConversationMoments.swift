@@ -242,8 +242,7 @@ public enum ConversationMoments {
       // Read in order even when the message is known: the next commit's line is the next one.
       // None printed, none made — unless it was asked to print nothing, and the line succeeded.
       guard let line = printed.nextCommit() else {
-        let quiet = command.rest.contains { $0 == "-q" || $0 == "--quiet" }
-        return quiet && succeeded ? [.commit(subject: message)] : []
+        return isQuiet(command) && succeeded ? [.commit(subject: message)] : []
       }
       return [.commit(subject: message ?? line.subject)]
     case "cherry-pick", "revert":
@@ -290,6 +289,33 @@ public enum ConversationMoments {
     default:
       return []
     }
+  }
+
+  /// Short options of `git commit` that take a value, joined to them or as the next argument.
+  private static let commitValueLetters: Set<Character> = ["m", "F", "C", "c", "t", "u", "S"]
+
+  /// Whether `git commit` was asked to print nothing: `-q`, `--quiet`, or a `q` among short
+  /// options grouped, before one that takes a value — `-qm x`, `-aq` —, never in a value.
+  private static func isQuiet(_ command: ResourceRecognizer.GitCommand) -> Bool {
+    var isValue = false
+    for argument in command.rest {
+      if isValue {
+        isValue = false
+        continue
+      }
+      guard let argument else { continue }
+      if argument == "--quiet" { return true }
+      guard argument.hasPrefix("-"), !argument.hasPrefix("--") else { continue }
+      for (offset, letter) in argument.dropFirst().enumerated() {
+        if letter == "q" { return true }
+        if commitValueLetters.contains(letter) {
+          // Its value follows when it ends the group.
+          isValue = offset == argument.count - 2
+          break
+        }
+      }
+    }
+    return false
   }
 
   /// Options of `git cherry-pick` and `git revert` that take a value.
