@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import VibeApplication
 import VibeConversationUI
@@ -7,16 +8,21 @@ import VibeTerminalUI
 /// The agent of a session, in its status bar (#575): "Claude Code · Opus 5.5", before the effort,
 /// which depends on it.
 ///
-/// A native menu, as the effort's is, of two lines. On top, the agent the session runs and its
-/// state, with the history of its switches as its submenu. Below, "Switch To", with the models of
-/// each agent as its submenu: one of them opens the Switch Agent sheet set on it. Never a view of
-/// its own: the side its submenus open on, and where they line up, are macOS's.
+/// A native menu of two lines, `AgentMenu`. On top, the agent the session runs and its state,
+/// with the history of its switches as its submenu. Below, "Switch To", with the models of each
+/// agent as its submenu: one of them opens the Switch Agent sheet set on it. The side its
+/// submenus open on, and where they line up, are macOS's.
+///
+/// The button looks like the effort's menu beside it; its menu is AppKit's, which gives its first
+/// line a title in bold and each agent its logo.
 struct SessionAgentMenu: View {
   let model: AppModel
   let session: WorkSession
   @Environment(\.statusBarDensity) private var density
   /// The agents and models to switch to, read when the menu is shown and when it opens.
   @State private var choices: AgentSwitchChoices?
+  /// The button's own view, which the menu opens above.
+  @State private var anchor = MenuAnchor.Holder()
 
   var body: some View {
     let names = AgentLabels(names: model.agentNames, models: choices?.modelNames ?? [:])
@@ -25,15 +31,22 @@ struct SessionAgentMenu: View {
     // The bar's step, or a narrower one when even that does not fit.
     ViewThatFits(in: .horizontal) {
       ForEach(density.andNarrower, id: \.self) { form in
-        Menu {
-          menuContent(names: names, canSwitch: canSwitch, history: history)
+        Button {
+          openMenu(names: names, canSwitch: canSwitch)
         } label: {
-          label(names: names, form: form)
+          HStack(spacing: 8) {
+            label(names: names, form: form)
+            // A menu's own mark, as the effort's menu draws it.
+            Image(systemName: "chevron.down")
+              .font(.system(size: 8, weight: .semibold))
+              .accessibilityHidden(true)
+          }
         }
         .controlSize(.small)
         .fixedSize()
       }
     }
+    .background(MenuAnchor(holder: anchor))
     .disabled(session.agent == nil || (!canSwitch && !history.hasChanges))
     // Outside the disabled menu, so that it is shown on the menu greyed out too.
     .instantTooltip(Text(verbatim: help(names: names, canSwitch: canSwitch)))
@@ -99,58 +112,22 @@ struct SessionAgentMenu: View {
 
   // MARK: - The menu
 
-  @ViewBuilder
-  private func menuContent(
-    names: AgentLabels, canSwitch: Bool, history: AgentHistoryPresentation
-  ) -> some View {
-    currentAgent(names: names, history: history)
-    Divider()
-    Menu {
-      switchChoices
-    } label: {
-      Text("Switch To", bundle: .module, comment: "Opens the agents and models to switch to.")
+  /// Opens the menu above the button, as it is now; the agents are read again meanwhile, for the
+  /// next time — an agent installed since is offered then.
+  private func openMenu(names: AgentLabels, canSwitch: Bool) {
+    let content = AgentMenuContent(
+      session: session, names: names, choices: choices, state: stateSentence,
+      canSwitch: canSwitch)
+    let id = session.id
+    let menu = AgentMenu.make(content) { [model] target in
+      model.beginAgentSwitch(id, preselected: target)
     }
-    .disabled(!canSwitch)
-    // Read again each time the menu opens: an agent installed since is offered at once.
-    .onAppear { Task { await readChoices() } }
-  }
-
-  /// The agent the session runs and its state; the history of its switches as its submenu, when
-  /// it had any. Read, never acted on.
-  @ViewBuilder
-  private func currentAgent(names: AgentLabels, history: AgentHistoryPresentation)
-    -> some View
-  {
-    let title = Text(
-      verbatim: session.agent.map { names.label($0) }
-        ?? String(localized: "No agent recorded", bundle: .module))
-    let state = Text(verbatim: stateSentence)
-    if history.hasChanges {
-      Menu {
-        ForEach(history.entries) { entry in
-          Button {
-          } label: {
-            // A failure is marked in its words: a disabled item draws no icon.
-            Text(verbatim: entry.failed ? "⚠︎ \(entry.title)" : entry.title)
-            Text(verbatim: entry.detail)
-          }
-          .disabled(true)
-          .accessibilityLabel(Text(verbatim: entry.spoken))
-        }
-      } label: {
-        Image(systemName: "cpu")
-        title
-        state
-      }
-    } else {
-      Button {
-      } label: {
-        Image(systemName: "cpu")
-        title
-        state
-      }
-      .disabled(true)
-    }
+    Task { await readChoices() }
+    guard let view = anchor.view else { return }
+    let gap: CGFloat = 4
+    // The menu's top left corner: above the button, on its left edge.
+    let top = view.isFlipped ? -gap - menu.size.height : view.bounds.height + gap + menu.size.height
+    menu.popUp(positioning: nil, at: NSPoint(x: 0, y: top), in: view)
   }
 
   /// The process's own state when it does not run — stopped, failed, starting — and otherwise
@@ -160,48 +137,6 @@ struct SessionAgentMenu: View {
       return status.label
     }
     return AgentHistoryPresentation.state(of: model.resolution(forID: session.id))
-  }
-
-  /// The models of each agent that can run, grouped by agent, the one the session runs checked;
-  /// then the sheet itself, set on nothing.
-  @ViewBuilder
-  private var switchChoices: some View {
-    if let choices {
-      ForEach(choices.offered) { agent in
-        Section {
-          ForEach(choices.choices(for: agent, current: session.agent)) { choice in
-            choiceItem(choice)
-          }
-        } header: {
-          Text(verbatim: agent.name)
-        }
-      }
-    }
-    Divider()
-    Button {
-      Self.open(nil, of: session.id, in: model)
-    } label: {
-      Text(
-        "Other Settings…", bundle: .module,
-        comment: "Opens the Switch Agent sheet with nothing chosen yet.")
-    }
-  }
-
-  @ViewBuilder
-  private func choiceItem(_ choice: AgentSwitchChoices.Choice) -> some View {
-    let name = Text(
-      verbatim: choice.modelName
-        ?? String(localized: "Default model of the agent", bundle: .module))
-    if choice.isCurrent {
-      Toggle(isOn: .constant(true)) { name }
-        .disabled(true)
-    } else {
-      Button {
-        Self.open(choice, of: session.id, in: model)
-      } label: {
-        name
-      }
-    }
   }
 
   /// Opens the Switch Agent sheet set on `choice`, or on nothing: the switch itself is the
@@ -268,14 +203,7 @@ struct AgentHistoryPresentation: Equatable {
 
   private static func entry(_ change: AgentChange, names: AgentLabels) -> Entry {
     let from = names.label(change.previous)
-    // Another model of the same agent names the model alone: the agent is already on the line.
-    let to =
-      change.changesProvider
-      ? names.label(change.next)
-      : (names.model(of: change.next)
-        ?? String(
-          localized: "default model", bundle: .module,
-          comment: "Stands for the model an agent uses when none is chosen."))
+    let to = names.label(change.next)
     switch change.outcome {
     case .completed:
       let handover = handover(change.handover)
@@ -372,13 +300,37 @@ struct AgentLabels: Equatable {
     AgentNaming.name(of: providerID, names: names)
   }
 
-  /// `nil` for the agent's default model.
+  /// `nil` for the agent's default model. An alias — `opus` — is named after the model it stands
+  /// for, whatever its case.
   func model(of agent: SessionAgentConfiguration) -> String? {
-    agent.modelID.map { models[agent.providerID]?[$0] ?? $0 }
+    agent.modelID.map { id in
+      let names = models[agent.providerID]
+      return names?[id] ?? names?[id.lowercased()] ?? id
+    }
   }
 
   func label(_ agent: SessionAgentConfiguration, separator: String = " · ") -> String {
     let name = name(of: agent.providerID)
     return model(of: agent).map { "\(name)\(separator)\($0)" } ?? name
+  }
+}
+
+/// The view the agent's menu opens from: SwiftUI gives a button no view of its own.
+struct MenuAnchor: NSViewRepresentable {
+  @MainActor
+  final class Holder {
+    weak var view: NSView?
+  }
+
+  let holder: Holder
+
+  func makeNSView(context: Context) -> NSView {
+    let view = NSView()
+    holder.view = view
+    return view
+  }
+
+  func updateNSView(_ view: NSView, context: Context) {
+    holder.view = view
   }
 }
