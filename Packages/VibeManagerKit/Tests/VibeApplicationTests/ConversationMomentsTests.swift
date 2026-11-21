@@ -110,6 +110,22 @@ struct ConversationMomentsTests {
         state: .failed(exitCode: 1)) == [.created(.pullRequest, label: "#48")])
   }
 
+  @Test("A cherry-pick's or a revert's line is theirs, not the next commit's")
+  func picks() {
+    let picked = "[main 1a2b3c4] Picked\n 1 file changed\nOn branch main\nnothing to commit\n"
+    #expect(details("git cherry-pick 9f8e7d6; git commit -m y", output: picked).isEmpty)
+    #expect(
+      details(
+        #"git revert --no-edit 9f8e7d6 && git commit -m "Then""#,
+        output: "[main 1a2b3c4] Revert \"X\"\n[main 5d6e7f8] Then\n") == [
+          .commit(subject: "Then")
+        ])
+    #expect(
+      details(
+        "git cherry-pick -n 9f8e7d6 && git commit -m Squashed",
+        output: "[main 5d6e7f8] Squashed\n") == [.commit(subject: "Squashed")])
+  }
+
   @Test("Commands chained by && each count, their commits read in order")
   func chained() {
     let output = "[main abc1234] First\n[main def5678] Second\n"

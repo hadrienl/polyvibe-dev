@@ -246,6 +246,11 @@ public enum ConversationMoments {
         return quiet && succeeded ? [.commit(subject: message)] : []
       }
       return [.commit(subject: message ?? line.subject)]
+    case "cherry-pick", "revert":
+      // They print a commit's line too, of no commit of the line: read past it, not taken for
+      // the next commit's.
+      for _ in 0..<printedCommits(of: command) { _ = printed.nextCommit() }
+      return []
     case "push":
       // Read in order whatever it pushes: the next push's lines are the next ones.
       let section = printed.nextPush()
@@ -287,6 +292,20 @@ public enum ConversationMoments {
     }
   }
 
+  /// Options of `git cherry-pick` and `git revert` that take a value.
+  private static let pickValueOptions: Set<String> = [
+    "-m", "--mainline", "-X", "--strategy-option", "--strategy",
+  ]
+
+  /// The lines a `git cherry-pick` or a `git revert` prints: one per commit named, a range as
+  /// one; none when it commits nothing, or stops.
+  private static func printedCommits(of command: ResourceRecognizer.GitCommand) -> Int {
+    let silent = ["-n", "--no-commit", "--abort", "--quit", "--skip"]
+    if command.rest.contains(where: { silent.contains($0 ?? "") }) { return 0 }
+    // `--continue` goes on with the one it stopped at.
+    return max(positional(command, valueOptions: pickValueOptions).count, 1)
+  }
+
   /// Options of `git push` that take a value, which is then neither the remote nor a refspec.
   private static let pushValueOptions: Set<String> = [
     "-o", "--push-option", "--repo", "--receive-pack", "--exec",
@@ -294,20 +313,28 @@ public enum ConversationMoments {
 
   /// The first refspec of `git push origin feature`, `git push -u origin +HEAD:feature`.
   private static func pushedRefspec(_ command: ResourceRecognizer.GitCommand) -> String? {
+    let positional = positional(command, valueOptions: pushValueOptions)
+    guard positional.count >= 2, var refspec = positional[1] else { return nil }
+    if refspec.hasPrefix("+") { refspec.removeFirst() }
+    return refspec
+  }
+
+  /// The arguments of a command that are not options, nor the values of `valueOptions`.
+  private static func positional(
+    _ command: ResourceRecognizer.GitCommand, valueOptions: Set<String>
+  ) -> [String?] {
     var positional: [String?] = []
     var index = 0
     while index < command.rest.count {
       let argument = command.rest[index]
-      if let option = argument, pushValueOptions.contains(option) {
+      if let option = argument, valueOptions.contains(option) {
         index += 2
         continue
       }
       if argument?.hasPrefix("-") != true { positional.append(argument) }
       index += 1
     }
-    guard positional.count >= 2, var refspec = positional[1] else { return nil }
-    if refspec.hasPrefix("+") { refspec.removeFirst() }
-    return refspec
+    return positional
   }
 
   /// Where a refspec pushes: `HEAD:feature` to `feature`.
