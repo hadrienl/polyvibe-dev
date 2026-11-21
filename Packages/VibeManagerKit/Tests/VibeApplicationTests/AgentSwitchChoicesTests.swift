@@ -71,6 +71,26 @@ struct AgentSwitchChoicesTests {
     #expect(standard.last?.target == AgentTarget(providerID: "claude-code"))
     #expect(standard.last?.isCurrent == true)
   }
+
+  @Test("An alias of a family names, and checks, the newest model of it")
+  func aliasResolved() async throws {
+    let claude = ChoicesProvider(
+      id: "claude-code", name: "Claude Code",
+      models: [
+        AgentModel(id: "claude-opus-5-5", displayName: "Opus 5.5", shortName: "Opus"),
+        AgentModel(id: "claude-sonnet-5-5", displayName: "Sonnet 5.5", shortName: "Sonnet"),
+        AgentModel(id: "claude-opus-5", displayName: "Opus 5", shortName: "Opus"),
+      ])
+    let choices = await read([claude])
+    let agent = try #require(choices.agent("claude-code"))
+
+    #expect(choices.modelNames["claude-code"]?["opus"] == "Opus 5.5")
+    #expect(choices.modelNames["claude-code"]?["claude-opus-5"] == "Opus 5")
+    let offered = choices.choices(
+      for: agent, current: SessionAgentConfiguration(providerID: "claude-code", modelID: "opus"))
+    #expect(offered.map(\.modelName) == ["Opus 5.5", "Sonnet 5.5", "Opus 5"])
+    #expect(offered.map(\.isCurrent) == [true, false, false])
+  }
 }
 
 private struct ChoicesProvider: AgentProvider {

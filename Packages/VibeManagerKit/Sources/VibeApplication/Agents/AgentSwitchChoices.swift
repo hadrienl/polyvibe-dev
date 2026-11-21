@@ -24,6 +24,14 @@ public struct AgentSwitchChoices: Equatable, Sendable {
 
     public var id: AgentProviderID { descriptor.id }
     public var name: String { descriptor.displayName }
+
+    /// The catalogue's model `id` names: itself, or the newest of the family an alias names —
+    /// `opus`, which Claude Code takes for its newest Opus. The catalogue lists the newest first.
+    public func model(named id: String?) -> AgentModel? {
+      guard let id else { return nil }
+      return models.first { $0.id == id }
+        ?? models.first { $0.shortName?.lowercased() == id.lowercased() }
+    }
   }
 
   /// One entry of the menu: an agent and a model, `modelID == nil` for the agent's own default.
@@ -82,12 +90,19 @@ public struct AgentSwitchChoices: Equatable, Sendable {
   }
 
   /// Each agent's models by identifier, to their names: how a model the session ran is named.
+  /// An alias of a family — `opus` — is named after the model it stands for.
   public var modelNames: [String: [String: String]] {
     Dictionary(
       agents.map { agent in
-        (
+        let aliases = agent.models.compactMap { model in
+          model.shortName.map { ($0.lowercased(), model.displayName) }
+        }
+        let names = agent.models.map { ($0.id, $0.displayName) }
+        // The identifiers first, then the newest model of each family: a real identifier is
+        // never renamed by an alias.
+        return (
           agent.id.rawValue,
-          Dictionary(agent.models.map { ($0.id, $0.displayName) }, uniquingKeysWith: { a, _ in a })
+          Dictionary(aliases.reversed() + names, uniquingKeysWith: { _, later in later })
         )
       }, uniquingKeysWith: { a, _ in a })
   }
@@ -103,11 +118,14 @@ public struct AgentSwitchChoices: Equatable, Sendable {
     for agent: Agent, current: SessionAgentConfiguration?
   ) -> [Choice] {
     let providerID = agent.id.rawValue
+    // The model the session runs, an alias resolved: `opus` checks the newest Opus.
+    let running =
+      current?.providerID == providerID ? agent.model(named: current?.modelID)?.id : nil
     var choices = agent.models.map { model in
       Choice(
         target: AgentTarget(providerID: providerID, modelID: model.id),
         modelName: model.displayName,
-        isCurrent: current?.providerID == providerID && current?.modelID == model.id)
+        isCurrent: running == model.id)
     }
     if choices.isEmpty {
       choices.append(
