@@ -181,7 +181,9 @@ struct OverviewFilterMenu: View {
       }
       item.image = MomentMenuIcon.image(of: kind, theme: theme)
       item.state = filters.shows(kind) ? .on : .off
-      item.badge = NSMenuItemBadge(count: filters.count(of: kind))
+      let count = filters.count(of: kind)
+      // AppKit suppresses a numeric zero badge; every kind still needs its count.
+      item.badge = count == 0 ? NSMenuItemBadge(string: "0") : NSMenuItemBadge(count: count)
       menu.addItem(item)
     }
     menu.addItem(.separator())

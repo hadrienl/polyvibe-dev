@@ -111,6 +111,7 @@ struct OverviewFilterBarTests {
       #expect(item.title == MomentPresentation.name(of: kind))
       #expect(item.state == (kind == .git ? .off : .on))
       #expect(item.badge?.itemCount == filters.count(of: kind))
+      #expect(item.badge?.stringValue == String(filters.count(of: kind)))
       let image = try #require(item.image)
       #expect(!image.isTemplate)
       #expect(image.size.width > 0 && image.size.height > 0)
