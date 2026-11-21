@@ -1,0 +1,123 @@
+import AppKit
+import SwiftUI
+import Testing
+import VibeApplication
+import VibeDomain
+
+@testable import VibeConversationUI
+
+/// The filters over the overview (#572): six buttons on one row, or, narrower than that, one
+/// that opens a menu of the kinds — never two rows.
+@MainActor
+@Suite("The overview's filters, wide and narrow")
+struct OverviewFilterBarTests {
+  /// Two commits and an error: moments of two kinds.
+  private static func model() -> ConversationModel {
+    func shell(_ id: String, _ command: String) -> ConversationEntry {
+      ConversationEntry(
+        id: id,
+        content: .tool(
+          ToolCall(
+            callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)])))
+    }
+    let model = ConversationModel(sessionID: SessionID())
+    let entries = [
+      ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
+      shell("m1", "git commit -m one"),
+      ConversationEntry(id: "m2", content: .notice(.error("Overloaded"))),
+      shell("m3", "git push origin main"),
+    ]
+    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    return model
+  }
+
+  private static func appearance(hiding kinds: Set<String> = []) -> ConversationAppearance {
+    var appearance = ConversationAppearance()
+    appearance.hiddenMomentKinds = kinds
+    return appearance
+  }
+
+  @Test("Each kind says how many moments it has")
+  func counts() {
+    let filters = OverviewFilters(moments: Self.model().moments, appearance: Self.appearance())
+    #expect(filters.count(of: .git) == 2)
+    #expect(filters.count(of: .incident) == 1)
+    #expect(filters.count(of: .tests) == 0)
+  }
+
+  @Test("The menu's button says how many kinds are shown, only when some are hidden")
+  func counter() {
+    let model = Self.model()
+    let all = OverviewFilters(moments: model.moments, appearance: Self.appearance())
+    #expect(all.showsAll)
+    #expect(all.badge == nil)
+    #expect(all.accessibilityValue == "6 of 6")
+
+    let some = OverviewFilters(
+      moments: model.moments, appearance: Self.appearance(hiding: ["tests"]))
+    #expect(!some.showsAll)
+    #expect(some.shownCount == 5)
+    #expect(some.badge == "5/6")
+    #expect(some.accessibilityValue == "5 of 6")
+  }
+
+  @Test("A line of the menu turns its kind over, as its button does")
+  func toggleFromTheMenu() {
+    let model = Self.model()
+    var asked: [(ConversationMomentKind, Bool)] = []
+    model.setMomentKindShown = { asked.append(($0, $1)) }
+    OverviewFilters(moments: model.moments, appearance: Self.appearance()).toggle(.git, in: model)
+    OverviewFilters(moments: model.moments, appearance: Self.appearance(hiding: ["incident"]))
+      .toggle(.incident, in: model)
+    #expect(asked.map(\.0) == [.git, .incident])
+    #expect(asked.map(\.1) == [false, true])
+  }
+
+  @Test("Show All shows every kind hidden, and only those")
+  func showAll() {
+    let model = Self.model()
+    var asked: [(ConversationMomentKind, Bool)] = []
+    model.setMomentKindShown = { asked.append(($0, $1)) }
+    OverviewFilters(
+      moments: model.moments, appearance: Self.appearance(hiding: ["git", "question"])
+    )
+    .showAll(in: model)
+    #expect(asked.map(\.0) == [.git, .question])
+    #expect(asked.map(\.1) == [true, true])
+
+    asked = []
+    OverviewFilters(moments: model.moments, appearance: Self.appearance()).showAll(in: model)
+    #expect(asked.isEmpty)
+  }
+
+  // MARK: Width
+
+  /// The form the bar takes at that width.
+  private func form(atWidth width: Double) -> OverviewFilterBar.Form? {
+    var form: OverviewFilterBar.Form?
+    let hosting = NSHostingView(
+      rootView: OverviewFilterBar(model: Self.model())
+        .frame(width: width)
+        .environment(\.conversationTheme, .systemDark)
+        .environment(\.conversationAppearance, Self.appearance(hiding: ["tests"]))
+        .onPreferenceChange(OverviewFilterBar.Form.Key.self) { form = $0 })
+    hosting.frame = NSRect(x: 0, y: 0, width: width, height: 60)
+    hosting.layoutSubtreeIfNeeded()
+    return form
+  }
+
+  @Test("Wide enough, the six buttons on one row; narrower, the menu alone")
+  func rowOrMenu() {
+    #expect(form(atWidth: 140) == .row)
+    #expect(form(atWidth: ConversationOverviewLayout.minimumWidth) == .menu)
+  }
+
+  @Test("The threshold is the row's own width: six buttons and their insets")
+  func threshold() {
+    let row =
+      6 * OverviewFilterBar.buttonSize + 5 * OverviewFilterBar.spacing + 2
+      * OverviewFilterBar.inset
+    #expect(form(atWidth: row) == .row)
+    #expect(form(atWidth: row - 1) == .menu)
+  }
+}
