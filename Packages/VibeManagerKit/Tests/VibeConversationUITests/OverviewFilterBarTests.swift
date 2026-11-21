@@ -39,7 +39,13 @@ struct OverviewFilterBarTests {
 
   @Test("Each kind says how many moments it has")
   func counts() {
-    let filters = OverviewFilters(moments: Self.model().moments, appearance: Self.appearance())
+    // Count the supplied moments, independently of transcript command recognition.
+    let moments: [ConversationMoments.Placed] = [
+      .init(blockIndex: 0, moment: .init(.commit(subject: "one"), entryID: "m1", date: nil)),
+      .init(blockIndex: 1, moment: .init(.error("Overloaded"), entryID: "m2", date: nil)),
+      .init(blockIndex: 2, moment: .init(.push(branch: "main"), entryID: "m3", date: nil)),
+    ]
+    let filters = OverviewFilters(moments: moments, appearance: Self.appearance())
     #expect(filters.count(of: .git) == 2)
     #expect(filters.count(of: .incident) == 1)
     #expect(filters.count(of: .tests) == 0)
