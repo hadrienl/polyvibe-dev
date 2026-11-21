@@ -16,7 +16,7 @@ struct StatusBarLayoutTests {
   private static let provider = EffortProvider(
     base: WorkspaceProvider(
       id: "claude-code", name: "Claude Code",
-      catalog: [AgentModel(id: "claude-sonnet-4-5-20250929", displayName: "Sonnet 4.5")]))
+      catalog: [AgentModel(id: StatusBarUsage.model, displayName: "Sonnet 4.5")]))
 
   /// An agent whose effort is "Extra High", the longest of the levels.
   private struct EffortProvider: AgentProvider, AgentEffortControlling {
@@ -65,8 +65,9 @@ struct StatusBarLayoutTests {
     let session = WorkSession(
       name: "Fix the VAT rounding",
       initialPrompt: "Fix it.",
+      // A conversation of its own: its context is read, and the Usage button shows its share.
       agent: SessionAgentConfiguration(
-        providerID: "claude-code", modelID: "claude-sonnet-4-5-20250929"),
+        providerID: "claude-code", modelID: StatusBarUsage.model, resumeIdentifier: "conversation"),
       status: .closed,
       createdAt: Date(timeIntervalSince1970: 1),
       updatedAt: Date(timeIntervalSince1970: 1),
@@ -81,8 +82,10 @@ struct StatusBarLayoutTests {
     let path = folder.path
     let terminals = SessionTerminals(
       supervisor: supervisor, viewportTimeout: .milliseconds(1), sessionFolder: { _ in path })
+    let usage = StatusBarUsage.usage(of: session.id)
     let model = AppModel(
-      repository: repository, agents: registry, launcher: launcher, terminals: terminals)
+      repository: repository, agents: registry, launcher: launcher, usage: usage,
+      terminals: terminals)
     let plan = try await Self.provider.launchPlan(
       for: AgentLaunchRequest(workingDirectoryPath: path))
     await launcher.launch(session: session, plan: plan)
@@ -91,6 +94,13 @@ struct StatusBarLayoutTests {
     await waitUntil { model.pane(for: session.id)?.status == .running }
     await model.refreshEffort(of: session.id)
     await model.refreshAgents()
+    // The figures, read as the button reads them once the session is shown.
+    usage.startWatching(session.id)
+    await usage.refresh()
+    usage.stopWatching(session.id)
+    let summary = SessionUsageSummary(
+      figures: usage.sessionUsage[session.id], percent: usage.contextWindows[session.id]?.percentUsed)
+    #expect(summary.cost != nil && summary.percent == 91, "the Usage button at its widest")
     let pane = try #require(model.pane(for: session.id))
     return Fixture(model: model, session: session, pane: pane)
   }
@@ -163,7 +173,7 @@ struct StatusBarLayoutTests {
     for width in stride(from: 420, through: 1_000, by: 20).map({ CGFloat($0) }) {
       let (controls, bounds) = try await draw(fixture, width: width, language: language)
       #expect(
-        controls.map(\.name) == ["agent", "effort", "drawer", "close"], "\(Int(width))")
+        controls.map(\.name) == ["agent", "effort", "usage", "drawer", "close"], "\(Int(width))")
       for control in controls {
         #expect(bounds.contains(control.frame), "\(Int(width)): \(control.name) out of the bar")
       }
@@ -175,5 +185,41 @@ struct StatusBarLayoutTests {
         }
       }
     }
+  }
+
+  @Test("The Usage button gives up its cost, then its share, at the bar's steps")
+  func usageFollowsTheSteps() async throws {
+    let fixture = try await fixture()
+    var widths: [StatusBarDensity: Set<CGFloat>] = [:]
+    for width in stride(from: 420, through: 1_000, by: 20).map({ CGFloat($0) }) {
+      let (controls, _) = try await draw(fixture, width: width, language: "en")
+      let usage = try #require(controls.first { $0.name == "usage" }, "\(Int(width))")
+      widths[StatusBarDensity.fitting(width), default: []].insert(usage.frame.width.rounded())
+    }
+    // One form for each step: the whole value, then without the cost, then the ring alone.
+    let full = try #require(widths[.full]), model = try #require(widths[.model])
+    let level = try #require(widths[.level])
+    let narrow = (widths[.gauge] ?? []).union(widths[.icons] ?? [])
+    #expect(full.count == 1 && full == model)
+    #expect(level.count == 1 && narrow.count == 1)
+    #expect(full.first! > level.first! && level.first! > narrow.first!)
+  }
+
+  @Test("The step chooses the Usage button's widest form; the figures, the ones it has")
+  func usageForms() {
+    let label = SessionUsageLabel(
+      summary: SessionUsageSummary(figures: SessionUsageLayoutTests.figures(), percent: 67),
+      isReading: false)
+    #expect(label.forms(at: .full) == [.full, .withoutCost, .ringAlone])
+    #expect(label.forms(at: .model) == [.full, .withoutCost, .ringAlone])
+    #expect(label.forms(at: .level) == [.withoutCost, .ringAlone])
+    #expect(label.forms(at: .gauge) == [.ringAlone])
+    #expect(label.forms(at: .icons) == [.ringAlone])
+    // Without a known window, the running time stays: there is no ring to fall back on.
+    let unknownWindow = SessionUsageLabel(
+      summary: SessionUsageSummary(figures: SessionUsageLayoutTests.figures(), percent: nil),
+      isReading: false)
+    #expect(unknownWindow.forms(at: .full) == [.full, .withoutCost])
+    #expect(unknownWindow.forms(at: .gauge) == [.withoutCost])
   }
 }
