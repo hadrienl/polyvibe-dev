@@ -316,6 +316,27 @@ struct BookmarkTests {
         scale: 0.1) == nil)
   }
 
+  @Test("Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
+  func previewFollowsTheLayout() {
+    let model = Self.model()
+    model.loadBookmarks(["m2"])
+    let before = Self.evenLayout(model)
+    let moment = model.shownMoments[0].moment
+    func y(_ layout: ConversationOverviewLayout, scale: Double) -> Double? {
+      ConversationOverview.cluster(
+        starting: moment, moments: model.shownMoments, layout: layout, scale: scale)?.y
+    }
+    #expect(y(before, scale: 0.1) == ConversationOverview.iconY(top: 240, scale: 0.1))
+    // The first row measured 200 points taller, as the wheel builds it: the icon moves down.
+    let after = before.remeasured(
+      Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, $0.id == "m0" ? 300.0 : 100.0) }))
+    #expect(y(after, scale: 0.1) == ConversationOverview.iconY(top: 440, scale: 0.1))
+    // A longer conversation drawn smaller.
+    #expect(y(after, scale: 0.05) == ConversationOverview.iconY(top: 440, scale: 0.05))
+    model.toggleBookmark(model.blocks[2])
+    #expect(y(after, scale: 0.1) == nil)
+  }
+
   // MARK: - Moments (#572)
 
   private static func shell(_ id: String, _ command: String) -> ConversationEntry {
@@ -422,5 +443,37 @@ struct BookmarkTests {
     let model = Self.momentsModel()
     #expect(model.moments(of: model.blocks[1]).map(\.kind) == [.git])
     #expect(model.moments(of: model.blocks[2]).isEmpty)
+  }
+
+  @Test("A bookmark's preview reads in the messages' own font and size, a serif theme's included")
+  func previewType() {
+    var theme = ConversationTheme.systemDark
+    theme.fontStyle = .serif
+    var appearance = ConversationAppearance()
+    appearance.textSize = .extraLarge
+    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
+    #expect(style.textSize == 18)
+    #expect(style.excerptFont == theme.messageFont(size: 18))
+    #expect(style.headingFont == theme.interfaceFont(size: 18 * 0.86, weight: .semibold))
+    #expect(style.eventFont == theme.interfaceFont(size: 18))
+  }
+
+  @Test("An answer's bookmark reads as the answer does, without its Markdown")
+  func answerWithoutMarkdown() {
+    let answer = ConversationBlock.entry(
+      ConversationEntry(
+        id: "a", content: .agentText("## Plan\n\n- **Rebase** on `main`\n\nThen ship.")))
+    #expect(ConversationModel.bookmarkLabel(of: answer) == "Plan Rebase on main Then ship.")
+    let reasoning = ConversationBlock.entry(
+      ConversationEntry(id: "r", content: .reasoning("*Check* the tests.")))
+    #expect(ConversationModel.bookmarkExcerpt(of: reasoning) == "Check the tests.")
+  }
+
+  @Test("A rule says nothing, and a block of code leaves one space before what follows")
+  func plainTextBetweenBlocks() {
+    #expect(ConversationModel.plainText(ofMarkdown: "Before\n\n---\n\nAfter") == "Before After")
+    #expect(
+      ConversationModel.plainText(ofMarkdown: "```swift\nlet x = 1\n```\n\nThen ship.")
+        == "let x = 1 Then ship.")
   }
 }

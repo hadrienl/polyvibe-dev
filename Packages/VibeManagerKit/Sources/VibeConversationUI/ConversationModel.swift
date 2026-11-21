@@ -1327,7 +1327,9 @@ public final class ConversationModel {
         // alike.
         let shown = ReplyLinks.shown(prompt, attachments: attachments).message
         text = CoordinatorInstructions.userText(of: shown) ?? shown
-      case .agentText(let answer), .reasoning(let answer?): text = answer
+      case .agentText(let answer), .reasoning(let answer?):
+        // As it reads, without its Markdown: only its start is shown, only its start is read.
+        text = plainText(ofMarkdown: String(answer.prefix(2000)))
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:
@@ -1356,12 +1358,21 @@ public final class ConversationModel {
     var text = ""
     var block: PresentationIntent?
     for run in parsed.runs {
-      // Parsed whole, blocks lose what stood between them: a space between each.
-      if !text.isEmpty, run.presentationIntent != block { text += " " }
-      block = run.presentationIntent
-      text += String(parsed[run.range].characters)
+      let intent = run.presentationIntent
+      // A rule says nothing.
+      if intent?.components.contains(where: { $0.kind == .thematicBreak }) == true { continue }
+      var piece = Substring(String(parsed[run.range].characters))
+      if intent != block {
+        // Parsed whole, blocks lose what stood between them: one space between each, whatever
+        // a block of code ended with.
+        while text.last?.isWhitespace == true { text.removeLast() }
+        piece = piece.drop(while: \.isWhitespace)
+        if !text.isEmpty, !piece.isEmpty { text += " " }
+      }
+      block = intent
+      text += piece
     }
-    return text
+    return text.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   /// Whether a sub-agent's block is unfolded, wherever it is shown: on its own, as a line of a

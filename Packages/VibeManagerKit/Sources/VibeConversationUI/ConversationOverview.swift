@@ -157,11 +157,11 @@ struct ConversationOverview: View {
 
   private var layout: ConversationOverviewLayout { box.layout }
 
+  /// What the pointer is on: the first moment of an icon, or the rest of the overview. Its icon —
+  /// the moments drawn with it, and where — is found again in each layout, not kept: icons move
+  /// as rows are measured and as the scale changes, the pointer standing still.
   private struct Hover: Equatable {
-    /// The moments under the pointer, among those shown.
-    var moments: Range<Int>?
-    /// Their icon, not the pointer: their preview stays put while the pointer moves near.
-    var y: Double
+    var moment: ConversationMoment?
   }
 
   /// Left of the drawing, where the moments' icons are.
@@ -186,7 +186,7 @@ struct ConversationOverview: View {
         .equatable()
         OverviewViewport(
           tracker: model.overview, box: box, scale: scale, colors: .init(theme),
-          isActive: frameDrag.isDragging || (hovered != nil && hovered?.moments == nil))
+          isActive: frameDrag.isDragging || (hovered != nil && hovered?.moment == nil))
       }
       .contentShape(Rectangle())
       .gesture(drag(scale: scale))
@@ -195,7 +195,7 @@ struct ConversationOverview: View {
         case .active(let point):
           let cluster = Self.cluster(
             near: point, moments: model.shownMoments, layout: layout, scale: scale)
-          let hover = Hover(moments: cluster?.moments, y: cluster?.y ?? point.y)
+          let hover = Hover(moment: cluster.map { model.shownMoments[$0.moments.lowerBound].moment })
           if hover != hovered { hovered = hover }
           // A moment is a link: the hand over the whole square of its icon, or its line.
           (cluster == nil ? NSCursor.arrow : NSCursor.pointingHand).set()
@@ -206,19 +206,31 @@ struct ConversationOverview: View {
       }
       // Left of the overview, level with the icon, over the messages.
       .overlay {
-        if let hovered, let range = hovered.moments, range.upperBound <= model.shownMoments.count {
+        if let moment = hovered?.moment,
+          let cluster = Self.cluster(
+            starting: moment, moments: model.shownMoments, layout: layout, scale: scale)
+        {
           BookmarkPreviewPlacement(
-            lineY: hovered.y,
+            lineY: cluster.y,
             width: ConversationOverviewLayout.previewWidth(
-              textSize: appearance.textSize.scaled(13), room: room)
+              textSize: MomentPreviewStyle(theme: theme, appearance: appearance).textSize,
+              room: room)
           ) {
-            MomentPreview(model: model, moments: Array(model.shownMoments[range]), theme: theme)
+            MomentPreview(
+              model: model, moments: Array(model.shownMoments[cluster.moments]), theme: theme)
           }
           .allowsHitTesting(false)
         }
       }
     }
     .background(WheelForwarder(pager: pager))
+    // A moment gone under the pointer — a bookmark taken away — is no longer hovered.
+    .onChange(of: model.momentsRevision) {
+      guard let moment = hovered?.moment,
+        !model.shownMoments.contains(where: { $0.moment == moment })
+      else { return }
+      hovered = Hover(moment: nil)
+    }
     .overlay(alignment: .leading) {
       Rectangle().fill(theme.border.color.opacity(0.6)).frame(width: 1)
     }
@@ -267,6 +279,17 @@ struct ConversationOverview: View {
     let tops = placed.map { layout.tops[$0.blockIndex] }
     return ConversationOverviewLayout.clusters(tops, scale: scale).map {
       ($0, iconY(top: tops[$0.lowerBound], scale: scale))
+    }
+  }
+
+  /// The icon a moment was hovered in, as the overview is laid out now: the moments drawn with
+  /// it, and where. `nil` once the moment is gone. Laid out again, it may be drawn with others.
+  static func cluster(
+    starting moment: ConversationMoment, moments: [ConversationMoments.Placed],
+    layout: ConversationOverviewLayout, scale: Double
+  ) -> (moments: Range<Int>, y: Double)? {
+    clusters(of: moments, layout: layout, scale: scale).first { cluster in
+      moments[cluster.moments].contains { $0.moment == moment }
     }
   }
 
@@ -617,8 +640,30 @@ private struct BookmarkPreviewPlacement: Layout {
   }
 }
 
+/// The type of the moments' preview, the conversation's own: a bookmark's words as the messages
+/// read them — the theme's font, at the conversation's size —, who wrote them as a relayed
+/// message's summary does.
+struct MomentPreviewStyle {
+  let textSize: Double
+  let headingFont: Font
+  /// A bookmark's message.
+  let excerptFont: Font
+  /// What happened, for the other moments.
+  let eventFont: Font
+  /// What the user answered a question.
+  let answerFont: Font
+
+  init(theme: ConversationTheme, appearance: ConversationAppearance) {
+    textSize = appearance.textSize.pointSize
+    headingFont = theme.interfaceFont(size: textSize * 0.86, weight: .semibold)
+    excerptFont = theme.messageFont(size: textSize)
+    eventFont = theme.interfaceFont(size: textSize)
+    answerFont = theme.interfaceFont(size: textSize * 0.86)
+  }
+}
+
 /// What the moments under the pointer are, beside the overview: a bookmark's message — who
-/// wrote it, when, its start —, or what happened and when, in the conversation's own text size.
+/// wrote it, when, its start —, or what happened and when, in the conversation's own type.
 private struct MomentPreview: View {
   let model: ConversationModel
   let moments: [ConversationMoments.Placed]
@@ -642,23 +687,24 @@ private struct MomentPreview: View {
       model.blocks.indices.contains(placed.blockIndex)
       ? model.blocks[placed.blockIndex] : nil
     let moment = placed.moment
+    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
     return VStack(alignment: .leading, spacing: 3) {
       if let heading = heading(of: moment, block: block) {
         Text(heading)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(11.5), weight: .semibold))
+          .font(style.headingFont)
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(1)
       }
       let label = MomentPresentation.label(of: moment, block: block)
       if !label.isEmpty {
         Text(label)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(13)))
+          .font(moment.kind == .bookmark ? style.excerptFont : style.eventFont)
           .foregroundStyle(theme.text.color)
           .lineLimit(3)
       }
       if let answer = MomentPresentation.answer(of: moment) {
         Text(answer)
-          .font(theme.interfaceFont(size: appearance.textSize.scaled(12.5)))
+          .font(style.answerFont)
           .foregroundStyle(theme.secondaryText.color)
           .lineLimit(2)
       }
