@@ -90,6 +90,8 @@ struct ConversationMomentsTests {
         "git push origin a; false", output: "   1a2b3c4..5d6e7f8  a -> a\n",
         state: .failed(exitCode: 1)) == [.push(branch: "a")])
     #expect(details("git switch -c late && false", state: .failed(exitCode: 1)).isEmpty)
+    #expect(details("git checkout -b late && false", state: .failed(exitCode: 1)).isEmpty)
+    #expect(details("gh pr create --fill && false", state: .failed(exitCode: 1)).isEmpty)
   }
 
   @Test("Commands chained by && each count, their commits read in order")

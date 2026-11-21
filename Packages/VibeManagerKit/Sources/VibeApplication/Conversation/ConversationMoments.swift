@@ -224,9 +224,9 @@ public enum ConversationMoments {
         if commits == nil, invocation.arguments.contains("commit") { commits = CommitLines(output) }
         found += gitMoments(
           invocation, output: output, succeeded: succeeded, commits: &commits)
-      case "gh",
-        "glab" where succeeded:
-        found += forgeMoments(invocation, output: output)
+      // A `where` would guard only the last of the names.
+      case "gh", "glab":
+        if succeeded { found += forgeMoments(invocation, output: output) }
       default: break
       }
     }
@@ -263,8 +263,8 @@ public enum ConversationMoments {
       // Refused, its line fails: only what it printed tells it pushed.
       guard succeeded || printed != nil else { return [] }
       return [.push(branch: refspec.flatMap(destination(of:)) ?? printed)]
-    case "checkout", "switch", "branch",
-      "worktree" where succeeded:
+    case "checkout", "switch", "branch", "worktree":
+      guard succeeded else { return [] }
       // The branches and worktrees it created, as the journal reads them.
       // Wherever it ran: a folder only the shell knows still had its branch made.
       return ResourceRecognizer.gitSightings(
