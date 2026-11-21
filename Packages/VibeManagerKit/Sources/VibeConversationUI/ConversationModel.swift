@@ -759,6 +759,9 @@ public final class ConversationModel {
   @ObservationIgnored private var echoTallies = EchoTallies()
   @ObservationIgnored private(set) var layoutCount = 0
   @ObservationIgnored private(set) var lastLayoutWork = LayoutWork()
+  /// What the last update of the moments did: the blocks whose moments it read, and those it
+  /// placed.
+  @ObservationIgnored private(set) var lastMomentsWork = (read: 0, placed: 0)
 
   /// Lays out again what changed — the entries from `changedFrom`, nothing when `nil` — now if
   /// the conversation is on screen, once it is otherwise.
@@ -1228,6 +1231,7 @@ public final class ConversationModel {
         placed.append(.init(blockIndex: index, moment: moment))
       }
     }
+    lastMomentsWork = (blocks.count - start, blockMoments.count - placedFrom)
     guard !moments[kept...].elementsEqual(placed) else { return }
     moments.replaceSubrange(kept..., with: placed)
     updateShownMoments()

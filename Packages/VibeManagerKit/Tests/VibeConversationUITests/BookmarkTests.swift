@@ -449,14 +449,18 @@ struct BookmarkTests {
 
   @Test("A conversation that grows reads the moments of its end as a whole reading would")
   func momentsReadIncrementally() {
-    var entries = [
-      ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
-      Self.shell("m1", "git commit -m one", output: "[main 1a2b3c4] one\n"),
-      ConversationEntry(id: "m2", content: .agentText("Done")),
-    ]
     let model = ConversationModel(sessionID: SessionID())
-    model.apply(ConversationSnapshot(entries: entries, availability: .available))
-    model.toggleBookmark(model.blocks[2])
+    model.processRunning = { true }
+    var revision = 0
+    var entries: [ConversationEntry] = []
+    /// The entries from `index` on changed, those before kept: as the reader publishes them.
+    func publish(changedFrom index: Int) {
+      revision += 1
+      var snapshot = ConversationSnapshot(entries: entries, availability: .available)
+      snapshot.revision = revision
+      snapshot.unchangedPrefix = index
+      model.apply(snapshot)
+    }
     func expectWhole() {
       #expect(
         model.moments
@@ -468,22 +472,42 @@ struct BookmarkTests {
         #expect(model.moments(of: block) == ConversationMoments.moments(of: block))
       }
     }
-    // A push still running, then done; an error after it.
+    entries = [
+      ConversationEntry(id: "p0", content: .userPrompt("Commit", attachments: [])),
+      ConversationEntry(id: "a1", content: .agentText("On it")),
+      Self.shell("s2", "git commit -m one", output: "[main 1a2b3c4] one\n"),
+      Self.shell("s3", "git status"),
+    ]
+    publish(changedFrom: 0)
+    #expect(model.blocks.map(\.id).count == 3)
+    // Marked before where the next layouts start.
+    model.toggleBookmark(model.blocks[0])
+    expectWhole()
+    // The group of tools grows: laid out again from its block, the bookmark before it kept.
     entries.append(
-      ConversationEntry(
-        id: "m3",
-        content: .tool(
-          ToolCall(
-            callID: "m3", kind: .shell, state: .running,
-            parameters: [.init(.command, "git push origin main")]))))
-    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+      Self.shell(
+        "s4", "git push origin main",
+        output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  main -> main\n"))
+    publish(changedFrom: 4)
+    #expect(model.blocks.count == 3)
+    // Read and placed as far as the layout went back, not from the start.
+    #expect(model.lastLayoutWork.blocks == 2)
+    #expect(model.lastMomentsWork == (read: 2, placed: 2))
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git])
     expectWhole()
-    entries[3] = Self.shell("m3", "git push origin main")
-    entries.append(ConversationEntry(id: "m4", content: .notice(.error("Overloaded"))))
-    model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    // An answer after it, then an error.
+    entries.append(ConversationEntry(id: "a5", content: .agentText("Pushed")))
+    publish(changedFrom: 5)
+    #expect(model.lastMomentsWork.read == model.lastLayoutWork.blocks)
+    #expect(model.lastMomentsWork.read < model.blocks.count)
     expectWhole()
-    #expect(model.moments.map(\.moment.kind) == [.git, .bookmark, .git, .incident])
-    model.toggleBookmark(model.blocks[4])
+    entries.append(ConversationEntry(id: "e6", content: .notice(.error("Overloaded"))))
+    publish(changedFrom: 6)
+    #expect(model.lastMomentsWork.read == model.lastLayoutWork.blocks)
+    #expect(model.lastMomentsWork.read < model.blocks.count)
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git, .incident])
+    expectWhole()
+    model.toggleBookmark(model.blocks[3])
     expectWhole()
   }
 
