@@ -301,7 +301,8 @@ struct ConversationOverview: View {
     return nearest.map { ($0.moments, $0.y, $0.touched) }
   }
 
-  /// The block a click at `point` brings up: that of the moment touched.
+  /// The block a click at `point` brings up: that of the moment touched. Named by the model's
+  /// blocks, which the moments are of: the layout may not have caught up with them yet.
   static func blockID(
     clickedAt point: CGPoint, model: ConversationModel, layout: ConversationOverviewLayout,
     scale: Double
@@ -310,7 +311,8 @@ struct ConversationOverview: View {
       let cluster = cluster(
         near: point, moments: model.shownMoments, layout: layout, scale: scale)
     else { return nil }
-    return layout.ids[model.shownMoments[cluster.touched].blockIndex]
+    let index = model.shownMoments[cluster.touched].blockIndex
+    return model.blocks.indices.contains(index) ? model.blocks[index].id : nil
   }
 
   /// What answers the pointer for an icon centred at `y`: the margin's width, as tall.

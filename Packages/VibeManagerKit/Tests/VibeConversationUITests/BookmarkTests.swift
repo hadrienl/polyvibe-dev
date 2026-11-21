@@ -266,9 +266,13 @@ struct BookmarkTests {
 
   /// The blocks laid out 100 points tall, 20 apart: block `i` starts at `i × 120`.
   private static func evenLayout(_ model: ConversationModel) -> ConversationOverviewLayout {
+    evenLayout(of: model.blocks)
+  }
+
+  private static func evenLayout(of blocks: [ConversationBlock]) -> ConversationOverviewLayout {
     ConversationOverviewLayout(
-      blocks: model.blocks,
-      measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
+      blocks: blocks,
+      measured: Dictionary(uniqueKeysWithValues: blocks.map { ($0.id, 100.0) }),
       metrics: .init(
         columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8),
       shapes: ConversationOverviewShapes())
@@ -426,6 +430,21 @@ struct BookmarkTests {
     #expect(
       ConversationOverview.blockID(
         clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.05) == "m1")
+  }
+
+  @Test("A click names the moment's block as the model has it, the layout a step behind")
+  func clickWithALayoutBehind() {
+    let model = Self.momentsModel()
+    // Laid out from blocks the model no longer has: other identifiers at the same places.
+    let behind = (0..<5).map {
+      ConversationBlock.entry(ConversationEntry(id: "old\($0)", content: .agentText("x")))
+    }
+    let layout = Self.evenLayout(of: behind)
+    let icon = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.1)[0].y
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.1) == "m1")
   }
 
   @Test("A row's margin reads the moments of its block as they were laid out")
