@@ -222,9 +222,7 @@ public enum ConversationMoments {
       switch invocation.program {
       case "git":
         found += gitMoments(invocation, succeeded: succeeded, printed: &printed)
-      // A `where` would guard only the last of the names.
-      case "gh", "glab":
-        if succeeded { found += forgeMoments(invocation, output: output) }
+      case "gh", "glab": found += forgeMoments(invocation, output: output, succeeded: succeeded)
       default: break
       }
     }
@@ -318,8 +316,10 @@ public enum ConversationMoments {
     return destination.flatMap { ResourceRecognizer.normalizedBranch(String($0)) }
   }
 
+  /// A ticket or a pull request created once the line succeeded or its address was printed; a
+  /// merge, only once the line succeeded.
   private static func forgeMoments(
-    _ invocation: Invocation, output: String
+    _ invocation: Invocation, output: String, succeeded: Bool
   ) -> [ConversationMoment.Detail] {
     guard let verb = invocation.forgeVerb else { return [] }
     let isRequest = verb.noun != "issue"
@@ -328,8 +328,9 @@ public enum ConversationMoments {
       .first { ($0.kind == .pullRequest) == isRequest }
     switch verb.action {
     case "create":
+      guard succeeded || printed != nil else { return [] }
       return [.created(isRequest ? .pullRequest : .issue, label: printed?.label)]
-    case "merge" where isRequest:
+    case "merge" where isRequest && succeeded:
       // Queued until checks pass: not merged yet.
       guard !Self.isQueuedMerge(invocation, output: output) else { return [] }
       let number = invocation.forgeNumber(after: verb)

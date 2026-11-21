@@ -101,6 +101,13 @@ struct ConversationMomentsTests {
     #expect(details("git switch -c late && false", state: .failed(exitCode: 1)).isEmpty)
     #expect(details("git checkout -b late && false", state: .failed(exitCode: 1)).isEmpty)
     #expect(details("gh pr create --fill && false", state: .failed(exitCode: 1)).isEmpty)
+    // Its address printed, the pull request was created, whatever its merge did.
+    #expect(
+      details(
+        "gh pr create --fill && gh pr merge --squash",
+        output:
+          "https://github.com/acme/shop/pull/48\nX Pull request acme/shop#48 is not mergeable\n",
+        state: .failed(exitCode: 1)) == [.created(.pullRequest, label: "#48")])
   }
 
   @Test("Commands chained by && each count, their commits read in order")
