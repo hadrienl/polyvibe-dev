@@ -434,7 +434,11 @@ public final class ConversationModel {
       {
         rebuild(changedFrom: 0)
       }
-      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds { updateShownMoments() }
+      if appearance.hiddenMomentKinds != oldValue.hiddenMomentKinds
+        || appearance.showsOverview != oldValue.showsOverview
+      {
+        updateShownMoments()
+      }
     }
   }
 
@@ -1229,9 +1233,14 @@ public final class ConversationModel {
     updateShownMoments()
   }
 
-  /// The moments of the kinds the settings show.
+  /// Whether bookmarks and moments are used: they are the overview's, and go with it. Hidden, the
+  /// bookmarks are kept, the filters too: they are all back with the overview.
+  public var usesMoments: Bool { appearance.showsOverview }
+
+  /// The moments of the kinds the settings show; none without the overview.
   private func updateShownMoments() {
-    let shown = ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds)
+    let shown =
+      usesMoments ? ConversationMoments.shown(moments, hiding: appearance.hiddenMomentKinds) : []
     guard shown != shownMoments else { return }
     shownMoments = shown
     let indices = ConversationMoments.blockIndices(of: shown)
@@ -1243,7 +1252,7 @@ public final class ConversationModel {
   /// what is read otherwise. `false` when there is none.
   @discardableResult
   public func toggleBookmarkInView() -> Bool {
-    guard let id = selectedBlockID() ?? overview.top?.blockID,
+    guard usesMoments, let id = selectedBlockID() ?? overview.top?.blockID,
       let block = blocks.first(where: { $0.id == id })
     else { return false }
     toggleBookmark(block)

@@ -487,6 +487,28 @@ struct BookmarkTests {
     expectWhole()
   }
 
+  @Test("Without the overview, neither bookmarks nor moments; all back with it")
+  func momentsGoWithTheOverview() {
+    let model = Self.momentsModel()
+    model.toggleBookmark(model.blocks[2])
+    model.appearance.hiddenMomentKinds = ["incident"]
+    let shown = model.shownMoments
+    #expect(shown.map(\.moment.kind) == [.git, .bookmark, .git])
+    model.appearance.showsOverview = false
+    #expect(!model.usesMoments)
+    #expect(model.shownMoments.isEmpty)
+    #expect(model.momentIndices.isEmpty)
+    #expect(model.momentBlocks.isEmpty)
+    #expect(!model.toggleBookmarkInView())
+    #expect(!model.revealNextMoment())
+    // Kept: the bookmarks, and the filters.
+    #expect(model.bookmarks == ["m2"])
+    #expect(model.appearance.hiddenMomentKinds == ["incident"])
+    model.appearance.showsOverview = true
+    #expect(model.shownMoments == shown)
+    #expect(model.momentIndices == [1, 2, 4])
+  }
+
   @Test("A row's margin reads the moments of its block as they were laid out")
   func rowMoments() {
     let model = Self.momentsModel()

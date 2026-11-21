@@ -181,6 +181,13 @@ public struct ConversationSettingsView: View {
           Toggle(isOn: $appearance.showsOverview) {
             Text("Show the overview beside the conversation", bundle: .module)
           }
+          // Bookmarks and moments are the overview's (#572).
+          Text(
+            "Bookmarks and key moments come with the overview. Hidden with it, they are kept, and come back with it.",
+            bundle: .module
+          )
+          .font(.caption)
+          .foregroundStyle(.secondary)
         } header: {
           Text("Display", bundle: .module)
         }

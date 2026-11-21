@@ -661,22 +661,28 @@ struct BlockRow: View {
       .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
       .onHover { isHovered = $0 }
       .overlay(alignment: .topLeading) {
-        HStack(alignment: .top, spacing: 0) {
-          let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
-          if moments.isEmpty {
-            Color.clear.frame(width: MomentGutterMark.width, height: 1)
-          } else {
-            MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
-          }
-          BookmarkGutter(
-            isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
-          ) {
-            model.toggleBookmark(block)
-          }
-        }
-        .padding(.top, firstLineTop)
-        .offset(x: -(BookmarkGutter.reach + MomentGutterMark.width))
+        // Without the overview, neither bookmarks nor moments (#572).
+        if appearance.showsOverview { gutter }
       }
+  }
+
+  /// The block's moment and bookmark, left of it.
+  private var gutter: some View {
+    HStack(alignment: .top, spacing: 0) {
+      let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
+      if moments.isEmpty {
+        Color.clear.frame(width: MomentGutterMark.width, height: 1)
+      } else {
+        MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
+      }
+      BookmarkGutter(
+        isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+      ) {
+        model.toggleBookmark(block)
+      }
+    }
+    .padding(.top, firstLineTop)
+    .offset(x: -(BookmarkGutter.reach + MomentGutterMark.width))
   }
 
   /// Whether its view lights it itself when it is brought up: what the user and the agent wrote.
