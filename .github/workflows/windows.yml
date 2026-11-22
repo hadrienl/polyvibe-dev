@@ -5,7 +5,8 @@ name: Windows
 # request looks red for a module nobody has ported yet.
 on:
   push:
-    branches: [main]
+    # epic/winlinux gathers the Windows and Linux port (#481) until it is stable enough to ship.
+    branches: [main, epic/winlinux]
   pull_request:
   workflow_dispatch:
 
