@@ -376,7 +376,6 @@ struct SessionHistoryTests {
 
     await model.requestArchive(archived.id)
 
-    #expect(model.archivedSessionCount == 1)
     #expect(model.visibleSessions.map(\.name) == ["Still working"])
     #expect(model.archivedSessions.map(\.name) == ["Done with this"])
 

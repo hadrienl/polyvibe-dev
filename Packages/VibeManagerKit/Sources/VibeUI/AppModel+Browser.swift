@@ -92,12 +92,6 @@ extension AppModel {
     layout.setShowsBrowserWhenAlternating(true)
   }
 
-  public func hideWebView() {
-    guard let browser, let id = selectedSessionID else { return }
-    browser.setVisible(false, for: id)
-    focusSession()
-  }
-
   /// Focus Web View, ⌥⌘4: the page takes the keyboard.
   public func focusWebView() {
     showWebView()

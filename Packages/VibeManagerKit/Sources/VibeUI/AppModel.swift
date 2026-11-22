@@ -1042,10 +1042,6 @@ public final class AppModel {
     return SessionHierarchy.apply(filter, to: sessions, notes: notes.searchIndex)
   }
 
-  public var archivedSessionCount: Int {
-    sessions.filter { $0.status == .archived }.count
-  }
-
   /// The archived sessions, last archived first, for the list at the foot of the sidebar. The
   /// search and the facets narrow it like a column.
   public var archivedSessions: [WorkSession] {

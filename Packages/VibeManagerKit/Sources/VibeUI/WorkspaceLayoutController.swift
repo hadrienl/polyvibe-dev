@@ -82,20 +82,6 @@ public final class WorkspaceLayoutController {
     showsBrowserWhenAlternating = showsBrowser
   }
 
-  /// Whether the terminal is on screen at all: not when the web view has the room to itself.
-  public var isTerminalShown: Bool {
-    columns.browser != .alternating || !showsBrowserWhenAlternating
-  }
-
-  /// Whether the web view is on screen.
-  public var isBrowserShown: Bool {
-    switch columns.browser {
-    case .hidden: return false
-    case .beside: return true
-    case .alternating: return showsBrowserWhenAlternating
-    }
-  }
-
   public func browserWidthChanged(to width: Double) {
     let bounded = WorkspaceLayout.bounded(
       width, in: WorkspaceLayout.browserWidthRange, fallback: browserWidth)
@@ -149,10 +135,6 @@ public final class WorkspaceLayoutController {
       updateIntent { $0.isSidebarVisible = false }
     }
     resolveColumns()
-  }
-
-  public func toggleSidebar() {
-    setSidebarVisible(!columns.isSidebarVisible)
   }
 
   public func windowWidthChanged(to width: Double) {

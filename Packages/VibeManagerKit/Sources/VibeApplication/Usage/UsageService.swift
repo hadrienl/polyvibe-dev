@@ -125,24 +125,6 @@ public actor UsageService {
       calendar: calendar, cost: Self.cost(at: list))
   }
 
-  /// The whole usage of one session.
-  public func sessionReport(_ id: SessionID, calendar: Calendar = .current) async -> UsageRow {
-    let now = clock.now()
-    let report = UsageAggregator.report(
-      runs: await runs().filter { $0.sessionID == id },
-      tokens: await loadedSnapshot().buckets.filter { $0.sessionID == id },
-      period: nil, grouping: .model, now: now, calendar: calendar)
-    return report.total
-  }
-
-  public func sessionModels(_ id: SessionID, calendar: Calendar = .current) async -> [UsageRow] {
-    let now = clock.now()
-    return UsageAggregator.report(
-      runs: [], tokens: await loadedSnapshot().buckets.filter { $0.sessionID == id },
-      period: nil, grouping: .model, now: now, calendar: calendar
-    ).rows
-  }
-
   /// Everything a screen shows, from one reading of the journal: the report for the period, and
   /// the whole usage of each of `sessions`.
   public func overview(
