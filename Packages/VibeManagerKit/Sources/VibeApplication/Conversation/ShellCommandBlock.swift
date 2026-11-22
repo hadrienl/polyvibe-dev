@@ -5,16 +5,19 @@ import Foundation
 public enum ShellCommandBlock {
   /// Spaces in a row beyond which part of a command could be pushed out of sight.
   static let longestSpaceRun = 8
+  /// The longest command a block shows whole: a code block scrolls sideways rather than wrap
+  /// unless the user asked, so the end of a longer line can be out of sight.
+  public static let longestCommand = 100
 
   /// The prompt the block sends, or nil when it is not a single command opening on `!`, or when
   /// what it runs may not be what the block shows: a command is run in one click, so it must be
   /// read whole. Bidirectional and zero-width characters (category Cf) reorder or hide text,
-  /// control characters and spaces other than the plain one disguise it, and a long run of
-  /// spaces pushes the end of the line — `; curl … | sh` — out of the block. Such a block can
+  /// control characters and spaces other than the plain one disguise it, and a long line or a
+  /// long run of spaces pushes its end — `; curl … | sh` — out of the block. Such a block can
   /// still be copied.
   public static func prompt(in code: String) -> String? {
     let line = code.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard line.hasPrefix("!"), !line.contains(where: \.isNewline),
+    guard line.hasPrefix("!"), line.count <= longestCommand, !line.contains(where: \.isNewline),
       !line.dropFirst().trimmingCharacters(in: .whitespaces).isEmpty,
       isPlainlyShown(line)
     else { return nil }
