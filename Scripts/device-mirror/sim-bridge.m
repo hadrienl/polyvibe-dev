@@ -201,9 +201,17 @@ static void readTouches(void) {
 // The Xcode `simctl` lists the simulators of: DEVELOPER_DIR, else the one xcode-select chose —
 // `Xcode-beta.app`, `Xcode-26.0.app` as xcodes names them. A CoreSimulator of one Xcode and
 // a SimulatorKit of another do not go together.
+/// `Contents/Developer` of an Xcode named by its application, `/Applications/Xcode-beta.app`,
+/// as `DEVELOPER_DIR` and `xcode-select` both take it.
+static NSString *withinApplication(NSString *path) {
+  NSString *trimmed = [path stringByStandardizingPath];
+  return [trimmed.pathExtension isEqual:@"app"]
+      ? [trimmed stringByAppendingPathComponent:@"Contents/Developer"] : trimmed;
+}
+
 static NSString *developerDirectory(void) {
   const char *given = getenv("DEVELOPER_DIR");
-  if (given && *given) return @(given);
+  if (given && *given) return withinApplication(@(given));
   char path[PATH_MAX] = {0};
   FILE *selected = popen("/usr/bin/xcode-select -p 2>/dev/null", "r");
   if (selected) {
@@ -212,7 +220,7 @@ static NSString *developerDirectory(void) {
   }
   size_t length = strlen(path);
   while (length > 0 && (path[length - 1] == '\n' || path[length - 1] == '/')) path[--length] = 0;
-  return length > 0 ? @(path) : @"/Applications/Xcode.app/Contents/Developer";
+  return length > 0 ? withinApplication(@(path)) : @"/Applications/Xcode.app/Contents/Developer";
 }
 
 static void *loadSimulatorKit(NSString *developer) {
@@ -231,6 +239,8 @@ int main(int argc, char **argv) {
     simulatorKit = loadSimulatorKit(developer);
     if (!simulatorKit) {
       // The Command Line Tools chosen, say: the Xcode of always.
+      fprintf(stderr, "sim-bridge: no SimulatorKit beside %s, trying /Applications/Xcode.app\n",
+          developer.fileSystemRepresentation);
       developer = @"/Applications/Xcode.app/Contents/Developer";
       simulatorKit = loadSimulatorKit(developer);
     }
