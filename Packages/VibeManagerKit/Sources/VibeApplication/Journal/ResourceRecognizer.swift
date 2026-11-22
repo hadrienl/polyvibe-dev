@@ -48,8 +48,6 @@ public enum ResourceRecognizer {
       return found
     case .creationOutput(let command, let directory, let output, let at):
       return outputSightings(command, directory: directory, output: output, at: at ?? now)
-    case .turnEnded:
-      return []
     }
   }
 

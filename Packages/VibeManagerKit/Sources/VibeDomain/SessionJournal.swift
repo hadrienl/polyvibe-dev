@@ -9,19 +9,11 @@ public struct JournalEntry: Hashable, Codable, Sendable, Identifiable {
   public let text: String
   /// When the turn it describes ended.
   public let at: Date
-  /// The agent whose turn it describes.
-  public let providerID: String?
-  /// How many older entries this one stands for, when the journal outgrew its bound.
-  public let foldedCount: Int?
 
-  public init(
-    id: UUID = UUID(), text: String, at: Date, providerID: String?, foldedCount: Int? = nil
-  ) {
+  public init(id: UUID = UUID(), text: String, at: Date) {
     self.id = id
     self.text = text
     self.at = at
-    self.providerID = providerID
-    self.foldedCount = foldedCount
   }
 }
 
@@ -44,28 +36,24 @@ public struct TranscriptCursor: Hashable, Codable, Sendable {
 /// left aside.
 public struct SessionJournal: Hashable, Codable, Sendable {
   public static let schemaVersion = 1
-  /// Past this, resources are counted and no longer kept.
+  /// Past this, resources are no longer kept.
   public static let resourceLimit = 1_000
 
   public var schema: Int
   /// Written before #572, read only.
   public var entries: [JournalEntry]
   public var resources: [SessionResource]
-  /// Resources seen past `resourceLimit`.
-  public var overflowResourceCount: Int
   /// By transcript file path.
   public var cursors: [String: TranscriptCursor]
 
   public init(
     entries: [JournalEntry] = [],
     resources: [SessionResource] = [],
-    overflowResourceCount: Int = 0,
     cursors: [String: TranscriptCursor] = [:]
   ) {
     schema = Self.schemaVersion
     self.entries = entries
     self.resources = resources
-    self.overflowResourceCount = overflowResourceCount
     self.cursors = cursors
   }
 
@@ -88,7 +76,7 @@ public struct SessionJournal: Hashable, Codable, Sendable {
     try container.encode(schema, forKey: .schema)
     try container.encode(entries, forKey: .entries)
     try container.encode(resources, forKey: .resources)
-    try container.encode(overflowResourceCount, forKey: .overflowResourceCount)
+    try container.encode(0, forKey: .overflowResourceCount)
     try container.encode(cursors, forKey: .cursors)
     try container.encode([Empty](), forKey: .pending)
     var summary = container.nestedContainer(keyedBy: ReadySummaryKeys.self, forKey: .summary)
@@ -117,9 +105,6 @@ public struct SessionJournal: Hashable, Codable, Sendable {
       } else if resources.count < Self.resourceLimit {
         positions[sighting.key] = resources.count
         resources.append(sighting)
-        changed = true
-      } else {
-        overflowResourceCount += 1
         changed = true
       }
     }

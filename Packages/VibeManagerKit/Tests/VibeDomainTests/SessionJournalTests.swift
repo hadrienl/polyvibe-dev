@@ -45,12 +45,14 @@ struct SessionJournalTests {
     #expect(journal.resources.first?.target == request.target)
   }
 
-  @Test("Past the bound, resources are counted, not kept")
+  @Test("Past the bound, resources are no longer kept")
   func resourceBound() {
     var journal = SessionJournal()
-    journal.record((0...SessionJournal.resourceLimit).map { resource("k\($0)") })
+    let filled = journal.record((0..<SessionJournal.resourceLimit).map { resource("k\($0)") })
+    let past = journal.record([resource("past")])
+    #expect(filled)
+    #expect(!past)
     #expect(journal.resources.count == SessionJournal.resourceLimit)
-    #expect(journal.overflowResourceCount == 1)
   }
 
   @Test("A journal survives a round trip through JSON")
@@ -58,7 +60,7 @@ struct SessionJournalTests {
     var journal = SessionJournal()
     journal.record([resource("a", .branch, label: "x")])
     journal.resources[0].target = .branch(repositoryPath: "/r", webURL: nil)
-    journal.entries = [JournalEntry(text: "Pushed", at: start, providerID: "codex")]
+    journal.entries = [JournalEntry(text: "Pushed", at: start)]
     journal.cursors["/t.jsonl"] = TranscriptCursor(offset: 12, inode: 3)
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601

@@ -18,7 +18,7 @@ struct FileArchiveReportStoreTests {
     let snapshot = ArchivedSessionSnapshot(
       sessionID: SessionID(), archivedAt: date, name: "Icons", colorHex: "#B42318",
       symbolName: "hammer", createdAt: date,
-      entries: [JournalEntry(text: "Moved the icons", at: date, providerID: "claude")])
+      entries: [JournalEntry(text: "Moved the icons", at: date)])
     let old = ArchiveBatch(kind: .manual, date: date.addingTimeInterval(-400 * 86_400))
     let batch = ArchiveBatch(
       kind: .rule(id: UUID(), name: "Evening"), date: date, sessions: [snapshot],

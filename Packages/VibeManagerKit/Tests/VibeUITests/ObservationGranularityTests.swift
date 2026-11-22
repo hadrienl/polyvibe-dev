@@ -23,7 +23,7 @@ private func notifies(reading read: () -> Void, when write: () -> Void) -> Bool 
 
 private struct NoTranscripts: SessionJournalReading {
   func read(_ session: WorkSession, from cursors: [String: TranscriptCursor]) -> TranscriptReading {
-    TranscriptReading(events: [], cursors: cursors, foundTranscript: false)
+    TranscriptReading(events: [], cursors: cursors)
   }
 
   func transcriptDirectories(for session: WorkSession) -> [String] { [] }
@@ -153,11 +153,13 @@ struct ObservationGranularityTests {
 
     #expect(
       !notifies(reading: { _ = journal.journal(for: first) }) {
-        journal.journals.set(SessionJournal(overflowResourceCount: 1), for: second)
+        journal.journals.set(
+          SessionJournal(cursors: ["/t.jsonl": TranscriptCursor(offset: 1)]), for: second)
       })
     #expect(
       notifies(reading: { _ = journal.journal(for: first) }) {
-        journal.journals.set(SessionJournal(overflowResourceCount: 1), for: first)
+        journal.journals.set(
+          SessionJournal(cursors: ["/t.jsonl": TranscriptCursor(offset: 1)]), for: first)
       })
   }
 

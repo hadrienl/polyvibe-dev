@@ -13,14 +13,10 @@ public enum TranscriptEvent: Hashable, Sendable {
   case creationOutput(command: String, directory: String?, output: String, at: Date?)
   /// What the agent said.
   case agentText(String, at: Date?)
-  /// The agent finished answering.
-  case turnEnded(at: Date?)
 }
 
 /// One call of a tool, as the journal needs it.
 public struct TranscriptToolCall: Hashable, Sendable {
-  /// `Bash`, `exec_command`, `WebFetch`, `mcp__gitlab__issues`…
-  public var name: String
   /// The command line, for a tool that runs one.
   public var command: String?
   /// Where it ran.
@@ -29,41 +25,30 @@ public struct TranscriptToolCall: Hashable, Sendable {
   public var branch: String?
   /// Every other string of its input, searched for URLs.
   public var strings: [String]
-  /// One line for the summary: `Bash: git push -u origin feat/36`, `Edit: Sources/App.swift`.
-  public var summary: String
   public var at: Date?
 
   public init(
-    name: String, command: String? = nil, directory: String? = nil, branch: String? = nil,
-    strings: [String] = [], summary: String, at: Date? = nil
+    command: String? = nil, directory: String? = nil, branch: String? = nil,
+    strings: [String] = [], at: Date? = nil
   ) {
-    self.name = name
     self.command = command
     self.directory = directory
     self.branch = branch
     self.strings = strings
-    self.summary = summary
     self.at = at
   }
 }
 
 /// The transcripts of a session read from where the last reading stopped.
 public struct TranscriptReading: Sendable {
-  /// Each conversation's events in order, with the agent that wrote them.
-  public var events: [(providerID: String, event: TranscriptEvent)]
+  /// Each conversation's events in order.
+  public var events: [TranscriptEvent]
   /// Where the reading of each file stopped now.
   public var cursors: [String: TranscriptCursor]
-  /// Whether any transcript of the session was found.
-  public var foundTranscript: Bool
 
-  public init(
-    events: [(providerID: String, event: TranscriptEvent)] = [],
-    cursors: [String: TranscriptCursor] = [:],
-    foundTranscript: Bool = false
-  ) {
+  public init(events: [TranscriptEvent] = [], cursors: [String: TranscriptCursor] = [:]) {
     self.events = events
     self.cursors = cursors
-    self.foundTranscript = foundTranscript
   }
 }
 
