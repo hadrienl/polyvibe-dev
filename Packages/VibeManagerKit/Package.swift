@@ -270,3 +270,18 @@ let package = Package(
     ),
   ]
 )
+
+// Windows and Linux (#481): only what has been ported is declared there, so that resolving the
+// package never fetches a dependency that is Apple's alone. Everything above stays as it is for the
+// Mac. A ticket that ports a module adds it to this list.
+#if !os(macOS)
+  let portedOutsideMac: Set<String> = [
+    "VibeDomain", "VibeApplication", "VibeProcess", "VibePersistence", "VibeGit", "VibeAgents",
+    "VibeEndpoints", "vibe-gateway", "VibeLocalizationTesting", "VibeAvatarLibraryTesting",
+    "VibeDomainTests", "VibeProcessTests", "VibeApplicationTests", "VibePersistenceTests",
+    "VibeEndpointsTests", "VibeGitTests",
+  ]
+  package.targets.removeAll { !portedOutsideMac.contains($0.name) }
+  package.products.removeAll { !portedOutsideMac.contains($0.name) }
+  package.dependencies.removeAll()
+#endif

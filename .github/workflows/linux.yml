@@ -1,0 +1,56 @@
+name: Linux
+
+# The port of #481: which modules build on Linux. A module is marked `required` by the ticket
+# that ports it; until then its failure shows as a warning on a green check, so that no pull
+# request looks red for a module nobody has ported yet.
+on:
+  push:
+    # epic/winlinux gathers the Windows and Linux port (#481) until it is stable enough to ship.
+    branches: [main, epic/winlinux]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    container: swift:6.4.2-noble@sha256:97b9d09f1e922ee794067ea8eec4874083c97d2d5027a6a409e398d82ebca016
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: VibeDomain, required: false }
+          - { target: VibeApplication, required: false }
+          - { target: VibeProcess, required: false }
+          - { target: VibePersistence, required: false }
+          - { target: VibeGit, required: false }
+          - { target: VibeAgents, required: false }
+          - { target: VibeEndpoints, required: false }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # GTK 4, WebKitGTK 6.0 and libsecret: the interface (#491), the web view (#506) and the
+      # secrets (#488) link against them.
+      - name: System packages
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev libsecret-1-dev
+      - name: Resolve
+        working-directory: Packages/VibeManagerKit
+        run: swift package resolve --force-resolved-versions
+      - name: Build ${{ matrix.target }}
+        id: build
+        continue-on-error: ${{ !matrix.required }}
+        working-directory: Packages/VibeManagerKit
+        run: swift build --force-resolved-versions --build-system native --target ${{ matrix.target }}
+      - name: Not ported yet
+        if: steps.build.outcome == 'failure'
+        shell: bash
+        run: echo "::warning title=${{ matrix.target }}::Does not build on Linux yet; expected until the ticket that ports it (#481)."
