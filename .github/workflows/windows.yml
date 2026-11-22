@@ -1,7 +1,8 @@
 name: Windows
 
-# The port of #481: which modules build on Windows. A module is listed under `required` by the
-# ticket that ports it; until then its failure is reported without failing the run.
+# The port of #481: which modules build on Windows. A module is marked `required` by the ticket
+# that ports it; until then its failure shows as a warning on a green check, so that no pull
+# request looks red for a module nobody has ported yet.
 on:
   push:
     branches: [main]
@@ -17,9 +18,9 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ matrix.target }}
     runs-on: windows-latest
     timeout-minutes: 45
-    continue-on-error: ${{ !matrix.required }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,5 +42,11 @@ jobs:
         working-directory: Packages/VibeManagerKit
         run: swift package resolve --force-resolved-versions
       - name: Build ${{ matrix.target }}
+        id: build
+        continue-on-error: ${{ !matrix.required }}
         working-directory: Packages/VibeManagerKit
         run: swift build --force-resolved-versions --build-system native --target ${{ matrix.target }}
+      - name: Not ported yet
+        if: steps.build.outcome == 'failure'
+        shell: bash
+        run: echo "::warning title=${{ matrix.target }}::Does not build on Windows yet; expected until the ticket that ports it (#481)."

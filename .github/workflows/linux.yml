@@ -1,7 +1,8 @@
 name: Linux
 
-# The port of #481: which modules build on Linux. A module is listed under `required` by the
-# ticket that ports it; until then its failure is reported without failing the run.
+# The port of #481: which modules build on Linux. A module is marked `required` by the ticket
+# that ports it; until then its failure shows as a warning on a green check, so that no pull
+# request looks red for a module nobody has ported yet.
 on:
   push:
     branches: [main]
@@ -17,10 +18,10 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ matrix.target }}
     runs-on: ubuntu-24.04
     container: swift:6.4.2-noble@sha256:97b9d09f1e922ee794067ea8eec4874083c97d2d5027a6a409e398d82ebca016
     timeout-minutes: 45
-    continue-on-error: ${{ !matrix.required }}
     strategy:
       fail-fast: false
       matrix:
@@ -44,5 +45,11 @@ jobs:
         working-directory: Packages/VibeManagerKit
         run: swift package resolve --force-resolved-versions
       - name: Build ${{ matrix.target }}
+        id: build
+        continue-on-error: ${{ !matrix.required }}
         working-directory: Packages/VibeManagerKit
         run: swift build --force-resolved-versions --build-system native --target ${{ matrix.target }}
+      - name: Not ported yet
+        if: steps.build.outcome == 'failure'
+        shell: bash
+        run: echo "::warning title=${{ matrix.target }}::Does not build on Linux yet; expected until the ticket that ports it (#481)."
