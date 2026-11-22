@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
@@ -462,7 +461,7 @@ public struct RootView: View {
               if model.browser != nil, model.selectedSessionID != nil {
                 model.openInWebView(url.absoluteString)
               } else {
-                NSWorkspace.shared.open(url)
+                ExternalOpening.open(url)
               }
             }
           }
