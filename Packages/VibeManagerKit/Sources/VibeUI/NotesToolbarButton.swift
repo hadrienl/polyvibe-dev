@@ -23,16 +23,7 @@ struct NotesToolbarButton: View {
     .disabled(!model.canShowNotes && !presentation.isShown)
     .instantTooltip(Text("Session Notes", bundle: .module))
     .accessibilityValue(accessibilityValue(hasNotes: hasNotes, presentation: presentation))
-    .popover(
-      isPresented: Binding(
-        get: { presentation.isPopoverShown && model.canShowNotes },
-        set: { if !$0 { model.notesPopoverDismissed() } }),
-      arrowEdge: .bottom
-    ) {
-      if let session = model.selectedSession {
-        NotesPopoverContent(model: model, session: session)
-      }
-    }
+    .background(NotesPopoverAnchor(presentation: presentation).allowsHitTesting(false))
   }
 
   /// Whether there are notes; in the panel's placement, first whether the panel is shown, the
@@ -44,7 +35,7 @@ struct NotesToolbarButton: View {
       : Text("Empty", bundle: .module, comment: "Said of a session's notes that hold nothing.")
     guard presentation.placement == .panel else { return notes }
     let shown =
-      presentation.isPanelShown
+      presentation.isPanelShown && presentation.active?.sessionID == model.selectedSessionID
       ? Text("Shown", bundle: .module, comment: "The notes' floating window is shown.")
       : Text("Hidden", bundle: .module, comment: "The notes' floating window is hidden.")
     return shown + Text(verbatim: ", ") + notes
@@ -95,39 +86,25 @@ struct NotesPopoverContent: View {
   }
 }
 
-/// The floating panel's content: the same editor, following the session on screen. Its name is
-/// in the window's title.
+/// The panel captures its session once, together with the document it edits.
 struct NotesPanelContent: View {
   let model: AppModel
+  let session: WorkSession
 
   var body: some View {
-    Group {
-      if model.canShowNotes, let session = model.selectedSession {
-        let document = model.notes.document(for: session.id)
-        VStack(alignment: .leading, spacing: 0) {
-          HStack {
-            Spacer(minLength: 0)
-            NotesStateLabel(document: document)
-              .id(session.id)
-          }
-          .padding(.horizontal, 12)
-          .padding(.top, 6)
-          SessionNotesSection(
-            session: session, document: document, notes: model.notes,
-            ticketTitles: model.ticketTitles, leave: { model.leaveNotes() })
-        }
-      } else {
-        ContentUnavailableView {
-          Label {
-            Text("No session selected", bundle: .module)
-          } icon: {
-            Image(systemName: "doc")
-          }
-        } description: {
-          Text("Select a session to see its notes.", bundle: .module)
-        }
+    let document = model.notes.document(for: session.id)
+    VStack(alignment: .leading, spacing: 0) {
+      HStack {
+        Spacer(minLength: 0)
+        NotesStateLabel(document: document)
       }
+      .padding(.horizontal, 12)
+      .padding(.top, 6)
+      SessionNotesSection(
+        session: session, document: document, notes: model.notes,
+        ticketTitles: model.ticketTitles, leave: { model.leaveNotes() })
     }
+    .id(session.id)
     .frame(minWidth: 260, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity)
   }
 }
@@ -151,5 +128,33 @@ struct NotesReattachButton: View {
 
   static var reattach: Text {
     Text("Reattach to the Toolbar", bundle: .module)
+  }
+}
+
+/// A stable native anchor in the toolbar. The controller, rather than a SwiftUI presentation
+/// binding, owns the NSPopover and dismisses its window before opening the panel.
+private struct NotesPopoverAnchor: NSViewRepresentable {
+  let presentation: NotesPresentation
+
+  func makeNSView(context: Context) -> AnchorView {
+    let view = AnchorView()
+    view.presentation = presentation
+    return view
+  }
+
+  func updateNSView(_ view: AnchorView, context: Context) {}
+
+  final class AnchorView: NSView {
+    weak var presentation: NotesPresentation?
+
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      guard window != nil else { return }
+      Task { @MainActor [weak self] in
+        guard let self, self.window != nil, let presentation = self.presentation else { return }
+        presentation.anchor = self
+        presentation.changed?()
+      }
+    }
   }
 }

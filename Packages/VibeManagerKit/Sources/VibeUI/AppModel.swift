@@ -935,7 +935,7 @@ public final class AppModel {
     self.launcher = launcher
     self.recentFolderStore = recentFolderStore
     self.layout = layout
-    notesPresentation = NotesPresentation(layout: layout)
+    notesPresentation = NotesPresentation(layout: layout, notes: notes)
 
     // A workspace without a launcher has nothing running, so the use cases are handed a runtime
     // that says exactly that rather than an optional they would each have to second-guess.

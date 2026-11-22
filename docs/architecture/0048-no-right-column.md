@@ -22,11 +22,19 @@ A **Notes** button, at the right of the toolbar after the simulators, opens the 
 a popover: the same editor, its state, its links, the ticket titles. Its icon says whether there are
 notes — `doc`, an empty sheet, or `doc.text`, a sheet with lines — and nothing else: no dot.
 
-The popover **detaches** into a floating utility panel that stays above the application's windows,
-is moved and resized like any window and **follows the selected session**; **Reattach**, in its
-title bar, brings the notes back under the button. Which of the two the user keeps is part of the
-workspace layout; the panel's frame is AppKit's, under a frame autosave name. Neither is open at
-launch.
+The popover **detaches** into a floating utility panel that stays above the application's windows
+and is moved and resized like any window; **Reattach**, in its title bar, brings the notes back
+under the button. Which of the two the user keeps is part of the workspace layout; the panel's frame
+is AppKit's, under a frame autosave name. Neither is open at launch.
+
+**One presentation at a time, bound to one session.** The notes on screen are a single request — a
+session and a placement — and AppKit's popover and panel, both owned by one controller, show
+exactly that request: changing placement closes the window that showed the previous one, and lets
+go of its editor, before the next opens. A panel is built for its session and never retargeted:
+selecting another session changes neither its title nor what it edits, and that session's Notes
+button replaces it with its own. A popover belongs to the session on screen and closes when another
+is selected; reattaching a panel left on another session brings that session back first. Two
+editors on the same notes, or a title naming one session over another's text, cannot happen.
 
 **Edit Notes** (⌥⌘N) opens the editor where the user keeps it and gives it the keyboard; again, or
 Escape, gives the keyboard back to the session. Every keystroke was already written a moment later;

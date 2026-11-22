@@ -142,8 +142,8 @@ struct NotesPresentationTests {
     #expect(model.notes.wantsFocus)
   }
 
-  @Test("The panel follows the session on screen, and the one left has its notes written")
-  func panelFollowsTheSelection() async throws {
+  @Test("The panel stays on its session when another is selected, and what was typed is written")
+  func panelStaysOnItsSession() async throws {
     let workspace = await workspace()
     let model = workspace.model
     model.detachNotes()
@@ -154,8 +154,38 @@ struct NotesPresentationTests {
     model.select(workspace.second.id)
 
     #expect(model.notesPresentation.isPanelShown)
+    #expect(model.notesPresentation.active?.sessionID == workspace.first.id)
     await waitUntil("the notes are written") { !document.hasUnsavedChanges }
     #expect(try await workspace.store.notes(for: workspace.first.id).text == "Left mid-sentence")
+  }
+
+  @Test("Another session's Notes button, over a floating window, shows that session's notes")
+  func anotherSessionsButtonOverThePanel() async {
+    let workspace = await workspace()
+    let model = workspace.model
+    model.detachNotes()
+    model.select(workspace.second.id)
+
+    model.toggleNotes()
+
+    #expect(model.notesPresentation.isPanelShown)
+    #expect(!model.notesPresentation.isPopoverShown)
+    model.toggleNotes()
+    #expect(!model.notesPresentation.isShown)
+  }
+
+  @Test("Reattaching a floating window left on another session brings its session back first")
+  func reattachBringsThePanelsSessionBack() async {
+    let workspace = await workspace()
+    let model = workspace.model
+    model.detachNotes()
+    model.select(workspace.second.id)
+
+    model.attachNotes()
+
+    #expect(model.selectedSessionID == workspace.first.id)
+    #expect(model.notesPresentation.isPopoverShown)
+    #expect(!model.notesPresentation.isPanelShown)
   }
 
   @Test("The panel closed by its own button stays closed, its placement kept")
@@ -200,61 +230,256 @@ struct NotesPresentationViewTests {
   private func model() async -> (AppModel, WorkSession) {
     let session = WorkSession(name: "Views", status: .closed)
     let model = AppModel(
-      repository: WorkspaceRepository(sessions: [session]),
+      repository: WorkspaceRepository(sessions: [
+        session, WorkSession(name: "Other", status: .closed),
+      ]),
       notesStore: InMemorySessionNotesStore())
     await model.load()
     model.select(session.id)
     return (model, session)
   }
 
-  @Test("Reattaching really closes the panel and preserves typing before either view disappears")
-  func typingDetachReattach() async throws {
-    _ = NSApplication.shared
+  /// The controller with nothing put on screen: the panels it would show, and an anchor for the
+  /// popover in a window never shown.
+  @MainActor
+  private final class Screen {
+    let controller: NotesPanelController
+    let anchorWindow: NSWindow
+    var shownPanels: [NotesPanel] = []
+    var shownPopovers: [NSPopover] = []
+
+    init(model: AppModel) {
+      _ = NSApplication.shared
+      controller = NotesPanelController(model: model)
+      anchorWindow = NSWindow(
+        contentRect: NSRect(x: 0, y: 0, width: 200, height: 40), styleMask: [.titled],
+        backing: .buffered, defer: false)
+      anchorWindow.isReleasedWhenClosed = false
+      let anchor = NSView(frame: NSRect(x: 0, y: 0, width: 28, height: 28))
+      anchorWindow.contentView?.addSubview(anchor)
+      controller.showPanel = { [unowned self] in self.shownPanels.append($0) }
+      controller.showPopover = { [unowned self] popover, _ in self.shownPopovers.append(popover) }
+      model.notesPresentation.anchor = anchor
+    }
+
+    /// The popover and the panel alive, whatever their windows: one at most.
+    var presentations: Int {
+      (controller.popover == nil ? 0 : 1) + (controller.panel == nil ? 0 : 1)
+    }
+
+    func close() {
+      controller.panel?.close()
+      anchorWindow.contentView = nil
+      anchorWindow.close()
+    }
+  }
+
+  @Test("Detach closes the popover and opens one panel on the same notes; Reattach the reverse")
+  func detachAndReattachReplaceThePresentation() async throws {
     let (model, session) = await model()
-    let controller = NotesPanelController(model: model)
+    let screen = Screen(model: model)
+    defer { screen.close() }
     let document = model.notes.document(for: session.id)
     await waitUntil("the notes are loaded") { document.isLoaded }
-    let host = NSHostingView(rootView: NotesPopoverContent(model: model, session: session))
-    let window = NSWindow(
-      contentRect: NSRect(x: -10000, y: -10000, width: 400, height: 460),
-      styleMask: [.titled], backing: .buffered, defer: false)
-    window.isReleasedWhenClosed = false
-    window.contentView = host
-    defer {
-      model.notesPanelClosed()
-      window.contentView = nil
-      window.close()
-    }
+
     model.toggleNotes()
-    await waitUntil("the popover editor") { Self.editor(in: host) != nil }
-    let popover = try #require(Self.editor(in: host))
-    popover.insertText(
-      "Typed immediately before detaching", replacementRange: NSRange(location: 0, length: 0))
+    let popover = try #require(screen.controller.popover)
+    #expect(screen.shownPopovers.count == 1)
+    #expect(screen.presentations == 1)
+    document.storage.append(NSAttributedString(string: "Typed, then detached"))
+    document.didChange()
 
     model.detachNotes()
-    let panel = try #require(controller.panel)
-    panel.setFrameOrigin(NSPoint(x: -10000, y: -10000))
-    #expect(panel.isVisible)
-    #expect(!model.notesPresentation.isPopoverShown)
-    await waitUntil("the panel editor") { Self.editor(in: panel.contentView) != nil }
-    let panelEditor = try #require(Self.editor(in: panel.contentView))
-    #expect(panelEditor.string == "Typed immediately before detaching")
-    panelEditor.insertText(
+    #expect(screen.controller.popover == nil)
+    #expect(popover.contentViewController == nil)
+    let panel = try #require(screen.controller.panel)
+    #expect(screen.shownPanels.map(ObjectIdentifier.init) == [ObjectIdentifier(panel)])
+    #expect(screen.presentations == 1)
+    await waitUntil("the panel's editor") { Self.editor(in: panel.contentView) != nil }
+    let editor = try #require(Self.editor(in: panel.contentView))
+    #expect(editor.string == "Typed, then detached")
+    editor.insertText(
       " and in the panel",
-      replacementRange: NSRange(location: panelEditor.string.utf16.count, length: 0))
+      replacementRange: NSRange(location: editor.string.utf16.count, length: 0))
 
     model.attachNotes()
-    #expect(!panel.isVisible)
+    #expect(screen.controller.panel == nil)
     #expect(panel.contentView == nil)
-    #expect(controller.panel == nil)
-    #expect(!model.notesPresentation.isPanelShown)
-    #expect(model.notesPresentation.isPopoverShown)
-    #expect(popover.string == "Typed immediately before detaching and in the panel")
-    // Let pending SwiftUI focus requests run: none may bring the old window back.
+    #expect(!panel.isVisible)
+    #expect(screen.controller.popover != nil)
+    #expect(screen.shownPopovers.count == 2)
+    #expect(screen.presentations == 1)
+    // Pending focus requests run: none may bring the closed panel back.
     for _ in 0..<10 { await Task.yield() }
     #expect(!panel.isVisible)
-    #expect(document.text == "Typed immediately before detaching and in the panel")
-    #expect(await document.save())
+    #expect(screen.shownPanels.count == 1)
+    #expect(document.text == "Typed, then detached and in the panel")
+  }
+
+  @Test("A floating window stays bound to its session when the workspace selects another")
+  func floatingWindowKeepsItsSession() async throws {
+    _ = NSApplication.shared
+    let (model, first) = await model()
+    let second = try #require(model.sessions.first { $0.name == "Other" })
+    let controller = NotesPanelController(model: model)
+    controller.showPanel = { _ in }
+    let document = model.notes.document(for: first.id)
+    await waitUntil("the notes are loaded") { document.isLoaded }
+    document.storage.append(NSAttributedString(string: "Only in Views"))
+    document.didChange()
+    model.detachNotes()
+    defer { model.notesPanelClosed() }
+    let panel = try #require(controller.panel)
+    await waitUntil("the editor") { Self.editor(in: panel.contentView) != nil }
+
+    model.showFromSelection(second.id)
+    for _ in 0..<10 { await Task.yield() }
+
+    #expect(controller.panel === panel)
+    #expect(panel.title == "Notes · Views")
+    #expect(Self.editor(in: panel.contentView)?.string == "Only in Views")
+    #expect(Self.editor(in: panel.contentView)?.accessibilityLabel() == "Notes for Views")
+    #expect(model.notes.document(for: second.id).text.isEmpty)
+  }
+
+  @Test("Another session's Notes button replaces the floating window with that session's own")
+  func anotherSessionsButtonReplacesThePanel() async throws {
+    let (model, first) = await model()
+    let second = try #require(model.sessions.first { $0.name == "Other" })
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    let firstDocument = model.notes.document(for: first.id)
+    await waitUntil("the notes are loaded") { firstDocument.isLoaded }
+    firstDocument.storage.append(NSAttributedString(string: "First's notes"))
+    firstDocument.didChange()
+    model.detachNotes()
+    let firstPanel = try #require(screen.controller.panel)
+
+    model.select(second.id)
+    model.toggleNotes()
+
+    let secondPanel = try #require(screen.controller.panel)
+    #expect(secondPanel !== firstPanel)
+    #expect(firstPanel.contentView == nil)
+    #expect(secondPanel.title == "Notes · Other")
+    #expect(screen.presentations == 1)
+    await waitUntil("the editor") { Self.editor(in: secondPanel.contentView) != nil }
+    #expect(Self.editor(in: secondPanel.contentView)?.string == "")
+    #expect(firstDocument.text == "First's notes")
+
+    // Back on the first session: its notes again, still in one window.
+    model.select(first.id)
+    #expect(screen.controller.panel === secondPanel)
+    model.toggleNotes()
+    let again = try #require(screen.controller.panel)
+    #expect(again.title == "Notes · Views")
+    #expect(secondPanel.contentView == nil)
+    #expect(screen.presentations == 1)
+    await waitUntil("the editor") { Self.editor(in: again.contentView) != nil }
+    #expect(Self.editor(in: again.contentView)?.string == "First's notes")
+  }
+
+  @Test("Reattaching another session's floating window brings that session back on screen")
+  func reattachSelectsThePanelsSession() async throws {
+    let (model, first) = await model()
+    let second = try #require(model.sessions.first { $0.name == "Other" })
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.detachNotes()
+    model.select(second.id)
+
+    model.attachNotes()
+
+    #expect(model.selectedSessionID == first.id)
+    #expect(model.notesPresentation.active?.sessionID == first.id)
+    #expect(model.notesPresentation.isPopoverShown)
+    #expect(screen.controller.panel == nil)
+    #expect(screen.presentations == 1)
+  }
+
+  @Test("The popover closes with another session; the button opens that session's popover")
+  func popoverFollowsTheSelection() async throws {
+    let (model, _) = await model()
+    let second = try #require(model.sessions.first { $0.name == "Other" })
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.toggleNotes()
+    let first = try #require(screen.controller.popover)
+
+    model.select(second.id)
+    #expect(screen.controller.popover == nil)
+    #expect(first.contentViewController == nil)
+    #expect(screen.presentations == 0)
+
+    model.toggleNotes()
+    #expect(screen.controller.popover != nil)
+    #expect(model.notesPresentation.active?.sessionID == second.id)
+    #expect(screen.presentations == 1)
+  }
+
+  @Test("The panel closed by its own button stays closed; the button opens a fresh one")
+  func panelClosedAndReopened() async throws {
+    let (model, session) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    let document = model.notes.document(for: session.id)
+    await waitUntil("the notes are loaded") { document.isLoaded }
+    document.storage.append(NSAttributedString(string: "Kept"))
+    document.didChange()
+    model.detachNotes()
+    let first = try #require(screen.controller.panel)
+
+    // Its own close button: the window closes, then tells its delegate.
+    first.close()
+    #expect(!model.notesPresentation.isShown)
+    #expect(screen.controller.panel == nil)
+    #expect(first.contentView == nil)
+
+    model.toggleNotes()
+    let second = try #require(screen.controller.panel)
+    #expect(second !== first)
+    #expect(screen.presentations == 1)
+    await waitUntil("the editor") { Self.editor(in: second.contentView) != nil }
+    #expect(Self.editor(in: second.contentView)?.string == "Kept")
+  }
+
+  @Test("A window closing late cannot put its replacement away")
+  func lateCloseIsIgnored() async throws {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.detachNotes()
+    let old = try #require(screen.controller.panel)
+    model.attachNotes()
+    let popover = try #require(screen.controller.popover)
+    model.detachNotes()
+
+    screen.controller.windowWillClose(
+      Notification(name: NSWindow.willCloseNotification, object: old))
+    screen.controller.popoverDidClose(
+      Notification(name: NSPopover.didCloseNotification, object: popover))
+
+    #expect(model.notesPresentation.isPanelShown)
+    #expect(screen.controller.panel != nil)
+    #expect(screen.presentations == 1)
+  }
+
+  @Test("The click on the button that closes the popover does not open it again")
+  func buttonClickClosingThePopover() async {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.toggleNotes()
+    // AppKit's transient popover closes on the mouse down; the button acts on the mouse up.
+    model.notesPresentation.closedByButtonClick(at: ProcessInfo.processInfo.systemUptime)
+    model.notesPopoverDismissed()
+
+    model.toggleNotes()
+    #expect(!model.notesPresentation.isShown)
+    #expect(screen.presentations == 0)
+
+    model.toggleNotes()
+    #expect(model.notesPresentation.isPopoverShown)
   }
 
   @Test("The popover holds the session's editor and the Detach button")
@@ -277,9 +502,9 @@ struct NotesPresentationViewTests {
 
   @Test("The panel holds the editor, and Reattach in its title bar; its title names the session")
   func panel() async throws {
-    let (model, _) = await model()
+    let (model, session) = await model()
     let controller = NotesPanelController(model: model)
-    let panel = controller.makePanel()
+    let panel = controller.makePanel(session: session)
     defer {
       panel.contentView = nil
       panel.close()
