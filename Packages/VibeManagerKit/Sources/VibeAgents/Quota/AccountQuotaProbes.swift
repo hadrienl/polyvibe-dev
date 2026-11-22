@@ -56,9 +56,12 @@ enum AccountQuotaProbe {
       guard let decoded = try? JSONDecoder().decode(ClaudeQuotaLine.self, from: Data(line)),
         let report = decoded.usageReport
       else { continue }
-      // An account on an API key has a usage report without limits: it has no quota.
+      // A subscription whose session is spent can leave the structured limits out and say them
+      // only in its text; an account on an API key says them nowhere: it has no quota.
       guard let limits = report.rateLimits?.limits, !limits.isEmpty else {
-        return .unavailable(.notReportedByAgent)
+        let windows = claudeTextWindows(output, now: now)
+        guard !windows.isEmpty else { return .unavailable(.notReportedByAgent) }
+        return .measured(AccountQuota(windows: windows, measuredAt: now))
       }
       let windows = limits.compactMap { limit -> QuotaWindow? in
         guard let kind = limit.kind, let percent = limit.percent else { return nil }
@@ -82,6 +85,94 @@ enum AccountQuotaProbe {
       return .unavailable(.signedOut)
     }
     return .unavailable(.unrecognized)
+  }
+
+  /// The windows `/usage` writes as text — `Current session: 100% used · resets Nov 22 at
+  /// 11:09pm (Europe/Paris)`, `Current week (all models): 41% used · resets …` — when its report
+  /// leaves them out. Only these lines are read: the rest of the text, which describes the
+  /// sessions, is skipped.
+  static func claudeTextWindows(_ output: Data, now: Date) -> [QuotaWindow] {
+    var windows: [QuotaWindow] = []
+    for line in output.split(separator: 0x0A) where line.contains(0x22) {
+      guard let decoded = try? JSONDecoder().decode(ClaudeTextLine.self, from: Data(line)),
+        decoded.type == "assistant"
+      else { continue }
+      for block in decoded.message?.content ?? [] {
+        for text in (block.text ?? "").split(separator: "\n") {
+          if let window = claudeTextWindow(String(text), now: now) { windows.append(window) }
+        }
+      }
+    }
+    return windows
+  }
+
+  static func claudeTextWindow(_ line: String, now: Date) -> QuotaWindow? {
+    let pattern =
+      #"^Current (session|week \((.{1,64})\)): (\d{1,3}(?:\.\d+)?)% used(?: · resets (.{1,80}))?$"#
+    guard let regex = try? NSRegularExpression(pattern: pattern),
+      let match = regex.firstMatch(
+        in: line, range: NSRange(line.startIndex..., in: line)),
+      let percentRange = Range(match.range(at: 3), in: line),
+      let percent = Double(line[percentRange])
+    else { return nil }
+    let model = Range(match.range(at: 2), in: line).map { String(line[$0]) }
+    let resets = Range(match.range(at: 4), in: line).flatMap {
+      textDate(String(line[$0]), now: now)
+    }
+    let used = min(percent, 100) / 100
+    switch model {
+    case nil:
+      return QuotaWindow(id: "session", kind: .session, usedFraction: used, resetsAt: resets)
+    case "all models":
+      return QuotaWindow(id: "weekly_all", kind: .weekly, usedFraction: used, resetsAt: resets)
+    case let name?:
+      return QuotaWindow(
+        id: "weekly_scoped:" + name, kind: .weeklyModel(name), usedFraction: used,
+        resetsAt: resets)
+    }
+  }
+
+  /// `Nov 22 at 11:09pm (Europe/Paris)`, or `11:09pm (Europe/Paris)` for today: the next such
+  /// moment from `now`, in the zone named.
+  static func textDate(_ text: String, now: Date) -> Date? {
+    var text = text.trimmingCharacters(in: .whitespaces)
+    var zone = TimeZone.current
+    if text.hasSuffix(")"), let open = text.lastIndex(of: "(") {
+      let name = String(text[text.index(after: open)..<text.index(before: text.endIndex)])
+      if let named = TimeZone(identifier: name) { zone = named }
+      text = text[..<open].trimmingCharacters(in: .whitespaces)
+    }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = zone
+    formatter.defaultDate = now
+    for format in ["MMM d 'at' h:mma", "MMM d 'at' ha", "MMM d", "h:mma", "ha"] {
+      formatter.dateFormat = format
+      guard let parsed = formatter.date(from: text) else { continue }
+      let hasDay = format.hasPrefix("MMM")
+      var date = parsed
+      if hasDay {
+        // Without a year: this year's, or next year's once this year's is long past.
+        var parts = calendar.dateComponents([.month, .day, .hour, .minute], from: parsed)
+        parts.year = calendar.component(.year, from: now)
+        date = calendar.date(from: parts) ?? parsed
+        if date < now.addingTimeInterval(-86_400),
+          let next = calendar.date(byAdding: .year, value: 1, to: date)
+        {
+          date = next
+        }
+      } else {
+        let time = calendar.dateComponents([.hour, .minute], from: parsed)
+        date =
+          calendar.date(
+            bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: 0, of: now) ?? parsed
+        if date < now, let next = calendar.date(byAdding: .day, value: 1, to: date) { date = next }
+      }
+      return date
+    }
+    return nil
   }
 
   // MARK: - Codex
@@ -256,6 +347,21 @@ struct ClaudeQuotaLine: Decodable {
     enum CodingKeys: String, CodingKey {
       case displayName = "display_name"
     }
+  }
+}
+
+/// A line of `claude -p /usage` reduced to its type and the text of its answer: what the limits
+/// are said in when the report leaves them out. Only the lines that name a window are read.
+struct ClaudeTextLine: Decodable {
+  let type: String?
+  let message: Message?
+
+  struct Message: Decodable {
+    let content: [Block]?
+  }
+
+  struct Block: Decodable {
+    let text: String?
   }
 }
 

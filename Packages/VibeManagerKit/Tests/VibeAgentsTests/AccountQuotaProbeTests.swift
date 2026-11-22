@@ -27,6 +27,40 @@ struct AccountQuotaProbeTests {
     #expect(quota.measuredAt == now)
   }
 
+  @Test("Claude Code: a spent session leaves the limits out of the report; its text is read")
+  func claudeText() throws {
+    // A Max account whose session was spent, on 2026-11-22: `limits` is null.
+    let output = #"""
+      {"type":"system","subtype":"init","cwd":"/tmp","apiKeySource":"none"}
+      {"type":"assistant","message":{"model":"<synthetic>","content":[{"type":"text","text":"You are currently using your subscription to power your Claude Code usage\n\nCurrent session: 100% used · resets Nov 22 at 11:09pm (Europe/Paris)\nCurrent week (all models): 41% used · resets Nov 25 at 12:59pm (Europe/Paris)\nCurrent week (Fable): 7% used\n\nLast 24h · 1266 requests · 11 sessions\n  72%  Start fresh when you switch tasks"}]},"usage_report":{"session":{"total_cost_usd":0},"rate_limits":{"limits":null,"extra_usage":{"is_enabled":false,"currency":"EUR"}}}}
+      {"type":"result","subtype":"success","num_turns":0,"total_cost_usd":0}
+      """#
+    let november = try #require(ISO8601DateFormatter().date(from: "2026-11-22T12:00:00Z"))
+    let quota = try #require(AccountQuotaProbe.claude(Data(output.utf8), now: november).quota)
+    #expect(quota.windows.map(\.kind) == [.session, .weekly, .weeklyModel("Fable")])
+    #expect(quota.windows.map(\.usedFraction) == [1, 0.41, 0.07])
+    // 23:09 in Paris is 22:09 UTC in November.
+    #expect(quota.windows[0].resetsAt == ISO8601DateFormatter().date(from: "2026-11-22T22:09:00Z"))
+    #expect(quota.windows[1].resetsAt == ISO8601DateFormatter().date(from: "2026-11-25T11:59:00Z"))
+    #expect(quota.windows[2].resetsAt == nil)
+  }
+
+  @Test(
+    "A reset without a day is today's, or tomorrow's once past; a date long past is next year's")
+  func claudeTextDates() throws {
+    let november = try #require(ISO8601DateFormatter().date(from: "2026-11-22T12:00:00Z"))
+    #expect(
+      AccountQuotaProbe.textDate("9am (UTC)", now: november)
+        == ISO8601DateFormatter().date(from: "2026-11-23T09:00:00Z"))
+    #expect(
+      AccountQuotaProbe.textDate("3:30pm (UTC)", now: november)
+        == ISO8601DateFormatter().date(from: "2026-11-22T15:30:00Z"))
+    #expect(
+      AccountQuotaProbe.textDate("Jan 2 at 1am (UTC)", now: november)
+        == ISO8601DateFormatter().date(from: "2027-01-02T01:00:00Z"))
+    #expect(AccountQuotaProbe.textDate("someday", now: november) == nil)
+  }
+
   @Test("Claude Code: an API key has no limits, a signed-out CLI says so, anything else is unread")
   func claudeUnavailable() {
     let apiKey = #"{"type":"assistant","usage_report":{"session":{},"rate_limits":null}}"#

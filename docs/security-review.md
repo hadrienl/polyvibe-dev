@@ -219,7 +219,10 @@ own sign-in, the CLI reaching its provider as it does for a turn. The applicatio
 no keychain item and no cookie; the OAuth endpoints a CLI uses for its quota and the browser's
 cookies were rejected for that reason. Each answer is decoded into types that declare only
 shares, windows, dates, a plan and the names of groups and models — the text of an answer, an
-account identifier, credits and the arguments the CLI echoes are never decoded. What is read is
+account identifier, credits and the arguments the CLI echoes are never decoded. One exception:
+when Claude Code's report leaves its limits out — a subscription whose session is spent — the
+lines of its text that name a window (`Current session: 100% used · resets …`) are matched by a
+bounded pattern; the rest of the text, which describes the sessions, is skipped. What is read is
 kept in memory only, never written to disk, and nothing is asked while usage tracking is off. An
 account is asked at most once in 30 s: when the Quotas popover or a session's Usage popover
 opens, every minute while one stays open, and every ten minutes in the background while the
