@@ -261,7 +261,7 @@ public final class AppModel {
   /// screen is read, so the others keep what was true when they were last looked at.
   public private(set) var branchReports: [SessionID: SessionBranchReport] = [:]
   /// When each report was last checked against the disk, apart from what it says: a reading
-  /// that found nothing new moves only this, and only the age beside the Git list is redrawn.
+  /// that found nothing new moves only this, which the handover summary dates its report by.
   private(set) var branchReportCheckedAt: [SessionID: Date] = [:]
   /// What `git status` says of each repository of each session, as last read. The session on
   /// screen is kept live by the monitor; the others keep what was true when they left it.
@@ -3566,12 +3566,6 @@ public final class AppModel {
 // MARK: - Branch report
 
 extension AppModel {
-  /// What the report says. Its `readAt` is when that last changed: `branchReportCheckedAt(for:)`
-  /// says when it was last checked, apart, so that a view of the report is not redrawn for it.
-  public func branchReport(for id: SessionID) -> SessionBranchReport? {
-    branchReports[id]
-  }
-
   /// The report dated by its last check, for what is written down rather than shown: the summary
   /// of a session handed to another agent says when its branches were read.
   func checkedBranchReport(for id: SessionID) -> SessionBranchReport? {
@@ -3581,15 +3575,6 @@ extension AppModel {
     }
     return report.checked(at: checkedAt)
   }
-
-  /// When the report of `id` was last checked against the disk. Read apart from the report, so
-  /// that only what shows the age depends on it.
-  public func branchReportCheckedAt(for id: SessionID) -> Date? {
-    branchReportCheckedAt[id] ?? branchReports[id]?.readAt
-  }
-
-  /// Whether the repositories of the session on screen are kept live, rather than read on demand.
-  public var observesRepositories: Bool { repositoryStatus != nil }
 
   public func repositoryStatus(for id: SessionID, path: String) -> RepositoryStatusState? {
     repositoryStatuses[RepositoryStatusKey(sessionID: id, repositoryPath: path)]

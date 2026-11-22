@@ -136,7 +136,6 @@ public struct RepositoryBranchReport: Hashable, Sendable, Identifiable {
   public let checkedOutBranch: String?
   public let change: BranchChange?
   public let isDirty: Bool
-  public let isUnreadable: Bool
 
   public init(
     path: String,
@@ -144,8 +143,7 @@ public struct RepositoryBranchReport: Hashable, Sendable, Identifiable {
     involvement: Involvement,
     checkedOutBranch: String?,
     change: BranchChange?,
-    isDirty: Bool,
-    isUnreadable: Bool = false
+    isDirty: Bool
   ) {
     self.path = path
     self.name = name
@@ -153,7 +151,6 @@ public struct RepositoryBranchReport: Hashable, Sendable, Identifiable {
     self.checkedOutBranch = checkedOutBranch
     self.change = change
     self.isDirty = isDirty
-    self.isUnreadable = isUnreadable
   }
 
   public var id: String { path }
@@ -306,7 +303,7 @@ public struct ReadSessionBranchReport: Sendable {
       await facts.forget(key)
       return RepositoryBranchReport(
         path: root, name: name, involvement: involvement, checkedOutBranch: nil, change: nil,
-        isDirty: false, isUnreadable: true)
+        isDirty: false)
     }
     return RepositoryBranchReport(
       path: root,

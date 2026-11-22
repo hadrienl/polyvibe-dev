@@ -327,11 +327,6 @@ extension AppModel {
     refreshTicket(of: id)
   }
 
-  /// The ticket the selected session shows, and where it comes from.
-  public var selectedTicket: TicketResolution.Resolved? {
-    selectedBrowser?.ticket
-  }
-
   /// Whether a session has something in its web view the user has not seen: a page an agent opened,
   /// or a question waiting.
   public func webViewAttention(for id: SessionID) -> WebViewAttention? {

@@ -40,7 +40,7 @@ struct BranchReportWatchTests {
 
     #expect(await reader.reads(of: "/work/web") == 0)
     let settled = await reader.reads(of: "/work/api")
-    #expect(model.branchReport(for: api.id)?.repositories.first?.checkedOutBranch == "main")
+    #expect(model.branchReports[api.id]?.repositories.first?.checkedOutBranch == "main")
     try await Task.sleep(for: .milliseconds(300))
     #expect(await reader.reads(of: "/work/api") == settled)
 
@@ -88,15 +88,15 @@ struct BranchReportWatchTests {
     await model.load()
     model.select(api.id)
     await model.refreshBranchReport()
-    let report = try #require(model.branchReport(for: api.id))
+    let report = try #require(model.branchReports[api.id])
     let reads = await reader.reads(of: "/work/api")
 
     // The agent writing: the transcript grows, and the report is read again each time.
     for _ in 0..<20 { await model.readBranches(of: api.id) }
 
     #expect(await reader.reads(of: "/work/api") == reads)
-    #expect(model.branchReport(for: api.id)?.readAt == report.readAt)
-    #expect(try #require(model.branchReportCheckedAt(for: api.id)) >= report.readAt)
+    #expect(model.branchReports[api.id]?.readAt == report.readAt)
+    #expect(try #require(model.checkedBranchReport(for: api.id)?.readAt) >= report.readAt)
 
     // Asked for by the user: everything is read again.
     await model.refreshBranchReport()
@@ -108,7 +108,7 @@ struct BranchReportWatchTests {
     let model = AppModel(repository: WatchRepository(values: [api]))
     await model.load()
 
-    #expect(model.branchReport(for: api.id) == nil)
+    #expect(model.branchReports[api.id] == nil)
   }
 }
 
