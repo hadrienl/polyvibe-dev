@@ -1115,7 +1115,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %1$@ — réinitialisation %2$@."
+            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %1$@ — réinitialisation %2$@."
           }
         },
         "hi" : {
@@ -1222,7 +1222,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %@."
+            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %@."
           }
         },
         "hi" : {
