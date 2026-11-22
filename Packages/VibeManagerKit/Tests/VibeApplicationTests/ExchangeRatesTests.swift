@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import VibeDomain
 
 @testable import VibeApplication
 
@@ -109,5 +110,72 @@ struct ExchangeRatesTests {
       clock: Clock(date: fetchedAt.addingTimeInterval(2 * 86_400)))
     #expect(await later.updateIfDue() == false)
     #expect(await later.current()?.day == "2026-11-20")
+  }
+}
+
+@Suite("Each account's last thirty days at public prices")
+struct AccountCostsTests {
+  struct Clock: SessionClock {
+    let date: Date
+    func now() -> Date { date }
+  }
+
+  actor Prices: ModelPriceStore {
+    let list: ModelPriceList
+    init(_ list: ModelPriceList) { self.list = list }
+    func load() async -> ModelPriceList? { list }
+    func save(_ list: ModelPriceList) async throws {}
+  }
+
+  struct NoFetch: ModelPriceFetching {
+    func fetchPriceList() async throws -> Data { throw CancellationError() }
+  }
+
+  @Test("Thirty days, today included, by account; a model without a price is said, not counted")
+  func rolling() async throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: 22, hour: 12)))
+    func day(_ offset: Int) -> LocalDay {
+      LocalDay(calendar.date(byAdding: .day, value: -offset, to: now)!, calendar: calendar)
+    }
+    let session = SessionID()
+    func file(_ provider: String, _ tallies: [TokenUsageFile.Tally]) -> TokenUsageFile {
+      TokenUsageFile(sessionID: session, providerID: provider, tallies: tallies)
+    }
+    let million = TokenCounts(input: 1_000_000)
+    let snapshot = TokenUsageSnapshot(files: [
+      "a": file(
+        "codex",
+        [
+          .init(model: "gpt-x", day: day(0), tokens: million, responses: 1),
+          .init(model: "gpt-x", day: day(29), tokens: million, responses: 1),
+          .init(model: "gpt-x", day: day(30), tokens: million, responses: 1),
+        ]),
+      "b": file(
+        "account.1",
+        [
+          .init(model: "gpt-x", day: day(3), tokens: million, responses: 1),
+          .init(model: "mystery", day: day(3), tokens: million, responses: 1),
+        ]),
+    ])
+    let store = InMemoryTokenUsageStore(snapshot: snapshot)
+    let ledger = InMemoryUsageLedger()
+    let tracking = InMemoryUsageTrackingStore()
+    let list = ModelPriceList(
+      fetchedAt: now,
+      prices: ["gpt-x": ModelPrice(input: Decimal(string: "0.000002")!, cacheRead: 0, cacheWrite: 0, output: 0)])
+    let service = UsageService(
+      recorder: UsageRecorder(ledger: ledger, tracking: tracking), ledger: ledger,
+      tracking: tracking, tokenStore: store, reader: nil,
+      prices: ModelPriceUpdater(
+        fetcher: NoFetch(), store: Prices(list), bundled: nil, clock: Clock(date: now)),
+      clock: Clock(date: now))
+
+    let costs = await service.accountCosts(days: 30, calendar: calendar)
+
+    #expect(costs["codex"]?.total == 4)
+    #expect(costs["account.1"]?.total == 2)
+    #expect(costs["account.1"]?.unpriced.map(\.model) == ["mystery"])
   }
 }

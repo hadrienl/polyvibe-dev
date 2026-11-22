@@ -114,6 +114,32 @@ public actor UsageService {
     await rates?.current()
   }
 
+  /// What each account's tokens of the last `days` days, today included, would have cost at
+  /// public prices (#599), by the agent's identifier: `claude-code`, `codex`, `account.<uuid>`.
+  /// A rolling window, not the calendar month; a model without a price is said, never counted.
+  public func accountCosts(days: Int = 30, calendar: Calendar = .current) async
+    -> [String: UsageCost.Estimate]
+  {
+    let now = clock.now()
+    guard let start = calendar.date(byAdding: .day, value: -(days - 1), to: now) else {
+      return [:]
+    }
+    let first = LocalDay(start, calendar: calendar)
+    let list = await prices?.current()
+    var tokens: [String: [String: TokenCounts]] = [:]
+    for bucket in await loadedSnapshot().buckets where bucket.day >= first {
+      tokens[bucket.providerID, default: [:]][bucket.model, default: TokenCounts()] += bucket.tokens
+    }
+    var costs: [String: UsageCost.Estimate] = [:]
+    for (providerID, models) in tokens {
+      costs[providerID] = UsageCost.estimate(
+        models.sorted { $0.key < $1.key }.map {
+          (UsageModelKey(providerID: providerID, model: $0.key), $0.value)
+        }, prices: list)
+    }
+    return costs
+  }
+
   public func tokens() async -> TokenUsageSnapshot {
     await loadedSnapshot()
   }

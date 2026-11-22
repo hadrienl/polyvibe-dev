@@ -48,6 +48,8 @@ public final class UsageModel {
   }
   /// The conversion in use: the dollar while no rate of the currency chosen is known.
   public private(set) var conversion = CostConversion.dollar
+  /// What each account's last thirty days would have cost at public prices (#599).
+  public private(set) var accountCosts: [String: UsageCost.Estimate] = [:]
 
   static let currencyKey = "costCurrency"
   @ObservationIgnored private let defaults: UserDefaults?
@@ -216,6 +218,7 @@ public final class UsageModel {
     sessionUsage = overview.sessions
     runsRecordedSince = overview.runsRecordedSince
     pricesFetchedAt = overview.pricesFetchedAt
+    accountCosts = await service.accountCosts()
   }
 
   /// The rate of the currency chosen, fetched again when a day old; costs are drawn again.

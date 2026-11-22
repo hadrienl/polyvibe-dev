@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
@@ -452,6 +453,18 @@ public struct RootView: View {
               selection: Binding(
                 get: { model.presentation(of: session) },
                 set: { model.setPresentation($0, of: session.id) }))
+          }
+        }
+        // Every account's quota, always there (#599).
+        if let usage = model.usage {
+          ToolbarItem(placement: .primaryAction) {
+            QuotasToolbarButton(usage: usage) { url in
+              if model.browser != nil, model.selectedSessionID != nil {
+                model.openInWebView(url.absoluteString)
+              } else {
+                NSWorkspace.shared.open(url)
+              }
+            }
           }
         }
         ToolbarItem(placement: .primaryAction) {
