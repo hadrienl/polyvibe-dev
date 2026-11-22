@@ -60,6 +60,9 @@ public struct CodexAgentProvider: AgentProvider {
   private let discovery: any CodexSessionDiscovering
   /// Asks the CLI for its skills (#219).
   let appServer: any CodexAppServerConnecting
+  /// Asks the CLI for its account's quota (#599). Wider than `appServer`'s: codex-cli 0.171
+  /// answers only once its refresh of the models has given up, five seconds after the question.
+  let quotaAppServer: any CodexAppServerConnecting
   /// Where its rollouts were found, shared with the branch report (#276).
   let transcriptLocations: TranscriptLocationCache
   /// What its rollouts and `config.toml` say of the reasoning effort (#411).
@@ -72,6 +75,8 @@ public struct CodexAgentProvider: AgentProvider {
     catalog: any CodexModelCatalogSource,
     discovery: any CodexSessionDiscovering,
     appServer: any CodexAppServerConnecting = CodexAppServerProcess(),
+    quotaAppServer: any CodexAppServerConnecting = CodexAppServerProcess(
+      timeout: .seconds(20)),
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
     effortReader: CodexEffortReader = CodexEffortReader(),
     approvalPreferences: (any AgentApprovalPreferences)? = nil
@@ -81,6 +86,7 @@ public struct CodexAgentProvider: AgentProvider {
     self.catalog = catalog
     self.discovery = discovery
     self.appServer = appServer
+    self.quotaAppServer = quotaAppServer
     self.transcriptLocations = transcriptLocations
     self.effortReader = effortReader
   }

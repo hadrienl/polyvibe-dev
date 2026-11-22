@@ -279,7 +279,7 @@ extension CodexAgentProvider: AgentQuotaReporting {
         for: AgentLaunchRequest(workingDirectoryPath: AccountQuotaProbe.workingDirectory()))
     else { return .unavailable(.notInstalled) }
     do {
-      let result = try await appServer.call(
+      let result = try await quotaAppServer.call(
         plan: plan, options: [], method: AccountQuotaProbe.codexMethod, params: Data("{}".utf8))
       return AccountQuotaProbe.codex(result, now: Date())
     } catch {
