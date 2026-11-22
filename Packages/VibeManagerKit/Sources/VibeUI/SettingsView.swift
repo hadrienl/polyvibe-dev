@@ -1300,6 +1300,7 @@ private struct UsageSettingsRow: View {
       ) {
         Text("Track agent usage", bundle: .module)
       }
+      QuotaAndCurrencySettings(usage: usage)
       Text(
         """
         Running time, runs and the tokens your agents' transcripts report, kept on this Mac only, \
@@ -1431,5 +1432,54 @@ private struct WebViewSettings: View {
       Text(
         "You will be signed out of every site in every session’s web view.", bundle: .module)
     }
+  }
+}
+
+/// How quotas and costs are shown (#599): used or left, the same for every agent, and the
+/// currency of every cost.
+private struct QuotaAndCurrencySettings: View {
+  @Bindable var usage: UsageModel
+  @Bindable var quotas: QuotaModel
+  @Environment(\.locale) private var locale
+
+  init(usage: UsageModel) {
+    self.usage = usage
+    quotas = usage.quotas
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Picker(selection: $quotas.display) {
+        Text("Used", bundle: .module).tag(QuotaModel.Display.used)
+        Text("Left", bundle: .module).tag(QuotaModel.Display.remaining)
+      } label: {
+        Text("Show quotas as", bundle: .module)
+      }
+      .pickerStyle(.segmented)
+      .fixedSize()
+      Picker(selection: $usage.currencyCode) {
+        ForEach(CostCurrency.codes, id: \.self) { code in
+          Text(verbatim: Self.name(of: code, locale: locale)).tag(code)
+        }
+      } label: {
+        Text("Currency of costs", bundle: .module)
+      }
+      .fixedSize()
+      Text(
+        "Prices are in US dollars, converted at the European Central Bank's reference rate, downloaded at most once a day.",
+        bundle: .module,
+        comment: "Under the currency of costs: where the rate comes from (#599)."
+      )
+      .font(.callout)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+    }
+    .disabled(!usage.isTrackingEnabled)
+  }
+
+  /// “Euro (EUR)”.
+  static func name(of code: String, locale: Locale) -> String {
+    let name = locale.localizedString(forCurrencyCode: code) ?? code
+    return "\(name.prefix(1).uppercased() + name.dropFirst()) (\(code))"
   }
 }

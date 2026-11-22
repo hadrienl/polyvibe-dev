@@ -347,6 +347,9 @@ struct SessionUsagePopoverContent: View {
                 locale: locale, bundle: .module,
                 comment: "Where the prices of the costs come from, and the day they were read.")))
         }
+        if let note = UsagePresentation.conversionNote(CostConversion.current, locale: locale) {
+          Text(verbatim: note)
+        }
         Text(UsagePresentation.privacyNote)
       }
       .font(.caption)

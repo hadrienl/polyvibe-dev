@@ -118,3 +118,27 @@ struct QuotaModelTests {
     #expect(spoken.hasPrefix("Codex, 5 hours, 82% used, resets "))
   }
 }
+
+@Suite("Costs in the currency chosen")
+struct CostConversionTests {
+  private let french = Locale(identifier: "fr_FR")
+
+  @Test("A cost is converted at the rate known, and stays in dollars without one")
+  func converted() throws {
+    let rates = ExchangeRates(
+      day: "2026-11-20", fetchedAt: Date(), perEuro: ["USD": Decimal(string: "1.25")!])
+    let euro = CostConversion.make(code: "EUR", rates: rates)
+    #expect(euro.code == "EUR")
+    #expect(euro.perDollar == Decimal(string: "0.8"))
+    #expect(UsagePresentation.cost(10, locale: french, conversion: euro) == "≈ 8,00\u{a0}€")
+    #expect(CostConversion.make(code: "JPY", rates: rates) == .dollar)
+    #expect(CostConversion.make(code: "EUR", rates: nil) == .dollar)
+    #expect(UsagePresentation.cost(10, locale: french, conversion: .dollar).hasPrefix("≈ 10,00"))
+    // Below a cent once converted: never a zero.
+    #expect(UsagePresentation.cost(Decimal(string: "0.005")!, locale: french, conversion: euro)
+      .hasPrefix("< 0,01"))
+    let note = try #require(UsagePresentation.conversionNote(euro, locale: Locale(identifier: "en_US")))
+    #expect(note.contains("2026-11-20"))
+    #expect(UsagePresentation.conversionNote(.dollar) == nil)
+  }
+}
