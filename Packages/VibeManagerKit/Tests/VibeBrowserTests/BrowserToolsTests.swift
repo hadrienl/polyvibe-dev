@@ -280,12 +280,20 @@ struct BrowserWorkspaceToolsTests {
     }
     #expect(listed["url"] == "vibe-device://SIM-1")
     #expect(listed["title"] == "iPhone 17")
-    for tool in ["page_read", "page_screenshot", "page_console"] {
+    for tool in ["page_read", "page_screenshot", "page_console", "tab_reload", "tab_navigate"] {
       let result = await workspace.run(
-        tool: tool, arguments: ["tab": .string(tab.id.description)], session: session)
+        tool: tool,
+        arguments: ["tab": .string(tab.id.description), "url": "https://example.com"],
+        session: session)
       #expect(result.isError, "\(tool)")
       #expect(text(result).contains("shows a device"), "\(tool)")
     }
+    #expect(tab.url.absoluteString == "vibe-device://SIM-1")
+    // Brought forward, it makes no web view of the device's address.
+    let activated = await workspace.run(
+      tool: "tab_activate", arguments: ["tab": .string(tab.id.description)], session: session)
+    #expect(!activated.isError)
+    #expect(tab.webView == nil)
     #expect(workspace.pendingRequests.isEmpty)
   }
 

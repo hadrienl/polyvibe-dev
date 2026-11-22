@@ -142,6 +142,22 @@ struct BrowserTabPinningTests {
     #expect(browser.unseenTabIDs.isEmpty)
   }
 
+  @Test("A tab opened behind before the kept tabs are read stays unseen once they are")
+  func unseenBeforeRestore() async {
+    _ = NSApplication.shared
+    let store = InMemoryBrowserStateStore()
+    let kept = BrowserTab(url: URL(string: "https://example.com")!, openedBy: .user)
+    await store.save(SessionBrowserState(tabs: [kept], activeTabID: kept.id), for: session)
+    let workspace = BrowserWorkspace(stateStore: store)
+    // Opened by an agent before the file is read: in front, no other tab being.
+    let early = workspace.open(
+      URL(string: "data:text/html,<p>agent</p>")!, in: session, openedBy: .user,
+      activate: false)
+    let browser = await workspace.restoredBrowser(for: session)
+    #expect(browser.activeTab?.id == kept.id)
+    #expect(browser.unseenTabIDs == [early.id])
+  }
+
   @Test("Close All closes the tabs that are not pinned, and brings a pinned one forward")
   func closeUnpinned() {
     let workspace = BrowserWorkspace()

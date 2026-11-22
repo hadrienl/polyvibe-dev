@@ -126,7 +126,11 @@ public final class SessionBrowser {
     groups = state.groups + groups
     // Pinned first and groups whole, whatever the file said (#536, #648).
     arrange { _ in }
-    if activeTabID == nil { activeTabID = state.activeTabID }
+    if activeTabID == nil {
+      activeTabID = state.activeTabID
+      // In front only because no tab was: sent behind by the one kept, it has not been seen.
+      for tab in opened where tab.id != activeTab?.id { unseenTabIDs.insert(tab.id) }
+    }
     if !isVisible { isVisible = state.isVisible }
     actionLog = BrowserActionLog(records: records + actionLog.records)
     isRestored = true
