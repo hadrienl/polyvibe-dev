@@ -141,6 +141,23 @@ struct OverviewWidthTests {
     try await waitUntil("narrowed", window, overviewIs: nominal(850))
   }
 
+  @Test("Wide, the overview is no wider than its maximum, held against the pane's right edge (#596)")
+  func wideOverviewHeldRight() async throws {
+    let (window, _) = host(width: 1700)
+    defer { window.close() }
+    #expect(nominal(1700) == ConversationOverviewLayout.maximumWidth)
+    try await waitUntil("wide", window, overviewIs: ConversationOverviewLayout.maximumWidth)
+    let laidOut = frames(in: window)
+    let overview = try #require(laidOut.overview)
+    let pane = try #require(window.contentView).bounds
+    #expect(overview.maxX == pane.maxX)
+    // The empty part of the margin lies between the text and the overview.
+    #expect(!laidOut.texts.isEmpty)
+    for text in laidOut.texts {
+      #expect(text.maxX + ConversationOverviewLayout.gap < overview.minX)
+    }
+  }
+
   @Test("Held wide then let go in a narrow pane, the messages and the composer leave it its room")
   func narrowPaneLeavesTheOverviewItsRoom() async throws {
     let (window, slot) = host(width: 850)

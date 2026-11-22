@@ -272,10 +272,14 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   }
 
   public static let minimumWidth = 56.0
+  /// No wider, however wide the margin (#596): held against the pane's right edge, as a scroll bar
+  /// is, the rest of the margin left empty.
+  public static let maximumWidth = 160.0
   /// Kept between the text and the overview.
   public static let gap = 12.0
 
-  /// The margin right of the column, less a gap; or, narrower than the minimum, the minimum, the
+  /// The margin right of the column, less a gap, up to `maximumWidth`; or, narrower than the
+  /// minimum, the minimum, the
   /// messages giving up what it lacks — no more, so that the text moves as the window narrows,
   /// never in a jump.
   ///
@@ -286,7 +290,9 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   ) -> Placement {
     let column = contentWidth + leadingMargin + trailingMargin
     let free = (paneWidth - min(column, paneWidth)) / 2 + trailingMargin - gap
-    guard free < minimumWidth else { return Placement(width: free.rounded(.down), reserved: 0) }
+    guard free < minimumWidth else {
+      return Placement(width: min(free, maximumWidth).rounded(.down), reserved: 0)
+    }
     // Centred, the column moves by half of what is given up while it keeps its width; once it
     // fills the pane, only its right margin stands between it and the overview.
     let centred = 2 * (minimumWidth - free)

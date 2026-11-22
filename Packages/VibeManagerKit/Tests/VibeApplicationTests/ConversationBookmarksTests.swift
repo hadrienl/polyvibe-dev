@@ -176,13 +176,33 @@ struct ConversationOverviewLayoutTests {
         == ConversationOverviewLayout.maximumScale)
   }
 
-  @Test("The overview takes the margin right of the text, which does not move")
+  @Test("Wide, the overview is no wider than its maximum, and the text does not move (#596)")
   func wideMargin() {
     // A 1400-point pane, an 820-point column between 32-point margins: 258 points on each side
-    // of them, then the right margin, less the gap.
+    // of them, then the right margin, less the gap — 278 points, more than the maximum.
     let placement = ConversationOverviewLayout.placement(
       paneWidth: 1400, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
-    #expect(placement == .init(width: 278, reserved: 0))
+    #expect(placement == .init(width: ConversationOverviewLayout.maximumWidth, reserved: 0))
+    #expect(ConversationOverviewLayout.maximumWidth == 160)
+    // Wider still, it stays at the maximum.
+    let wider = ConversationOverviewLayout.placement(
+      paneWidth: 2560, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
+    #expect(wider == .init(width: 160, reserved: 0))
+  }
+
+  @Test("Between the minimum and the maximum, the overview takes the whole margin")
+  func mediumMargin() {
+    func placement(_ pane: Double) -> ConversationOverviewLayout.Placement {
+      ConversationOverviewLayout.placement(
+        paneWidth: pane, contentWidth: 820, leadingMargin: 32, trailingMargin: 32)
+    }
+    // 1100 points: 108 on each side of the column, the right margin, less the gap.
+    #expect(placement(1100) == .init(width: 128, reserved: 0))
+    // 1164 points: just the maximum; two points more do not widen it.
+    #expect(placement(1164) == .init(width: 160, reserved: 0))
+    #expect(placement(1166) == .init(width: 160, reserved: 0))
+    // Half a point of margin is not drawn.
+    #expect(placement(1101) == .init(width: 128, reserved: 0))
   }
 
   @Test("Narrower than the minimum, it keeps the minimum and the text makes room, little by little")
