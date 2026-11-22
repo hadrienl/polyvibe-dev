@@ -13,38 +13,6 @@ public struct RepositoryStatusKey: Hashable, Sendable {
   }
 }
 
-/// An entry, and whether the session's own transcript names it.
-///
-/// `git status` says a file changed, never who changed it. The transcript says which files the
-/// agent's editing tools wrote: a file it names is this agent's work. One it does not name is not
-/// someone else's — a command the agent ran may have written it — so it is said to be unattributed,
-/// never attributed to another session.
-public struct AttributedEntry: Hashable, Sendable, Identifiable {
-  public let entry: WorkingTreeEntry
-  public let touchedByAgent: Bool
-
-  public init(entry: WorkingTreeEntry, touchedByAgent: Bool) {
-    self.entry = entry
-    self.touchedByAgent = touchedByAgent
-  }
-
-  public var id: String { entry.id }
-}
-
-/// A file the branch committed, and whether the session's own transcript names it. The branch may
-/// carry commits from before the session: those files are unattributed, not someone else's.
-public struct AttributedCommittedFile: Hashable, Sendable, Identifiable {
-  public let file: CommittedFile
-  public let touchedByAgent: Bool
-
-  public init(file: CommittedFile, touchedByAgent: Bool) {
-    self.file = file
-    self.touchedByAgent = touchedByAgent
-  }
-
-  public var id: String { file.id }
-}
-
 /// What is known of one repository of the session on screen.
 public struct RepositoryStatusState: Equatable, Sendable {
   public enum Phase: Equatable, Sendable {
@@ -61,41 +29,17 @@ public struct RepositoryStatusState: Equatable, Sendable {
   public let key: RepositoryStatusKey
   /// Never cleared by a failure.
   public let lastValid: WorkingTreeStatus?
-  /// `lastValid`'s entries, attributed for this session.
-  public let entries: [AttributedEntry]
-  /// `lastValid`'s committed files, attributed for this session.
-  public let committed: [AttributedCommittedFile]
   public let phase: Phase
-  /// Other sessions working in the same repository: the entries not attributed to this agent may
-  /// be theirs.
-  public let sharedWith: [SessionID]
 
-  public init(
-    key: RepositoryStatusKey,
-    lastValid: WorkingTreeStatus?,
-    entries: [AttributedEntry],
-    committed: [AttributedCommittedFile] = [],
-    phase: Phase,
-    sharedWith: [SessionID]
-  ) {
+  public init(key: RepositoryStatusKey, lastValid: WorkingTreeStatus?, phase: Phase) {
     self.key = key
     self.lastValid = lastValid
-    self.entries = entries
-    self.committed = committed
     self.phase = phase
-    self.sharedWith = sharedWith
-  }
-
-  /// How many changed entries the transcript does not name.
-  public var unattributedCount: Int {
-    entries.filter { !$0.touchedByAgent }.count
   }
 
   /// The same state, whatever the clock said when each was read.
   func hasSameContent(as other: RepositoryStatusState) -> Bool {
-    guard key == other.key, phase == other.phase, sharedWith == other.sharedWith,
-      entries == other.entries, committed == other.committed
-    else { return false }
+    guard key == other.key, phase == other.phase else { return false }
     switch (lastValid, other.lastValid) {
     case (nil, nil): return true
     case (let lhs?, let rhs?): return lhs.hasSameContent(as: rhs)
@@ -107,11 +51,9 @@ public struct RepositoryStatusState: Equatable, Sendable {
 /// A repository to watch for the session on screen, as its branch report found it.
 public struct ObservedRepository: Hashable, Sendable {
   public let path: String
-  public let sharedWith: [SessionID]
 
-  public init(path: String, sharedWith: [SessionID] = []) {
+  public init(path: String) {
     self.path = path
-    self.sharedWith = sharedWith
   }
 }
 
@@ -170,7 +112,6 @@ public actor RepositoryStatusMonitor {
 
   private struct Watched {
     let path: String
-    var sharedWith: [SessionID]
     var directories: GitDirectories?
     var lastValid: WorkingTreeStatus?
     var phase: RepositoryStatusState.Phase = .refreshing
@@ -192,7 +133,6 @@ public actor RepositoryStatusMonitor {
 
   private var session: WorkSession?
   private var repositories: [String: Watched] = [:]
-  private var editedPaths: Set<String> = []
   private var transcriptDirectories: [String] = []
   private var published: [RepositoryStatusKey: RepositoryStatusState] = [:]
   private var targets: [(prefix: String, target: Target)] = []
@@ -239,21 +179,16 @@ public actor RepositoryStatusMonitor {
     let generation = generation
 
     if let transcripts {
-      let activity = await transcripts.activity(for: session)
       let directories = await transcripts.transcriptDirectories(for: session)
       guard generation == self.generation else { return }
-      editedPaths = Set((activity?.editedPaths ?? []).map(CanonicalPath.of))
       transcriptDirectories = directories.map(CanonicalPath.of)
     }
 
-    var wanted: [String: ObservedRepository] = [:]
-    for repository in observed {
-      wanted[CanonicalPath.of(repository.path)] = repository
-    }
+    let wanted = Set(observed.map { CanonicalPath.of($0.path) })
 
     // Dropped from the report: said to be no longer watched, and forgotten.
     var dropped: [RepositoryStatusState] = []
-    for path in repositories.keys where wanted[path] == nil {
+    for path in repositories.keys where !wanted.contains(path) {
       repositories[path]?.lockCheck?.cancel()
       repositories[path] = nil
       let key = RepositoryStatusKey(sessionID: session.id, repositoryPath: path)
@@ -264,13 +199,9 @@ public actor RepositoryStatusMonitor {
     if !dropped.isEmpty { continuation.yield(.states(dropped)) }
 
     var added: [String] = []
-    for (path, repository) in wanted {
-      if repositories[path] != nil {
-        repositories[path]?.sharedWith = repository.sharedWith
-      } else {
-        repositories[path] = Watched(path: path, sharedWith: repository.sharedWith)
-        added.append(path)
-      }
+    for path in wanted where repositories[path] == nil {
+      repositories[path] = Watched(path: path)
+      added.append(path)
     }
 
     for path in added.sorted() {
@@ -331,7 +262,6 @@ public actor RepositoryStatusMonitor {
     targets = []
     for watched in repositories.values { watched.lockCheck?.cancel() }
     repositories = [:]
-    editedPaths = []
     transcriptDirectories = []
     let unobserved = published.values.map { $0.with(phase: .unobserved) }
     published = [:]
@@ -472,41 +402,9 @@ public actor RepositoryStatusMonitor {
   // MARK: - Publishing
 
   private func state(of watched: Watched, in session: SessionID) -> RepositoryStatusState {
-    let entries = (watched.lastValid?.entries ?? []).map { entry in
-      AttributedEntry(entry: entry, touchedByAgent: isEdited(entry, in: watched.path))
-    }
-    let committed = (watched.lastValid?.committed?.files ?? []).map { file in
-      AttributedCommittedFile(file: file, touchedByAgent: isEdited(file, in: watched.path))
-    }
-    return RepositoryStatusState(
+    RepositoryStatusState(
       key: RepositoryStatusKey(sessionID: session, repositoryPath: watched.path),
-      lastValid: watched.lastValid,
-      entries: entries,
-      committed: committed,
-      phase: watched.phase,
-      sharedWith: watched.sharedWith
-    )
-  }
-
-  private func isEdited(_ entry: WorkingTreeEntry, in root: String) -> Bool {
-    let absolute = (root as NSString).appendingPathComponent(entry.path)
-    if case .untrackedDirectory = entry.kind {
-      let prefix = absolute.hasSuffix("/") ? absolute : absolute + "/"
-      return editedPaths.contains { $0.hasPrefix(prefix) }
-    }
-    if editedPaths.contains(absolute) { return true }
-    if case .tracked(.renamed(let from, _)?, _) = entry.kind {
-      return editedPaths.contains((root as NSString).appendingPathComponent(from))
-    }
-    return false
-  }
-
-  private func isEdited(_ file: CommittedFile, in root: String) -> Bool {
-    if editedPaths.contains((root as NSString).appendingPathComponent(file.path)) { return true }
-    if case .renamed(let from, _) = file.change {
-      return editedPaths.contains((root as NSString).appendingPathComponent(from))
-    }
-    return false
+      lastValid: watched.lastValid, phase: watched.phase)
   }
 
   private func publish(_ path: String) {
@@ -618,15 +516,6 @@ public actor RepositoryStatusMonitor {
     for path in dirty.sorted() {
       markDirty(path)
     }
-    if transcriptGrew, let transcripts {
-      let activity = await transcripts.activity(for: session)
-      guard generation == self.generation else { return }
-      let edited = Set((activity?.editedPaths ?? []).map(CanonicalPath.of))
-      if edited != editedPaths {
-        editedPaths = edited
-        publishAll()
-      }
-    }
     if branchesMoved || transcriptGrew {
       continuation.yield(.branchReportOutdated(session.id))
     }
@@ -701,9 +590,7 @@ public actor RepositoryStatusMonitor {
 
 extension RepositoryStatusState {
   func with(phase: Phase) -> RepositoryStatusState {
-    RepositoryStatusState(
-      key: key, lastValid: lastValid, entries: entries, committed: committed, phase: phase,
-      sharedWith: sharedWith)
+    RepositoryStatusState(key: key, lastValid: lastValid, phase: phase)
   }
 }
 

@@ -63,7 +63,7 @@ struct GitStatusReaderTests {
     #expect(kind(status, "Generated/") == .untrackedDirectory)
     #expect(kind(status, "loose.txt") == .untracked)
     #expect(status.branch.branchName == "main")
-    #expect(!status.isClean)
+    #expect(!status.counts.isEmpty)
   }
 
   @Test("A merge that stopped on a conflict is said, file and operation")

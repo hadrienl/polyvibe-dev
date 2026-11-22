@@ -3803,10 +3803,7 @@ extension AppModel {
     guard let repositoryStatus, observedSessionID == id,
       let session = sessions.first(where: { $0.id == id }), let report = branchReports[id]
     else { return }
-    let repositories = report.repositories.map { repository in
-      ObservedRepository(
-        path: repository.path, sharedWith: sharers(of: repository.path, besides: id))
-    }
+    let repositories = report.repositories.map { ObservedRepository(path: $0.path) }
     // The same repositories, the same transcript and the same conversations: the monitor already
     // watches all of it, and would only read the transcript and its folders again.
     let request = ObservationRequest(
@@ -3823,17 +3820,6 @@ extension AppModel {
     let repositories: [ObservedRepository]
     let hasTranscript: Bool
     let conversations: [String?]
-  }
-
-  /// The other sessions whose last report names this repository. Only what has been read in this
-  /// run is known: a session never shown since launch is not counted.
-  private func sharers(of path: String, besides id: SessionID) -> [SessionID] {
-    sessions
-      .filter { session in
-        session.id != id && session.status != .archived
-          && branchReports[session.id]?.repositories.contains { $0.path == path } == true
-      }
-      .map(\.id)
   }
 
   private func apply(_ update: RepositoryStatusUpdate) {

@@ -21,7 +21,7 @@ struct RepositoryStatusMonitorTests {
       reader: reader, events: events, transcripts: transcripts, clock: clock, limits: limits)
   }
 
-  @Test("Each repository is read once when it is first watched, and its changes attributed")
+  @Test("Each repository is read once when it is first watched")
   func firstReading() async {
     let reader = ScriptedStatusReader()
     await reader.answer(
@@ -31,10 +31,7 @@ struct RepositoryStatusMonitorTests {
         WorkingTreeEntry(path: "README.md", kind: .tracked(staged: .modified, unstaged: nil)),
         WorkingTreeEntry(path: "Generated/", kind: .untrackedDirectory),
       ])
-    let transcripts = TableTranscriptSource(edited: [
-      "/work/api/Sources/A.swift", "/work/api/Generated/Model.swift",
-    ])
-    let monitor = makeMonitor(reader: reader, transcripts: transcripts)
+    let monitor = makeMonitor(reader: reader)
     let recorder = StatusUpdateRecorder.listening(to: monitor)
 
     await monitor.observe(session, repositories: [ObservedRepository(path: "/work/api")])
@@ -43,8 +40,6 @@ struct RepositoryStatusMonitorTests {
     let state = await recorder.latest("/work/api")
     #expect(state?.key == RepositoryStatusKey(sessionID: session.id, repositoryPath: "/work/api"))
     #expect(state?.lastValid?.counts == WorkingTreeCounts(staged: 1, unstaged: 1, untracked: 1))
-    #expect(state?.entries.map(\.touchedByAgent) == [true, false, true])
-    #expect(state?.unattributedCount == 1)
     #expect(await reader.readCount("/work/api") == 1)
   }
 
@@ -70,38 +65,6 @@ struct RepositoryStatusMonitorTests {
 
     await monitor.stopObserving()
     #expect(await monitor.knownStatus(of: session.id, atPath: "/work/api") == nil)
-  }
-
-  @Test("The files a branch committed are attributed like the others, renames by their origin")
-  func committedAttribution() async {
-    let reader = ScriptedStatusReader()
-    await reader.answer(
-      "/work/api",
-      with: .success(
-        WorkingTreeStatus(
-          repositoryPath: "/work/api", branch: BranchStatus(headRevision: "abc", branchName: "x"),
-          entries: [], counts: WorkingTreeCounts(),
-          committed: BranchCommits(
-            base: "origin/main", mergeBase: "def", commitCount: 2,
-            files: [
-              CommittedFile(path: "Sources/A.swift", change: .modified),
-              CommittedFile(path: "B.swift", change: .renamed(from: "Old.swift", similarity: 95)),
-              CommittedFile(path: "C.swift", change: .added),
-            ], totalCount: 3),
-          observedAt: Date())))
-    let transcripts = TableTranscriptSource(edited: [
-      "/work/api/Sources/A.swift", "/work/api/Old.swift",
-    ])
-    let monitor = makeMonitor(reader: reader, transcripts: transcripts)
-    let recorder = StatusUpdateRecorder.listening(to: monitor)
-
-    await monitor.observe(session, repositories: [ObservedRepository(path: "/work/api")])
-
-    #expect(await eventually { await recorder.latest("/work/api")?.phase == .fresh })
-    let state = await recorder.latest("/work/api")
-    #expect(state?.committed.map(\.touchedByAgent) == [true, true, false])
-    // Only what is not committed yet counts as unattributed: nothing, here.
-    #expect(state?.unattributedCount == 0)
   }
 
   @Test("Without a signal from the disk, nothing is read again")
@@ -190,7 +153,7 @@ struct RepositoryStatusMonitorTests {
     await reader.answer("/work/api", entries: [])
     await monitor.refresh()
     #expect(await eventually { await recorder.latest("/work/api")?.phase == .fresh })
-    #expect(await recorder.latest("/work/api")?.lastValid?.isClean == true)
+    #expect(await recorder.latest("/work/api")?.lastValid?.counts.isEmpty == true)
   }
 
   @Test("A lock held a moment is not a failure; one held past the grace is said, with its age")
@@ -285,7 +248,7 @@ struct RepositoryStatusMonitorTests {
     #expect(await eventually { await reader.readCount(worktree) == 2 })
   }
 
-  @Test("A transcript that grows updates what is attributed, and dates the report")
+  @Test("A transcript that grows dates the report, not one beside it")
   func transcriptGrowth() async throws {
     let reader = ScriptedStatusReader()
     let events = ManualFileChanges()
@@ -299,7 +262,7 @@ struct RepositoryStatusMonitorTests {
       agent: SessionAgentConfiguration(providerID: "claude-code", resumeIdentifier: "5e9-abc"),
       repositories: [RepositoryContext(path: "/work/api")])
     await monitor.observe(session, repositories: [ObservedRepository(path: "/work/api")])
-    #expect(await eventually { await recorder.latest("/work/api")?.unattributedCount == 1 })
+    #expect(await eventually { await recorder.latest("/work/api")?.phase == .fresh })
     #expect(await eventually { events.openStreams == 1 })
 
     // Another session opened in the same folder writes its own transcript beside this one's.
@@ -307,10 +270,8 @@ struct RepositoryStatusMonitorTests {
     try await Task.sleep(for: .milliseconds(100))
     #expect(await recorder.outdatedReports == 0)
 
-    await transcripts.setEdited(["/work/api/a.swift"])
     events.send(.changed(["/transcripts/project/5e9-abc.jsonl"]))
 
-    #expect(await eventually { await recorder.latest("/work/api")?.unattributedCount == 0 })
     #expect(await eventually { await recorder.outdatedReports == 1 })
     #expect(await reader.readCount("/work/api") == 1)
   }
@@ -355,19 +316,6 @@ struct RepositoryStatusMonitorTests {
     #expect(await recorder.latest("/work/api")?.phase == .unobserved)
     #expect(await recorder.latest("/work/api")?.lastValid != nil)
     #expect(await eventually { events.openStreams == 0 })
-  }
-
-  @Test("Another session in the same repository is named")
-  func sharedRepository() async {
-    let reader = ScriptedStatusReader()
-    let monitor = makeMonitor(reader: reader)
-    let recorder = StatusUpdateRecorder.listening(to: monitor)
-    let other = SessionID()
-
-    await monitor.observe(
-      session, repositories: [ObservedRepository(path: "/work/api", sharedWith: [other])])
-
-    #expect(await eventually { await recorder.latest("/work/api")?.sharedWith == [other] })
   }
 }
 
@@ -489,16 +437,5 @@ struct RepositoryStatusIssueTests {
     #expect(
       RepositoryStatusIssue.classify(errorOutput: "fatal: bad object HEAD\nmore", path: "/x")
         == .failed(summary: "fatal: bad object HEAD"))
-  }
-
-  @Test("A command to copy is escaped for the shell, and only offered where it helps")
-  func copyableCommands() {
-    #expect(
-      RepositoryStatusIssue.unsafeRepository(path: "/Users/a/l'API (v2)").copyableCommand
-        == #"git config --global --add safe.directory '/Users/a/l'\''API (v2)'"#)
-    #expect(
-      RepositoryStatusIssue.locked(lockPath: "/r/.git/index.lock", since: Date()).copyableCommand
-        == "rm /r/.git/index.lock")
-    #expect(RepositoryStatusIssue.missing(path: "/r").copyableCommand == nil)
   }
 }

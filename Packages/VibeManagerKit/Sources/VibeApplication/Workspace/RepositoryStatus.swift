@@ -46,8 +46,7 @@ public protocol SessionTranscriptLocating: Sendable {
   func transcriptDirectories(for session: WorkSession) async -> [String]
 }
 
-/// Why a repository could not be read. Each case carries its sentence and what to do about it, in
-/// the manner of `SessionDraftIssue`: a row shows the three without knowing which it holds.
+/// Why a repository could not be read.
 public enum RepositoryStatusIssue: Error, Hashable, Sendable {
   case missing(path: String)
   case notARepository(path: String)
@@ -57,78 +56,6 @@ public enum RepositoryStatusIssue: Error, Hashable, Sendable {
   case gitUnavailable(GitUnavailable)
   case timedOut(after: Duration)
   case failed(summary: String)
-
-  public var message: String {
-    switch self {
-    case .missing:
-      return String(localized: "This repository is no longer where it was.", bundle: .module)
-    case .notARepository:
-      return String(localized: "This folder is no longer a Git repository.", bundle: .module)
-    case .locked(_, let since):
-      let minutes = max(1, Int(Date().timeIntervalSince(since) / 60))
-      return String(
-        localized: "Another Git process has been working in this repository for \(minutes) min.",
-        bundle: .module)
-    case .permissionDenied:
-      return String(
-        localized: "macOS does not let Vibe Manager read this repository.", bundle: .module)
-    case .unsafeRepository:
-      return String(
-        localized: "Git refuses to read this repository: it belongs to another user.",
-        bundle: .module)
-    case .gitUnavailable(let reason):
-      return reason.errorDescription ?? String(localized: "Git could not be run.", bundle: .module)
-    case .timedOut(let after):
-      return String(
-        localized: "This repository took more than \(after.components.seconds) s to answer.",
-        bundle: .module)
-    case .failed(let summary):
-      return summary.isEmpty
-        ? String(localized: "Git could not read this repository.", bundle: .module) : summary
-    }
-  }
-
-  public var suggestion: String? {
-    switch self {
-    case .missing, .notARepository:
-      return String(
-        localized: """
-          Nothing is repaired automatically: reveal the folder, and restart the session where the \
-          repository now is.
-          """,
-        bundle: .module)
-    case .locked:
-      return String(
-        localized:
-          "If no Git command is running any more, the lock was left behind and can be removed.",
-        bundle: .module)
-    case .permissionDenied:
-      return String(
-        localized: "Give Vibe Manager Full Disk Access in System Settings.", bundle: .module)
-    case .unsafeRepository:
-      return String(localized: "Mark it as safe if you trust it.", bundle: .module)
-    case .gitUnavailable(.commandLineToolsMissing):
-      return String(localized: "Install the Command Line Tools.", bundle: .module)
-    case .gitUnavailable:
-      return String(localized: "Install Git, then read the repositories again.", bundle: .module)
-    case .timedOut, .failed:
-      return String(localized: "Read the repositories again.", bundle: .module)
-    }
-  }
-
-  /// A command to copy into a terminal — escaped for the shell, and never run by the application.
-  public var copyableCommand: String? {
-    switch self {
-    case .locked(let lockPath, _):
-      return "rm \(ShellWord.quote(lockPath))"
-    case .unsafeRepository(let path):
-      return "git config --global --add safe.directory \(ShellWord.quote(path))"
-    case .gitUnavailable(.commandLineToolsMissing):
-      return "xcode-select --install"
-    default:
-      return nil
-    }
-  }
 
   /// Reads a refusal from Git. The runner runs Git in English whatever the user's region, so these
   /// sentences are the same on every Mac.
@@ -152,17 +79,5 @@ public enum RepositoryStatusIssue: Error, Hashable, Sendable {
       .first
       .map { String($0).trimmingCharacters(in: .whitespaces) } ?? ""
     return .failed(summary: firstLine)
-  }
-}
-
-/// A word the shell reads back unchanged.
-enum ShellWord {
-  static func quote(_ word: String) -> String {
-    let safe = CharacterSet(
-      charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/._-+:@%")
-    if !word.isEmpty, word.unicodeScalars.allSatisfy({ safe.contains($0) }) {
-      return word
-    }
-    return "'" + word.replacingOccurrences(of: "'", with: #"'\''"#) + "'"
   }
 }

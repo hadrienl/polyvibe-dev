@@ -112,66 +112,6 @@ struct BranchReportWatchTests {
   }
 }
 
-@MainActor
-@Suite("What a repository's state reads as")
-struct RepositoryStatusPresentationTests {
-  private let key = RepositoryStatusKey(sessionID: SessionID(), repositoryPath: "/work/api")
-
-  private func state(
-    _ entries: [(WorkingTreeEntry, Bool)],
-    branch: BranchStatus = BranchStatus(branchName: "main"),
-    operation: RepositoryOperation? = nil,
-    phase: RepositoryStatusState.Phase = .fresh,
-    sharedWith: [SessionID] = []
-  ) -> RepositoryStatusState {
-    var counts = WorkingTreeCounts()
-    for (entry, _) in entries {
-      if case .untracked = entry.kind { counts.untracked += 1 }
-      if entry.isStaged { counts.staged += 1 }
-      if entry.isUnstaged { counts.unstaged += 1 }
-    }
-    let status = WorkingTreeStatus(
-      repositoryPath: "/work/api", branch: branch, operation: operation,
-      entries: entries.map(\.0), counts: counts, observedAt: Date())
-    return RepositoryStatusState(
-      key: key, lastValid: status,
-      entries: entries.map { AttributedEntry(entry: $0.0, touchedByAgent: $0.1) },
-      phase: phase, sharedWith: sharedWith)
-  }
-
-  @Test("Counts in words, with what the transcript does not account for")
-  func summary() {
-    let staged = WorkingTreeEntry(path: "a", kind: .tracked(staged: .modified, unstaged: .modified))
-    let untracked = WorkingTreeEntry(path: "b", kind: .untracked)
-    let presentation = RepositoryStatusPresentation(
-      state: state([(staged, true), (untracked, false)]))
-
-    #expect(
-      presentation.summary
-        == "1 staged · 1 unstaged · 1 untracked — 1 not in this session's transcript")
-    #expect(RepositoryStatusPresentation(state: state([])).summary == "No changes")
-  }
-
-  @Test("Distance, operation and sharing are said; a failure keeps the last state beside it")
-  func details() {
-    let other = SessionID()
-    let failing = state(
-      [], branch: BranchStatus(branchName: "main", upstream: "origin/main", ahead: 2, behind: 1),
-      operation: .rebasing,
-      phase: .failed(.unsafeRepository(path: "/work/api"), since: Date()), sharedWith: [other])
-    let presentation = RepositoryStatusPresentation(
-      state: failing, sessionNames: [other: "Audit deps"])
-
-    #expect(
-      presentation.details == [
-        "2 ahead, 1 behind of upstream", "Rebase in progress", "Shared with Audit deps",
-      ])
-    #expect(presentation.summary == "No changes")
-    #expect(presentation.isStale)
-    #expect(presentation.command == "git config --global --add safe.directory /work/api")
-  }
-}
-
 private actor CountingReader: RepositoryActivityReading {
   private var counts: [String: Int] = [:]
   private let fingerprinted: Bool

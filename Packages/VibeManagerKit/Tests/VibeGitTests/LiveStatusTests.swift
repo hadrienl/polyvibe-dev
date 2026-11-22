@@ -36,7 +36,8 @@ struct LiveStatusTests {
 
     await monitor.observe(session, repositories: [ObservedRepository(path: path)])
     await waitUntil("the new repository reads clean") {
-      latest(path, in: box).map { $0.phase == .fresh && $0.lastValid?.isClean == true } == true
+      latest(path, in: box).map { $0.phase == .fresh && $0.lastValid?.counts.isEmpty == true }
+        == true
     }
     // FSEvents only reports what happens after its stream has started.
     try await Task.sleep(for: .milliseconds(300))
@@ -54,7 +55,7 @@ struct LiveStatusTests {
     // A commit touches nothing in the working tree: only Git's own folder says it happened.
     try await git(["commit", "-q", "-m", "Change"], in: repository)
     await waitUntil("the commit leaves the tree clean") {
-      latest(path, in: box).map { $0.lastValid?.isClean == true } == true
+      latest(path, in: box).map { $0.lastValid?.counts.isEmpty == true } == true
     }
 
     try await git(["checkout", "-q", "-b", "feature"], in: repository)

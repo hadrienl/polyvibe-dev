@@ -66,7 +66,7 @@ enum SessionThemeText {
     return Text("This theme applies as it is, in light and dark mode.", bundle: .module)
   }
 
-  /// The theme's name, as the inspector shows it.
+  /// The theme's name, as the popover shows it.
   static func name(of theme: String?, themes: ConversationThemesModel) -> Text {
     guard let theme else { return followsSettings }
     guard let found = themes.theme(theme) else { return Text("Theme Not Found", bundle: .module) }

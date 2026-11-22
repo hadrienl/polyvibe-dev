@@ -85,21 +85,15 @@ final class ManualFileChanges: FileChangeObserving, @unchecked Sendable {
   }
 }
 
-/// A transcript whose edited paths the test sets.
+/// A transcript whose folders the test sets.
 actor TableTranscriptSource: SessionTranscriptSource {
-  private var edited: Set<String>
   private let directories: [String]
 
-  init(edited: Set<String> = [], directories: [String] = []) {
-    self.edited = edited
+  init(directories: [String] = []) {
     self.directories = directories
   }
 
-  func setEdited(_ paths: Set<String>) { edited = paths }
-
-  func activity(for session: WorkSession) async -> TranscriptActivity? {
-    TranscriptActivity(editedPaths: edited)
-  }
+  func activity(for session: WorkSession) async -> TranscriptActivity? { nil }
 
   func transcriptDirectories(for session: WorkSession) async -> [String] { directories }
 }

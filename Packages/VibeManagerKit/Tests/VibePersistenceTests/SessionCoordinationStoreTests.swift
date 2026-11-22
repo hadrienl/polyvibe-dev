@@ -85,30 +85,11 @@ struct SessionCoordinationStoreTests {
   }
 }
 
-@Suite("Keeping what coordinators did and asked for")
+@Suite("Keeping what coordinators asked for")
 struct FileCoordinationStoreTests {
   private func directory() -> URL {
     FileManager.default.temporaryDirectory
       .appendingPathComponent("coordination-\(UUID().uuidString)", isDirectory: true)
-  }
-
-  @Test("A child's trace keeps its last 200 entries, in order")
-  func traceIsBounded() async {
-    let folder = directory()
-    defer { try? FileManager.default.removeItem(at: folder) }
-    let store = FileCoordinationStore(directory: folder)
-    let child = SessionID()
-    for index in 0..<205 {
-      await store.append(
-        CoordinationTraceEntry(
-          date: Date(timeIntervalSince1970: TimeInterval(index)), coordinatorName: "V2",
-          action: .messaged, detail: "\(index)"),
-        to: child)
-    }
-    let trace = await FileCoordinationStore(directory: folder).trace(of: child)
-    #expect(trace.count == 200)
-    #expect(trace.first?.detail == "5")
-    #expect(trace.last?.detail == "204")
   }
 
   @Test("Wake-ups are kept across a relaunch, and taken away one by one")

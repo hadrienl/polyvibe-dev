@@ -54,6 +54,12 @@ of 0027 and the column in the layout of 0008 are removed, with their toolbar but
 the editor changed files open with. What other screens still read stays: the branch report of 0012
 and the repositories' live states of 0013 feed the summary a restart or an agent switch hands over.
 
+What only the column read goes with it. The live states of 0013 keep the last reading and its
+phase, no longer which changes the transcript names, which other sessions share the repository, or
+the sentences and commands that explained a failure. Coordinators no longer leave a trace of what
+they did to their children (0039): it was written for the coordination section alone, and the
+`*.trace.json` files an older build left are no longer read.
+
 A layout written by an older build still reads: the column's keys are read past and never written
 again.
 

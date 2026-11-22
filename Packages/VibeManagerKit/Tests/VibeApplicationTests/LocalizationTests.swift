@@ -35,8 +35,5 @@ struct LocalizationTests {
       Localization.string(
         "The terminal host stopped, and this agent was stopped with it.", module: "VibeApplication",
         in: "fr") == "L’hôte des terminaux s’est arrêté, et cet agent avec lui.")
-    #expect(
-      RepositoryStatusIssue.locked(lockPath: "/r/.git/index.lock", since: Date()).message
-        == "Another Git process has been working in this repository for 1 min.")
   }
 }

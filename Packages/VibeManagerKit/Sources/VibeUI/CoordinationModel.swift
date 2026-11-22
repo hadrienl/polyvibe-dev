@@ -4,8 +4,8 @@ import VibeApplication
 import VibeDomain
 
 /// What coordination keeps between two calls of a coordinator's tools (#352): the limit the user
-/// set, the coordinators calling the user, the traces of what they did to their children, what
-/// waits to be told to them, and the wake-ups they asked for.
+/// set, the coordinators calling the user, what waits to be told to them, and the wake-ups they
+/// asked for.
 @MainActor
 @Observable
 public final class CoordinationModel {
@@ -29,8 +29,6 @@ public final class CoordinationModel {
 
   /// The coordinators that called the user, with what they said, until the user opens them.
   public internal(set) var calls: [SessionID: String] = [:]
-  /// What coordinators did to each child, as read or written in this run.
-  public internal(set) var traces: [SessionID: [CoordinationTraceEntry]] = [:]
   /// The agents that can coordinate: those handed tools and instructions at launch. Read once the
   /// agents are known; until then, none.
   public internal(set) var coordinatingAgents: Set<String> = []
@@ -76,8 +74,6 @@ public final class CoordinationModel {
   /// Whether the ticker sleeps until a wake-up rather than for a second: something new to type
   /// wakes it.
   @ObservationIgnored var tickerSleepsLong = false
-  /// The traces already read from the store.
-  @ObservationIgnored private var loadedTraces: Set<SessionID> = []
 
   public init(
     store: (any CoordinationStore)? = nil,
@@ -101,14 +97,6 @@ public final class CoordinationModel {
     write { await $0.setWake(wake, for: coordinator) }
   }
 
-  func record(_ entry: CoordinationTraceEntry, for child: SessionID) {
-    traces[child, default: []].append(entry)
-    if let count = traces[child]?.count, count > CoordinationLimits.traceEntries {
-      traces[child]?.removeFirst(count - CoordinationLimits.traceEntries)
-    }
-    write { await $0.append(entry, to: child) }
-  }
-
   private func write(_ operation: @escaping @Sendable (any CoordinationStore) async -> Void) {
     guard let store else { return }
     let previous = writes
@@ -116,19 +104,6 @@ public final class CoordinationModel {
       await previous?.value
       await operation(store)
     }
-  }
-
-  /// Reads a child's trace from the store, once.
-  func loadTrace(of child: SessionID) async {
-    guard let store, loadedTraces.insert(child).inserted else { return }
-    // After the writes under way, so that what was recorded meanwhile is in what is read.
-    await writes?.value
-    let recorded = traces[child]?.count ?? 0
-    let stored = await store.trace(of: child)
-    // What was recorded while the store was read is not in it: kept after it.
-    let since = (traces[child] ?? []).dropFirst(recorded)
-    let merged = Array((stored + since).suffix(CoordinationLimits.traceEntries))
-    if !merged.isEmpty { traces[child] = merged }
   }
 }
 

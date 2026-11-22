@@ -224,8 +224,6 @@ public struct WorkingTreeStatus: Hashable, Sendable {
     self.duration = duration
   }
 
-  public var isClean: Bool { counts.isEmpty }
-
   /// Whether two readings describe the same repository, whenever and however fast they were
   /// made. A reading that only moved the clock is not news, and publishing it would redraw a list
   /// for nothing.

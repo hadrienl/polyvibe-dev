@@ -2,29 +2,16 @@ import Foundation
 import VibeApplication
 import VibeDomain
 
-/// What coordinators did and asked for (#352), beside the store: `Coordination/<child>.trace.json`
-/// for what was done to each child, at most 200 entries, and `Coordination/wakes.json` for the
-/// wake-ups the coordinators wait for.
+/// What coordinators asked for (#352), beside the store: `Coordination/wakes.json` for the wake-ups
+/// the coordinators wait for.
 ///
-/// A document that cannot be read is an empty one: it held a trace, or a wake-up the coordinator
-/// can ask again. It is replaced at the next write.
+/// A document that cannot be read is an empty one: it held a wake-up the coordinator can ask
+/// again. It is replaced at the next write.
 public actor FileCoordinationStore: CoordinationStore {
-  public static let traceLimit = CoordinationLimits.traceEntries
-
   private let directory: URL
 
   public init(directory: URL) {
     self.directory = directory
-  }
-
-  public func trace(of child: SessionID) -> [CoordinationTraceEntry] {
-    read([CoordinationTraceEntry].self, from: traceURL(child)) ?? []
-  }
-
-  public func append(_ entry: CoordinationTraceEntry, to child: SessionID) {
-    var entries = trace(of: child)
-    entries.append(entry)
-    write(Array(entries.suffix(Self.traceLimit)), to: traceURL(child))
   }
 
   public func wakes() -> [SessionID: CoordinationWake] {
@@ -43,10 +30,6 @@ public actor FileCoordinationStore: CoordinationStore {
     write(stored, to: wakesURL)
   }
 
-  nonisolated func traceURL(_ id: SessionID) -> URL {
-    directory.appendingPathComponent("\(id.rawValue.uuidString).trace.json", isDirectory: false)
-  }
-
   private nonisolated var wakesURL: URL {
     directory.appendingPathComponent("wakes.json", isDirectory: false)
   }
@@ -63,7 +46,7 @@ public actor FileCoordinationStore: CoordinationStore {
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
     encoder.dateEncodingStrategy = .iso8601
     guard let data = try? encoder.encode(value) else { return }
-    // A lost write costs a line of a trace, or a wake-up the coordinator can ask again.
+    // A lost write costs a wake-up the coordinator can ask again.
     try? AtomicFileWriter.write(data, to: url)
   }
 }

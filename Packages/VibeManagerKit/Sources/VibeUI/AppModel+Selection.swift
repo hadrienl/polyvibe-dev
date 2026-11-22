@@ -4,8 +4,8 @@ import VibeDomain
 
 /// Several sessions selected in the sidebar (#77).
 ///
-/// `selectedSessionID` keeps its meaning: the session on screen, in the main area and the
-/// inspector. The selection only says what the next command applies to.
+/// `selectedSessionID` keeps its meaning: the session on screen, in the main area. The selection
+/// only says what the next command applies to.
 extension AppModel {
   /// What the sidebar's list draws as selected.
   /// Empty over a new session's draft (#177): the draft's row is the one on screen.
