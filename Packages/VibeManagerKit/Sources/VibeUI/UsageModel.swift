@@ -35,6 +35,8 @@ public final class UsageModel {
   /// The providers whose CLI writes usage the application can read; `nil` until the registry
   /// has answered, when no agent is said not to report any.
   public var reportingProviderIDs: Set<String>?
+  /// The quota of every account plugged in (#599).
+  public let quotas: QuotaModel
 
   private let service: UsageService
   private var sessions: () -> [WorkSession] = { [] }
@@ -50,10 +52,15 @@ public final class UsageModel {
   private var sleepObserver: SleepObserver?
   private let refreshInterval: Duration
 
-  public init(service: UsageService, refreshInterval: Duration = .seconds(30)) {
+  public init(
+    service: UsageService, refreshInterval: Duration = .seconds(30),
+    quotas: QuotaModel = QuotaModel()
+  ) {
     self.service = service
     self.refreshInterval = refreshInterval
+    self.quotas = quotas
     sleepObserver = SleepObserver(recorder: service.recorder)
+    quotas.isTrackingEnabled = { [weak self] in self?.isTrackingEnabled ?? false }
   }
 
   /// Where the sessions come from: the workspace's own list, archived ones included.
@@ -65,6 +72,14 @@ public final class UsageModel {
   ) {
     self.sessions = sessions
     self.endpointWindow = endpointWindow
+    // The accounts the sessions of the last day ran on: the ones the header's gauge follows.
+    quotas.recentlyUsed = {
+      let since = Date().addingTimeInterval(-86_400)
+      return Set(
+        sessions().filter { $0.updatedAt >= since }.flatMap { session in
+          session.conversations.map(\.providerID) + [session.agent?.providerID].compactMap { $0 }
+        })
+    }
   }
 
   /// Settles what the previous run of the application left open, once the terminal host has
@@ -195,6 +210,7 @@ public final class UsageModel {
     await service.setTracking(enabled)
     await loadTracking()
     if !enabled { contextWindows = [:] }
+    await quotas.trackingChanged(enabled)
     if enabled { await refresh() } else { await recompute() }
   }
 

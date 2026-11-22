@@ -42,7 +42,8 @@ struct SessionUsageButton: View {
     .instantTooltip(summary.help(locale: locale))
     .accessibilityLabel(
       Text(
-        LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading.")))
+        LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading."))
+    )
     .accessibilityValue(Text(verbatim: summary.spoken(locale: locale)))
     .task(id: isShown ? session.id : nil) {
       guard isShown else { return }
@@ -274,20 +275,68 @@ struct SessionUsagePopover: View {
         context: usage.contextWindows[session.id],
         contextUnavailability: usage.contextUnavailability(for: session),
         contextAgentName: session.agent.flatMap { agentNames[$0.transcriptProviderID] }),
-      pricesFetchedAt: usage.pricesFetchedAt)
+      pricesFetchedAt: usage.pricesFetchedAt,
+      quota: quota
+    )
+    .onAppear {
+      if let account { usage.quotas.startWatching([account]) }
+    }
+    .onDisappear {
+      if account != nil { usage.quotas.stopWatching() }
+    }
   }
+
+  /// The account the session's agent runs on, when its CLI can tell its quota.
+  private var account: String? {
+    guard let id = session.agent?.providerID, usage.quotas.isAccount(id) else { return nil }
+    return id
+  }
+
+  private var quota: SessionQuota? {
+    guard let account, usage.isTrackingEnabled else { return nil }
+    return SessionQuota(
+      account: agentNames[account] ?? account, entry: usage.quotas.entry(for: account),
+      isAsking: usage.quotas.asking.contains(account), display: usage.quotas.display)
+  }
+}
+
+/// The quota of the account a session runs on, in its Usage popover (#599).
+struct SessionQuota {
+  let account: String
+  let entry: AccountQuotaService.Entry?
+  let isAsking: Bool
+  let display: QuotaModel.Display
 }
 
 /// The popover's layout, apart from the model it reads: what a test draws.
 struct SessionUsagePopoverContent: View {
   let figures: SessionUsageFigures
   let pricesFetchedAt: Date?
+  var quota: SessionQuota? = nil
 
   @Environment(\.locale) private var locale
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       figures
+      if let quota {
+        Divider()
+        VStack(alignment: .leading, spacing: 6) {
+          Text(
+            LocalizedStringResource(
+              "Quota · \(quota.account)", bundle: .module,
+              comment:
+                "A session's usage: the quota of the account it runs on, named after the dot."
+            )
+          )
+          .font(.headline)
+          TimelineView(.periodic(from: .now, by: 30)) { context in
+            AccountQuotaSection(
+              account: quota.account, entry: quota.entry, isAsking: quota.isAsking,
+              display: quota.display, now: context.date)
+          }
+        }
+      }
       Divider()
       VStack(alignment: .leading, spacing: 2) {
         if let pricesFetchedAt {
