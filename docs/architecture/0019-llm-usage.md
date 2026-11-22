@@ -241,3 +241,20 @@ alternatives; the rest stands.
 - **Currency.** Dollars, written the way the user's language writes them, never converted: the
   prices are in dollars, and a rate would be one more figure to keep fresh. A cost that rounds to
   nothing without being nothing is “< $0.01”.
+
+## Amendment — Antigravity's usage, context and quota (#599)
+
+Measured on agy 1.5.14, 2026-11-22.
+
+- **Usage.** Each `PLANNER_RESPONSE` step of agy's transcript carries `model`, `input_tokens`,
+  `cache_read_tokens` and `output_tokens`; input leaves the cache out, as Claude Code's does. A
+  `CHECKPOINT`, the call that compacts the conversation, carries the same counters without a model:
+  it counts for the last model named. Steps are counted once by `step_index`. A line is decoded only
+  when its bytes hold `"input_tokens":`, into a type that declares nothing but those counters, the
+  step's type, index, date and model. `AgentCapabilities.reportsUsage` is now true for Antigravity.
+- **Context.** The input with the cache read of the last response. agy writes no window in its
+  transcript, so none is said; a `CHECKPOINT` is a compaction, its own input the context before it.
+- **Quota.** agy writes the error that ends a turn on a spent quota to its terminal only. Its status
+  line carries `quota.<bucket>.remaining_fraction` and `reset_time`, which the status command keeps
+  (see the security review); a turn that fails while a bucket is spent becomes an account notice
+  naming the bucket and its reset.

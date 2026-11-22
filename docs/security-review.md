@@ -84,7 +84,9 @@ account. Such a session is always Manual. The gateway's new Chat Completions rea
 
 Session-only `--settings` supplies an inline status command. It uses `/bin/sh`, `head`, `cat`,
 `plutil`, `awk` and `printf`, reads at most 4 MiB, drains stdin and extracts only the validated conversation
-UUID, allowlisted agent state and two boolean flags (confirmation pending/background work).
+UUID, allowlisted agent state, two boolean flags (confirmation pending/background work) and, since
+#599, the `quota` buckets' remaining fraction and reset time, stripped to `A-Za-z0-9._:;=@+-` and
+cut to eight buckets and 512 bytes so that no value can end the JSON string it is written in.
 Nothing from the state payload is evaluated as code. The existing enabled user status command is
 shell-quoted as a positional parameter and run with the same input and output, as the CLI already
 does. No global or project configuration is written. A malformed/unreadable settings file is not

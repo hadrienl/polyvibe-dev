@@ -11,7 +11,7 @@ public struct AntigravityAgentProvider: AgentProvider {
     id: id, displayName: "Antigravity", symbolName: "sparkles", minimumVersion: minimumVersion,
     capabilities: AgentCapabilities(
       supportsModelSelection: true, supportsInitialPrompt: true, supportsResume: true,
-      reportsUsage: false))
+      reportsUsage: true))
   public static let specification = CommandLineAgentSpecification(
     binaryName: "agy",
     additionalEnvironmentKeys: [

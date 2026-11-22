@@ -4,12 +4,15 @@ import VibeApplication
 /// Finds the transcripts a session's CLI wrote, without opening them.
 ///
 /// Claude Code writes `projects/<folder>/<session id>.jsonl`, and one file per sub-agent under
-/// `<session id>/subagents/`. Codex writes `sessions/YYYY/MM/DD/rollout-…-<id>.jsonl`.
+/// `<session id>/subagents/`. Codex writes `sessions/YYYY/MM/DD/rollout-…-<id>.jsonl`. agy
+/// writes `.gemini/antigravity-cli/brain/<id>/.system_generated/logs/transcript.jsonl`.
 public struct AgentTranscriptLocator: Sendable {
   public typealias ListDirectory = @Sendable (URL) -> [URL]?
 
   public let claudeProjects: URL
   public let codexSessions: URL
+  /// The home agy writes its `.gemini` folder in.
+  public let antigravityHome: URL
   /// Lists a folder; `nil` when it cannot be read. Injected so that tests can count the listings.
   let list: ListDirectory
   /// The folders of the extra accounts, each its account's conversations' (#478).
@@ -19,10 +22,12 @@ public struct AgentTranscriptLocator: Sendable {
     claudeProjects: URL = ClaudeCodeHome.projectsDirectory(),
     codexSessions: URL = CodexHome.sessionsDirectory(),
     homes: AgentHomes? = nil,
+    antigravityHome: URL = FileManager.default.homeDirectoryForCurrentUser,
     list: @escaping ListDirectory = AgentTranscriptLocator.contents(of:)
   ) {
     self.claudeProjects = claudeProjects
     self.codexSessions = codexSessions
+    self.antigravityHome = antigravityHome
     self.homes = homes
     self.list = list
   }
@@ -59,6 +64,15 @@ public struct AgentTranscriptLocator: Sendable {
 
   private static func all(own: URL, accounts: [String: URL]?) -> [URL] {
     [own] + (accounts ?? [:]).sorted { $0.key < $1.key }.map(\.value)
+  }
+
+  /// agy's transcript of the conversation, when it has written one (#599).
+  public func antigravityTranscripts(for identifier: String) -> [URL] {
+    guard
+      let url = AntigravityAgentProvider.transcript(identifier: identifier, home: antigravityHome),
+      FileManager.default.fileExists(atPath: url.path)
+    else { return [] }
+    return [url]
   }
 
   @Sendable public static func contents(of folder: URL) -> [URL]? {
