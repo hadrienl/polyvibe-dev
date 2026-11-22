@@ -114,6 +114,8 @@ struct OverviewFilterBarTests {
       #expect(item.badge?.stringValue == String(filters.count(of: kind)))
       let image = try #require(item.image)
       #expect(!image.isTemplate)
+      // Left `.automatic`, macOS 27 opens the menu without its images.
+      if #available(macOS 27, *) { #expect(item.preferredImageVisibility == .visible) }
       #expect(image.size.width > 0 && image.size.height > 0)
       let data = try #require(image.tiffRepresentation)
       let bitmap = try #require(NSBitmapImageRep(data: data))

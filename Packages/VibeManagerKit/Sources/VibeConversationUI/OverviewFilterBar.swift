@@ -180,6 +180,9 @@ struct OverviewFilterMenu: View {
         filters.toggle(kind, in: model)
       }
       item.image = MomentMenuIcon.image(of: kind, theme: theme)
+      // macOS 27 hides a menu item's image by default (`.automatic`): the kind's icon is how
+      // the menu reads, as the row of buttons does.
+      if #available(macOS 27, *) { item.preferredImageVisibility = .visible }
       item.state = filters.shows(kind) ? .on : .off
       let count = filters.count(of: kind)
       // AppKit suppresses a numeric zero badge; every kind still needs its count.
