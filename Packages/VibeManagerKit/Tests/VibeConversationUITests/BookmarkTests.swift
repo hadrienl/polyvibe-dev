@@ -266,9 +266,13 @@ struct BookmarkTests {
 
   /// The blocks laid out 100 points tall, 20 apart: block `i` starts at `i × 120`.
   private static func evenLayout(_ model: ConversationModel) -> ConversationOverviewLayout {
+    evenLayout(of: model.blocks)
+  }
+
+  private static func evenLayout(of blocks: [ConversationBlock]) -> ConversationOverviewLayout {
     ConversationOverviewLayout(
-      blocks: model.blocks,
-      measured: Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, 100.0) }),
+      blocks: blocks,
+      measured: Dictionary(uniqueKeysWithValues: blocks.map { ($0.id, 100.0) }),
       metrics: .init(
         columnWidth: 600, textSize: 14, lineHeight: 1.2, blockSpacing: 20, paragraphSpacing: 8),
       shapes: ConversationOverviewShapes())
@@ -316,14 +320,38 @@ struct BookmarkTests {
         scale: 0.1) == nil)
   }
 
+  @Test("Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
+  func previewFollowsTheLayout() {
+    let model = Self.model()
+    model.loadBookmarks(["m2"])
+    let before = Self.evenLayout(model)
+    let moment = model.shownMoments[0].moment
+    func y(_ layout: ConversationOverviewLayout, scale: Double) -> Double? {
+      ConversationOverview.cluster(
+        starting: moment, moments: model.shownMoments, layout: layout, scale: scale)?.y
+    }
+    #expect(y(before, scale: 0.1) == ConversationOverview.iconY(top: 240, scale: 0.1))
+    // The first row measured 200 points taller, as the wheel builds it: the icon moves down.
+    let after = before.remeasured(
+      Dictionary(uniqueKeysWithValues: model.blocks.map { ($0.id, $0.id == "m0" ? 300.0 : 100.0) }))
+    #expect(y(after, scale: 0.1) == ConversationOverview.iconY(top: 440, scale: 0.1))
+    // A longer conversation drawn smaller.
+    #expect(y(after, scale: 0.05) == ConversationOverview.iconY(top: 440, scale: 0.05))
+    model.toggleBookmark(model.blocks[2])
+    #expect(y(after, scale: 0.1) == nil)
+  }
+
   // MARK: - Moments (#572)
 
-  private static func shell(_ id: String, _ command: String) -> ConversationEntry {
+  private static func shell(_ id: String, _ command: String, output: String = "")
+    -> ConversationEntry
+  {
     ConversationEntry(
       id: id,
       content: .tool(
         ToolCall(
-          callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)])))
+          callID: id, kind: .shell, state: .succeeded, parameters: [.init(.command, command)],
+          output: ToolOutput(text: output))))
   }
 
   /// A prompt, a commit, an answer, an error, a push.
@@ -331,7 +359,7 @@ struct BookmarkTests {
     let model = ConversationModel(sessionID: SessionID())
     let entries = [
       ConversationEntry(id: "m0", content: .userPrompt("Commit", attachments: [])),
-      shell("m1", "git commit -m one"),
+      shell("m1", "git commit -m one", output: "[main 1a2b3c4] one\n"),
       ConversationEntry(id: "m2", content: .agentText("Done")),
       ConversationEntry(id: "m3", content: .notice(.error("Overloaded"))),
       shell("m4", "git push origin main"),
@@ -415,6 +443,115 @@ struct BookmarkTests {
     let found = ConversationOverview.cluster(
       near: CGPoint(x: 40, y: line), moments: model.shownMoments, layout: layout, scale: 0.05)
     #expect(found?.moments == 0..<3)
+    // The line brings its own bookmark up; the icon, the group's first moment.
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 40, y: line), model: model, layout: layout, scale: 0.05) == "m2")
+    let icon = clusters[0].y
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.05) == "m1")
+  }
+
+  @Test("A click names the moment's block as the model has it, the layout a step behind")
+  func clickWithALayoutBehind() {
+    let model = Self.momentsModel()
+    // Laid out from blocks the model no longer has: other identifiers at the same places.
+    let behind = (0..<5).map {
+      ConversationBlock.entry(ConversationEntry(id: "old\($0)", content: .agentText("x")))
+    }
+    let layout = Self.evenLayout(of: behind)
+    let icon = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.1)[0].y
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.1) == "m1")
+  }
+
+  @Test("A conversation that grows reads the moments of its end as a whole reading would")
+  func momentsReadIncrementally() {
+    let model = ConversationModel(sessionID: SessionID())
+    model.processRunning = { true }
+    var revision = 0
+    var entries: [ConversationEntry] = []
+    /// The entries from `index` on changed, those before kept: as the reader publishes them.
+    func publish(changedFrom index: Int) {
+      revision += 1
+      var snapshot = ConversationSnapshot(entries: entries, availability: .available)
+      snapshot.revision = revision
+      snapshot.unchangedPrefix = index
+      model.apply(snapshot)
+    }
+    func expectWhole() {
+      #expect(
+        model.moments
+          == ConversationMoments.placed(in: model.blocks, bookmarks: model.bookmarks))
+      #expect(
+        model.bookmarkedIndices
+          == ConversationBookmarks.markedIndices(in: model.blocks, bookmarks: model.bookmarks))
+      for block in model.blocks {
+        #expect(model.moments(of: block) == ConversationMoments.moments(of: block))
+      }
+    }
+    entries = [
+      ConversationEntry(id: "p0", content: .userPrompt("Commit", attachments: [])),
+      ConversationEntry(id: "a1", content: .agentText("On it")),
+      Self.shell("s2", "git commit -m one", output: "[main 1a2b3c4] one\n"),
+      Self.shell("s3", "git status"),
+    ]
+    publish(changedFrom: 0)
+    #expect(model.blocks.map(\.id).count == 3)
+    // Marked before where the next layouts start.
+    model.toggleBookmark(model.blocks[0])
+    expectWhole()
+    // The group of tools grows: laid out again from its block, the bookmark before it kept.
+    entries.append(
+      Self.shell(
+        "s4", "git push origin main",
+        output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  main -> main\n"))
+    publish(changedFrom: 4)
+    #expect(model.blocks.count == 3)
+    // Read and placed as far as the layout went back, not from the start.
+    #expect(model.lastLayoutWork.blocks == 2)
+    #expect(model.lastMomentsWork == (read: 2, placed: 2))
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git])
+    expectWhole()
+    // An answer after it, then an error.
+    entries.append(ConversationEntry(id: "a5", content: .agentText("Pushed")))
+    publish(changedFrom: 5)
+    #expect(model.lastMomentsWork.read == model.lastLayoutWork.blocks)
+    #expect(model.lastMomentsWork.read < model.blocks.count)
+    expectWhole()
+    entries.append(ConversationEntry(id: "e6", content: .notice(.error("Overloaded"))))
+    publish(changedFrom: 6)
+    #expect(model.lastMomentsWork.read == model.lastLayoutWork.blocks)
+    #expect(model.lastMomentsWork.read < model.blocks.count)
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git, .incident])
+    expectWhole()
+    model.toggleBookmark(model.blocks[3])
+    expectWhole()
+  }
+
+  @Test("Without the overview, neither bookmarks nor moments; all back with it")
+  func momentsGoWithTheOverview() {
+    let model = Self.momentsModel()
+    model.toggleBookmark(model.blocks[2])
+    model.appearance.hiddenMomentKinds = ["incident"]
+    let shown = model.shownMoments
+    #expect(shown.map(\.moment.kind) == [.git, .bookmark, .git])
+    model.appearance.showsOverview = false
+    #expect(!model.usesMoments)
+    #expect(model.shownMoments.isEmpty)
+    #expect(model.momentIndices.isEmpty)
+    #expect(model.momentBlocks.isEmpty)
+    #expect(!model.toggleBookmarkInView())
+    #expect(!model.revealNextMoment())
+    // Kept: the bookmarks, and the filters.
+    #expect(model.bookmarks == ["m2"])
+    #expect(model.appearance.hiddenMomentKinds == ["incident"])
+    model.appearance.showsOverview = true
+    #expect(model.shownMoments == shown)
+    #expect(model.momentIndices == [1, 2, 4])
   }
 
   @Test("A row's margin reads the moments of its block as they were laid out")
@@ -422,5 +559,37 @@ struct BookmarkTests {
     let model = Self.momentsModel()
     #expect(model.moments(of: model.blocks[1]).map(\.kind) == [.git])
     #expect(model.moments(of: model.blocks[2]).isEmpty)
+  }
+
+  @Test("A bookmark's preview reads in the messages' own font and size, a serif theme's included")
+  func previewType() {
+    var theme = ConversationTheme.systemDark
+    theme.fontStyle = .serif
+    var appearance = ConversationAppearance()
+    appearance.textSize = .extraLarge
+    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
+    #expect(style.textSize == 18)
+    #expect(style.excerptFont == theme.messageFont(size: 18))
+    #expect(style.headingFont == theme.interfaceFont(size: 18 * 0.86, weight: .semibold))
+    #expect(style.eventFont == theme.interfaceFont(size: 18))
+  }
+
+  @Test("An answer's bookmark reads as the answer does, without its Markdown")
+  func answerWithoutMarkdown() {
+    let answer = ConversationBlock.entry(
+      ConversationEntry(
+        id: "a", content: .agentText("## Plan\n\n- **Rebase** on `main`\n\nThen ship.")))
+    #expect(ConversationModel.bookmarkLabel(of: answer) == "Plan Rebase on main Then ship.")
+    let reasoning = ConversationBlock.entry(
+      ConversationEntry(id: "r", content: .reasoning("*Check* the tests.")))
+    #expect(ConversationModel.bookmarkExcerpt(of: reasoning) == "Check the tests.")
+  }
+
+  @Test("A rule says nothing, and a block of code leaves one space before what follows")
+  func plainTextBetweenBlocks() {
+    #expect(ConversationModel.plainText(ofMarkdown: "Before\n\n---\n\nAfter") == "Before After")
+    #expect(
+      ConversationModel.plainText(ofMarkdown: "```swift\nlet x = 1\n```\n\nThen ship.")
+        == "let x = 1 Then ship.")
   }
 }

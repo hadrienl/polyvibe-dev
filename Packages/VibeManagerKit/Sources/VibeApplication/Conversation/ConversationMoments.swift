@@ -175,9 +175,11 @@ public enum ConversationMoments {
       return [.plan(call.parameter(.plan).flatMap(firstLine))]
     case .shell:
       var found: [ConversationMoment.Detail] = []
-      // Only what was done: a commit that failed made none. A test run that failed is the point.
-      if call.state == .succeeded, let command = call.parameter(.command) {
-        found += commandMoments(command, output: call.output?.text ?? "")
+      // Only what was done, command by command: a line that failed may have committed before its
+      // push was refused. A test run that failed is the point.
+      if call.state.isFinished, let command = call.parameter(.command) {
+        found += commandMoments(
+          command, output: call.output?.text ?? "", succeeded: call.state == .succeeded)
       }
       if call.state.isFinished, let tests = call.facts.tests {
         found.append(.tests(tests))
@@ -201,21 +203,26 @@ public enum ConversationMoments {
   // MARK: - Commands
 
   /// What a command line did that is a moment: its `git` commits, pushes, branches and worktrees,
-  /// its `gh` and `glab` tickets and pull requests. Read only once it succeeded.
-  static func commandMoments(_ line: String, output: String) -> [ConversationMoment.Detail] {
+  /// its `gh` and `glab` tickets and pull requests.
+  ///
+  /// A commit is one only when `git commit` printed its line, a push when what it printed under
+  /// its `To` shows a branch pushed — or, when nothing of it is shown, when the line succeeded and
+  /// says nothing was refused: `&&`, `;`, `| tail` and `|| true` make the line's exit say little
+  /// of each command. The rest counts only once the whole line `succeeded`.
+  static func commandMoments(
+    _ line: String, output: String, succeeded: Bool = true
+  ) -> [ConversationMoment.Detail] {
     // Most commands are neither: their line is not even cut into words.
     guard line.contains("git") || line.contains("gh") || line.contains("glab") else { return [] }
     let line = ResourceRecognizer.withoutHereDocuments(line)
     var found: [ConversationMoment.Detail] = []
-    // Read only once a commit is found: `git log`, `git diff` print much and commit nothing.
-    var commits: CommitLines?
+    var printed = PrintedLines(output)
     for words in ShellWords.commands(in: line) {
       guard let invocation = Invocation(words) else { continue }
       switch invocation.program {
       case "git":
-        if commits == nil, invocation.arguments.contains("commit") { commits = CommitLines(output) }
-        found += gitMoments(invocation, output: output, commits: &commits)
-      case "gh", "glab": found += forgeMoments(invocation, output: output)
+        found += gitMoments(invocation, succeeded: succeeded, printed: &printed)
+      case "gh", "glab": found += forgeMoments(invocation, output: output, succeeded: succeeded)
       default: break
       }
     }
@@ -223,7 +230,7 @@ public enum ConversationMoments {
   }
 
   private static func gitMoments(
-    _ invocation: Invocation, output: String, commits: inout CommitLines?
+    _ invocation: Invocation, succeeded: Bool, printed: inout PrintedLines
   ) -> [ConversationMoment.Detail] {
     guard let command = ResourceRecognizer.GitCommand(invocation, directory: "/") else {
       return []
@@ -233,9 +240,19 @@ public enum ConversationMoments {
       guard !command.rest.contains("--dry-run") else { return [] }
       let message = command.value(of: "m", "--message").flatMap { $0.flatMap(firstLine) }
       // Read in order even when the message is known: the next commit's line is the next one.
-      let printed = commits?.next()
-      return [.commit(subject: message ?? printed)]
+      // None printed, none made — unless it was asked to print nothing, and the line succeeded.
+      guard let line = printed.nextCommit() else {
+        return isQuiet(command) && succeeded ? [.commit(subject: message)] : []
+      }
+      return [.commit(subject: message ?? line.subject)]
+    case "cherry-pick", "revert":
+      // They print a commit's line too, of no commit of the line: read past it, not taken for
+      // the next commit's.
+      for _ in 0..<printedCommits(of: command) { _ = printed.nextCommit() }
+      return []
     case "push":
+      // Read in order whatever it pushes: the next push's lines are the next ones.
+      let section = printed.nextPush()
       if command.rest.contains(where: {
         ["-d", "--delete", "--tags", "--all", "--mirror", "--dry-run", "-n"].contains($0 ?? "")
       }) {
@@ -244,8 +261,18 @@ public enum ConversationMoments {
       let refspec = pushedRefspec(command)
       // `git push origin :old` deletes a branch.
       if refspec?.hasPrefix(":") == true { return [] }
-      return [.push(branch: refspec.flatMap(destination(of:)) ?? pushedBranch(in: output))]
+      let pushed: [String]
+      if let section {
+        pushed = section.pushed
+      } else {
+        // Nothing of it shown: the line's word, unless the line says something was refused.
+        guard succeeded, !printed.tellsOfARefusal else { return [] }
+        pushed = []
+      }
+      guard section == nil || !pushed.isEmpty else { return [] }
+      return [.push(branch: refspec.flatMap(destination(of:)) ?? pushed.first)]
     case "checkout", "switch", "branch", "worktree":
+      guard succeeded else { return [] }
       // The branches and worktrees it created, as the journal reads them.
       // Wherever it ran: a folder only the shell knows still had its branch made.
       return ResourceRecognizer.gitSightings(
@@ -264,6 +291,47 @@ public enum ConversationMoments {
     }
   }
 
+  /// Short options of `git commit` that take a value, joined to them or as the next argument.
+  private static let commitValueLetters: Set<Character> = ["m", "F", "C", "c", "t", "u", "S"]
+
+  /// Whether `git commit` was asked to print nothing: `-q`, `--quiet`, or a `q` among short
+  /// options grouped, before one that takes a value — `-qm x`, `-aq` —, never in a value.
+  private static func isQuiet(_ command: ResourceRecognizer.GitCommand) -> Bool {
+    var isValue = false
+    for argument in command.rest {
+      if isValue {
+        isValue = false
+        continue
+      }
+      guard let argument else { continue }
+      if argument == "--quiet" { return true }
+      guard argument.hasPrefix("-"), !argument.hasPrefix("--") else { continue }
+      for (offset, letter) in argument.dropFirst().enumerated() {
+        if letter == "q" { return true }
+        if commitValueLetters.contains(letter) {
+          // Its value follows when it ends the group.
+          isValue = offset == argument.count - 2
+          break
+        }
+      }
+    }
+    return false
+  }
+
+  /// Options of `git cherry-pick` and `git revert` that take a value.
+  private static let pickValueOptions: Set<String> = [
+    "-m", "--mainline", "-X", "--strategy-option", "--strategy",
+  ]
+
+  /// The lines a `git cherry-pick` or a `git revert` prints: one per commit named, a range as
+  /// one; none when it commits nothing, or stops.
+  private static func printedCommits(of command: ResourceRecognizer.GitCommand) -> Int {
+    let silent = ["-n", "--no-commit", "--abort", "--quit", "--skip"]
+    if command.rest.contains(where: { silent.contains($0 ?? "") }) { return 0 }
+    // `--continue` goes on with the one it stopped at.
+    return max(positional(command, valueOptions: pickValueOptions).count, 1)
+  }
+
   /// Options of `git push` that take a value, which is then neither the remote nor a refspec.
   private static let pushValueOptions: Set<String> = [
     "-o", "--push-option", "--repo", "--receive-pack", "--exec",
@@ -271,20 +339,28 @@ public enum ConversationMoments {
 
   /// The first refspec of `git push origin feature`, `git push -u origin +HEAD:feature`.
   private static func pushedRefspec(_ command: ResourceRecognizer.GitCommand) -> String? {
+    let positional = positional(command, valueOptions: pushValueOptions)
+    guard positional.count >= 2, var refspec = positional[1] else { return nil }
+    if refspec.hasPrefix("+") { refspec.removeFirst() }
+    return refspec
+  }
+
+  /// The arguments of a command that are not options, nor the values of `valueOptions`.
+  private static func positional(
+    _ command: ResourceRecognizer.GitCommand, valueOptions: Set<String>
+  ) -> [String?] {
     var positional: [String?] = []
     var index = 0
     while index < command.rest.count {
       let argument = command.rest[index]
-      if let option = argument, pushValueOptions.contains(option) {
+      if let option = argument, valueOptions.contains(option) {
         index += 2
         continue
       }
       if argument?.hasPrefix("-") != true { positional.append(argument) }
       index += 1
     }
-    guard positional.count >= 2, var refspec = positional[1] else { return nil }
-    if refspec.hasPrefix("+") { refspec.removeFirst() }
-    return refspec
+    return positional
   }
 
   /// Where a refspec pushes: `HEAD:feature` to `feature`.
@@ -293,22 +369,10 @@ public enum ConversationMoments {
     return destination.flatMap { ResourceRecognizer.normalizedBranch(String($0)) }
   }
 
-  private static let pushedPattern = try? NSRegularExpression(
-    pattern: #"^\s*[*+=!-]?\s*(?:\[new branch\]|[0-9a-f]+\.\.\.?[0-9a-f]+)\s+\S+\s+->\s+(\S+)"#,
-    options: .anchorsMatchLines)
-
-  /// `   1a2b3c4..5d6e7f8  main -> main`, ` * [new branch]      feature -> feature`.
-  static func pushedBranch(in output: String) -> String? {
-    guard let pushedPattern,
-      let match = pushedPattern.firstMatch(
-        in: output, range: NSRange(output.startIndex..., in: output)),
-      let range = Range(match.range(at: 1), in: output)
-    else { return nil }
-    return ResourceRecognizer.normalizedBranch(String(output[range]))
-  }
-
+  /// A ticket or a pull request created once the line succeeded or its address was printed; a
+  /// merge, only once the line succeeded.
   private static func forgeMoments(
-    _ invocation: Invocation, output: String
+    _ invocation: Invocation, output: String, succeeded: Bool
   ) -> [ConversationMoment.Detail] {
     guard let verb = invocation.forgeVerb else { return [] }
     let isRequest = verb.noun != "issue"
@@ -317,8 +381,9 @@ public enum ConversationMoments {
       .first { ($0.kind == .pullRequest) == isRequest }
     switch verb.action {
     case "create":
+      guard succeeded || printed != nil else { return [] }
       return [.created(isRequest ? .pullRequest : .issue, label: printed?.label)]
-    case "merge" where isRequest:
+    case "merge" where isRequest && succeeded:
       // Queued until checks pass: not merged yet.
       guard !Self.isQueuedMerge(invocation, output: output) else { return [] }
       let number = invocation.forgeNumber(after: verb)
@@ -350,24 +415,104 @@ public enum ConversationMoments {
     return String(output[range])
   }
 
-  /// The lines `git commit` prints, `[main 1a2b3c4] Subject`, read one per commit of the line.
-  struct CommitLines {
-    private var subjects: [String]
+  /// What a command line printed, read by its commands in their order: each commit its line,
+  /// each push its section. Read only once a command asks: most print neither.
+  struct PrintedLines {
+    let output: String
+    private var commits: CommitLines?
+    private var pushes: PushLines?
 
-    private static let pattern = try? NSRegularExpression(
-      pattern: #"^\[[^\]\s]+(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)$"#, options: .anchorsMatchLines)
+    init(_ output: String) { self.output = output }
 
-    init(_ output: String) {
-      guard output.contains("] "), let pattern = Self.pattern else {
-        subjects = []
-        return
-      }
-      subjects = pattern.matches(in: output, range: NSRange(output.startIndex..., in: output))
-        .compactMap { Range($0.range(at: 1), in: output).map { String(output[$0]) } }
+    mutating func nextCommit() -> CommitLines.Printed? {
+      if commits == nil { commits = CommitLines(output) }
+      return commits?.next()
     }
 
-    mutating func next() -> String? {
-      subjects.isEmpty ? nil : subjects.removeFirst()
+    mutating func nextPush() -> PushLines.Section? {
+      if pushes == nil { pushes = PushLines(output) }
+      return pushes?.next()
+    }
+
+    /// What `git push` says of a ref refused, even with its lines cut: `| tail` keeps its hints.
+    var tellsOfARefusal: Bool {
+      ["[rejected]", "[remote rejected]", "failed to push", "Updates were rejected"]
+        .contains { output.contains($0) }
+    }
+  }
+
+  /// What `git push` prints of its refs under `To <url>`, one section per push of the line, in
+  /// order: `   1a2b3c4..5d6e7f8  main -> main`, ` * [new branch]  feature -> feature`,
+  /// ` ! [rejected]  main -> main (fetch first)`. `git fetch` and `git pull` print theirs under
+  /// `From`: never read.
+  struct PushLines {
+    struct Section: Equatable {
+      /// The branches it pushed, refused ones aside.
+      var pushed: [String] = []
+    }
+
+    private var sections: [Section] = []
+
+    private static let refPattern = try? NSRegularExpression(
+      pattern: #"^\s*([+*=!-])?\s*(\[[^\]]+\]|[0-9a-f]+\.\.\.?[0-9a-f]+)\s+\S+\s+->\s+(\S+)"#)
+
+    init(_ output: String) {
+      guard output.contains("To "), let pattern = Self.refPattern else { return }
+      var current: Section?
+      for line in output.split(whereSeparator: \.isNewline).map(String.init) {
+        if line.hasPrefix("To ") || line.hasPrefix("From ") {
+          if let current { sections.append(current) }
+          current = line.hasPrefix("To ") ? Section() : nil
+          continue
+        }
+        guard current != nil,
+          let match = pattern.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)),
+          let summary = Range(match.range(at: 2), in: line),
+          let destination = Range(match.range(at: 3), in: line)
+        else { continue }
+        let flag = Range(match.range(at: 1), in: line).map { line[$0] } ?? ""
+        // Refused, up to date or deleted: nothing pushed.
+        guard !["!", "=", "-"].contains(flag), !line[summary].contains("rejected"),
+          let branch = ResourceRecognizer.normalizedBranch(String(line[destination]))
+        else { continue }
+        current?.pushed.append(branch)
+      }
+      if let current { sections.append(current) }
+    }
+
+    mutating func next() -> Section? {
+      sections.isEmpty ? nil : sections.removeFirst()
+    }
+  }
+
+  /// The lines `git commit` prints, `[main 1a2b3c4] Subject` — `[detached HEAD 1a2b3c4]` in a
+  /// rebase —, read one per commit of the line; `ok 1a2b3c4` when `rtk` shortened it.
+  struct CommitLines {
+    /// A commit made, named when its line says so.
+    struct Printed: Equatable {
+      let subject: String?
+    }
+
+    private var printed: [Printed]
+
+    private static let pattern = try? NSRegularExpression(
+      pattern:
+        #"^(?:\[(?:detached HEAD|[^\]\s]+)(?: \([^)]*\))? [0-9a-f]{7,}\] (.+)|ok [0-9a-f]{7,})$"#,
+      options: .anchorsMatchLines)
+
+    init(_ output: String) {
+      guard output.contains("] ") || output.contains("ok "), let pattern = Self.pattern else {
+        printed = []
+        return
+      }
+      printed = pattern.matches(in: output, range: NSRange(output.startIndex..., in: output))
+        .map { match in
+          Printed(subject: Range(match.range(at: 1), in: output).map { String(output[$0]) })
+        }
+    }
+
+    mutating func next() -> Printed? {
+      printed.isEmpty ? nil : printed.removeFirst()
     }
   }
 }

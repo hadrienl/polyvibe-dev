@@ -18,22 +18,49 @@ struct ConversationMomentsTests {
           output: ToolOutput(text: output), facts: ToolFacts(tests: tests))))
   }
 
-  private func details(_ command: String, output: String = "")
-    -> [ConversationMoment.Detail]
-  {
-    ConversationMoments.moments(in: [Self.shell("s", command, output: output)]).map(\.detail)
+  private func details(
+    _ command: String, output: String = "", state: ToolCallState = .succeeded
+  ) -> [ConversationMoment.Detail] {
+    ConversationMoments.moments(in: [Self.shell("s", command, output: output, state: state)])
+      .map(\.detail)
   }
+
+  /// What `git commit` prints.
+  private static let committed = "[main 1a2b3c4] Subject\n 1 file changed, 1 insertion(+)\n"
 
   // MARK: - Git
 
   @Test("A commit is named by its -m, or by the line git printed")
   func commits() {
     #expect(
-      details(#"git commit -m "fix(cart): round VAT per line""#) == [
+      details(#"git commit -m "fix(cart): round VAT per line""#, output: Self.committed) == [
         .commit(subject: "fix(cart): round VAT per line")
       ])
-    #expect(details(#"git commit -am "Second""#) == [.commit(subject: "Second")])
-    #expect(details(#"git commit --message="Third line""#) == [.commit(subject: "Third line")])
+    #expect(
+      details(#"git commit -am "Second""#, output: Self.committed) == [.commit(subject: "Second")])
+    #expect(
+      details(#"git commit --message="Third line""#, output: Self.committed) == [
+        .commit(subject: "Third line")
+      ])
+    // In a rebase, or a worktree on no branch.
+    #expect(
+      details("git commit -m Detached", output: "[detached HEAD 981c550c] Detached\n") == [
+        .commit(subject: "Detached")
+      ])
+    #expect(
+      details("git commit -F msg.txt", output: "[detached HEAD 981c550c] feat: from a file\n") == [
+        .commit(subject: "feat: from a file")
+      ])
+    // What rtk prints of it.
+    #expect(
+      details("rtk git commit -m Fourth", output: "ok 8b47257\n") == [.commit(subject: "Fourth")])
+    #expect(details("git commit -q -m Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit -qm Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit -aq -m Quiet") == [.commit(subject: "Quiet")])
+    #expect(details("git commit --quiet -m Quiet") == [.commit(subject: "Quiet")])
+    // A q in a message is not one.
+    #expect(details("git commit -m -q").isEmpty)
+    #expect(details("git commit -mq").isEmpty)
     let heredoc = """
       git commit -m "$(cat <<'EOF'
       feat(#572): key moments
@@ -49,10 +76,60 @@ struct ConversationMomentsTests {
     #expect(details("git commit --dry-run -m x").isEmpty)
   }
 
-  @Test("A commit that failed made none")
+  @Test("A commit that failed made none, whatever the line's exit")
   func failedCommit() {
     let entry = Self.shell("s", "git commit -m x", state: .failed(exitCode: 1))
     #expect(ConversationMoments.moments(in: [entry]).isEmpty)
+    let nothing = "On branch main\nnothing to commit, working tree clean\n"
+    #expect(details("git commit -m x; true", output: nothing).isEmpty)
+    #expect(details("git commit -m x || true", output: nothing).isEmpty)
+    #expect(details("git commit -q -m x", state: .failed(exitCode: 1)).isEmpty)
+  }
+
+  @Test("A commit made before its push was refused is a moment; the push is not")
+  func refusedPush() {
+    let output = """
+      [feat/x 1a2b3c4] Fix X
+       2 files changed, 9 insertions(+)
+      To github.com:a/b.git
+       ! [rejected]        feat/x -> feat/x (fetch first)
+      error: failed to push some refs to 'github.com:a/b.git'
+      """
+    #expect(
+      details(
+        #"git add -A && git commit -m "Fix X" && git push"#, output: output,
+        state: .failed(exitCode: 1)) == [.commit(subject: "Fix X")])
+    // What a failed line printed of a push still tells it went.
+    #expect(
+      details(
+        "git push origin a; false", output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  a -> a\n",
+        state: .failed(exitCode: 1)) == [.push(branch: "a")])
+    #expect(details("git switch -c late && false", state: .failed(exitCode: 1)).isEmpty)
+    #expect(details("git checkout -b late && false", state: .failed(exitCode: 1)).isEmpty)
+    #expect(details("gh pr create --fill && false", state: .failed(exitCode: 1)).isEmpty)
+    // Its address printed, the pull request was created, whatever its merge did.
+    #expect(
+      details(
+        "gh pr create --fill && gh pr merge --squash",
+        output:
+          "https://github.com/acme/shop/pull/48\nX Pull request acme/shop#48 is not mergeable\n",
+        state: .failed(exitCode: 1)) == [.created(.pullRequest, label: "#48")])
+  }
+
+  @Test("A cherry-pick's or a revert's line is theirs, not the next commit's")
+  func picks() {
+    let picked = "[main 1a2b3c4] Picked\n 1 file changed\nOn branch main\nnothing to commit\n"
+    #expect(details("git cherry-pick 9f8e7d6; git commit -m y", output: picked).isEmpty)
+    #expect(
+      details(
+        #"git revert --no-edit 9f8e7d6 && git commit -m "Then""#,
+        output: "[main 1a2b3c4] Revert \"X\"\n[main 5d6e7f8] Then\n") == [
+          .commit(subject: "Then")
+        ])
+    #expect(
+      details(
+        "git cherry-pick -n 9f8e7d6 && git commit -m Squashed",
+        output: "[main 5d6e7f8] Squashed\n") == [.commit(subject: "Squashed")])
   }
 
   @Test("Commands chained by && each count, their commits read in order")
@@ -72,7 +149,9 @@ struct ConversationMomentsTests {
       details("git push", output: "To github.com:a/b.git\n   1a2b3c4..5d6e7f8  main -> main\n")
         == [.push(branch: "main")])
     #expect(
-      details("rtk git push", output: " * [new branch]      feature -> feature\n") == [
+      details(
+        "rtk git push", output: "To github.com:a/b.git\n * [new branch]      feature -> feature\n"
+      ) == [
         .push(branch: "feature")
       ])
     #expect(details("git push") == [.push(branch: nil)])
@@ -80,6 +159,50 @@ struct ConversationMomentsTests {
     #expect(details("git push origin :old").isEmpty)
     #expect(details("git push -o ci.skip origin feat") == [.push(branch: "feat")])
     #expect(details("git push --tags").isEmpty)
+  }
+
+  /// What `git push` prints when its branch is refused.
+  private static let refused = """
+    To github.com:a/b.git
+     ! [rejected]        main -> main (fetch first)
+    error: failed to push some refs to 'github.com:a/b.git'
+    hint: Updates were rejected because the remote contains work that you do not
+    hint: have locally. This is usually caused by another repository pushing to
+    hint: the same ref. If you want to integrate the remote changes, use
+    hint: 'git pull' before pushing again.
+    hint: See the 'Note about fast-forwards' in 'git push --help' for details.
+
+    """
+
+  @Test("A push refused is none: a fetch's lines, a pipe's success and another push's say nothing")
+  func refusedPushes() {
+    let pulled = """
+      From github.com:a/b
+       * branch            main       -> FETCH_HEAD
+         1a2b3c4..5d6e7f8  main       -> origin/main
+      Successfully rebased and updated refs/heads/main.
+
+      """
+    #expect(
+      details(
+        "git pull --rebase && git push", output: pulled + Self.refused,
+        state: .failed(exitCode: 1)
+      ).isEmpty)
+    // `tail` succeeds whatever the push did, and keeps only its hints.
+    let tail = Self.refused.split(separator: "\n").suffix(5).joined(separator: "\n")
+    #expect(details("git push 2>&1 | tail -5", output: tail).isEmpty)
+    let both = """
+      To github.com:a/b.git
+       * [new branch]      a -> a
+      To github.com:a/b.git
+       ! [remote rejected] b -> b (pre-receive hook declined)
+      error: failed to push some refs to 'github.com:a/b.git'
+
+      """
+    #expect(
+      details("git push origin a && git push origin b", output: both, state: .failed(exitCode: 1))
+        == [.push(branch: "a")])
+    #expect(details("git fetch && git push", output: pulled + both) == [.push(branch: "a")])
   }
 
   @Test("Branches and worktrees created, not those only switched to")
@@ -211,7 +334,7 @@ struct ConversationMomentsTests {
     let entries = [
       ConversationEntry(id: "u", content: .userPrompt("Commit", attachments: [])),
       Self.shell("s1", "git status"),
-      Self.shell("s2", "git commit -m one"),
+      Self.shell("s2", "git commit -m one", output: Self.committed),
       Self.shell("s3", "git push origin main"),
     ]
     let grouped = ConversationGrouping.blocks(entries, grouping: true)
@@ -231,7 +354,10 @@ struct ConversationMomentsTests {
 
   @Test("A bookmark comes before the block's own moments, and a hidden kind is left out")
   func hidden() {
-    let entries = [Self.shell("s", "git commit -m one", tests: TestOutcome(total: 2, failed: 0))]
+    let entries = [
+      Self.shell(
+        "s", "git commit -m one", output: Self.committed, tests: TestOutcome(total: 2, failed: 0))
+    ]
     let placed = ConversationMoments.placed(
       in: ConversationGrouping.blocks(entries), bookmarks: ["s"])
     #expect(placed.map(\.moment.kind) == [.bookmark, .git, .tests])
