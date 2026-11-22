@@ -51,14 +51,15 @@ public struct ExchangeRates: Codable, Hashable, Sendable {
     var rates: [String: Decimal] = [:]
 
     func parser(
-      _ parser: XMLParser, didStartElement element: String, namespaceURI: String?,
-      qualifiedName: String?, attributes: [String: String] = [:]
+      _: XMLParser, didStartElement element: String, namespaceURI _: String?,
+      qualifiedName _: String?, attributes: [String: String] = [:]
     ) {
       guard element == "Cube" else { return }
       if let time = attributes["time"], time.count == 10 { day = time }
       guard let currency = attributes["currency"], currency.count == 3,
         currency.allSatisfy({ $0.isASCII && $0.isUppercase }),
-        let text = attributes["rate"], let rate = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")),
+        let text = attributes["rate"],
+        let rate = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")),
         rate > 0, rates.count < 64
       else { return }
       rates[currency] = rate
@@ -132,7 +133,8 @@ public actor ExchangeRateUpdater {
   @discardableResult
   public func updateIfDue() async -> Bool {
     let now = clock.now()
-    if let current = await current(), now.timeIntervalSince(current.fetchedAt) < Self.refreshInterval
+    if let current = await current(),
+      now.timeIntervalSince(current.fetchedAt) < Self.refreshInterval
     {
       return false
     }

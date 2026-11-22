@@ -124,7 +124,9 @@ struct AccountCostsTests {
     let list: ModelPriceList
     init(_ list: ModelPriceList) { self.list = list }
     func load() async -> ModelPriceList? { list }
-    func save(_ list: ModelPriceList) async throws {}
+    func save(_: ModelPriceList) async throws {
+      // Nothing to keep: the list is the one the test gave.
+    }
   }
 
   struct NoFetch: ModelPriceFetching {
@@ -135,7 +137,8 @@ struct AccountCostsTests {
   func rolling() async throws {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "UTC")!
-    let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: 22, hour: 12)))
+    let now = try #require(
+      calendar.date(from: DateComponents(year: 2026, month: 11, day: 22, hour: 12)))
     func day(_ offset: Int) -> LocalDay {
       LocalDay(calendar.date(byAdding: .day, value: -offset, to: now)!, calendar: calendar)
     }
@@ -164,7 +167,10 @@ struct AccountCostsTests {
     let tracking = InMemoryUsageTrackingStore()
     let list = ModelPriceList(
       fetchedAt: now,
-      prices: ["gpt-x": ModelPrice(input: Decimal(string: "0.000002")!, cacheRead: 0, cacheWrite: 0, output: 0)])
+      prices: [
+        "gpt-x": ModelPrice(
+          input: Decimal(string: "0.000002")!, cacheRead: 0, cacheWrite: 0, output: 0)
+      ])
     let service = UsageService(
       recorder: UsageRecorder(ledger: ledger, tracking: tracking), ledger: ledger,
       tracking: tracking, tokenStore: store, reader: nil,

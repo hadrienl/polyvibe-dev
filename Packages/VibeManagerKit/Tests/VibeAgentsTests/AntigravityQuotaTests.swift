@@ -18,7 +18,7 @@ struct AntigravityQuotaTests {
     if let quota { object["quota"] = quota }
     return AgentActivityEvent(
       name: AntigravityStatusCommand.event, date: Date(),
-      payload: try! JSONSerialization.data(withJSONObject: object))
+      payload: (try? JSONSerialization.data(withJSONObject: object)) ?? Data())
   }
 
   @Test("The quota field reads as buckets; what does not read is left out")
@@ -138,7 +138,7 @@ struct AntigravityQuotaTests {
   }
 
   private func line(_ decoder: AntigravityConversationDecoder, _ object: [String: Any]) {
-    decoder.consume(try! JSONSerialization.data(withJSONObject: object))
+    decoder.consume((try? JSONSerialization.data(withJSONObject: object)) ?? Data())
   }
 
   @Test("An API error is shown while nothing follows it, and leaves once the retry answers")

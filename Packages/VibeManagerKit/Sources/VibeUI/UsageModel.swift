@@ -95,12 +95,18 @@ public final class UsageModel {
     self.endpointWindow = endpointWindow
     // The accounts the sessions of the last day ran on: the ones the header's gauge follows.
     quotas.recentlyUsed = {
-      let since = Date().addingTimeInterval(-86_400)
-      return Set(
-        sessions().filter { $0.updatedAt >= since }.flatMap { session in
-          session.conversations.map(\.providerID) + [session.agent?.providerID].compactMap { $0 }
-        })
+      Self.accounts(of: sessions(), since: Date().addingTimeInterval(-86_400))
     }
+  }
+
+  /// The agents the sessions changed since `date` ran on.
+  static func accounts(of sessions: [WorkSession], since date: Date) -> Set<String> {
+    var accounts = Set<String>()
+    for session in sessions where session.updatedAt >= date {
+      accounts.formUnion(session.conversations.map(\.providerID))
+      if let agent = session.agent { accounts.insert(agent.providerID) }
+    }
+    return accounts
   }
 
   /// Settles what the previous run of the application left open, once the terminal host has
@@ -231,9 +237,8 @@ public final class UsageModel {
     guard next != conversion else { return }
     conversion = next
     CostConversion.current = next
-    // The figures carry no currency: drawn again, they are in the new one.
-    sessionUsage = sessionUsage
-    report = report
+    // The figures carry no currency: computed again, they are drawn in the new one.
+    await recompute()
   }
 
   private func loadTracking() async {
