@@ -190,6 +190,9 @@ struct ConversationOverview: View {
       }
       .contentShape(Rectangle())
       .gesture(drag(scale: scale))
+      // The click that brings the window forward goes there too, as on a scroll bar: else it
+      // only activated the window, and a bookmark took a second click (#596).
+      .modifier(TakesActivatingClick())
       .onContinuousHover { phase in
         switch phase {
         case .active(let point):
@@ -852,5 +855,34 @@ private struct WheelForwarder: NSViewRepresentable {
         super.scrollWheel(with: event)
       }
     }
+  }
+}
+
+/// A view whose gestures take the click that activates its window too (macOS 15 on).
+struct TakesActivatingClick: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(macOS 15, *) {
+      content.allowsWindowActivationEvents(true)
+    } else {
+      content
+    }
+  }
+}
+
+/// The overview dimmed at rest, plain under the pointer (#596): only the opacity of its container
+/// changes — nothing is laid out nor drawn again, the rows and the moments neither. Not flattened
+/// into a group: a bookmark's preview, over the messages, would blur that group, not them.
+struct OverviewBandFade: ViewModifier {
+  static let restingOpacity = 0.55
+  static let fadeDuration = 0.18
+  @State private var isHovered = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isHovered ? 1 : Self.restingOpacity)
+      // Reduce Motion: at once.
+      .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: isHovered)
+      .onHover { isHovered = $0 }
   }
 }

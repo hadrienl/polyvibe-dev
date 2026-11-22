@@ -158,6 +158,30 @@ struct OverviewWidthTests {
     }
   }
 
+  @Test("The click that brings the window forward reaches the overview, not the messages (#596)")
+  func overviewTakesTheActivatingClick() async throws {
+    let (window, _) = host(width: 1700)
+    defer { window.close() }
+    try await waitUntil("wide", window, overviewIs: ConversationOverviewLayout.maximumWidth)
+    let laidOut = frames(in: window)
+    let overview = try #require(laidOut.overview)
+    let text = try #require(laidOut.texts.first)
+    let content = try #require(window.contentView)
+    // What AppKit asks the view under a click in a window that is not the key one: whether the
+    // click goes to it, or only brings the window forward.
+    func takesFirstClick(at point: NSPoint) -> Bool {
+      let event = NSEvent.mouseEvent(
+        with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0,
+        windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
+        pressure: 1)
+      return content.hitTest(point)?.acceptsFirstMouse(for: event) ?? false
+    }
+    if #available(macOS 15, *) {
+      #expect(takesFirstClick(at: NSPoint(x: overview.midX, y: overview.midY)))
+    }
+    #expect(!takesFirstClick(at: NSPoint(x: text.midX, y: text.midY)))
+  }
+
   @Test("Held wide then let go in a narrow pane, the messages and the composer leave it its room")
   func narrowPaneLeavesTheOverviewItsRoom() async throws {
     let (window, slot) = host(width: 850)
