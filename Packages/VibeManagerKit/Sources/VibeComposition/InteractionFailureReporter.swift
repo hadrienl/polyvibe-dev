@@ -30,11 +30,13 @@ actor InteractionFailureReporter {
 
   /// A report not sent after this many failed attempts, or this long after it was queued, is
   /// given up: `gh` missing or signed out would otherwise be run for the life of the application.
+  /// An attempt that could not reach GitHub is not counted: offline, a report waits its age out.
   static let maximumAttempts = 10
   static let maximumAge: TimeInterval = 3 * 24 * 3600
   /// The longest wait between two attempts, the delay doubling from `retryDelay`.
   static let maximumRetryDelay: Duration = .seconds(3600)
-  /// The issues opened in a day at most; the others wait for the next day.
+  /// The issues opened in a day at most; the others are tried again later, and go out as the
+  /// oldest issue of the day turns 24 hours old.
   static let dailyIssueLimit = 3
 
   init(
@@ -146,21 +148,24 @@ actor InteractionFailureReporter {
             let existing = try JSONSerialization.jsonObject(with: found.standardOutput)
               as? [[String: Any]]
           else {
-            pending = failed(&report, file) || pending
+            pending = failed(&report, file, counted: !Self.isOffline(found)) || pending
             continue
           }
           if let url = existing.first?["url"] as? String {
             report.issueURL = url
           } else {
-            // Enough for today: the others wait for a later launch or failure.
-            guard createdToday(in: files) < Self.dailyIssueLimit else { return }
+            // Enough for today: tried again later, which is not a failed attempt.
+            guard createdToday(in: files) < Self.dailyIssueLimit else {
+              pending = true
+              break
+            }
             let created = try await gh(
               [
                 "issue", "create", "--repo", Self.repository, "--title", report.title,
                 "--label", "bug", "--body-file", "-",
               ], input: report.body)
             guard created.exitCode == 0 else {
-              pending = failed(&report, file) || pending
+              pending = failed(&report, file, counted: !Self.isOffline(created)) || pending
               continue
             }
             let url = String(decoding: created.standardOutput, as: UTF8.self).trimmingCharacters(
@@ -182,13 +187,20 @@ actor InteractionFailureReporter {
     }
   }
 
-  /// Counts a failed attempt; whether the report is still to be tried.
-  private func failed(_ report: inout Report, _ file: URL) -> Bool {
+  /// Counts a failed attempt, unless `counted` is false; whether the report is still to be tried.
+  private func failed(_ report: inout Report, _ file: URL, counted: Bool = true) -> Bool {
+    guard counted else { return true }
     let attempts = (report.attempts ?? 0) + 1
     report.attempts = attempts
     if attempts >= Self.maximumAttempts { report.abandoned = true }
     try? JSONEncoder().encode(report).write(to: file, options: .atomic)
     return report.abandoned != true
+  }
+
+  /// `gh` could not reach GitHub: the Mac is offline, the report is not at fault.
+  nonisolated static func isOffline(_ result: BoundedProcessResult) -> Bool {
+    let message = String(decoding: result.standardError, as: UTF8.self)
+    return message.contains("error connecting to")
   }
 
   /// The issues this outbox opened in the last 24 hours.
@@ -202,8 +214,12 @@ actor InteractionFailureReporter {
     }
   }
 
+  /// The names of the user on this Mac, short and full: what a prompt, `~alice` or a commit's
+  /// author shows of them.
+  static let userNames = [NSUserName(), NSFullUserName()]
+
   /// Shared by new reports and the durable outbox, so upgrades also protect queued text.
-  nonisolated static func redact(_ text: String) -> String {
+  nonisolated static func redact(_ text: String, userNames: [String] = userNames) -> String {
     var scrubbed = text.replacingOccurrences(of: "\\\"", with: "\"")
     let patterns = [
       #"(?i)(\bbearer\s+)[^\s"'\\,}<>]+"#,
@@ -218,6 +234,13 @@ actor InteractionFailureReporter {
     for pattern in patterns {
       scrubbed = scrubbed.replacingOccurrences(
         of: pattern, with: "$1[REDACTED]", options: .regularExpression)
+    }
+    // Whose Mac it is, wherever the name shows as a word: `alice@alice-mbp ~ %`.
+    for name in userNames.sorted(by: { $0.count > $1.count }) where name.count >= 2 {
+      scrubbed = scrubbed.replacingOccurrences(
+        of: #"(?i)(?<![\p{L}\p{N}])"# + NSRegularExpression.escapedPattern(for: name)
+          + #"(?![\p{L}\p{N}])"#,
+        with: "[REDACTED]", options: .regularExpression)
     }
     return scrubbed.replacingOccurrences(
       of:

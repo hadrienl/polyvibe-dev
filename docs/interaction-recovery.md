@@ -29,9 +29,11 @@ nothing is written to the outbox and nothing waiting in it is sent. The report i
 request content, selected answer, planned and successfully written key groups, terminal text
 before/after, timestamp, app build, OS and recovery behavior. Common credential forms (including
 AWS environment variables, Basic/Bearer authorization, `*_TOKEN` variables, passwords in URLs,
-GitHub, GitLab, Slack and Google keys, JWTs and private keys) and the user name in `/Users/<name>`
-are masked; a typed or pasted text is reported by its length only, in the selected answer and in
-key traces, and taken out of the terminal text where it shows whole. The terminal text and request content are included so a maintainer can reproduce the
+GitHub, GitLab, Slack and Google keys, JWTs and private keys), the user name in `/Users/<name>`
+and the user's short and full names wherever they show as a word (a prompt, `~name`, an author
+line) are masked; a typed or pasted text is reported by its length only, in the selected answer
+and in key traces, and taken out of the terminal text where it shows whole, from three
+characters (a `y` taken out would take every `y` of the screen with it). The terminal text and request content are included so a maintainer can reproduce the
 case without an image. Each block is cut at 9,000 characters and the body at 60,000, within
 GitHub's limit.
 
@@ -39,7 +41,9 @@ GitHub's limit.
 directory. It uses the installed `gh` CLI and its existing GitHub authentication. A failed
 submission is retried after a minute, the delay doubling up to an hour, and pending entries are
 retried on app launch. A report is given up after 10 failed attempts or 3 days, so a missing or
-signed-out `gh` is not run forever. At most 3 issues are opened in 24 hours; the others wait.
+signed-out `gh` is not run forever; an attempt `gh` could not make for want of a network is not
+counted, so a report waits out a time offline. At most 3 issues are opened in 24 hours; the
+others are tried again, the delay still doubling up to an hour, and go out as the slots free.
 Pending reports from older versions are sanitized again before they are submitted. Each request has a stable
 SHA-256 fingerprint: an existing local result or a matching GitHub issue prevents another post,
 including after a crash between issue creation and saving its URL. Completed entries retain the

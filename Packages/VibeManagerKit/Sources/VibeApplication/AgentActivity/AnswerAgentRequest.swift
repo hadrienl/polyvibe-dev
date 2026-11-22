@@ -441,6 +441,9 @@ extension AgentAnswer {
 extension AgentAnswer {
   /// What a failure report says of this answer: a text the user typed by its length only, as
   /// the key traces already do. Options, choices and refusals are kept, to reproduce the case.
+  /// The shortest typed text taken out of a report's screens.
+  static let shortestOmittedText = 3
+
   public var reported: String {
     guard case .answers(let answers) = self else { return String(reflecting: self) }
     let each = answers.map { answer -> String in
@@ -451,11 +454,15 @@ extension AgentAnswer {
   }
 
   /// A screen with the text the user typed taken out where it shows whole: what the field of
-  /// the dialog echoes. A text wrapped over several lines may still show in part.
+  /// the dialog echoes. A text wrapped over several lines may still show in part. A text of one
+  /// or two characters, `y` or `2`, says nothing of the user and stays: taken out, every such
+  /// letter of the screen would go with it.
   public func withoutTypedText(_ screen: String) -> String {
     guard case .answers(let answers) = self else { return screen }
     return answers.reduce(screen) { screen, answer in
-      guard case .text(let text) = answer, !text.isEmpty else { return screen }
+      guard case .text(let text) = answer, text.count >= Self.shortestOmittedText else {
+        return screen
+      }
       return screen.replacingOccurrences(of: text, with: "<typed text omitted>")
     }
   }

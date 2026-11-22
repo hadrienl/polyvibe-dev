@@ -12,18 +12,29 @@ private actor ReportingCLI {
   let created: String
   /// `gh` missing or signed out: every call fails.
   let isMissing: Bool
+  /// The calls made before GitHub can be reached.
+  var offlineCallsLeft: Int
   init(
     existing: Bool = false, failuresLeft: Int = 0,
-    created: String = "https://github.com/hadrienl/polyvibe-dev/issues/123", isMissing: Bool = false
+    created: String = "https://github.com/hadrienl/polyvibe-dev/issues/123", isMissing: Bool = false,
+    offlineCalls: Int = 0
   ) {
     self.existing = existing
     self.failuresLeft = failuresLeft
     self.created = created
     self.isMissing = isMissing
+    self.offlineCallsLeft = offlineCalls
   }
   func run(_ request: BoundedProcessRequest) -> BoundedProcessResult {
     calls.append(request)
     if isMissing { return BoundedProcessResult(termination: .exited(127)) }
+    if offlineCallsLeft > 0 {
+      offlineCallsLeft -= 1
+      return BoundedProcessResult(
+        termination: .exited(1),
+        standardError: Data(
+          "error connecting to api.github.com\ncheck your internet connection".utf8))
+    }
     if request.arguments.contains("create"), failuresLeft > 0 {
       failuresLeft -= 1
       return BoundedProcessResult(termination: .exited(1))
@@ -34,6 +45,14 @@ private actor ReportingCLI {
       : created + "\n"
     return BoundedProcessResult(termination: .exited(0), standardOutput: Data(output.utf8))
   }
+}
+
+/// A clock the test moves on.
+private final class TestClock: @unchecked Sendable {
+  private let lock = NSLock()
+  private var date = Date()
+  var now: Date { lock.withLock { date } }
+  func advance(by interval: TimeInterval) { lock.withLock { date += interval } }
 }
 
 struct InteractionFailureReporterTests {
@@ -123,6 +142,15 @@ struct InteractionFailureReporterTests {
     #expect(body.contains("[49]"))
     #expect(body.contains("terminal view"))
     #expect(body.contains("interaction-failure-fingerprint"))
+  }
+
+  @Test("The user's names are masked wherever they show as a word (#558)")
+  func userNames() {
+    let screen = "alice@alice-mbp ~/clients % git log\nAuthor: Alice Martin\nmalice ~alice"
+    let scrubbed = InteractionFailureReporter.redact(screen, userNames: ["alice", "Alice Martin"])
+    #expect(
+      scrubbed
+        == "[REDACTED]@[REDACTED]-mbp ~/clients % git log\nAuthor: [REDACTED]\nmalice ~[REDACTED]")
   }
 
   @Test("Whose home a path is, tokens of common services and keys are masked too")
@@ -300,6 +328,28 @@ struct InteractionFailureReporterTests {
     #expect(
       answer.withoutTypedText("> my private reply, with a name\n  Enter to submit")
         == "> <typed text omitted>\n  Enter to submit")
+    // One letter typed leaves the screen readable.
+    let screen = "Do you want to proceed?\n> a\n  Enter to submit"
+    #expect(AgentAnswer.answers([.text("a")]).withoutTypedText(screen) == screen)
+  }
+
+  @Test("Offline, an attempt is not counted, and the report goes out once online (#558)")
+  func offline() async throws {
+    let directory = try outbox()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let cli = ReportingCLI(offlineCalls: InteractionFailureReporter.maximumAttempts + 1)
+    let reporter = InteractionFailureReporter(
+      directory: directory, environment: [:], retryDelay: .milliseconds(1),
+      isEnabled: { true }, run: { await cli.run($0) })
+    await reporter.enqueue(failure())
+    for _ in 0..<1_000 {
+      if reports(in: directory).first?["issueURL"] != nil { break }
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    let report = try #require(reports(in: directory).first)
+    #expect(report["issueURL"] as? String == "https://github.com/hadrienl/vibe-manager/issues/123")
+    #expect(report["abandoned"] == nil)
+    #expect(report["attempts"] == nil)
   }
 
   @Test("Without gh, a report is given up after a few attempts, the delay doubling (#558)")
@@ -347,13 +397,15 @@ struct InteractionFailureReporterTests {
     #expect(await cli.calls.isEmpty)
   }
 
-  @Test("Few issues are opened a day, the others wait (#558)")
+  @Test("Few issues are opened a day, the others go out the next day (#558)")
   func dailyLimit() async throws {
     let directory = try outbox()
     defer { try? FileManager.default.removeItem(at: directory) }
     let cli = ReportingCLI()
+    let clock = TestClock()
     let reporter = InteractionFailureReporter(
-      directory: directory, environment: [:], isEnabled: { true }, run: { await cli.run($0) })
+      directory: directory, environment: [:], retryDelay: .milliseconds(5), isEnabled: { true },
+      now: { clock.now }, run: { await cli.run($0) })
     for index in 0..<(InteractionFailureReporter.dailyIssueLimit + 2) {
       await reporter.enqueue(
         .init(
@@ -372,5 +424,13 @@ struct InteractionFailureReporterTests {
     #expect(
       await cli.calls.count { $0.arguments.contains("create") }
         == InteractionFailureReporter.dailyIssueLimit)
+    #expect(all.allSatisfy { $0["attempts"] == nil })
+    // A day later, with the application still open, the others go out.
+    clock.advance(by: 25 * 3600)
+    for _ in 0..<500 {
+      if reports(in: directory).count(where: { $0["issueURL"] != nil }) == all.count { break }
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(reports(in: directory).count { $0["issueURL"] != nil } == all.count)
   }
 }
