@@ -21,6 +21,10 @@ public struct CommandLineAgentSpecification: Sendable {
   public let authenticationArguments: [String]?
   /// Extra environment keys this CLI needs on top of the shared allow list.
   public let additionalEnvironmentKeys: Set<String>
+  /// Keys never taken from the login shell, only from the application's own environment — the
+  /// one an extra account sets (#478). A `CLAUDE_CONFIG_DIR` exported by the shell would make the
+  /// agent's own account run in another account's folder (#599).
+  public let shellIgnoredEnvironmentKeys: Set<String>
   /// Where a user can read how to install or update this CLI.
   public let documentationURL: URL?
   /// The command a user types to sign in, shown by the authentication remediation.
@@ -40,10 +44,12 @@ public struct CommandLineAgentSpecification: Sendable {
     versionRetryTimeout: Duration = .seconds(10),
     authenticationArguments: [String]? = nil,
     additionalEnvironmentKeys: Set<String> = [],
+    shellIgnoredEnvironmentKeys: Set<String> = [],
     documentationURL: URL? = nil,
     authenticationCommandLine: String? = nil,
     authenticationOutcome: (@Sendable (ProbeResult) -> Bool?)? = nil
   ) {
+    self.shellIgnoredEnvironmentKeys = shellIgnoredEnvironmentKeys
     self.authenticationOutcome = authenticationOutcome
     self.binaryName = binaryName
     self.candidateDirectories = candidateDirectories
@@ -73,6 +79,7 @@ public struct CommandLineAgentSpecification: Sendable {
       versionRetryTimeout: versionRetryTimeout,
       authenticationArguments: authenticationArguments,
       additionalEnvironmentKeys: additionalEnvironmentKeys,
+      shellIgnoredEnvironmentKeys: shellIgnoredEnvironmentKeys,
       documentationURL: documentationURL,
       authenticationCommandLine: authenticationCommandLine,
       authenticationOutcome: authenticationOutcome
@@ -180,7 +187,9 @@ public struct CommandLineAgentProvider: AgentProvider {
       executablePath: installation.executablePath,
       arguments: arguments,
       environment: AgentEnvironmentPolicy.environment(
-        base: environment.merging(shellEnvironment) { _, shell in shell },
+        base: environment.merging(
+          shellEnvironment.filter { !specification.shellIgnoredEnvironmentKeys.contains($0.key) }
+        ) { _, shell in shell },
         additionalKeys: specification.additionalEnvironmentKeys,
         overrides: request.additionalEnvironment
       ),

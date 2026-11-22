@@ -232,6 +232,52 @@ struct ClaudeCodeAgentProviderTests {
     #expect(plan.environment["CLAUDE_CONFIG_DIR"] == "/Users/test/elsewhere")
   }
 
+  @Test("A configuration folder exported by the login shell does not move the agent's own account")
+  func shellConfigurationFolderIgnored() throws {
+    // The account of the application's environment, or an extra account's (#478), is the one
+    // that counts: the shell's would make Claude Code run in another account's folder (#599).
+    let base = CommandLineAgentProvider(
+      descriptor: ClaudeCodeAgentProvider.descriptor,
+      specification: ClaudeCodeAgentProvider.specification,
+      models: [],
+      argumentBuilder: ClaudeCodeArgumentBuilder(),
+      availabilityProbe: AgentAvailabilityProbe(
+        descriptor: ClaudeCodeAgentProvider.descriptor,
+        specification: ClaudeCodeAgentProvider.specification,
+        locator: StubLocator(location: .found(path: Self.path, source: .candidateDirectory)),
+        probe: StubProcessProbe()),
+      environment: ["PATH": "/usr/bin", "HOME": "/Users/test"]
+    )
+    let shell = [
+      "PATH": "/Users/test/bin:/usr/bin", "CLAUDE_CONFIG_DIR": "/Users/test/.claude-other",
+    ]
+
+    let plan = try base.plan(
+      for: AgentLaunchRequest(workingDirectoryPath: "/Users/test/app"),
+      installation: TestFixtures.installation,
+      shellEnvironment: shell)
+    #expect(plan.environment["CLAUDE_CONFIG_DIR"] == nil)
+    #expect(plan.environment["PATH"] == "/Users/test/bin:/usr/bin")
+
+    let account = CommandLineAgentProvider(
+      descriptor: ClaudeCodeAgentProvider.descriptor,
+      specification: ClaudeCodeAgentProvider.specification,
+      models: [],
+      argumentBuilder: ClaudeCodeArgumentBuilder(),
+      availabilityProbe: AgentAvailabilityProbe(
+        descriptor: ClaudeCodeAgentProvider.descriptor,
+        specification: ClaudeCodeAgentProvider.specification,
+        locator: StubLocator(location: .found(path: Self.path, source: .candidateDirectory)),
+        probe: StubProcessProbe()),
+      environment: ["HOME": "/Users/test", "CLAUDE_CONFIG_DIR": "/Users/test/.claude-prisme"]
+    )
+    let accountPlan = try account.plan(
+      for: AgentLaunchRequest(workingDirectoryPath: "/Users/test/app"),
+      installation: TestFixtures.installation,
+      shellEnvironment: shell)
+    #expect(accountPlan.environment["CLAUDE_CONFIG_DIR"] == "/Users/test/.claude-prisme")
+  }
+
   @Test("An exported diagnostic carries no identity")
   func diagnosticCarriesNoIdentity() async {
     let probe = ScriptedClaudeProbe(
@@ -333,8 +379,9 @@ struct ClaudeCodeAuthenticationStatusTests {
   func accountNamesItsOrganization() {
     func account(_ org: String, _ plan: String) -> String? {
       ClaudeCodeAuthenticationStatus.account(
-        in: #"{"loggedIn":true,"email":"a@x.io","orgName":"\#(org)","subscriptionType":"\#(plan)"}"#)?
-        .label
+        in: #"{"loggedIn":true,"email":"a@x.io","orgName":"\#(org)","subscriptionType":"\#(plan)"}"#
+      )?
+      .label
     }
     #expect(account("Prisme.ai", "team") == "a@x.io · Prisme.ai")
     #expect(account("a@x.io's Organization", "max") == "a@x.io · Max")

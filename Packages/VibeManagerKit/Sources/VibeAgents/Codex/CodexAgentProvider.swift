@@ -49,6 +49,7 @@ public struct CodexAgentProvider: AgentProvider {
       "http_proxy", "https_proxy", "no_proxy",
       "SSL_CERT_FILE", "SSL_CERT_DIR",
     ],
+    shellIgnoredEnvironmentKeys: ["CODEX_HOME"],
     documentationURL: URL(string: "https://developers.openai.com/codex/cli"),
     authenticationCommandLine: "codex login"
   )

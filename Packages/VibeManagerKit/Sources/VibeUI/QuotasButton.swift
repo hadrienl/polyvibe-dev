@@ -135,7 +135,8 @@ struct QuotasPopover: View {
               }
             }
           }
-          .frame(maxHeight: 460)
+          // As tall as the screen allows, so that every account shows without scrolling when it can.
+          .frame(maxHeight: Self.listMaxHeight)
           .fixedSize(horizontal: false, vertical: true)
         }
         Divider()
@@ -152,7 +153,7 @@ struct QuotasPopover: View {
       .controlSize(.small)
     }
     .padding(14)
-    .frame(width: 340, alignment: .leading)
+    .frame(width: 380, alignment: .leading)
     .onAppear {
       quotas.startWatching()
       // The costs of thirty days need every session's transcripts, as the Usage window reads.
@@ -179,6 +180,9 @@ struct QuotasPopover: View {
           Text(verbatim: cost)
             .font(.callout)
             .monospacedDigit()
+            .foregroundStyle(
+              usage.accountCosts[account.id]?.hasPrice == true ? .primary : .secondary
+            )
             .help(Self.costHelp(locale: locale))
         }
       }
@@ -197,14 +201,24 @@ struct QuotasPopover: View {
     }
   }
 
-  /// “≈ 127 € · 30 d”, when a model of the account has a price.
+  /// “≈ 127 € · 30 d”; without a session in Vibe Manager over thirty days, or only models without
+  /// a price, says so rather than a zero.
   private func cost(of providerID: String) -> String? {
-    guard let estimate = usage.accountCosts[providerID], estimate.hasPrice else { return nil }
+    guard let estimate = usage.accountCosts[providerID] else {
+      return String(
+        localized: LocalizedStringResource(
+          "No session in 30 days", locale: locale, bundle: .module,
+          comment:
+            "An account without any session run in Vibe Manager over the last thirty days: no cost to say."
+        ))
+    }
+    guard estimate.hasPrice else { return UsagePresentation.unknownPrice(locale: locale) }
     let amount = UsagePresentation.cost(estimate.total, locale: locale)
     return String(
       localized: LocalizedStringResource(
         "\(amount) · 30 d", locale: locale, bundle: .module,
-        comment: "An account's API-equivalent cost over the last thirty days, such as “≈ 127 € · 30 d”."
+        comment:
+          "An account's API-equivalent cost over the last thirty days, such as “≈ 127 € · 30 d”."
       ))
   }
 
@@ -232,6 +246,12 @@ struct QuotasPopover: View {
       .foregroundStyle(.secondary)
       .fixedSize(horizontal: false, vertical: true)
     }
+  }
+
+  /// The screen's visible height, less room for the toolbar, the header, the total and the button.
+  static var listMaxHeight: CGFloat {
+    let screen = NSScreen.main?.visibleFrame.height ?? 800
+    return max(360, screen - 260)
   }
 
   static func costHelp(locale: Locale) -> String {

@@ -36,6 +36,7 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
       "http_proxy", "https_proxy", "no_proxy",
       "SSL_CERT_FILE", "SSL_CERT_DIR",
     ],
+    shellIgnoredEnvironmentKeys: ["CLAUDE_CONFIG_DIR"],
     documentationURL: URL(string: "https://docs.claude.com/en/docs/claude-code/setup"),
     authenticationCommandLine: "claude auth login",
     authenticationOutcome: ClaudeCodeAuthenticationStatus.isSignedIn
