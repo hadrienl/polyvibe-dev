@@ -161,6 +161,7 @@ public final class AppEnvironment {
     // One shell for every agent and account.
     let loginShell = LoginShellEnvironment(
       inherited: configuration.environment, probe: SystemProcessProbe())
+    RetiredPreferences.remove(suiteName: data.defaultsSuite)
     // One store for every agent that offers an approval mode, under each one's identifier.
     let approvals = UserDefaultsAgentApprovalPreferences(suiteName: data.defaultsSuite)
     let providers =
