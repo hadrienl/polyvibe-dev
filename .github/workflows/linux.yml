@@ -42,7 +42,7 @@ jobs:
           apt-get install -y --no-install-recommends libgtk-4-dev libwebkitgtk-6.0-dev libsecret-1-dev
       - name: Resolve
         working-directory: Packages/VibeManagerKit
-        run: swift package resolve
+        run: swift package resolve --force-resolved-versions
       - name: Build ${{ matrix.target }}
         working-directory: Packages/VibeManagerKit
         run: swift build --build-system native --target ${{ matrix.target }}
