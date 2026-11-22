@@ -30,7 +30,8 @@ final class NotesPanel: NSPanel {
 /// Both are AppKit's, owned here rather than by SwiftUI bindings, so that a change is one
 /// synchronous step: the window showing the previous request closes and lets go of its editor,
 /// then a new one opens on the next request's session. Each window is built for one session and
-/// never retargeted — its title and its document are that session's for as long as it is open.
+/// never retargeted — its title and its document are that session's for as long as it is open;
+/// the panel following the selection is a new panel, at the same place.
 ///
 /// The panel's place and size are AppKit's to keep, under its frame name: the user finds it where
 /// they left it, from one launch to the next.
@@ -44,8 +45,11 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   /// The request the window on screen shows; `nil` with nothing on screen, including a popover
   /// waiting for the toolbar's button to be back in the toolbar.
   private(set) var displayed: NotesPresentation.Request?
-  /// Puts the panel on screen. Tests keep it off the screen and read the panel instead.
-  var showPanel: (NotesPanel) -> Void = { $0.makeKeyAndOrderFront(nil) }
+  /// Puts the panel on screen, with the keyboard or without. Tests keep it off the screen and read
+  /// the panel instead.
+  var showPanel: (NotesPanel, Bool) -> Void = { panel, takesKeyboard in
+    if takesKeyboard { panel.makeKeyAndOrderFront(nil) } else { panel.orderFront(nil) }
+  }
   /// Opens the popover under the toolbar's button. Tests keep it off the screen too.
   var showPopover: (NSPopover, NSView) -> Void = { popover, anchor in
     popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
@@ -63,6 +67,7 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   private func update() {
     let request = model.notesPresentation.active
     guard request != displayed else { return }
+    let wasKey = panel?.isKeyWindow == true
     closeCurrent()
     guard let request,
       let session = model.sessions.first(where: { $0.id == request.sessionID })
@@ -72,7 +77,7 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       displayed = request
       let panel = makePanel(session: session)
       self.panel = panel
-      showPanel(panel)
+      showPanel(panel, request.activates || wasKey)
     case .popover:
       guard let anchor = model.notesPresentation.anchor, anchor.window != nil else { return }
       displayed = request

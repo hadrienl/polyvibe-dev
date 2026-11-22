@@ -3029,7 +3029,7 @@ public final class AppModel {
     if let previous = selectedSessionID, previous != id {
       Task { [notes] in await notes.flush(previous) }
     }
-    if selectedSessionID != id { notesSelectionChanged() }
+    if selectedSessionID != id { notesSelectionChanged(to: id) }
     selectedSessionID = id
     conversations.cancelPendingComposerFocus(unless: id)
     layout.select(id)

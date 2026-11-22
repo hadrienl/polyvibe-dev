@@ -8,9 +8,9 @@ import VibeDomain
 ///
 /// One presentation at a time, for one session: `active` says which session's notes are shown and
 /// how. Opening the other placement, or another session's notes, replaces it — the window or the
-/// popover that showed the previous one closes before the next opens. A floating window keeps the
-/// session it was opened for: selecting another session in the workspace changes neither its title
-/// nor what it edits.
+/// popover that showed the previous one closes before the next opens. Each window is built for one
+/// session and never retargeted: when the floating window follows the selection, a new window,
+/// the next session's, replaces the previous one.
 ///
 /// The placement — popover or panel — is the user's and is kept in the layout; whether either is
 /// open is not, and a relaunch opens neither.
@@ -23,6 +23,9 @@ public final class NotesPresentation {
     let id = UUID()
     let sessionID: SessionID
     let placement: NotesPlacement
+    /// Whether the window takes the keyboard. A panel following the selection does not: the user
+    /// is choosing a session, not writing notes.
+    var activates = true
   }
 
   /// What is on screen, if anything.
@@ -108,6 +111,19 @@ public final class NotesPresentation {
   func panelClosed() {
     if isPanelShown { dismiss() }
   }
+
+  /// Another session on screen: the popover closes over the notes it was showing; the floating
+  /// window is replaced by the new session's, or closes without a session.
+  func selectionChanged(to sessionID: SessionID?) {
+    switch active?.placement {
+    case .popover: dismiss()
+    case .panel:
+      guard let sessionID else { return dismiss() }
+      guard active?.sessionID != sessionID else { return }
+      active = Request(sessionID: sessionID, placement: .panel, activates: isPanelKey)
+    case nil: break
+    }
+  }
 }
 
 extension AppModel {
@@ -121,8 +137,7 @@ extension AppModel {
     return notes.hasNotes(for: id)
   }
 
-  /// The toolbar's button. Showing another session's floating window, it brings this session's
-  /// notes in its place.
+  /// The toolbar's button.
   public func toggleNotes() {
     guard canShowNotes, let id = selectedSessionID else {
       notesPresentation.dismiss()
@@ -164,10 +179,7 @@ extension AppModel {
 
   /// Reattach: the panel closes and the popover opens under the toolbar's button, from now on.
   public func attachNotes() {
-    guard let id = notesPresentation.active?.sessionID ?? selectedSessionID else { return }
-    // The popover belongs to the session on screen: the workspace comes back to the panel's
-    // session first, never A's notes under B's toolbar.
-    if selectedSessionID != id { select(id) }
+    guard let id = selectedSessionID else { return }
     notesPresentation.show(for: id, placement: .popover)
     notes.requestFocus()
   }
@@ -178,7 +190,6 @@ extension AppModel {
   /// The panel closed by its own button or ⌘W.
   public func notesPanelClosed() { notesPresentation.panelClosed() }
 
-  /// Another session on screen: the popover closes over the notes it was showing; a floating
-  /// window stays, on the session it was opened for.
-  func notesSelectionChanged() { notesPresentation.popoverClosed() }
+  /// Another session on screen: the popover closes, the floating window follows.
+  func notesSelectionChanged(to id: SessionID?) { notesPresentation.selectionChanged(to: id) }
 }
