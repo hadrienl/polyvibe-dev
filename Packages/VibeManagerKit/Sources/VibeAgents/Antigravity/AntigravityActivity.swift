@@ -9,6 +9,11 @@ enum AntigravityStatusCommand {
   /// Two processes per refresh: `plutil` turns the payload into an XML property list, one
   /// `awk` pass reads the allowed fields from it and the time. The user's own command gets the
   /// payload whole, up to 4 MiB.
+  ///
+  /// The quota of the account (#599), as agy 1.5.14 gives it — `quota.<bucket>` with a
+  /// `remaining_fraction` and a `reset_time` — is kept as `bucket=fraction@reset;…`: at most eight
+  /// buckets, 512 bytes, and only the characters such values are made of, so that nothing in it
+  /// can end the JSON string it is written into.
   static let script = #"""
     u=$1;
     i=$({ head -c 4194304; cat >/dev/null; });
@@ -16,19 +21,20 @@ enum AntigravityStatusCommand {
     { sub(/^[ \t]+/, "") }
     /^<(dict|array)>$/ { if (d == 1) o = k; k = ""; d++; next }
     /^<\/(dict|array)>$/ { d--; next }
-    /^<key>.*<\/key>$/ { v = $0; gsub(/<\/?key>/, "", v); if (d == 1) k = v; else n = v; next }
+    /^<key>.*<\/key>$/ { v = $0; gsub(/<\/?key>/, "", v); if (d == 1) k = v; else n = v; if (d == 2 && o == "quota") { q = v; if (!(q in qf)) qn[++qc] = q }; next }
     d == 1 && k != "" { v = $0; if (v == "<true/>") v = "true"; else if (v == "<false/>") v = "false"; else gsub(/<[^>]*>/, "", v); f[k] = v; k = ""; next }
+    d == 3 && o == "quota" { v = $0; gsub(/<[^>]*>/, "", v); if (n == "remaining_fraction") qf[q] = v; else if (n == "reset_time") qr[q] = v; n = ""; next }
     d > 1 { if (o == "subagents" && n == "status" && $0 == "<string>running</string>") b = "true"; n = "" }
-    END { srand(); printf "%s|%s|%s|%s|%s|%d", f["conversation_id"], f["agent_state"], f["tool_confirmation_pending"], f["task_count"], (b == "" ? "false" : b), srand() }');
+    END { srand(); for (i = 1; i <= qc && i <= 8; i++) { u = qn[i]; if (u in qf) a = a (a == "" ? "" : ";") u "=" qf[u] "@" qr[u] }; printf "%s|%s|%s|%s|%s|%s|%d", f["conversation_id"], f["agent_state"], f["tool_confirmation_pending"], f["task_count"], (b == "" ? "false" : b), a, srand() }');
     set -f; IFS='|'; set -- $r; unset IFS; set +f;
-    c=$1; s=$2; p=$3; t=$4; b=$5; now=$6;
+    c=$1; s=$2; p=$3; t=$4; b=$5; q=$(printf '%s' "$6" | LC_ALL=C /usr/bin/tr -cd 'A-Za-z0-9._:;=@+-' | /usr/bin/head -c 512); now=$7;
     case "$t" in ''|*[!0-9]*) ;; *) [ "$t" -gt 0 ] && b=true;; esac;
     [ "$b" = true ] || b=false;
     case "$c" in [0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]-[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]) ;; *) c=;; esac;
     case "$s" in idle|working|tool_use|reviewing|authenticating|initializing|error) ;; *) s=unknown;; esac;
     [ "$p" = true ] || p=false;
     case "$now" in ''|*[!0-9]*) now=0;; esac;
-    [ -n "$VIBE_AGENT_ACTIVITY_LOG" ] && printf 'AntigravityStatus\t%s\t{"conversation_id":"%s","agent_state":"%s","pending":%s,"background":%s}\n' "$now" "$c" "$s" "$p" "$b" >>"$VIBE_AGENT_ACTIVITY_LOG";
+    [ -n "$VIBE_AGENT_ACTIVITY_LOG" ] && printf 'AntigravityStatus\t%s\t{"conversation_id":"%s","agent_state":"%s","pending":%s,"background":%s,"quota":"%s"}\n' "$now" "$c" "$s" "$p" "$b" "$q" >>"$VIBE_AGENT_ACTIVITY_LOG";
     [ -n "$u" ] && printf '%s' "$i" | /bin/sh -c "$u";
     exit 0
     """#
@@ -82,6 +88,8 @@ extension AntigravityAgentProvider: AgentActivityReporting {
 public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sendable {
   private let lock = NSLock()
   private var previous: String?
+  /// The account's quota as the last snapshot gave it: what a failed turn is explained by.
+  private var quota: [AntigravityQuotaBucket] = []
   public let approvalAnswerKeys: Set<[UInt8]> = []
 
   public init() {}
@@ -109,13 +117,25 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
       ["idle", "working", "tool_use", "reviewing", "authenticating", "initializing", "error"]
         .contains(effective)
     else { return nil }
+    let snapshot = (object["quota"] as? String).map(AntigravityQuotaBucket.parse)
     return lock.withLock {
+      // A snapshot without the field — an older status command — keeps what was known.
+      if let snapshot, !snapshot.isEmpty { quota = snapshot }
       guard effective != previous else { return nil }
       let old = previous
       previous = effective
+      if effective == "error", let message = AntigravityQuotaBucket.failure(quota) {
+        // agy writes the refusal neither to the transcript nor to the status line: a spent
+        // bucket is what it was, and the user has to wait, not sign in again.
+        return .turnFailed(
+          AgentTerminalPrompt(kind: .account, message: message, error: Self.quotaError))
+      }
       return Self.signal(from: old, to: effective)
     }
   }
+
+  /// The name given to a turn agy stopped on a spent quota.
+  static let quotaError = "quota_exhausted"
 
   /// What a change of state means. Only snapshots are seen, never who started a turn: a turn
   /// that starts from rest is the user's — work the agent resumes by itself (background tasks,

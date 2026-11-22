@@ -1085,6 +1085,327 @@
         }
       }
     },
+    "Antigravity stopped on an error. Quota reached: %@ — resets %@." : {
+      "comment" : "An Antigravity turn failed while a quota was spent. The first argument names the quotas, the second is a date and time, such as “Fri 28 Nov, 13:39”.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "توقف Antigravity بسبب خطأ. تم بلوغ الحصة: %1$@ — تُعاد في %2$@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity wurde wegen eines Fehlers angehalten. Kontingent erreicht: %1$@ – wird am %2$@ zurückgesetzt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Antigravity stopped on an error. Quota reached: %1$@ — resets %2$@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity se detuvo por un error. Cuota alcanzada: %1$@ — se restablece el %2$@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %1$@ — réinitialisation %2$@."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity एक त्रुटि पर रुक गया। कोटा पूरा हुआ: %1$@ — %2$@ को रीसेट होगा।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity si è fermato per un errore. Quota raggiunta: %1$@ — si azzera %2$@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity はエラーで停止しました。上限に達したクォータ：%1$@ — %2$@ にリセット。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity가 오류로 중단되었습니다. 한도에 도달한 할당량: %1$@ — %2$@에 초기화됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity is gestopt door een fout. Quotum bereikt: %1$@ — wordt %2$@ hersteld."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity zatrzymał się z powodu błędu. Osiągnięto limit: %1$@ — odnowienie: %2$@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Antigravity parou por um erro. Cota atingida: %1$@ — renova em %2$@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity остановился из-за ошибки. Квота исчерпана: %1$@ — сброс %2$@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity bir hata nedeniyle durdu. Kotaya ulaşıldı: %1$@ — sıfırlanma: %2$@."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity зупинився через помилку. Квоту вичерпано: %1$@ — оновлення %2$@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity 因错误而停止。已达到配额：%1$@ — 将于 %2$@ 重置。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity 因錯誤而停止。已達到配額：%1$@ — 將於 %2$@ 重設。"
+          }
+        }
+      }
+    },
+    "Antigravity stopped on an error. Quota reached: %@." : {
+      "comment" : "An Antigravity turn failed while a quota was spent. The argument names the quotas.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "توقف Antigravity بسبب خطأ. تم بلوغ الحصة: %@."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity wurde wegen eines Fehlers angehalten. Kontingent erreicht: %@."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Antigravity stopped on an error. Quota reached: %@."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity se detuvo por un error. Cuota alcanzada: %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity s’est arrêté sur une erreur. Quota atteint : %@."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity एक त्रुटि पर रुक गया। कोटा पूरा हुआ: %@।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity si è fermato per un errore. Quota raggiunta: %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity はエラーで停止しました。上限に達したクォータ：%@。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity가 오류로 중단되었습니다. 한도에 도달한 할당량: %@."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity is gestopt door een fout. Quotum bereikt: %@."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity zatrzymał się z powodu błędu. Osiągnięto limit: %@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Antigravity parou por um erro. Cota atingida: %@."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity остановился из-за ошибки. Квота исчерпана: %@."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity bir hata nedeniyle durdu. Kotaya ulaşıldı: %@."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity зупинився через помилку. Квоту вичерпано: %@."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity 因错误而停止。已达到配额：%@。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antigravity 因錯誤而停止。已達到配額：%@。"
+          }
+        }
+      }
+    },
+    "Claude and GPT models, weekly" : {
+      "comment" : "An Antigravity quota: the weekly limit of its Claude and GPT models.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماذج Claude وGPT، أسبوعيًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude- und GPT-Modelle, wöchentlich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Claude and GPT models, weekly"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelos Claude y GPT, semanal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modèles Claude et GPT, semaine"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude और GPT मॉडल, साप्ताहिक"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelli Claude e GPT, settimanale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude・GPT モデル（週間）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude 및 GPT 모델, 주간"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude- en GPT-modellen, wekelijks"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modele Claude i GPT, tygodniowo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelos Claude e GPT, semanal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Модели Claude и GPT, неделя"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude ve GPT modelleri, haftalık"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Моделі Claude і GPT, тиждень"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude 和 GPT 模型（每周）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude 和 GPT 模型（每週）"
+          }
+        }
+      }
+    },
     "Create an AGENTS.md file with instructions for Codex." : {
       "comment" : "Codex's /init command, in the composer's list.",
       "localizations" : {
@@ -1283,6 +1604,113 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "透過 %@ 的端點"
+          }
+        }
+      }
+    },
+    "Gemini models, weekly" : {
+      "comment" : "An Antigravity quota: the weekly limit of its Gemini models.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نماذج Gemini، أسبوعيًا"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini-Modelle, wöchentlich"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Gemini models, weekly"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelos Gemini, semanal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modèles Gemini, semaine"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini मॉडल, साप्ताहिक"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelli Gemini, settimanale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini モデル（週間）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini 모델, 주간"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini-modellen, wekelijks"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modele Gemini, tygodniowo"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modelos Gemini, semanal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Модели Gemini, неделя"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini modelleri, haftalık"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Моделі Gemini, тиждень"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini 模型（每周）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemini 模型（每週）"
           }
         }
       }

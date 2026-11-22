@@ -63,6 +63,10 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
   private var killedRoles: [String: Int] = [:]
   /// The last prompt of the user: a call without a result before it never got one.
   private var lastPrompt = -1
+  /// The last step written, and the errors met on the way: an error is shown only while nothing
+  /// follows it — agy retries after it, and a step written after is the retry that worked.
+  private var lastStep = -1
+  private var failures: Set<Int> = []
   /// Responses with a call still waiting for its result, before any later prompt.
   private(set) var openResponses: Set<Int> = []
   /// Responses whose results are shown apart from their calls.
@@ -81,6 +85,9 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     case response(text: String, thinking: String?, calls: [AntigravityTools.Call])
     case result(AntigravityTools.Result)
     case message(AntigravityTools.Message?)
+    /// `ERROR_MESSAGE`: what the model's API answered, such as `API error (attempt 1):
+    /// RESOURCE_EXHAUSTED (code 429): You have exhausted your capacity on this model.`
+    case failure(String)
     case other
 
     var isResult: Bool {
@@ -116,6 +123,12 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       kind: Self.kind(of: type, object))
     steps[index] = step
     var dirty: Set<Int> = [index]
+    if case .failure = step.kind { failures.insert(index) } else { failures.remove(index) }
+    if index > lastStep {
+      // The errors before it were retried: they are shown no more.
+      dirty.formUnion(failures.filter { $0 < index && $0 >= lastStep })
+      lastStep = index
+    }
     if let calls = step.kind.calls {
       let count = max(calls.count, previous?.kind.calls?.count ?? 0)
       if count > 0 { dirty.formUnion(index + 1...index + count) }
@@ -170,6 +183,10 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
         calls: calls)
     case "GENERIC": return .result(AntigravityTools.Result(object))
     case "SYSTEM_MESSAGE": return .message(AntigravityTools.Message(content))
+    case "ERROR_MESSAGE":
+      let error = (object["error"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard let error, !error.isEmpty else { return .other }
+      return .failure(ToolOutput.bounded(error).text)
     default: return .other
     }
   }
@@ -255,6 +272,8 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       if !text.isEmpty {
         append("information", .notice(.information(AntigravityTools.shorteningTasks(text))))
       }
+    case .failure(let error) where index == lastStep:
+      append("error", .notice(.error(error)))
     default: break
     }
     replaceEntries(of: index, with: additions)
