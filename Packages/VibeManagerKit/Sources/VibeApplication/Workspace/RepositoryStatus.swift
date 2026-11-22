@@ -41,11 +41,6 @@ public protocol FileChangeObserving: Sendable {
   func signals(for paths: [String]) -> AsyncStream<FileChangeSignal>
 }
 
-/// Where an agent writes the transcript of a session, so that its growth can be watched.
-public protocol SessionTranscriptLocating: Sendable {
-  func transcriptDirectories(for session: WorkSession) async -> [String]
-}
-
 /// Why a repository could not be read.
 public enum RepositoryStatusIssue: Error, Hashable, Sendable {
   case missing(path: String)

@@ -107,18 +107,6 @@ struct SessionBranchReportCacheTests {
       repositories: [RepositoryContext(path: attached)])
   }
 
-  private func status(dirty: Bool, observedAt: Date) throws -> WorkingTreeStatus {
-    let folder = FileManager.default.temporaryDirectory
-      .appendingPathComponent("VibeReport-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    // Written now, so after `start`: listed, it counts as the agent's.
-    try Data("x".utf8).write(to: folder.appendingPathComponent("a.swift"))
-    return WorkingTreeStatus(
-      repositoryPath: folder.path, branch: BranchStatus(branchName: "main"),
-      entries: dirty ? [WorkingTreeEntry(path: "a.swift", kind: .untracked)] : [],
-      counts: WorkingTreeCounts(untracked: dirty ? 1 : 0), observedAt: observedAt)
-  }
-
   @Test("The same fingerprint twice: the branches are read once")
   func sameFingerprint() async {
     let reader = FingerprintedRepositories()
@@ -168,21 +156,7 @@ struct SessionBranchReportCacheTests {
     #expect(await reader.calls("status") == 2)
   }
 
-  @Test("A repository the monitor watches is told dirty by its status, without a second one")
-  func watchedRepository() async throws {
-    let reader = FingerprintedRepositories()
-    let known = try status(dirty: true, observedAt: start.addingTimeInterval(10))
-    let read = ReadSessionBranchReport(
-      reader: reader, knownStatus: { _, _ in known })
-
-    let report = await read(for: session())
-    _ = await read(for: session())
-
-    #expect(report.repositories.first?.isDirty == true)
-    #expect(await reader.calls("status") == 0)
-  }
-
-  @Test("A repository the monitor does not watch runs its own status at most every 30 s")
+  @Test("Read twice, a repository runs its status at most every 30 s")
   func unwatchedRepository() async {
     let reader = FingerprintedRepositories()
     let clock = MovableClock(start)
@@ -196,21 +170,6 @@ struct SessionBranchReportCacheTests {
     clock.advance(by: 2)
     _ = await read(for: session())
     #expect(await reader.calls("status") == 2)
-  }
-
-  @Test("A status cut short without an answer is not taken for clean")
-  func truncatedStatus() async throws {
-    let reader = FingerprintedRepositories(dirty: true)
-    let clean = try status(dirty: false, observedAt: start)
-    let truncated = WorkingTreeStatus(
-      repositoryPath: clean.repositoryPath, branch: clean.branch, entries: [],
-      counts: WorkingTreeCounts(untracked: 5000), isTruncated: true, observedAt: start)
-    let read = ReadSessionBranchReport(reader: reader, knownStatus: { _, _ in truncated })
-
-    let report = await read(for: session())
-
-    #expect(report.repositories.first?.isDirty == true)
-    #expect(await reader.calls("status") == 1)
   }
 
   @Test("A repository only visited, and unchanged, costs no Git at the second reading")

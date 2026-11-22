@@ -4,6 +4,9 @@
 - Date: 2026-09-23
 - Issue: [#13](https://github.com/hadrienl/vibe-manager/issues/13)
 
+> Superseded by [ADR 0048](0048-no-right-column.md): nothing watches a repository any more; Git
+> is read when the handover summary or the request palette needs it.
+
 ## Context
 
 The branch report of ADR 0012 finds the repositories a session worked in — the folder it was opened

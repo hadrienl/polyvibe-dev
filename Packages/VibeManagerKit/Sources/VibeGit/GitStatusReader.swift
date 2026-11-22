@@ -55,7 +55,7 @@ public struct GitStatusReader: RepositoryStatusReading {
       operation = Self.operation(in: found.gitDirectory)
       lock = Self.indexLock(in: found.gitDirectory)
     }
-    // What the monitor paces its readings by.
+    // How long the reading took, Git and the folder it keeps its state in.
     duration = clock.now - started
     return .success(
       WorkingTreeStatus(

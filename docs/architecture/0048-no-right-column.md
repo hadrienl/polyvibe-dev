@@ -5,7 +5,8 @@
 - Issue: [#578](https://github.com/hadrienl/vibe-manager/issues/578)
 - Supersedes: [0027](0027-inspector-sections.md); in part [0008](0008-workspace-layout.md) (the
   right column), [0014](0014-git-inspector.md) (the Git pane and its file list) and
-  [0016](0016-session-notes.md) (where the notes are edited, and their size limit)
+  [0016](0016-session-notes.md) (where the notes are edited, and their size limit),
+  [0013](0013-live-git-status.md) (the repositories watched)
 
 ## Context
 
@@ -52,13 +53,21 @@ The Git pane, the initial prompt, the coordination section, the column's header,
 of 0027 and the column in the layout of 0008 are removed, with their toolbar button, their commands
 (Show Context ⌥⌘I, Reset Column Layout, Focus Context ⌥⌘3) and the setting that only served them,
 the editor changed files open with. What other screens still read stays: the branch report of 0012
-and the repositories' live states of 0013 feed the summary a restart or an agent switch hands over.
+and `git status` feed the summary an agent switch hands over, and the request palette names the
+branch of a session.
 
-What only the column read goes with it. The live states of 0013 keep the last reading and its
-phase, no longer which changes the transcript names, which other sessions share the repository, or
-the sentences and commands that explained a failure. Coordinators no longer leave a trace of what
-they did to their children (0039): it was written for the coordination section alone, and the
-`*.trace.json` files an older build left are no longer read.
+What only the column read goes with it. Coordinators no longer leave a trace of what they did to
+their children (0039): it was written for the coordination section alone, and the `*.trace.json`
+files an older build left are no longer read.
+
+### Git is read when something needs it
+
+Nothing watches the repositories of the session on screen any more: the monitor of 0013, its file
+system events and the branch report it had read again in the background kept up a state only the
+column showed. The summary of an agent switch reads the branch report and the `git status` of each
+of its repositories when its sheet opens; until they arrive it is written from what the session
+recorded, and the user's edits are never overwritten. A request reads the branch of its session
+when it arrives in the palette, the branch recorded at creation standing in until then.
 
 A layout written by an older build still reads: the column's keys are read past and never written
 again.

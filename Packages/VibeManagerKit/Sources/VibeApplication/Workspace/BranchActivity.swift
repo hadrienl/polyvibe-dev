@@ -201,34 +201,26 @@ public struct SessionBranchReport: Hashable, Sendable {
 /// work. Each path is brought back to the repository — or the worktree the agent made itself —
 /// it belongs to.
 ///
-/// Read again each time the agent's transcript grows, so Git runs only when an answer may have
-/// changed: the branches when the fingerprint of the references moved, the working tree from the
-/// status the monitor already keeps — or, for a repository it does not watch, at most every
-/// `unwatchedStatusInterval`. A forced reading — the user asked, came back, or the agent stopped —
-/// reads everything again.
+/// Read twice in a row, Git runs only when an answer may have changed: the branches when the
+/// fingerprint of the references moved, the working tree at most every `statusInterval`. A forced
+/// reading reads everything again.
 public struct ReadSessionBranchReport: Sendable {
-  /// The last status the monitor read of a repository of a session, when it watches it.
-  public typealias KnownStatus = @Sendable (SessionID, String) async -> WorkingTreeStatus?
-
   private let reader: any RepositoryActivityReading
   private let transcripts: (any SessionTranscriptReading)?
   private let clock: any SessionClock
-  private let knownStatus: KnownStatus?
-  private let unwatchedStatusInterval: TimeInterval
+  private let statusInterval: TimeInterval
   private let facts = RepositoryFactsCache()
 
   public init(
     reader: any RepositoryActivityReading,
     transcripts: (any SessionTranscriptReading)? = nil,
     clock: any SessionClock = SystemSessionClock(),
-    knownStatus: KnownStatus? = nil,
-    unwatchedStatusInterval: TimeInterval = 30
+    statusInterval: TimeInterval = 30
   ) {
     self.reader = reader
     self.transcripts = transcripts
     self.clock = clock
-    self.knownStatus = knownStatus
-    self.unwatchedStatusInterval = unwatchedStatusInterval
+    self.statusInterval = statusInterval
   }
 
   public func callAsFunction(for session: WorkSession, forced: Bool = false) async
@@ -311,7 +303,7 @@ public struct ReadSessionBranchReport: Sendable {
       involvement: involvement,
       checkedOutBranch: references.head.checkedOutBranch,
       change: references.change,
-      isDirty: await isDirty(root, key: key, of: session, since: since, forced: forced)
+      isDirty: await isDirty(root, key: key, since: since, forced: forced)
     )
   }
 
@@ -339,32 +331,18 @@ public struct ReadSessionBranchReport: Sendable {
     return read
   }
 
-  /// Whether the agent left work uncommitted: from the monitor's own status when it watches the
-  /// repository, so that `git status` runs once for both; otherwise with a status of its own, at
-  /// most every `unwatchedStatusInterval`.
+  /// Whether the agent left work uncommitted, read at most every `statusInterval`.
   private func isDirty(
-    _ root: String, key: RepositoryFactsCache.Key, of session: WorkSession, since: Date,
-    forced: Bool
+    _ root: String, key: RepositoryFactsCache.Key, since: Date, forced: Bool
   ) async -> Bool {
-    let known = await facts.workingTree(for: key)
-    if !forced, let knownStatus, let status = await knownStatus(session.id, root) {
-      if let known, known.observedAt == status.observedAt { return known.isDirty }
-      if let answer = status.hasChanges(since: since) {
-        await facts.remember(
-          RepositoryFactsCache.WorkingTree(
-            isDirty: answer, observedAt: status.observedAt, checkedAt: clock.now()), for: key)
-        return answer
-      }
-    }
-    if !forced, let known, known.observedAt == nil,
-      clock.now().timeIntervalSince(known.checkedAt) < unwatchedStatusInterval
+    if !forced, let known = await facts.workingTree(for: key),
+      clock.now().timeIntervalSince(known.checkedAt) < statusInterval
     {
       return known.isDirty
     }
     let answer = await reader.hasUncommittedChanges(atPath: root, since: since)
     await facts.remember(
-      RepositoryFactsCache.WorkingTree(isDirty: answer, observedAt: nil, checkedAt: clock.now()),
-      for: key)
+      RepositoryFactsCache.WorkingTree(isDirty: answer, checkedAt: clock.now()), for: key)
     return answer
   }
 
@@ -395,8 +373,7 @@ public struct ReadSessionBranchReport: Sendable {
 }
 
 /// What was last read of each repository for each session, and what it was read from: the
-/// fingerprint of the references for the branches, the monitor's reading or the clock for the
-/// working tree.
+/// fingerprint of the references for the branches, the clock for the working tree.
 actor RepositoryFactsCache {
   struct Key: Hashable, Sendable {
     let root: String
@@ -412,8 +389,6 @@ actor RepositoryFactsCache {
 
   struct WorkingTree: Sendable {
     let isDirty: Bool
-    /// The monitor's reading it was told by, or `nil` for a status of the report's own.
-    let observedAt: Date?
     let checkedAt: Date
   }
 
@@ -440,26 +415,5 @@ actor RepositoryFactsCache {
   func forget(_ key: Key) {
     references[key] = nil
     workingTrees[key] = nil
-  }
-}
-
-extension WorkingTreeStatus {
-  /// Whether a file this status lists was written after `date`, with `stat` only: the rule the
-  /// report applies to a status of its own, applied to one the monitor already read.
-  ///
-  /// `nil` when the list was cut short without an answer: what is beyond it is unknown.
-  public func hasChanges(since date: Date, limit: Int = 500) -> Bool? {
-    var checked = 0
-    for entry in entries {
-      guard checked < limit else { return false }
-      checked += 1
-      let file = (repositoryPath as NSString).appendingPathComponent(entry.path)
-      if let modified = (try? FileManager.default.attributesOfItem(atPath: file))?[
-        .modificationDate] as? Date, modified > date
-      {
-        return true
-      }
-    }
-    return isTruncated ? nil : false
   }
 }

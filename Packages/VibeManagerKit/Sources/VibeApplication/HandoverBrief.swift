@@ -9,7 +9,8 @@ import VibeDomain
 public struct SessionBriefInput: Sendable {
   public let session: WorkSession
   public let branches: SessionBranchReport?
-  public let statuses: [RepositoryStatusState]
+  /// `git status` of each repository of `branches`, by its path.
+  public let statuses: [String: WorkingTreeStatus]
   /// Display names of the agents, by provider identifier. An agent missing here is named by its
   /// identifier.
   public let agentNames: [String: String]
@@ -19,7 +20,7 @@ public struct SessionBriefInput: Sendable {
   public init(
     session: WorkSession,
     branches: SessionBranchReport? = nil,
-    statuses: [RepositoryStatusState] = [],
+    statuses: [String: WorkingTreeStatus] = [:],
     agentNames: [String: String] = [:],
     notes: String? = nil
   ) {
@@ -167,7 +168,7 @@ extension SessionContextBriefBuilder {
       return folders(of: input.session).map { (.folders, $0) }
     }
     let lines = report.repositories.map { repository -> String in
-      let status = input.statuses.first { $0.key.repositoryPath == repository.path }?.lastValid
+      let status = input.statuses[repository.path]
       let branch =
         repository.checkedOutBranch ?? status?.branch.branchName
         ?? status?.branch.headRevision.map { "detached at \(String($0.prefix(7)))" }

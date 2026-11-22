@@ -12,7 +12,7 @@ import VibeDomain
 ///
 /// Only read, never written, and read incrementally: a transcript grows to megabytes and is read
 /// again each time it grows, so each file is resumed where the last reading stopped.
-public actor AgentTranscriptReader: SessionTranscriptSource {
+public actor AgentTranscriptReader: SessionTranscriptReading {
   /// Where each conversation's files were found: the conversation view's memory, shared (#276).
   /// The report reads the transcript every second while the agent writes; listing every folder
   /// of `~/.claude/projects`, or one folder per day of a Codex session, each time would cost more
@@ -60,42 +60,6 @@ public actor AgentTranscriptReader: SessionTranscriptSource {
       }
     }
     return foundAny ? activity : nil
-  }
-
-  /// The folders to watch for the session's transcripts to grow: the whole Claude Code projects
-  /// folder, the whole Codex sessions folder, or both after a switch between them.
-  ///
-  /// Not the folders its files are in today. A Claude Code session selected before its agent wrote
-  /// a word has no file yet, so no folder; a Codex session writes in the folder of the day, which
-  /// changes at midnight and when it is resumed the next day. Either would stop being watched
-  /// exactly when it starts to matter. Events from other sessions' transcripts wake the monitor for
-  /// a comparison of names, nothing more: only files named after this session count.
-  public func transcriptDirectories(for session: WorkSession) async -> [String] {
-    var directories: [String] = []
-    for conversation in session.conversations where Self.identifier(of: conversation) != nil {
-      let found: [URL]
-      switch conversation.transcriptProviderID {
-      case ClaudeCodeAgentProvider.id.rawValue:
-        found = locator.allClaudeProjects
-      case CodexAgentProvider.id.rawValue:
-        found = locator.allCodexSessions
-      default:
-        continue
-      }
-      for directory in found.map(\.path) where !directories.contains(directory) {
-        directories.append(directory)
-      }
-    }
-    return directories
-  }
-
-  private static func identifier(of conversation: SessionAgentConfiguration) -> String? {
-    guard
-      let identifier = conversation.resumeIdentifier?.trimmingCharacters(
-        in: .whitespacesAndNewlines),
-      !identifier.isEmpty
-    else { return nil }
-    return identifier
   }
 
   // MARK: - Reading them
