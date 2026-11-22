@@ -13,7 +13,7 @@ check **Polyvibe › Check for Updates…** before reporting.
 Do not open a public issue. Use one of:
 
 - GitHub's private vulnerability reporting:
-  [Report a vulnerability](https://github.com/hadrienl/vibe-manager/security/advisories/new)
+  [Report a vulnerability](https://github.com/hadrienl/polyvibe-dev/security/advisories/new)
 - Email: [hadrien@lanneau.me](mailto:hadrien@lanneau.me)
 
 Include the version, the macOS version, what an attacker controls, what they gain, and the steps to

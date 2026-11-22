@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const REPO = "hadrienl/vibe-manager";
+const REPO = "hadrienl/polyvibe-dev";
 const GH = `https://github.com/${REPO}`;
 const SITE_URL = "https://polyvibe.dev/";
 const SOURCE_LANG = "fr";

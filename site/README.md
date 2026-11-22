@@ -1,6 +1,6 @@
 # The landing page
 
-The site served at <https://polyvibe.dev/> (GitHub Pages, custom domain; the former address <https://hadrienl.github.io/vibe-manager/> redirects there). `build.mjs` renders it into the
+The site served at <https://polyvibe.dev/> (GitHub Pages of `hadrienl/polyvibe-dev`, custom domain; the former address <https://hadrienl.github.io/vibe-manager/> is relayed by the `hadrienl/hadrienl.github.io` site, ADR 0046). `build.mjs` renders it into the
 folder GitHub Pages serves; `Scripts/publish-appcast.sh` runs it, then generates the Sparkle feed
 `appcast.xml` beside it, and the Appcast workflow deploys the whole on every change of `site/` on
 `main` and on every published, edited or deleted release. Nothing generated is committed.
@@ -52,12 +52,11 @@ neighbours.
 
 ```sh
 node site/build.mjs /tmp/vm-site          # releases fetched from the GitHub API
-cd /tmp && mkdir -p serve && ln -sfn /tmp/vm-site serve/vibe-manager
-python3 -m http.server 8765 --directory serve   # http://localhost:8765/vibe-manager/
+python3 -m http.server 8765 --directory /tmp/vm-site   # http://localhost:8765/
 ```
 
-The pages link their assets relatively (`../assets/`), so they work under `/vibe-manager/` as on
-GitHub Pages; the root redirect needs a server, the language pages open from the disk too.
+The pages link their assets relatively (`../assets/`), so they work at the domain's root as under
+a folder; the root redirect needs a server, the language pages open from the disk too.
 
 ## Change a text, add a language
 

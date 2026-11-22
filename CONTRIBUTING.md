@@ -5,7 +5,7 @@ welcome. By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUC
 
 ## Reporting a bug or asking for a feature
 
-Open an [issue](https://github.com/hadrienl/vibe-manager/issues/new/choose) with the matching
+Open an [issue](https://github.com/hadrienl/polyvibe-dev/issues/new/choose) with the matching
 template. For a bug, the version (**Polyvibe › About**), the macOS version, the agent involved
 and the steps to reproduce it are what make it fixable. **Help › Report an Issue…** in the
 application opens the same page.

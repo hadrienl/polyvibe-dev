@@ -9,9 +9,14 @@ private actor ReportingCLI {
   var calls: [BoundedProcessRequest] = []
   let existing: Bool
   var failuresLeft: Int
-  init(existing: Bool = false, failuresLeft: Int = 0) {
+  let created: String
+  init(
+    existing: Bool = false, failuresLeft: Int = 0,
+    created: String = "https://github.com/hadrienl/polyvibe-dev/issues/123"
+  ) {
     self.existing = existing
     self.failuresLeft = failuresLeft
+    self.created = created
   }
   func run(_ request: BoundedProcessRequest) -> BoundedProcessResult {
     calls.append(request)
@@ -21,8 +26,8 @@ private actor ReportingCLI {
     }
     let output =
       request.arguments.contains("list")
-      ? (existing ? "[{\"url\":\"https://github.com/hadrienl/vibe-manager/issues/123\"}]" : "[]")
-      : "https://github.com/hadrienl/vibe-manager/issues/123\n"
+      ? (existing ? "[{\"url\":\"https://github.com/hadrienl/polyvibe-dev/issues/123\"}]" : "[]")
+      : created + "\n"
     return BoundedProcessResult(termination: .exited(0), standardOutput: Data(output.utf8))
   }
 }
@@ -146,6 +151,37 @@ struct InteractionFailureReporterTests {
     let calls = await cli.calls
     #expect(calls[1].arguments.contains("--body-file"))
     #expect(calls[1].standardInput?.data.isEmpty == false)
+  }
+
+  @Test(
+    "An issue is created in the renamed repository, and its URL kept under either name",
+    arguments: [
+      ("https://github.com/hadrienl/polyvibe-dev/issues/7", true),
+      ("https://github.com/hadrienl/vibe-manager/issues/7", true),
+      ("https://github.com/someone/else/issues/7", false),
+    ])
+  func renamedRepository(created: String, kept: Bool) async throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let cli = ReportingCLI(created: created)
+    let reporter = InteractionFailureReporter(
+      directory: directory, environment: [:], retryDelay: .seconds(60), run: { await cli.run($0) })
+    await reporter.enqueue(failure())
+    for _ in 0..<200 {
+      if await cli.calls.count == 2 { break }
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    try await Task.sleep(for: .milliseconds(50))
+    let calls = await cli.calls
+    #expect(calls.count == 2)
+    for call in calls {
+      let repository = call.arguments.firstIndex(of: "--repo").map { call.arguments[$0 + 1] }
+      #expect(repository == "hadrienl/polyvibe-dev")
+    }
+    let file = try #require(
+      FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        .first)
+    #expect(try String(contentsOf: file, encoding: .utf8).contains("issueURL") == kept)
   }
 
   @Test("An outbox entry left before a crash finds its existing GitHub ticket")

@@ -6,6 +6,15 @@ import VibeProcess
 /// Durable outbox: a failed interaction remains reportable through offline periods and restarts.
 /// The request fingerprint is also searched on GitHub before creation, covering a crash after POST.
 actor InteractionFailureReporter {
+  /// Where the issues are created.
+  static let repository = "hadrienl/polyvibe-dev"
+
+  /// What the URL of an issue created opens with: under the repository's name, or its former one
+  /// (`gh` may answer with either while GitHub redirects the renamed repository, ADR 0046).
+  static let issuePrefixes = [
+    "https://github.com/\(repository)/issues/", "https://github.com/hadrienl/vibe-manager/issues/",
+  ]
+
   private let directory: URL
   private let environment: [String: String]
   private let retryDelay: Duration
@@ -89,7 +98,7 @@ actor InteractionFailureReporter {
           try JSONEncoder().encode(report).write(to: file, options: .atomic)
           let fingerprint = file.deletingPathExtension().lastPathComponent
           let found = try await gh([
-            "issue", "list", "--repo", "hadrienl/vibe-manager", "--state", "all", "--search",
+            "issue", "list", "--repo", Self.repository, "--state", "all", "--search",
             "interaction-failure-\(fingerprint) in:body", "--json", "url",
           ])
           guard found.exitCode == 0,
@@ -104,7 +113,7 @@ actor InteractionFailureReporter {
           } else {
             let created = try await gh(
               [
-                "issue", "create", "--repo", "hadrienl/vibe-manager", "--title", report.title,
+                "issue", "create", "--repo", Self.repository, "--title", report.title,
                 "--label", "bug", "--body-file", "-",
               ], input: report.body)
             guard created.exitCode == 0 else {
@@ -113,7 +122,7 @@ actor InteractionFailureReporter {
             }
             let url = String(decoding: created.standardOutput, as: UTF8.self).trimmingCharacters(
               in: .whitespacesAndNewlines)
-            guard url.hasPrefix("https://github.com/hadrienl/vibe-manager/issues/") else {
+            guard Self.issuePrefixes.contains(where: url.hasPrefix) else {
               pending = true
               continue
             }

@@ -7,7 +7,7 @@
 <p><strong>Help › Export Diagnostics…</strong> gathers the app's local log and shows the whole file before you save it. The log is made of event types with no room for free text: it holds no prompt, note, session name, folder name or terminal content. It is kept in <code>~/Library/Logs/Vibe Manager</code> for two weeks at most, and nothing is ever sent.</p>
 
 <h3 id="interaction-reports">Answers that did not get through</h3>
-<p>When an answer to a request cannot be delivered or confirmed (see <a href="requests.html#palette">Answer your agents</a>), Polyvibe opens the session in Terminal view and files a <code>bug</code> issue in <a href="https://github.com/hadrienl/vibe-manager/issues">hadrienl/vibe-manager</a>, through the GitHub command-line tool <code>gh</code> and the account it is signed in to; without <code>gh</code>, nothing is sent. The issue is public. It holds the request, the answer chosen, the keys typed (free text left out), the terminal's text before and after, the time and the versions of the app and macOS. Common credentials — keys, tokens, authorization headers — are masked. A report that fails is tried again every minute and at the next launch, and the same request is never reported twice.</p>
+<p>When an answer to a request cannot be delivered or confirmed (see <a href="requests.html#palette">Answer your agents</a>), Polyvibe opens the session in Terminal view and files a <code>bug</code> issue in <a href="https://github.com/hadrienl/polyvibe-dev/issues">hadrienl/polyvibe-dev</a>, through the GitHub command-line tool <code>gh</code> and the account it is signed in to; without <code>gh</code>, nothing is sent. The issue is public. It holds the request, the answer chosen, the keys typed (free text left out), the terminal's text before and after, the time and the versions of the app and macOS. Common credentials — keys, tokens, authorization headers — are masked. A report that fails is tried again every minute and at the next launch, and the same request is never reported twice.</p>
 
 <h2 id="common">Common problems</h2>
 <dl>
@@ -28,7 +28,7 @@
   <dt>Signing in to a site fails in the companion's web view</dt>
   <dd>Passkeys don't work in the web view: use a password, or touch <strong>Open in Safari</strong>. See <a href="companion.html#web">The web view</a>.</dd>
 </dl>
-<p>More cases are covered in <strong>Help › Troubleshooting</strong>, which opens <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/operations.md">docs/operations.md</a>.</p>
+<p>More cases are covered in <strong>Help › Troubleshooting</strong>, which opens <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/operations.md">docs/operations.md</a>.</p>
 
 <h2 id="privacy">What stays on your Mac</h2>
 <ul>

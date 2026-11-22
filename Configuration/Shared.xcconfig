@@ -12,8 +12,8 @@ INFOPLIST_FILE = App/VibeManagerApp/Info.plist
 // Where updates are looked for, and the EdDSA key an update must be signed with (ADR 0033). The
 // key is public: its private half is a secret of the `release` environment, and a copy offline.
 // Empty, the application does not look for updates at all. A copy built before the rename still
-// reads hadrienl.github.io/vibe-manager/appcast.xml, which GitHub Pages redirects to this domain
-// (ADR 0046).
+// reads hadrienl.github.io/vibe-manager/appcast.xml, which the hadrienl/hadrienl.github.io site
+// keeps serving (ADR 0046).
 VIBE_UPDATE_FEED_URL = https:/$()/polyvibe.dev/appcast.xml
 VIBE_UPDATE_PUBLIC_KEY = K32Oa1zTevzFvIiLBZ7rnLd1u6jPtTlPl5VdmNfm+hg=
 ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor

@@ -7,7 +7,7 @@
 <p><strong>Aide › Exporter les diagnostics…</strong> rassemble le journal local de l’app et montre le fichier en entier avant que vous l’enregistriez. Le journal se compose de types d’événements, sans place pour du texte libre : il ne contient aucun prompt, aucune note, aucun nom de session ou de dossier, aucun contenu de terminal. Il est conservé dans <code>~/Library/Logs/Vibe Manager</code> deux semaines au plus, et rien n’est jamais envoyé.</p>
 
 <h3 id="interaction-reports">Les réponses qui ne sont pas passées</h3>
-<p>Quand une réponse à une demande ne peut pas être transmise ou confirmée (voir <a href="requests.html#palette">Répondre à vos agents</a>), Polyvibe ouvre la session en vue Terminal et crée un ticket <code>bug</code> dans <a href="https://github.com/hadrienl/vibe-manager/issues">hadrienl/vibe-manager</a>, par l’outil en ligne de commande de GitHub <code>gh</code> et le compte auquel il est connecté ; sans <code>gh</code>, rien n’est envoyé. Le ticket est public. Il contient la demande, la réponse choisie, les touches tapées (sans le texte libre), le texte du terminal avant et après, l’heure et les versions de l’app et de macOS. Les identifiants courants — clés, jetons, en-têtes d’autorisation — sont masqués. Un signalement qui échoue est retenté chaque minute et au lancement suivant, et une même demande n’est jamais signalée deux fois.</p>
+<p>Quand une réponse à une demande ne peut pas être transmise ou confirmée (voir <a href="requests.html#palette">Répondre à vos agents</a>), Polyvibe ouvre la session en vue Terminal et crée un ticket <code>bug</code> dans <a href="https://github.com/hadrienl/polyvibe-dev/issues">hadrienl/polyvibe-dev</a>, par l’outil en ligne de commande de GitHub <code>gh</code> et le compte auquel il est connecté ; sans <code>gh</code>, rien n’est envoyé. Le ticket est public. Il contient la demande, la réponse choisie, les touches tapées (sans le texte libre), le texte du terminal avant et après, l’heure et les versions de l’app et de macOS. Les identifiants courants — clés, jetons, en-têtes d’autorisation — sont masqués. Un signalement qui échoue est retenté chaque minute et au lancement suivant, et une même demande n’est jamais signalée deux fois.</p>
 
 <h2 id="common">Problèmes courants</h2>
 <dl>
@@ -28,7 +28,7 @@
   <dt>La connexion à un site échoue dans la vue web du compagnon</dt>
   <dd>Les passkeys ne fonctionnent pas dans la vue web : utilisez un mot de passe, ou touchez <strong>Ouvrir dans Safari</strong>. Voir <a href="companion.html#web">La vue web</a>.</dd>
 </dl>
-<p>D’autres cas sont traités dans <strong>Aide › Dépannage</strong>, qui ouvre <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/operations.md">docs/operations.md</a>.</p>
+<p>D’autres cas sont traités dans <strong>Aide › Dépannage</strong>, qui ouvre <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/operations.md">docs/operations.md</a>.</p>
 
 <h2 id="privacy">Ce qui reste sur votre Mac</h2>
 <ul>

@@ -125,7 +125,7 @@ struct CompanionSettingsView: View {
   }
 
   private static let alphaInstructions = URL(
-    string: "https://github.com/hadrienl/vibe-manager/blob/main/README.md#iphone-companion-alpha")!
+    string: "https://github.com/hadrienl/polyvibe-dev/blob/main/README.md#iphone-companion-alpha")!
   private static let testFlightInvitation = URL(string: "https://testflight.apple.com/join/DsJgybUh")!
 
   private var unavailable: String? {

@@ -12,7 +12,7 @@
 #
 # It reads:
 #   GH_TOKEN             to read the releases (optional on a Mac where `gh auth login` was done)
-#   GITHUB_REPOSITORY    the repository, `hadrienl/vibe-manager` by default
+#   GITHUB_REPOSITORY    the repository, `hadrienl/polyvibe-dev` by default
 #
 # The feed is recomputed in full every time. A draft never enters it: its assets are not even
 # downloaded. No secret is needed: each release carries its EdDSA signature in its
@@ -21,7 +21,7 @@
 set -euo pipefail
 
 readonly repository_root="${0:A:h:h}"
-readonly repository="${GITHUB_REPOSITORY:-hadrienl/vibe-manager}"
+readonly repository="${GITHUB_REPOSITORY:-hadrienl/polyvibe-dev}"
 
 fail() {
   print -u2 "publish-appcast: $*"

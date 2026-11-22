@@ -42,11 +42,11 @@ enum Entry {
 
 struct VibeManagerApp: App {
   private static let troubleshooting = URL(
-    string: "https://github.com/hadrienl/vibe-manager/blob/main/docs/operations.md")
+    string: "https://github.com/hadrienl/polyvibe-dev/blob/main/docs/operations.md")
   /// Where help lives until there is documentation: the questions already asked, and a place to
   /// ask a new one.
-  private static let issues = URL(string: "https://github.com/hadrienl/vibe-manager/issues")
-  private static let newIssue = URL(string: "https://github.com/hadrienl/vibe-manager/issues/new")
+  private static let issues = URL(string: "https://github.com/hadrienl/polyvibe-dev/issues")
+  private static let newIssue = URL(string: "https://github.com/hadrienl/polyvibe-dev/issues/new")
 
   @State private var environment = AppEnvironment()
   @State private var windowFocus = WindowFocus()
@@ -443,8 +443,8 @@ private struct TemplateCommands: View {
 
 /// The standard About panel, with the website and the source under the version.
 private enum AboutPanel {
-  static let website = URL(string: "https://hadrienl.github.io/vibe-manager/")
-  static let source = URL(string: "https://github.com/hadrienl/vibe-manager")
+  static let website = URL(string: "https://polyvibe.dev/")
+  static let source = URL(string: "https://github.com/hadrienl/polyvibe-dev")
 
   @MainActor
   static func show() {

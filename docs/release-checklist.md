@@ -121,7 +121,8 @@ GitHub.
 - [ ] The Appcast workflow went green, and `https://polyvibe.dev/appcast.xml`
       lists the version — without a channel for a final version, on `unstable` for a release
       candidate — and no draft.
-- [ ] `https://hadrienl.github.io/vibe-manager/appcast.xml` redirects there: every copy built
-      before the rename to Polyvibe still reads that address (ADR 0046).
+- [ ] `https://hadrienl.github.io/vibe-manager/appcast.xml`, served by `hadrienl/hadrienl.github.io`,
+      lists the version too: every copy built before the rename to Polyvibe still reads that
+      address (ADR 0046).
 - [ ] A copy of the version before, on the right channel, offers this one (Polyvibe → Check
       for Updates…).
