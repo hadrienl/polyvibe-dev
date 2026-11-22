@@ -169,7 +169,8 @@ struct OverviewFilterMenu: View {
     .accessibilityIdentifier("moment-filter-menu")
   }
 
-  /// AppKit owns the rows: SwiftUI's Toggle menu bridge can discard a Label's image.
+  /// AppKit owns the rows, so that each one carries its count as a badge and asks for its icon
+  /// to be shown: macOS 27 opens a menu without its items' images unless they ask.
   static func makeMenu(
     model: ConversationModel, filters: OverviewFilters, theme: ConversationTheme
   ) -> NSMenu {
@@ -180,8 +181,8 @@ struct OverviewFilterMenu: View {
         filters.toggle(kind, in: model)
       }
       item.image = MomentMenuIcon.image(of: kind, theme: theme)
-      // macOS 27 hides a menu item's image by default (`.automatic`): the kind's icon is how
-      // the menu reads, as the row of buttons does.
+      // Left `.automatic`, macOS 27 hides it: the kind's icon is how the menu reads, as the row
+      // of buttons does.
       if #available(macOS 27, *) { item.preferredImageVisibility = .visible }
       item.state = filters.shows(kind) ? .on : .off
       let count = filters.count(of: kind)
