@@ -99,6 +99,7 @@ public struct CodexAgentProvider: AgentProvider {
     shellEnvironment: (any ShellEnvironmentSource)? = nil,
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
     account: AgentDescriptor? = nil,
+    accountFolders: @escaping @Sendable () -> Set<String> = { [] },
     approvalPreferences: (any AgentApprovalPreferences)? = nil
   ) -> CodexAgentProvider {
     // A `CODEX_HOME` this application cannot resolve is dropped rather than forwarded: the
@@ -132,7 +133,9 @@ public struct CodexAgentProvider: AgentProvider {
         argumentBuilder: CodexArgumentBuilder(),
         availabilityProbe: availabilityProbe,
         environment: environment,
-        shellEnvironment: shellEnvironment
+        shellEnvironment: shellEnvironment,
+        // The extra accounts' folders, which the shell cannot hand the agent's own account.
+        accountFolders: accountFolders
       ),
       catalog: CodexModelCatalog(environment: environment),
       discovery: CodexRolloutSessionDiscovery(environment: environment),

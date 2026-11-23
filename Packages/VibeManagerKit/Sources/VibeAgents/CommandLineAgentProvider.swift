@@ -1,5 +1,6 @@
 import Foundation
 import VibeApplication
+import VibeDomain
 
 /// Everything a concrete CLI has to declare so it can be detected and launched.
 ///
@@ -21,9 +22,10 @@ public struct CommandLineAgentSpecification: Sendable {
   public let authenticationArguments: [String]?
   /// Extra environment keys this CLI needs on top of the shared allow list.
   public let additionalEnvironmentKeys: Set<String>
-  /// Keys never taken from the login shell, only from the application's own environment — the
-  /// one an extra account sets (#478). A `CLAUDE_CONFIG_DIR` exported by the shell would make the
-  /// agent's own account run in another account's folder (#599).
+  /// The keys that name the CLI's folder (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`). The login shell's
+  /// value never replaces the one an extra account sets (#478), and is refused for the agent's
+  /// own account when it names an extra account's folder: both would run in the same folder, the
+  /// same account under two names (#599). Any other folder the shell names is kept.
   public let shellIgnoredEnvironmentKeys: Set<String>
   /// Where a user can read how to install or update this CLI.
   public let documentationURL: URL?
@@ -121,6 +123,7 @@ public struct CommandLineAgentProvider: AgentProvider {
   private let catalog: [AgentModel]
   private let environment: [String: String]
   private let shellEnvironment: (any ShellEnvironmentSource)?
+  private let accountFolders: @Sendable () -> Set<String>
 
   public init(
     descriptor: AgentDescriptor,
@@ -129,8 +132,10 @@ public struct CommandLineAgentProvider: AgentProvider {
     argumentBuilder: any CommandLineAgentArgumentBuilder,
     availabilityProbe: AgentAvailabilityProbe,
     environment: [String: String] = ProcessInfo.processInfo.environment,
-    shellEnvironment: (any ShellEnvironmentSource)? = nil
+    shellEnvironment: (any ShellEnvironmentSource)? = nil,
+    accountFolders: @escaping @Sendable () -> Set<String> = { [] }
   ) {
+    self.accountFolders = accountFolders
     self.descriptor = descriptor
     self.specification = specification
     catalog = models
@@ -157,6 +162,21 @@ public struct CommandLineAgentProvider: AgentProvider {
     // application launched from the Finder inherits.
     let shell = await shellEnvironment?.environment() ?? [:]
     return try plan(for: request, installation: installation, shellEnvironment: shell)
+  }
+
+  /// The login shell's variables, less a folder it names that is not the agent's to take: see
+  /// `shellIgnoredEnvironmentKeys`.
+  private func shellKept(_ shell: [String: String]) -> [String: String] {
+    let keys = specification.shellIgnoredEnvironmentKeys
+    guard !keys.isEmpty else { return shell }
+    let home = AgentHomeDirectory.home(in: environment)
+    let claimed = accountFolders()
+    return shell.filter { key, value in
+      guard keys.contains(key) else { return true }
+      if environment[key] != nil { return false }
+      guard let folder = AgentAccount.resolvedDirectory(value, home: home) else { return true }
+      return !claimed.contains(folder)
+    }
   }
 
   /// Pure part of the launch: same installation, request and shell always yield the same plan.
@@ -187,9 +207,7 @@ public struct CommandLineAgentProvider: AgentProvider {
       executablePath: installation.executablePath,
       arguments: arguments,
       environment: AgentEnvironmentPolicy.environment(
-        base: environment.merging(
-          shellEnvironment.filter { !specification.shellIgnoredEnvironmentKeys.contains($0.key) }
-        ) { _, shell in shell },
+        base: environment.merging(shellKept(shellEnvironment)) { _, shell in shell },
         additionalKeys: specification.additionalEnvironmentKeys,
         overrides: request.additionalEnvironment
       ),

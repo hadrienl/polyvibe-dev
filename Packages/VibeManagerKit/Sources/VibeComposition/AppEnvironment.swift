@@ -168,7 +168,8 @@ public final class AppEnvironment {
       configuration.providers?(diagnostics.log)
       ?? Self.providers(
         environment: configuration.environment, diagnostics: diagnostics.log,
-        transcriptLocations: transcriptLocations, shell: loginShell, approvals: approvals)
+        transcriptLocations: transcriptLocations, shell: loginShell, approvals: approvals,
+        accountFolders: { agentHomes.accountFolders })
     // The endpoints (#107): registered beside the command line agents from the start — a session
     // the terminal host kept is adopted as soon as the workspace loads, and must find its agent —
     // their secrets in the keychain, their sessions reaching them through the gateway.
@@ -983,7 +984,8 @@ public final class AppEnvironment {
   private static func providers(
     environment: [String: String], diagnostics: any DiagnosticLog,
     transcriptLocations: TranscriptLocationCache, shell: LoginShellEnvironment,
-    approvals: any AgentApprovalPreferences
+    approvals: any AgentApprovalPreferences,
+    accountFolders: @escaping @Sendable () -> Set<String>
   ) -> [any AgentProvider] {
     if environment["VIBE_ENABLE_MOCK_AGENT"] == "only" {
       return [MockAgentProvider(environment: environment)]
@@ -994,10 +996,11 @@ public final class AppEnvironment {
     var providers: [any AgentProvider] = [
       ClaudeCodeAgentProvider.make(
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
-        transcriptLocations: transcriptLocations),
+        transcriptLocations: transcriptLocations, accountFolders: accountFolders),
       CodexAgentProvider.make(
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
-        transcriptLocations: transcriptLocations, approvalPreferences: approvals),
+        transcriptLocations: transcriptLocations, accountFolders: accountFolders,
+        approvalPreferences: approvals),
       AntigravityAgentProvider.make(
         environment: environment, diagnostics: diagnostics, shellEnvironment: shell,
         approvalPreferences: approvals),
