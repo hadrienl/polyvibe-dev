@@ -75,6 +75,30 @@ struct HandoverGitTests {
     #expect(await statuses.reads == 2)
   }
 
+  @Test("A session left with no request in the palette lets its branch go")
+  func branchLetGo() async throws {
+    let statuses = CountingStatuses()
+    let model = await makeModel(statuses: statuses)
+    model.readBranches(of: [subject])
+    await waitUntil("the branch is read") { model.branch(of: subject) == "fix/parser" }
+
+    model.requestsDidChange()
+
+    #expect(model.requestBranches.isEmpty)
+  }
+
+  @Test("The sheet cancelled, what Git said for it is let go")
+  func cancelLetsGo() async throws {
+    let statuses = CountingStatuses()
+    let model = await makeModel(statuses: statuses)
+
+    model.beginAgentSwitch(subject.id)
+    await waitUntil("the reading") { model.switchGitReading != nil }
+    model.cancelAgentSwitch()
+
+    #expect(model.switchGitReading == nil)
+  }
+
   @Test("A request reads the branch of its session once, and the palette shows it")
   func requestBranch() async throws {
     let statuses = CountingStatuses()

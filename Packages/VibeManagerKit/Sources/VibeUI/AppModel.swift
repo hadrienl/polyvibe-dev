@@ -261,8 +261,12 @@ public final class AppModel {
   /// and only then (#578). Nil until that reading arrives; the summary is built from what the
   /// session recorded meanwhile.
   private(set) var switchGitReading: (sessionID: SessionID, reading: SessionGitReading)?
+  /// That reading, under way: called off with the sheet.
+  private var switchGitTask: Task<Void, Never>?
   /// The branch each session with a request in the palette was on when that request arrived.
   var requestBranches: [SessionID: String] = [:]
+  /// The latest reading of each of those branches asked for, still under way.
+  @ObservationIgnored var requestBranchReadings: [SessionID: Int] = [:]
 
   /// The session the user asked to archive while something was still running in it, held until
   /// they confirm. Archiving is reversible, the work in progress it stops is not (#115).
@@ -2275,14 +2279,14 @@ public final class AppModel {
       }
     )
     pendingSwitch = sheet
-    switchGitReading = nil
+    stopSwitchGitReading()
     Task { await sheet.load() }
     // Git is read now, once: the sheet opens on what the session recorded, and the summary
     // catches up — unless the user has started editing it, which is theirs to keep.
     if let readGit {
-      Task { [weak self] in
+      switchGitTask = Task { [weak self] in
         let reading = await readGit(for: session)
-        guard let self, self.pendingSwitch === sheet else { return }
+        guard !Task.isCancelled, let self, self.pendingSwitch === sheet else { return }
         self.switchGitReading = (id, reading)
         sheet.contextChanged()
       }
@@ -2291,6 +2295,14 @@ public final class AppModel {
 
   public func cancelAgentSwitch() {
     pendingSwitch = nil
+    stopSwitchGitReading()
+  }
+
+  /// The sheet gone, what was read for it goes too, and a reading still under way is called off.
+  private func stopSwitchGitReading() {
+    switchGitTask?.cancel()
+    switchGitTask = nil
+    switchGitReading = nil
   }
 
   public func dismissSwitchFailure() {
@@ -2308,6 +2320,7 @@ public final class AppModel {
     guard let sheet = pendingSwitch, sheet.canSwitch else { return }
     pendingSwitch = nil
     let summary: String? = sheet.handover == .summary ? sheet.summaryText : nil
+    stopSwitchGitReading()
     await performAgentSwitch(
       id: sheet.sessionID,
       to: sheet.target,
