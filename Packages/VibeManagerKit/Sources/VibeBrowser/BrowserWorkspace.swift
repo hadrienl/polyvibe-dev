@@ -80,6 +80,7 @@ public final class BrowserWorkspace {
   @ObservationIgnored private let logStore: any BrowserActionLogStore
   @ObservationIgnored private let saveDelay: Duration
   @ObservationIgnored private var permissionsLoading: Task<Void, Never>?
+  @ObservationIgnored private var gpuProcessWatch: GPUProcessWatch?
 
   public init(
     stateStore: any BrowserStateStore = InMemoryBrowserStateStore(),
@@ -102,6 +103,32 @@ public final class BrowserWorkspace {
       await permissions.loaded()
       self?.grants = permissions.grants
     }
+  }
+
+  /// Gives the pages a new web view when WebKit loses its GPU process: those made before stay grey
+  /// otherwise (#613). `log` says when it did.
+  public func watchGPUProcess(_ log: any GPUProcessExitLog) {
+    watchGPUProcess(log, afterScreenChange: GPUProcessWatch.afterScreenChange)
+  }
+
+  func watchGPUProcess(_ log: any GPUProcessExitLog, afterScreenChange delays: [Duration]) {
+    gpuProcessWatch = GPUProcessWatch(log: log, afterScreenChange: delays) { [weak self] date in
+      self?.replacePages(madeBefore: date)
+    }
+  }
+
+  /// Looks now whether WebKit lost its GPU process, and waits for the pages to be replaced if it did.
+  func checkGPUProcess() async {
+    await gpuProcessWatch?.check().value
+  }
+
+  /// Replaces every page made before `date`, the keyboard staying where it was.
+  func replacePages(madeBefore date: Date) {
+    let leftWithKeyboard = pageLeftWithKeyboard
+    for browser in browsers.values {
+      for tab in browser.allTabs { tab.replaceWebView(ifMadeBefore: date) }
+    }
+    pageLeftWithKeyboard = leftWithKeyboard
   }
 
   /// Waits for the sites always allowed to have been read, and listed.
@@ -167,6 +194,7 @@ public final class BrowserWorkspace {
   public func sessionDidAppear(_ id: SessionID) {
     browsers[id]?.hasUnseenAgentPage = false
     discardIdlePages(except: id)
+    gpuProcessWatch?.check()
   }
 
   /// The ticket of a session, as its store and its branch say it now.

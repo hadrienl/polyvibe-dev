@@ -77,6 +77,8 @@ public final class BrowserTabModel: NSObject, Identifiable {
 
   /// Set when the web view exists: the page itself.
   public private(set) var webView: WKWebView?
+  /// When the web view was made: one made before WebKit lost its GPU process draws nothing (#613).
+  @ObservationIgnored private(set) var webViewMadeAt: Date?
 
   /// Told when the address or the title changed, so the session can be kept.
   @ObservationIgnored var didChange: (@MainActor () -> Void)?
@@ -220,10 +222,30 @@ public final class BrowserTabModel: NSObject, Identifiable {
     configuration.attachConsole(to: webView, handler: ConsoleMessageHandler(tab: self))
     connectLinks(of: webView)
     self.webView = webView
+    webViewMadeAt = Date()
     observe(webView)
     configuration.park(webView)
     load(url)
     return webView
+  }
+
+  /// The page was made before WebKit lost its GPU process at `date`, and stays grey (#613): a new
+  /// web view takes its place, at the same address. One on screen is replaced where it is, with the
+  /// keyboard if it had it; one waiting in the parking window is let go, and loads again when it is
+  /// next shown. Returns whether the page was replaced or let go.
+  @discardableResult
+  func replaceWebView(ifMadeBefore date: Date) -> Bool {
+    guard let old = webView, let madeAt = webViewMadeAt, madeAt <= date else { return false }
+    let holder = old.window is ParkingWindow ? nil : old.superview
+    let window = old.window
+    let hadKeyboard = (window?.firstResponder as? NSView)?.isDescendant(of: old) ?? false
+    discard()
+    guard let holder else { return true }
+    let fresh = ensureWebView()
+    fresh.removeFromSuperview()
+    holder.addSubview(fresh)
+    if hadKeyboard { window?.makeFirstResponder(fresh) }
+    return true
   }
 
   /// Takes a web view WebKit already made, and is loading, for a pop-up.
@@ -233,6 +255,7 @@ public final class BrowserTabModel: NSObject, Identifiable {
     configuration.attachConsole(to: webView, handler: ConsoleMessageHandler(tab: self))
     if let webView = webView as? SessionWebView { connectLinks(of: webView) }
     self.webView = webView
+    webViewMadeAt = Date()
     observe(webView)
     configuration.park(webView)
   }
