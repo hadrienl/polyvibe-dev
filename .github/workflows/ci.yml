@@ -17,7 +17,9 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: xcode-27
-    timeout-minutes: 40
+    # The tests, then the application's build in Release: about 30 minutes on a quick runner,
+    # past 40 on a slow one, with every test passed.
+    timeout-minutes: 60
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
