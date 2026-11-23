@@ -67,7 +67,10 @@ system events and the branch report it had read again in the background kept up 
 column showed. The summary of an agent switch reads the branch report and the `git status` of each
 of its repositories when its sheet opens; until they arrive it is written from what the session
 recorded, and the user's edits are never overwritten. A request reads the branch of its session
-when it arrives in the palette, the branch recorded at creation standing in until then.
+when it arrives in the palette, the branch recorded at creation standing in until then. Every
+reading is a full one: the cache of 0012, which spared Git when the fingerprint of the references
+had not moved, kept what a reading made in the background could reuse, and none is made any more.
+The palette asks only for the branch's name (`git symbolic-ref`), not a whole `git status`.
 
 A layout written by an older build still reads: the column's keys are read past and never written
 again.

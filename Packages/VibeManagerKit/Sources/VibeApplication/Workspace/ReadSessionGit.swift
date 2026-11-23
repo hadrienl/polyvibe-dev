@@ -28,7 +28,7 @@ public struct ReadSessionGit: Sendable {
   }
 
   public func callAsFunction(for session: WorkSession) async -> SessionGitReading {
-    let report = await branches(for: session, forced: true)
+    let report = await branches(for: session)
     guard let statuses else { return SessionGitReading(branches: report) }
     var read: [String: WorkingTreeStatus] = [:]
     for repository in report.repositories {

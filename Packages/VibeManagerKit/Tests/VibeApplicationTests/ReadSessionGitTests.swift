@@ -57,7 +57,6 @@ struct ReadSessionGitTests {
 private actor MainEverywhere: RepositoryActivityReading {
   private(set) var heads = 0
 
-  func referenceFingerprint(atPath path: String) -> ReferenceFingerprint? { nil }
 
   func head(atPath path: String) -> RepositoryHead? {
     heads += 1
