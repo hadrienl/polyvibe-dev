@@ -80,6 +80,10 @@ public final class BrowserWorkspace {
   @ObservationIgnored private let logStore: any BrowserActionLogStore
   @ObservationIgnored private let saveDelay: Duration
   @ObservationIgnored private var permissionsLoading: Task<Void, Never>?
+  @ObservationIgnored private var renderingWatch: PageRenderingWatch?
+  @ObservationIgnored private var renderingProbe: (any PageRenderingProbe)?
+  @ObservationIgnored private var renderingCheck: Task<Void, Never>?
+  @ObservationIgnored private var renderingCheckAgain = false
 
   public init(
     stateStore: any BrowserStateStore = InMemoryBrowserStateStore(),
@@ -102,6 +106,72 @@ public final class BrowserWorkspace {
       await permissions.loaded()
       self?.grants = permissions.grants
     }
+  }
+
+  /// Gives a new web view to the pages that no longer draw, WebKit having lost its GPU process:
+  /// they stay grey otherwise (#613).
+  public func watchPageRendering() {
+    watchPageRendering(
+      probe: SnapshotRenderingProbe(), afterScreenChange: PageRenderingWatch.afterScreenChange)
+  }
+
+  func watchPageRendering(probe: any PageRenderingProbe, afterScreenChange delays: [Duration]) {
+    renderingProbe = probe
+    renderingWatch = PageRenderingWatch(afterScreenChange: delays) { [weak self] in
+      await self?.checkRendering().value
+    }
+  }
+
+  /// Looks whether the pages on screen draw. When one does not, WebKit lost its GPU process, and
+  /// every page made before is in the same state: each page is looked at, and those that do not
+  /// draw are replaced. A page that crashed keeps its own notice, a simulator has no page, and a
+  /// page an agent is acting on is left to it until its next look. Asked while a look is under
+  /// way, another follows it: the page just put on screen was not among those looked at.
+  @discardableResult
+  func checkRendering() -> Task<Void, Never> {
+    if let renderingCheck {
+      renderingCheckAgain = true
+      return renderingCheck
+    }
+    guard let probe = renderingProbe else { return Task {} }
+    let task = Task { [weak self] in
+      guard let self else { return }
+      repeat {
+        self.renderingCheckAgain = false
+        await self.replaceBlankPages(probe)
+      } while self.renderingCheckAgain
+      self.renderingCheck = nil
+    }
+    renderingCheck = task
+    return task
+  }
+
+  private func replaceBlankPages(_ probe: any PageRenderingProbe) async {
+    let pages = browsers.values.flatMap(\.allTabs).filter {
+      $0.isLoaded && !$0.hasCrashed && $0.deviceUDID == nil && !$0.isAgentActing
+    }
+    guard await !Self.blank(pages.filter(\.isOnScreen), probe).isEmpty else { return }
+    let blank = await Self.blank(pages, probe)
+    // A page closed, let go or given another web view meanwhile is not the one looked at.
+    let leftWithKeyboard = pageLeftWithKeyboard
+    for (tab, webView) in blank where !tab.isClosed && tab.webView === webView && !tab.isAgentActing {
+      tab.replaceWebView()
+    }
+    pageLeftWithKeyboard = leftWithKeyboard
+  }
+
+  /// The pages among `tabs` that give no picture of themselves, all asked at once, with the web
+  /// view each was asked through.
+  private static func blank(_ tabs: [BrowserTabModel], _ probe: any PageRenderingProbe) async
+    -> [(BrowserTabModel, WKWebView)]
+  {
+    let asks = tabs.compactMap { tab -> (BrowserTabModel, WKWebView, Task<Bool, Never>)? in
+      guard let webView = tab.webView else { return nil }
+      return (tab, webView, Task { await probe.draws(webView) })
+    }
+    var blank: [(BrowserTabModel, WKWebView)] = []
+    for (tab, webView, ask) in asks where await !ask.value { blank.append((tab, webView)) }
+    return blank
   }
 
   /// Waits for the sites always allowed to have been read, and listed.
@@ -286,8 +356,13 @@ public final class BrowserWorkspace {
   /// The tab is on screen: it is loaded if it was not, and taken out of the parking window.
   public func show(_ tab: BrowserTabModel) -> WKWebView {
     let webView = tab.ensureWebView()
+    // A page coming out of the parking window is looked at once it is on screen (#613).
+    let comesOnScreen = webView.window is ParkingWindow
     configuration.unpark(webView)
     touch(tab)
+    if comesOnScreen, renderingProbe != nil {
+      Task { [weak self] in self?.checkRendering() }
+    }
     return webView
   }
 

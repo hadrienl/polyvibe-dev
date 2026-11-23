@@ -226,6 +226,29 @@ public final class BrowserTabModel: NSObject, Identifiable {
     return webView
   }
 
+  /// The page is shown in a window, rather than waiting in the parking window.
+  var isOnScreen: Bool {
+    guard let window = webView?.window, !(window is ParkingWindow) else { return false }
+    return window.isVisible
+  }
+
+  /// The page no longer draws, WebKit having lost its GPU process (#613): a new web view takes its
+  /// place, at the same address. One on screen is replaced where it is, with the keyboard if it
+  /// had it; one waiting in the parking window is let go, and loads again when it is next shown.
+  func replaceWebView() {
+    // A page in full screen belongs to WebKit's full-screen window until it leaves it.
+    guard let old = webView, old.fullscreenState == .notInFullscreen else { return }
+    let holder = old.window is ParkingWindow ? nil : old.superview
+    let window = old.window
+    let hadKeyboard = (window?.firstResponder as? NSView)?.isDescendant(of: old) ?? false
+    discard()
+    guard let holder else { return }
+    let fresh = ensureWebView()
+    fresh.removeFromSuperview()
+    holder.addSubview(fresh)
+    if hadKeyboard { window?.makeFirstResponder(fresh) }
+  }
+
   /// Takes a web view WebKit already made, and is loading, for a pop-up.
   func adopt(_ webView: WKWebView) {
     webView.navigationDelegate = self

@@ -299,6 +299,7 @@ public final class AppEnvironment {
       preferences: browserSettings,
       configuration: BrowserWebConfiguration(
         storeIdentifierFile: dataFolder.appendingPathComponent("browser-store-identifier")))
+    browser.watchPageRendering()
     self.browser = browser
     let commandDirectory = Self.installCommand(
       at: hostLocation, executable: configuration.browserBridgeExecutable)
