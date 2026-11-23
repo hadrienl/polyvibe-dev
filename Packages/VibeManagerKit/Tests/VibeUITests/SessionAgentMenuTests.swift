@@ -131,6 +131,28 @@ struct SessionAgentMenuTests {
     #expect(history.entries[2].title.contains("Other Agent · o1"))
   }
 
+  @Test("A switch back to the agent's default model says so, rather than naming the agent alone")
+  func defaultModelIsNamed() {
+    let back = AgentChange(
+      date: Date(timeIntervalSince1970: 1_699_500_000),
+      previous: SessionAgentConfiguration(providerID: "stub", modelID: "fast"),
+      next: SessionAgentConfiguration(providerID: "stub"),
+      handover: .resumedConversation)
+    let away = AgentChange(
+      date: Date(timeIntervalSince1970: 1_699_600_000),
+      previous: SessionAgentConfiguration(providerID: "stub"),
+      next: SessionAgentConfiguration(providerID: "other"),
+      handover: .resumedConversation)
+
+    let history = AgentHistoryPresentation(
+      session: session(history: [back, away]), names: AgentLabels(names: Self.names))
+
+    // Within one agent, the default model is named; to another agent, the agent alone says it.
+    #expect(
+      history.entries[1].title == "Stub Agent · fast → Stub Agent · Default model of the agent")
+    #expect(history.entries[0].title == "Stub Agent → Other Agent")
+  }
+
   @Test("Models are named as their catalogue names them, else by their identifier")
   func catalogueNames() {
     let labels = AgentLabels(names: Self.names, models: ["other": ["o1": "O1 Pro"]])

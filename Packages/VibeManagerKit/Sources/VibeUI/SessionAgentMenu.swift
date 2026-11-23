@@ -202,8 +202,8 @@ struct AgentHistoryPresentation: Equatable {
   }
 
   private static func entry(_ change: AgentChange, names: AgentLabels) -> Entry {
-    let from = names.label(change.previous)
-    let to = names.label(change.next)
+    let from = side(change.previous, of: change, names: names)
+    let to = side(change.next, of: change, names: names)
     switch change.outcome {
     case .completed:
       let handover = handover(change.handover)
@@ -232,6 +232,17 @@ struct AgentHistoryPresentation: Equatable {
           bundle: .module,
           comment: "What VoiceOver says of a failed agent switch: a date, the agent, and why."))
     }
+  }
+
+  /// One side of a switch. Between two models of the same agent, a side without a model of its
+  /// own is the agent's default model, said so: "Claude Code · Opus 5.5 → Claude Code" would not
+  /// say that a model was changed at all.
+  private static func side(
+    _ agent: SessionAgentConfiguration, of change: AgentChange, names: AgentLabels
+  ) -> String {
+    guard !change.changesProvider, agent.modelID == nil else { return names.label(agent) }
+    let defaultModel = String(localized: "Default model of the agent", bundle: .module)
+    return "\(names.name(of: agent.providerID)) · \(defaultModel)"
   }
 
   /// Whether the agent can be resumed, or why not.
