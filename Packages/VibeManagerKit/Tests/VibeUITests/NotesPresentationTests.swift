@@ -242,7 +242,7 @@ struct NotesPresentationViewTests {
 
     init(model: AppModel) {
       _ = NSApplication.shared
-      controller = NotesPanelController(model: model)
+      controller = NotesPanelController(model: model, frameName: "VibeNotesPanel-\(UUID())")
       anchorWindow = NSWindow(
         contentRect: NSRect(x: 0, y: 0, width: 200, height: 40), styleMask: [.titled],
         backing: .buffered, defer: false)
@@ -268,6 +268,7 @@ struct NotesPresentationViewTests {
 
     func close() {
       controller.panel?.close()
+      UserDefaults.standard.removeObject(forKey: "NSWindow Frame \(controller.frameName)")
       anchorWindow.contentView = nil
       anchorWindow.close()
     }
@@ -398,26 +399,31 @@ struct NotesPresentationViewTests {
     withExtendedLifetime(folded) {}
   }
 
-  @Test("Each window that replaces the panel opens where the last one was left, and keeps its own")
+  @Test("Each window that replaces the panel keeps its place under the name, where it is moved to")
   func replacementKeepsThePlace() async throws {
     let (model, first) = await model()
     let second = try #require(model.sessions.first { $0.name == "Other" })
     let screen = Screen(model: model)
     defer { screen.close() }
+    let key = "NSWindow Frame \(screen.controller.frameName)"
+    // Where AppKit wrote the panel's place: the origin, first two numbers of the frame.
+    func saved() -> [Substring] {
+      (UserDefaults.standard.string(forKey: key) ?? "").split(separator: " ").prefix(2).map { $0 }
+    }
     model.detachNotes()
     let firstPanel = try #require(screen.controller.panel)
     firstPanel.setFrameOrigin(NSPoint(x: 140, y: 220))
 
     model.showFromSelection(second.id)
     let secondPanel = try #require(screen.controller.panel)
-    #expect(secondPanel.frameAutosaveName == NotesPanelController.frameName)
-    #expect(secondPanel.frame.origin == NSPoint(x: 140, y: 220))
+    #expect(secondPanel.frameAutosaveName == screen.controller.frameName)
+    #expect(saved() == ["140", "220"])
     secondPanel.setFrameOrigin(NSPoint(x: 310, y: 260))
 
     model.showFromSelection(first.id)
     let again = try #require(screen.controller.panel)
-    #expect(again.frameAutosaveName == NotesPanelController.frameName)
-    #expect(again.frame.origin == NSPoint(x: 310, y: 260))
+    #expect(again.frameAutosaveName == screen.controller.frameName)
+    #expect(saved() == ["310", "260"])
   }
 
   @Test("The popover closes with another session; the button opens that session's popover")
@@ -526,7 +532,8 @@ struct NotesPresentationViewTests {
   @Test("The panel holds the editor, and Reattach in its title bar; its title names the session")
   func panel() async throws {
     let (model, session) = await model()
-    let controller = NotesPanelController(model: model)
+    let controller = NotesPanelController(model: model, frameName: "VibeNotesPanel-\(UUID())")
+    defer { UserDefaults.standard.removeObject(forKey: "NSWindow Frame \(controller.frameName)") }
     let panel = controller.makePanel(session: session)
     defer {
       panel.contentView = nil

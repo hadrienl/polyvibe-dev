@@ -37,7 +37,9 @@ final class NotesPanel: NSPanel {
 /// they left it, from one launch to the next.
 @MainActor
 public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDelegate {
-  static let frameName = "VibeNotesPanel"
+  /// Where AppKit keeps the panel's place. A name a test gives its own controller: AppKit lends a
+  /// name to one window at a time, and tests run side by side.
+  let frameName: String
 
   private let model: AppModel
   private(set) var panel: NotesPanel?
@@ -57,8 +59,9 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     popover.contentViewController?.view.window?.setAccessibilityIdentifier("notes-popover")
   }
 
-  public init(model: AppModel) {
+  public init(model: AppModel, frameName: String = "VibeNotesPanel") {
     self.model = model
+    self.frameName = frameName
     super.init()
     model.notesPresentation.returnFromPanel = { [weak self] in self?.returnKeyboard() }
     model.notesPresentation.changed = { [weak self] in self?.update() }
@@ -126,7 +129,7 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       // Its place written, and its name given up: the window kept alive below would still hold
       // it, and AppKit gives a name to one window at a time — the replacement would open where
       // the first panel was, and never write where it is moved to.
-      panel.saveFrame(usingName: Self.frameName)
+      panel.saveFrame(usingName: frameName)
       panel.setFrameAutosaveName("")
       panel.orderOut(nil)
       panel.contentView = nil
@@ -163,10 +166,10 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     accessory.layoutAttribute = .trailing
     panel.addTitlebarAccessoryViewController(accessory)
     panel.title = Self.title(of: session.name)
-    if !panel.setFrameUsingName(Self.frameName) {
+    if !panel.setFrameUsingName(frameName) {
       place(panel)
     }
-    panel.setFrameAutosaveName(Self.frameName)
+    panel.setFrameAutosaveName(frameName)
     return panel
   }
 
