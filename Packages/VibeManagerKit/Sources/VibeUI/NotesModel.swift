@@ -65,6 +65,9 @@ public final class NotesDocument {
   /// Set by the editor showing the notes: ends the typing its undo action is gathering, before a
   /// change made from elsewhere, which must be an undo action of its own.
   @ObservationIgnored var breakTypingCoalescing: (() -> Void)?
+  /// The editor that shows the notes now, the one whose undo actions and closure are the
+  /// document's. Detaching, an editor another one has already replaced leaves them alone.
+  @ObservationIgnored weak var editor: AnyObject?
   /// The ticket lines inserted at the top, as they are there now (#89).
   @ObservationIgnored var ticketLines: TicketLineBlock?
 

@@ -106,9 +106,17 @@ struct SessionNotesEditor: NSViewRepresentable {
       guard document !== next else { return }
       if let document {
         document.selection = textView.selectedRange()
+        if document.editor === self { document.editor = nil }
         Task { await document.save() }
       }
       document = next
+      // Taken from an editor still alive — SwiftUI can create the destination of a change of
+      // presentation before it dismantles the previous one: what that one recorded acts through
+      // a text view going away, and this one has recorded nothing yet.
+      if let owner = next.editor, owner !== self {
+        next.undoManager.removeAllActions()
+      }
+      next.editor = self
       next.breakTypingCoalescing = { [weak textView] in textView?.breakUndoCoalescing() }
       // Typing is grouped into one undo action as long as nothing breaks it: left open, the next
       // session's first keystrokes would join the action registered in this one's undo manager.
@@ -126,12 +134,17 @@ struct SessionNotesEditor: NSViewRepresentable {
 
     func detach() {
       guard let document, let textView else { return }
-      document.selection = textView.selectedRange()
       textView.breakUndoCoalescing()
-      // The actions recorded so far act through this text view, which is going away: kept, a ⌘Z
-      // in the next one would do nothing, or edit a layout manager nothing shows any more.
-      document.undoManager.removeAllActions()
-      document.breakTypingCoalescing = nil
+      // Already shown by another editor, the document is that one's: its selection, its undo
+      // actions and its closure are left as they are.
+      if document.editor === self {
+        document.selection = textView.selectedRange()
+        // The actions recorded so far act through this text view, which is going away: kept, a
+        // ⌘Z in the next one would do nothing, or edit a layout manager nothing shows any more.
+        document.undoManager.removeAllActions()
+        document.breakTypingCoalescing = nil
+        document.editor = nil
+      }
       // An empty storage of its own, so the document's is held by one layout manager fewer.
       Self.move(textView.layoutManager, to: NSTextStorage())
       textView.isEditable = false

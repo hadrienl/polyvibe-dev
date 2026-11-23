@@ -384,6 +384,9 @@ struct NotesEditorTests {
     // SwiftUI can create the destination before dismantling the previous presentation.
     let (panel, panelCoordinator) = editor(for: document)
     oldCoordinator.detach()
+    // The late detach leaves the new editor what is its own.
+    #expect(document.breakTypingCoalescing != nil)
+    #expect(document.editor === panelCoordinator)
     #expect(panel.textStorage === document.storage)
     #expect(panel.string == text)
     #expect(document.storage.layoutManagers.count == 1)
