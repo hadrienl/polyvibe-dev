@@ -97,6 +97,17 @@ struct SessionIdentityWindowTests {
 
   private static let undo = Selector(("undo:"))
 
+  /// Gives the list the keyboard back, as the app does, if the terminal took it meanwhile. The
+  /// terminal on screen claims the keyboard once, at its first update inside the window, which
+  /// SwiftUI makes whenever the model next changes — the rename, here — and the busier the machine
+  /// the later: after the list was given the keyboard, it took it from under the test, which then
+  /// waited a minute for a list that no longer had it.
+  private static func keyboardInList(_ list: NSTableView, of workspace: Workspace) {
+    guard workspace.window.firstResponder !== list else { return }
+    workspace.window.makeFirstResponder(list)
+    workspace.model.focusSidebar()
+  }
+
   /// Whether something between the view and the window takes ⌘Z: the window's own undo manager
   /// does not count.
   private static func answersUndo(before window: NSWindow?, from view: NSView) -> Bool {
@@ -182,7 +193,10 @@ struct SessionIdentityWindowTests {
     // open meanwhile, does not always tell SwiftUI's focus that the list took it.
     model.focusSidebar()
     // Once the sidebar has been drawn again with something to undo.
-    await waitUntil("the sidebar answers ⌘Z") { Self.answersUndo(before: list.window, from: list) }
+    await waitUntil("the sidebar answers ⌘Z") {
+      Self.keyboardInList(list, of: workspace)
+      return Self.answersUndo(before: list.window, from: list)
+    }
 
     // In the terminal, ⌘Z goes on to the window: the rename stays.
     let terminal = try #require(workspace.terminal)
@@ -195,7 +209,8 @@ struct SessionIdentityWindowTests {
     workspace.window.makeFirstResponder(list)
     model.focusSidebar()
     await waitUntil("the sidebar answers ⌘Z again") {
-      Self.answersUndo(before: list.window, from: list)
+      Self.keyboardInList(list, of: workspace)
+      return Self.answersUndo(before: list.window, from: list)
     }
     #expect(list.tryToPerform(Self.undo, with: nil))
     await waitUntil("the rename is undone") {
