@@ -3,6 +3,7 @@ import Foundation
 import Testing
 import VibeApplication
 import VibeDomain
+import VibeTerminalUI
 
 @testable import VibeUI
 
@@ -151,6 +152,16 @@ struct SessionAgentMenuTests {
     #expect(
       history.entries[1].title == "Stub Agent · fast → Stub Agent · Default model of the agent")
     #expect(history.entries[0].title == "Stub Agent → Other Agent")
+  }
+
+  @Test("A running agent is said to run, not to be ready to resume; without a process, the resume")
+  func stateOfARunningAgent() async {
+    let ready = SessionAgentResolution.ready(
+      descriptor: Self.stub.descriptor,
+      availability: await Self.stub.availability(forceRefresh: false))
+    #expect(AgentHistoryPresentation.state(of: .running, resolution: ready) == "Running")
+    #expect(AgentHistoryPresentation.state(of: .exited(code: 0), resolution: ready) == "Finished")
+    #expect(AgentHistoryPresentation.state(of: nil, resolution: ready) == "Ready to resume.")
   }
 
   @Test("Models are named as their catalogue names them, else by their identifier")

@@ -130,13 +130,9 @@ struct SessionAgentMenu: View {
     menu.popUp(positioning: nil, at: NSPoint(x: 0, y: top), in: view)
   }
 
-  /// The process's own state when it does not run — stopped, failed, starting — and otherwise
-  /// whether the agent can be resumed.
   private var stateSentence: String {
-    if let status = model.pane(for: session.id)?.status, status != .running {
-      return status.label
-    }
-    return AgentHistoryPresentation.state(of: model.resolution(forID: session.id))
+    AgentHistoryPresentation.state(
+      of: model.pane(for: session.id)?.status, resolution: model.resolution(forID: session.id))
   }
 
   /// Opens the Switch Agent sheet set on `choice`, or on nothing: the switch itself is the
@@ -243,6 +239,15 @@ struct AgentHistoryPresentation: Equatable {
     guard !change.changesProvider, agent.modelID == nil else { return names.label(agent) }
     let defaultModel = String(localized: "Default model of the agent", bundle: .module)
     return "\(names.name(of: agent.providerID)) · \(defaultModel)"
+  }
+
+  /// The state of the session's agent: its process's own when it has one — running, starting,
+  /// stopped, failed — and otherwise whether it can be resumed. A running agent is never said to
+  /// be ready to resume: the status bar has no other word that it runs.
+  static func state(
+    of status: TerminalPaneModel.Status?, resolution: SessionAgentResolution?
+  ) -> String {
+    status?.label ?? state(of: resolution)
   }
 
   /// Whether the agent can be resumed, or why not.
