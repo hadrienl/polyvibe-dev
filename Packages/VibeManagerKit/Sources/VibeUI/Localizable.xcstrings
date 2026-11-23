@@ -2324,6 +2324,107 @@
         }
       }
     },
+    "Quotas and Costs" : {
+      "comment" : "A section of the Settings window.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحصص والتكاليف"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontingente und Kosten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuotas y costes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quotas et coûts"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कोटा और लागत"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quote e costi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クォータとコスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할당량 및 비용"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quota en kosten"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limity i koszty"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cotas e custos"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Квоты и стоимость"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kotalar ve maliyetler"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Квоти та вартість"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配额与费用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配額與費用"
+          }
+        }
+      }
+    },
     "Quotas, limit reached: %@" : {
       "comment" : "Help of the Quotas button: the accounts and windows whose limit is reached.",
       "localizations" : {
@@ -3932,6 +4033,107 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "用量僅記錄在這台 Mac 上。僅下載公開的價格與匯率列表。"
+          }
+        }
+      }
+    },
+    "Usage tracking is off: turn on Track agent usage in Privacy to see quotas and costs." : {
+      "comment" : "Under the quota and currency settings while usage tracking is off (#599).",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبّع الاستخدام متوقف: فعّل «تتبّع استخدام الوكلاء» في «الخصوصية» لعرض الحصص والتكاليف."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Nutzungserfassung ist aus: Schalte „Nutzung der Agents erfassen“ unter „Datenschutz“ ein, um Kontingente und Kosten zu sehen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El registro del uso está desactivado: activa «Registrar el uso de los agentes» en Privacidad para ver las cuotas y los costes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le suivi de l’utilisation est désactivé : activez « Suivre l’utilisation des agents » dans Confidentialité pour voir les quotas et les coûts."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उपयोग ट्रैकिंग बंद है: कोटा और लागत देखने के लिए गोपनीयता में \"एजेंट का उपयोग ट्रैक करें\" चालू करें।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il monitoraggio dell’utilizzo è disattivato: attiva «Monitora l’utilizzo degli agenti» in Privacy per vedere quote e costi."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用状況の記録はオフです。クォータとコストを表示するには、「プライバシー」で「エージェントの使用状況を記録」をオンにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용량 추적이 꺼져 있습니다. 할당량과 비용을 보려면 개인정보 보호에서 \"에이전트 사용량 추적\"을 켜세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruik volgen staat uit: zet ‘Volg gebruik van agents’ aan bij Privacy om quota en kosten te zien."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Śledzenie użycia jest wyłączone: włącz „Śledź użycie agentów” w sekcji Prywatność, aby zobaczyć limity i koszty."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acompanhamento do uso está desativado: ative “Acompanhar o uso dos agentes” em Privacidade para ver cotas e custos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отслеживание использования выключено: включите «Отслеживать использование агентов» в разделе «Конфиденциальность», чтобы видеть квоты и стоимость."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kullanım izleme kapalı: kotaları ve maliyetleri görmek için Gizlilik bölümünde “Ajan kullanımını izle”yi açın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відстеження використання вимкнено: увімкніть «Відстежувати використання агентів» у розділі «Приватність», щоб бачити квоти та вартість."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量跟踪已关闭：请在“隐私”中打开“跟踪智能体用量”以查看配额与费用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量追蹤已關閉：請在「隱私權」中開啟「追蹤代理程式用量」以查看配額與費用。"
           }
         }
       }

@@ -457,8 +457,8 @@ struct SettingsPageView: View {
   }
 }
 
-/// Settings › General: the sessions, their summary, their side terminals, where a changed file
-/// opens, and the tutorial.
+/// Settings › General: the sessions, their summary, their side terminals, how quotas and costs
+/// show, and the tutorial.
 struct GeneralSettingsPage: View {
   @Bindable var model: AppModel
 
@@ -477,6 +477,13 @@ struct GeneralSettingsPage: View {
           SideTerminalsRow(terminals: terminals)
         } header: {
           Text("Side Terminals", bundle: .module, comment: "A section of the Settings window.")
+        }
+      }
+      if let usage = model.usage {
+        Section {
+          QuotaAndCurrencySettings(usage: usage)
+        } header: {
+          Text("Quotas and Costs", bundle: .module, comment: "A section of the Settings window.")
         }
       }
       Section {
@@ -1300,7 +1307,6 @@ private struct UsageSettingsRow: View {
       ) {
         Text("Track agent usage", bundle: .module)
       }
-      QuotaAndCurrencySettings(usage: usage)
       Text(
         """
         Running time, runs and the tokens your agents' transcripts report, kept on this Mac only, \
@@ -1457,6 +1463,7 @@ private struct QuotaAndCurrencySettings: View {
       }
       .pickerStyle(.segmented)
       .fixedSize()
+      .disabled(!usage.isTrackingEnabled)
       Picker(selection: $usage.currencyCode) {
         ForEach(CostCurrency.codes, id: \.self) { code in
           Text(verbatim: Self.name(of: code, locale: locale)).tag(code)
@@ -1465,6 +1472,7 @@ private struct QuotaAndCurrencySettings: View {
         Text("Currency of costs", bundle: .module)
       }
       .fixedSize()
+      .disabled(!usage.isTrackingEnabled)
       Text(
         "Prices are in US dollars, converted at the European Central Bank's reference rate, downloaded at most once a day.",
         bundle: .module,
@@ -1473,8 +1481,17 @@ private struct QuotaAndCurrencySettings: View {
       .font(.callout)
       .foregroundStyle(.secondary)
       .fixedSize(horizontal: false, vertical: true)
+      if !usage.isTrackingEnabled {
+        Text(
+          "Usage tracking is off: turn on Track agent usage in Privacy to see quotas and costs.",
+          bundle: .module,
+          comment: "Under the quota and currency settings while usage tracking is off (#599)."
+        )
+        .font(.callout)
+        .foregroundStyle(.orange)
+        .fixedSize(horizontal: false, vertical: true)
+      }
     }
-    .disabled(!usage.isTrackingEnabled)
   }
 
   /// “Euro (EUR)”.
