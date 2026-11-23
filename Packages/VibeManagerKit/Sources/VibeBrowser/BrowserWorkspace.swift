@@ -80,7 +80,9 @@ public final class BrowserWorkspace {
   @ObservationIgnored private let logStore: any BrowserActionLogStore
   @ObservationIgnored private let saveDelay: Duration
   @ObservationIgnored private var permissionsLoading: Task<Void, Never>?
-  @ObservationIgnored private var gpuProcessWatch: GPUProcessWatch?
+  @ObservationIgnored private var renderingWatch: PageRenderingWatch?
+  @ObservationIgnored private var renderingProbe: (any PageRenderingProbe)?
+  @ObservationIgnored private var renderingCheck: Task<Void, Never>?
 
   public init(
     stateStore: any BrowserStateStore = InMemoryBrowserStateStore(),
@@ -105,30 +107,52 @@ public final class BrowserWorkspace {
     }
   }
 
-  /// Gives the pages a new web view when WebKit loses its GPU process: those made before stay grey
-  /// otherwise (#613). `log` says when it did.
-  public func watchGPUProcess(_ log: any GPUProcessExitLog) {
-    watchGPUProcess(log, afterScreenChange: GPUProcessWatch.afterScreenChange)
+  /// Gives a new web view to the pages that no longer draw, WebKit having lost its GPU process:
+  /// they stay grey otherwise (#613).
+  public func watchPageRendering() {
+    watchPageRendering(
+      probe: SnapshotRenderingProbe(), afterScreenChange: PageRenderingWatch.afterScreenChange)
   }
 
-  func watchGPUProcess(_ log: any GPUProcessExitLog, afterScreenChange delays: [Duration]) {
-    gpuProcessWatch = GPUProcessWatch(log: log, afterScreenChange: delays) { [weak self] date in
-      self?.replacePages(madeBefore: date)
+  func watchPageRendering(probe: any PageRenderingProbe, afterScreenChange delays: [Duration]) {
+    renderingProbe = probe
+    renderingWatch = PageRenderingWatch(afterScreenChange: delays) { [weak self] in
+      await self?.checkRendering().value
     }
   }
 
-  /// Looks now whether WebKit lost its GPU process, and waits for the pages to be replaced if it did.
-  func checkGPUProcess() async {
-    await gpuProcessWatch?.check().value
+  /// Looks whether the pages on screen draw. When one does not, WebKit lost its GPU process, and
+  /// every page made before is in the same state: each page is looked at, and those that do not
+  /// draw are replaced. A page that crashed keeps its own notice.
+  @discardableResult
+  func checkRendering() -> Task<Void, Never> {
+    if let renderingCheck { return renderingCheck }
+    guard let probe = renderingProbe else { return Task {} }
+    let task = Task { [weak self] in
+      guard let self else { return }
+      let pages = self.browsers.values.flatMap(\.allTabs).filter { $0.isLoaded && !$0.hasCrashed }
+      if await !Self.blank(pages.filter(\.isOnScreen), probe).isEmpty {
+        let leftWithKeyboard = self.pageLeftWithKeyboard
+        for tab in await Self.blank(pages, probe) where !tab.isClosed { tab.replaceWebView() }
+        self.pageLeftWithKeyboard = leftWithKeyboard
+      }
+      self.renderingCheck = nil
+    }
+    renderingCheck = task
+    return task
   }
 
-  /// Replaces every page made before `date`, the keyboard staying where it was.
-  func replacePages(madeBefore date: Date) {
-    let leftWithKeyboard = pageLeftWithKeyboard
-    for browser in browsers.values {
-      for tab in browser.allTabs { tab.replaceWebView(ifMadeBefore: date) }
+  /// The pages among `tabs` that give no picture of themselves, all asked at once.
+  private static func blank(_ tabs: [BrowserTabModel], _ probe: any PageRenderingProbe) async
+    -> [BrowserTabModel]
+  {
+    let asks = tabs.compactMap { tab -> (BrowserTabModel, Task<Bool, Never>)? in
+      guard let webView = tab.webView else { return nil }
+      return (tab, Task { await probe.draws(webView) })
     }
-    pageLeftWithKeyboard = leftWithKeyboard
+    var blank: [BrowserTabModel] = []
+    for (tab, ask) in asks where await !ask.value { blank.append(tab) }
+    return blank
   }
 
   /// Waits for the sites always allowed to have been read, and listed.
@@ -194,7 +218,6 @@ public final class BrowserWorkspace {
   public func sessionDidAppear(_ id: SessionID) {
     browsers[id]?.hasUnseenAgentPage = false
     discardIdlePages(except: id)
-    gpuProcessWatch?.check()
   }
 
   /// The ticket of a session, as its store and its branch say it now.
@@ -314,8 +337,13 @@ public final class BrowserWorkspace {
   /// The tab is on screen: it is loaded if it was not, and taken out of the parking window.
   public func show(_ tab: BrowserTabModel) -> WKWebView {
     let webView = tab.ensureWebView()
+    // A page coming out of the parking window is looked at once it is on screen (#613).
+    let comesOnScreen = webView.window is ParkingWindow
     configuration.unpark(webView)
     touch(tab)
+    if comesOnScreen, renderingProbe != nil {
+      Task { [weak self] in self?.checkRendering() }
+    }
     return webView
   }
 

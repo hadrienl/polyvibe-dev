@@ -1,14 +1,13 @@
 import AppKit
 import Foundation
-import OSLog
 import Testing
 import VibeDomain
 import WebKit
 
 @testable import VibeBrowser
 
-/// Pages made before WebKit lost its GPU process stay grey; they are given a new web view (#613).
-@Suite("Pages after WebKit loses its GPU process")
+/// Pages left without WebKit's GPU process stay grey; they are given a new web view (#613).
+@Suite("Pages that no longer draw")
 @MainActor
 struct GPUProcessRecoveryTests {
   private let session = SessionID()
@@ -21,30 +20,44 @@ struct GPUProcessRecoveryTests {
     workspace.open(
       URL(string: "data:text/html,<p>\(page)</p>")!, in: session, openedBy: .user,
       activate: false)
-    return workspace.browser(for: session).tabs.last!
+  }
+
+  /// A window the page is shown in, out of the user's sight.
+  private func screenWindow() -> NSWindow {
+    let window = NSWindow(
+      contentRect: NSRect(x: -20_000, y: -20_000, width: 400, height: 300), styleMask: [.borderless],
+      backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.alphaValue = 0
+    window.ignoresMouseEvents = true
+    window.orderFrontRegardless()
+    return window
+  }
+
+  private func putOnScreen(_ tab: BrowserTabModel, _ workspace: BrowserWorkspace, in window: NSWindow)
+    -> WKWebView
+  {
+    let webView = workspace.show(tab)
+    webView.removeFromSuperview()
+    window.contentView?.addSubview(webView)
+    return webView
   }
 
   @Test("A page on screen gets a new web view where the old one was, with the keyboard")
   func pageOnScreenIsReplacedInPlace() throws {
     let workspace = BrowserWorkspace()
     let tab = openTab("a", in: workspace)
-    let window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled],
-      backing: .buffered, defer: true)
+    let window = screenWindow()
     defer { window.close() }
-    window.isReleasedWhenClosed = false
-    let holder = try #require(window.contentView)
-    let old = workspace.show(tab)
-    old.removeFromSuperview()
-    holder.addSubview(old)
+    let old = putOnScreen(tab, workspace, in: window)
     window.makeFirstResponder(old)
 
-    workspace.replacePages(madeBefore: Date())
+    tab.replaceWebView()
 
     let fresh = try #require(tab.webView)
     #expect(fresh !== old)
     #expect(old.superview == nil)
-    #expect(fresh.superview === holder)
+    #expect(fresh.superview === window.contentView)
     #expect((window.firstResponder as? NSView)?.isDescendant(of: fresh) == true)
     #expect(fresh.navigationDelegate === tab)
   }
@@ -55,89 +68,96 @@ struct GPUProcessRecoveryTests {
     let tab = openTab("a", in: workspace)
     #expect(tab.isLoaded)
 
-    workspace.replacePages(madeBefore: Date())
+    tab.replaceWebView()
 
     #expect(!tab.isLoaded)
     #expect(workspace.show(tab) === tab.webView)
     #expect(tab.isLoaded)
   }
 
-  @Test("A page made after the loss is left alone")
-  func laterPageIsKept() throws {
+  @Test("A page on screen that does not draw has every page that does not draw replaced")
+  func blankPageOnScreenReplacesTheBlankOnes() async throws {
+    let probe = ScriptedProbe()
     let workspace = BrowserWorkspace()
-    let loss = Date()
-    let tab = openTab("a", in: workspace)
-    let page = try #require(tab.webView)
+    workspace.watchPageRendering(probe: probe, afterScreenChange: [])
+    let shown = openTab("shown", in: workspace)
+    let parkedBlank = openTab("parked-blank", in: workspace)
+    let parkedFine = openTab("parked-fine", in: workspace)
+    let window = screenWindow()
+    defer { window.close() }
+    let old = putOnScreen(shown, workspace, in: window)
+    await workspace.checkRendering().value
+    #expect(probe.asked.contains(ObjectIdentifier(old)))
+    #expect(shown.webView === old)
 
-    workspace.replacePages(madeBefore: loss.addingTimeInterval(-1))
+    probe.blank = [shown.webView, parkedBlank.webView].compactMap { $0.map(ObjectIdentifier.init) }
+    let kept = try #require(parkedFine.webView)
+    await workspace.checkRendering().value
 
-    #expect(tab.webView === page)
+    #expect(shown.webView !== old)
+    #expect(shown.webView?.superview === window.contentView)
+    #expect(!parkedBlank.isLoaded)
+    #expect(parkedFine.webView === kept)
   }
 
-  @Test("The log is looked at when a session is shown, and the pages replaced")
-  func sessionShownLooks() async {
-    let log = ScriptedExitLog()
+  @Test("Pages off screen are not looked at while the pages on screen draw")
+  func onlyOnScreenFirst() async {
+    let probe = ScriptedProbe()
     let workspace = BrowserWorkspace()
-    workspace.watchGPUProcess(log, afterScreenChange: [])
-    let tab = openTab("a", in: workspace)
-    log.exit = Date()
+    workspace.watchPageRendering(probe: probe, afterScreenChange: [])
+    let parked = openTab("parked", in: workspace)
+    probe.blank = [parked.webView].compactMap { $0.map(ObjectIdentifier.init) }
 
-    workspace.sessionDidAppear(session)
+    await workspace.checkRendering().value
 
-    await waitUntil("the page let go") { !tab.isLoaded }
+    #expect(probe.asked.isEmpty)
+    #expect(parked.isLoaded)
   }
 
-  @Test("After the displays change, the log is looked at again until the loss shows")
+  @Test("After the displays change, the pages are looked at again and again")
   func screenChangeLooksAgain() async {
-    let log = ScriptedExitLog()
+    let probe = ScriptedProbe()
     let workspace = BrowserWorkspace()
-    workspace.watchGPUProcess(log, afterScreenChange: [.milliseconds(10), .milliseconds(20)])
+    workspace.watchPageRendering(probe: probe, afterScreenChange: [.milliseconds(10), .seconds(1)])
     let tab = openTab("a", in: workspace)
+    let window = screenWindow()
+    defer { window.close() }
+    let old = putOnScreen(tab, workspace, in: window)
+    await waitUntil("the page looked at when shown") { probe.looks >= 1 }
+    let looks = probe.looks
 
     NotificationCenter.default.post(
       name: NSApplication.didChangeScreenParametersNotification, object: NSApp)
-    await waitUntil("a first look") { log.looks >= 1 }
-    #expect(tab.isLoaded)
-    log.exit = Date()
+    await waitUntil("a first look after the change") { probe.looks > looks }
+    #expect(tab.webView === old)
+    probe.blank = [ObjectIdentifier(old)]
 
-    await waitUntil("the page let go") { !tab.isLoaded }
-    #expect(log.looks >= 2)
+    await waitUntil("the page replaced at the next look") { tab.webView !== old }
   }
 
-  @Test("Only a GPU process that quit for want of work leaves no page behind")
-  func reasons() {
-    let message = "GPUProcessProxy::gpuProcessExited: reason="
-    #expect(OSLogGPUProcessExitLog.leavesPagesBlank(message + "Unresponsive"))
-    #expect(OSLogGPUProcessExitLog.leavesPagesBlank(message + "Crash"))
-    #expect(!OSLogGPUProcessExitLog.leavesPagesBlank(message + "IdleExit"))
-  }
+  @Test("A page that gives a picture of itself draws")
+  func snapshotProbe() async {
+    let workspace = BrowserWorkspace()
+    let tab = openTab("a", in: workspace)
+    let window = screenWindow()
+    defer { window.close() }
+    let webView = putOnScreen(tab, workspace, in: window)
+    await tab.waitUntilSettled()
 
-  @Test("The application's own log says when WebKit lost its GPU process")
-  func readsOwnLog() async {
-    let start = Date()
-    Logger(subsystem: "com.apple.WebKit", category: "Process").log(
-      "0x1 - GPUProcessProxy::gpuProcessExited: reason=Unresponsive")
-    Logger(subsystem: "com.apple.WebKit", category: "Process").log(
-      "0x2 - GPUProcessProxy::gpuProcessExited: reason=IdleExit")
-    var found: Date?
-    await waitUntil("the line in the log") {
-      found = await OSLogGPUProcessExitLog().lastExit(since: start.addingTimeInterval(-1))
-      return found != nil
-    }
-    #expect(found.map { $0 >= start.addingTimeInterval(-1) } == true)
+    #expect(await SnapshotRenderingProbe().draws(webView))
   }
 }
 
-/// A log that says what the test tells it to, and counts the looks.
+/// A probe that says the pages it is told about do not draw, and counts what it is asked.
 @MainActor
-private final class ScriptedExitLog: GPUProcessExitLog {
-  var exit: Date?
+private final class ScriptedProbe: PageRenderingProbe {
+  var blank: [ObjectIdentifier] = []
+  var asked: Set<ObjectIdentifier> = []
   var looks = 0
 
-  nonisolated func lastExit(since date: Date) async -> Date? {
-    await MainActor.run {
-      looks += 1
-      return exit.flatMap { $0 >= date ? $0 : nil }
-    }
+  func draws(_ webView: WKWebView) async -> Bool {
+    looks += 1
+    asked.insert(ObjectIdentifier(webView))
+    return !blank.contains(ObjectIdentifier(webView))
   }
 }
