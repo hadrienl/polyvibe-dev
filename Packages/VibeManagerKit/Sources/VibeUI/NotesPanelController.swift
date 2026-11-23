@@ -103,6 +103,11 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       self.panel = nil
       panel.delegate = nil
       if panel.isKeyWindow { returnKeyboard() }
+      // Its place written, and its name given up: the window kept alive below would still hold
+      // it, and AppKit gives a name to one window at a time — the replacement would open where
+      // the first panel was, and never write where it is moved to.
+      panel.saveFrame(usingName: Self.frameName)
+      panel.setFrameAutosaveName("")
       panel.orderOut(nil)
       panel.contentView = nil
       panel.close()

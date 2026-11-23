@@ -354,6 +354,28 @@ struct NotesPresentationViewTests {
     #expect(secondDocument.text == "Only in Other")
   }
 
+  @Test("Each window that replaces the panel opens where the last one was left, and keeps its own")
+  func replacementKeepsThePlace() async throws {
+    let (model, first) = await model()
+    let second = try #require(model.sessions.first { $0.name == "Other" })
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.detachNotes()
+    let firstPanel = try #require(screen.controller.panel)
+    firstPanel.setFrameOrigin(NSPoint(x: 140, y: 220))
+
+    model.showFromSelection(second.id)
+    let secondPanel = try #require(screen.controller.panel)
+    #expect(secondPanel.frameAutosaveName == NotesPanelController.frameName)
+    #expect(secondPanel.frame.origin == NSPoint(x: 140, y: 220))
+    secondPanel.setFrameOrigin(NSPoint(x: 310, y: 260))
+
+    model.showFromSelection(first.id)
+    let again = try #require(screen.controller.panel)
+    #expect(again.frameAutosaveName == NotesPanelController.frameName)
+    #expect(again.frame.origin == NSPoint(x: 310, y: 260))
+  }
+
   @Test("The popover closes with another session; the button opens that session's popover")
   func popoverFollowsTheSelection() async throws {
     let (model, _) = await model()
