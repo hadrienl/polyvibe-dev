@@ -168,7 +168,9 @@ private struct Fixture {
         return true
       },
       screen: { _ in await screen.text },
-      sleep: { _ in })
+      // Gives the thread up: a loop that polls the screen never would, and on a runner with few
+      // cores it would keep the test that changes the screen from ever running.
+      sleep: { _ in await Task.yield() })
   }
 
   func start() async {
