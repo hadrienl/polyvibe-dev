@@ -344,19 +344,21 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
 
   /// Where the same preview shows for an icon in the margin of the messages (#608), in the pane's
   /// points: below the icon's box, from its left edge, so that the line it marks stays read —
-  /// above it where there is no room below, as near the composer. It never leaves the pane: moved
+  /// above it where there is no room below, as near the composer. It never leaves the part of the
+  /// pane between `paneTop` and `paneBottom` — the toolbar above, the composer below —: moved
   /// left at its right edge, and, with room on neither side, down or up just enough.
   public static func marginPreviewOrigin(
     iconMinX: Double, iconMinY: Double, iconMaxY: Double, previewWidth: Double,
-    previewHeight: Double, paneWidth: Double, paneHeight: Double
+    previewHeight: Double, paneWidth: Double, paneTop: Double = 0, paneBottom: Double
   ) -> (x: Double, y: Double) {
     let x = max(min(iconMinX, paneWidth - previewMargin - previewWidth), previewMargin)
-    let lowest = paneHeight - previewMargin - previewHeight
+    let highest = paneTop + previewMargin
+    let lowest = paneBottom - previewMargin - previewHeight
     let below = iconMaxY + previewMargin
     if below <= lowest { return (x, below) }
     let above = iconMinY - previewMargin - previewHeight
-    if above >= previewMargin { return (x, above) }
-    return (x, max(min(below, lowest), previewMargin))
+    if above >= highest { return (x, above) }
+    return (x, max(min(below, lowest), highest))
   }
 
   /// How wide a bookmark's preview may be: wider as the text is larger, never wider than the

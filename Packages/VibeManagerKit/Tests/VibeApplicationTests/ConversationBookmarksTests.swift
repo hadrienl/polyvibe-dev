@@ -256,11 +256,11 @@ struct ConversationOverviewLayoutTests {
 
   private func marginOrigin(
     iconX: Double = 40, iconY: Double, width: Double = 280, height: Double = 60,
-    paneWidth: Double = 900, paneHeight: Double = 700
+    paneWidth: Double = 900, paneTop: Double = 0, paneHeight: Double = 700
   ) -> (x: Double, y: Double) {
     ConversationOverviewLayout.marginPreviewOrigin(
       iconMinX: iconX, iconMinY: iconY, iconMaxY: iconY + 20, previewWidth: width,
-      previewHeight: height, paneWidth: paneWidth, paneHeight: paneHeight)
+      previewHeight: height, paneWidth: paneWidth, paneTop: paneTop, paneBottom: paneHeight)
   }
 
   @Test("In the margin, the preview stands below the icon, from its left: the line stays read")
@@ -274,6 +274,15 @@ struct ConversationOverviewLayoutTests {
   func marginPreviewAbove() {
     let origin = marginOrigin(iconY: 640)
     #expect(origin.y + 60 == 640 - ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("Never under the toolbar: above the icon only below it, else as high as it may go")
+  func marginPreviewBelowTheToolbar() {
+    // Room above the icon, but under the toolbar: below the icon, as low as the pane allows.
+    let origin = marginOrigin(iconY: 100, height: 90, paneTop: 52, paneHeight: 200)
+    #expect(origin.y == 200 - 4 - 90)
+    let tall = marginOrigin(iconY: 100, height: 300, paneTop: 52, paneHeight: 200)
+    #expect(tall.y == 52 + ConversationOverviewLayout.previewMargin)
   }
 
   @Test("At the pane's right edge it moves left, and never past its left edge")

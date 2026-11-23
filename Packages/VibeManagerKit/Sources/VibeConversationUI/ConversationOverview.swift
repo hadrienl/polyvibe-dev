@@ -725,12 +725,14 @@ struct BookmarkGutter: View {
       .contentShape(Rectangle())
       .onTapGesture(perform: toggle)
       .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
-      .onHover { isHovered = $0 }
       // Set, its preview tells it; a help tag would come over it.
       .help(isMarked ? Text(verbatim: "") : label)
+      // One tracking of the pointer, for its look and its preview.
       .modifier(
         MarginPreviewSource(
-          preview: preview, blockID: blockID, target: .bookmark, isEnabled: isMarked))
+          preview: preview, blockID: blockID, target: .bookmark, isEnabled: isMarked,
+          hovered: { isHovered = $0 })
+      )
       .accessibilityElement()
       .accessibilityLabel(label)
       .accessibilityAddTraits(.isButton)

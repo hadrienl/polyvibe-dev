@@ -117,6 +117,11 @@ struct MarginPreviewTests {
     #expect(item.label == "Round the VAT per line")
     #expect(item.isExcerpt)
     #expect(content == Self.overviewContent(of: block, in: model, bookmark: true))
+    // Taken away by a click, the pointer still on it: nothing more to show.
+    model.toggleBookmark(block)
+    #expect(
+      MomentPreviewContent(
+        margin: .bookmark, of: block, model: model, appearance: ConversationAppearance()) == nil)
   }
 
   @Test("An answer bookmarked is the agent's")
@@ -167,5 +172,37 @@ struct MarginPreviewTests {
     now += ConversationMarginPreview.quietAfterScroll
     preview.pointerOn(blockID: "b2", target: .moments, anchor: anchor)
     #expect(preview.hover?.blockID == "b2")
+  }
+
+  @Test("The icon moving under a still pointer is a scroll: hidden, and quiet a while")
+  func iconMoved() {
+    var now = ContinuousClock.now
+    let preview = ConversationMarginPreview()
+    preview.now = { now }
+    let anchor = CGRect(x: 10, y: 200, width: 18, height: 20)
+    preview.pointerOn(blockID: "b1", target: .moments, anchor: anchor)
+    preview.pointerOn(blockID: "b1", target: .moments, anchor: anchor.offsetBy(dx: 0, dy: -40))
+    #expect(preview.hover == nil)
+    preview.pointerOn(blockID: "b2", target: .moments, anchor: anchor)
+    #expect(preview.hover == nil)
+    now += ConversationMarginPreview.quietAfterScroll
+    preview.pointerOn(blockID: "b2", target: .moments, anchor: anchor)
+    #expect(preview.hover?.blockID == "b2")
+  }
+
+  @Test("The messages moving elsewhere keep what is shown, and show nothing new for a while")
+  func contentMoved() {
+    var now = ContinuousClock.now
+    let preview = ConversationMarginPreview()
+    preview.now = { now }
+    let anchor = CGRect(x: 10, y: 200, width: 18, height: 20)
+    preview.pointerOn(blockID: "b1", target: .moments, anchor: anchor)
+    preview.contentMoved()
+    #expect(preview.hover?.blockID == "b1")
+    preview.pointerOn(blockID: "b1", target: .bookmark, anchor: anchor)
+    #expect(preview.hover?.target == .moments)
+    now += ConversationMarginPreview.quietAfterScroll
+    preview.hide()
+    #expect(preview.hover == nil)
   }
 }

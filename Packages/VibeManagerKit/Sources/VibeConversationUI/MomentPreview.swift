@@ -163,9 +163,9 @@ struct MomentPreview: View {
 // MARK: - The margin's preview (#608)
 
 /// The icon of the margin the pointer is on, and where it is: what the preview over the messages
-/// shows, and next to what. Gone as soon as the messages scroll, and not shown again until the
-/// pointer moves once they have stopped: the rows passing under a still pointer would show and
-/// hide it at each frame.
+/// shows, and next to what. Gone as soon as the icon moves under the pointer — the messages
+/// scrolled —, and not shown again until the pointer moves once they have stopped: the rows
+/// passing under a still pointer would show and hide it at each frame.
 @MainActor
 @Observable
 public final class ConversationMarginPreview {
@@ -191,8 +191,13 @@ public final class ConversationMarginPreview {
 
   public init() {}
 
-  /// The pointer is on an icon, or the icon it is on moved.
+  /// The pointer is on an icon, or the icon it is on moved: under a pointer that stayed, the
+  /// messages scrolled.
   func pointerOn(blockID: String, target: Target, anchor: CGRect) {
+    if let hover, hover.blockID == blockID, hover.target == target, hover.anchor != anchor {
+      scrolled()
+      return
+    }
     if let quietUntil, now() < quietUntil { return }
     let hover = Hover(blockID: blockID, target: target, anchor: anchor)
     if hover != self.hover { self.hover = hover }
@@ -206,20 +211,34 @@ public final class ConversationMarginPreview {
 
   /// The messages moved under the pointer.
   func scrolled() {
+    contentMoved()
+    if hover != nil { hover = nil }
+  }
+
+  /// The messages moved, perhaps not on screen — rows above measured again —: what is shown
+  /// stays while its icon does not move, but no row brought under the pointer shows its own.
+  func contentMoved() {
     quietUntil = now() + Self.quietAfterScroll
+  }
+
+  /// The conversation put away: nothing shown when it comes back, the pointer elsewhere.
+  func hide() {
     if hover != nil { hover = nil }
   }
 }
 
 /// Tells the margin's preview when the pointer is on the icon it is applied to, and where the
-/// icon is. Its place is read only while the pointer is on it: nothing is added to a row built
-/// by a scroll but the hover's tracking.
+/// icon is. Its place is read only while the pointer is on it: a row built by a scroll adds the
+/// hover's tracking and the state it keeps, nothing that runs before the pointer comes.
 struct MarginPreviewSource: ViewModifier {
   let preview: ConversationMarginPreview
   let blockID: String
   let target: ConversationMarginPreview.Target
   /// Whether it has something to show: a bookmark not set has none.
   var isEnabled = true
+  /// Told when the pointer comes onto the icon and leaves it: the icon's own look, with the same
+  /// tracking.
+  var hovered: ((Bool) -> Void)?
   @State private var isHovered = false
   @State private var anchor: CGRect?
 
@@ -228,10 +247,14 @@ struct MarginPreviewSource: ViewModifier {
       .onContinuousHover { phase in
         switch phase {
         case .active:
-          if !isHovered { isHovered = true }
+          if !isHovered {
+            isHovered = true
+            hovered?(true)
+          }
           show(at: anchor)
         case .ended:
           isHovered = false
+          hovered?(false)
           anchor = nil
           preview.pointerLeft(blockID: blockID, target: target)
         }
@@ -284,6 +307,8 @@ struct MarginPreviewOverlay: View {
         let anchor = hover.anchor.offsetBy(dx: -origin.x, dy: -origin.y)
         MarginPreviewPlacement(
           anchor: anchor,
+          // Below the toolbar the messages scroll under, above the composer.
+          insets: (geometry.safeAreaInsets.top, geometry.safeAreaInsets.bottom),
           width: ConversationOverviewLayout.previewWidth(
             textSize: MomentPreviewStyle(theme: theme, appearance: appearance).textSize,
             room: geometry.size.width - anchor.minX)
@@ -302,6 +327,7 @@ struct MarginPreviewOverlay: View {
 /// the size it takes at `width` at most.
 private struct MarginPreviewPlacement: Layout {
   let anchor: CGRect
+  let insets: (top: Double, bottom: Double)
   let width: Double
 
   func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -316,7 +342,7 @@ private struct MarginPreviewPlacement: Layout {
       let origin = ConversationOverviewLayout.marginPreviewOrigin(
         iconMinX: anchor.minX, iconMinY: anchor.minY, iconMaxY: anchor.maxY,
         previewWidth: size.width, previewHeight: size.height, paneWidth: bounds.width,
-        paneHeight: bounds.height)
+        paneTop: insets.top, paneBottom: bounds.height - insets.bottom)
       subview.place(
         at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
         proposal: ProposedViewSize(size))

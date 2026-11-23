@@ -155,6 +155,8 @@ public struct ConversationView: View {
       model.readAloud?.forget(ObjectIdentifier(model))
     }
     .onChange(of: isActive) { _, isActive in
+      // Kept mounted but hidden, its rows never tell the pointer left them (#608).
+      model.marginPreview.hide()
       if isActive {
         claimKeyboardOnActivation()
       } else {
@@ -288,8 +290,8 @@ public struct ConversationView: View {
         .onGeometryChange(for: CGRect.self) {
           $0.frame(in: .scrollView)
         } action: { frame in
-          // Scrolled: the margin's preview is no longer next to its icon (#608).
-          if frame.minY != contentFrame.minY { model.marginPreview.scrolled() }
+          // Moved: no row brought under the pointer shows its preview for a while (#608).
+          if frame.minY != contentFrame.minY { model.marginPreview.contentMoved() }
           contentFrame = frame
           model.scrollGeometryChanged(contentFrame: frame, viewportHeight: viewportHeight)
           trackReadablePart()
