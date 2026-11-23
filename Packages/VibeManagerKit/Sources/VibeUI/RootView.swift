@@ -1118,7 +1118,7 @@ public struct RootView: View {
       } else if session.status == .archived {
         let appearance = model.displayedAppearance(of: session)
         ArchivedSessionDetail(
-          session: session, agentNames: model.agentNames, appearance: appearance,
+          model: model, session: session, appearance: appearance,
           icon: model.icons.image(for: appearance.iconID)
         ) {
           Task { await model.restore(session.id) }
@@ -1139,6 +1139,9 @@ public struct RootView: View {
               .font(.callout)
               .foregroundStyle(.secondary)
           }
+          // Without a terminal there is no status bar: its agent's menu, with the agent's state
+          // and history, is shown here (#575).
+          SessionAgentMenu(model: model, session: session)
         }
         .background(.background)
       }
@@ -1871,8 +1874,8 @@ private struct DetachWarningBanner: View {
 /// It is deliberately a card and not an error: archiving is a decision the user made, so the
 /// column states the facts, says plainly that nothing was deleted, and offers the way back.
 private struct ArchivedSessionDetail: View {
+  let model: AppModel
   let session: WorkSession
-  let agentNames: [String: String]
   /// Its badge as drawn: the one previewed while its icon is being changed (#183).
   let appearance: SessionAppearance
   let icon: NSImage?
@@ -1906,12 +1909,9 @@ private struct ArchivedSessionDetail: View {
               Text(session.name)
                 .font(.title3)
                 .fontWeight(.semibold)
-              if let agent = session.agent {
-                Text(AgentNaming.label(agent, names: agentNames))
-                  .font(.callout)
-                  .foregroundStyle(.secondary)
-                  .instantTooltip(Text(verbatim: agent.providerID))
-              }
+              // The agent's menu of the status bar (#575): the bar is gone with the terminal,
+              // and the menu is where the agent's history is read.
+              SessionAgentMenu(model: model, session: session)
             }
           }
 
