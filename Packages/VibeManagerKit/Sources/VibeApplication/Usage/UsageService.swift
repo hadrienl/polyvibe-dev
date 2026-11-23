@@ -12,6 +12,7 @@ public actor UsageService {
   private let reader: (any TokenUsageReading)?
   private let contextReader: (any ContextWindowReading)?
   private let prices: ModelPriceUpdater?
+  private let rates: ExchangeRateUpdater?
   private let clock: any SessionClock
 
   /// Where each current conversation's transcript was left, for its context (#407). In memory
@@ -35,10 +36,12 @@ public actor UsageService {
     reader: (any TokenUsageReading)?,
     contextReader: (any ContextWindowReading)? = nil,
     prices: ModelPriceUpdater? = nil,
+    rates: ExchangeRateUpdater? = nil,
     clock: any SessionClock = SystemSessionClock()
   ) {
     self.contextReader = contextReader
     self.prices = prices
+    self.rates = rates
     self.recorder = recorder
     self.ledger = ledger
     self.tracking = tracking
@@ -95,6 +98,46 @@ public actor UsageService {
       return false
     }
     return await prices.updateIfDue()
+  }
+
+  /// Fetches the bank's rates again when they are a day old (#599): only for a currency other
+  /// than the dollar, and not while tracking is off nor from a copy that only reads.
+  @discardableResult
+  public func updateRatesIfDue(currency: String) async -> Bool {
+    guard currency != "USD", let rates, await !recorder.isReadOnly(), await recorder.isTracking()
+    else { return false }
+    return await rates.updateIfDue()
+  }
+
+  /// The rates in use, those kept or the copy shipped with the application.
+  public func exchangeRates() async -> ExchangeRates? {
+    await rates?.current()
+  }
+
+  /// What each account's tokens of the last `days` days, today included, would have cost at
+  /// public prices (#599), by the agent's identifier: `claude-code`, `codex`, `account.<uuid>`.
+  /// A rolling window, not the calendar month; a model without a price is said, never counted.
+  public func accountCosts(days: Int = 30, calendar: Calendar = .current) async
+    -> [String: UsageCost.Estimate]
+  {
+    let now = clock.now()
+    guard let start = calendar.date(byAdding: .day, value: -(days - 1), to: now) else {
+      return [:]
+    }
+    let first = LocalDay(start, calendar: calendar)
+    let list = await prices?.current()
+    var tokens: [String: [String: TokenCounts]] = [:]
+    for bucket in await loadedSnapshot().buckets where bucket.day >= first {
+      tokens[bucket.providerID, default: [:]][bucket.model, default: TokenCounts()] += bucket.tokens
+    }
+    var costs: [String: UsageCost.Estimate] = [:]
+    for (providerID, models) in tokens {
+      costs[providerID] = UsageCost.estimate(
+        models.sorted { $0.key < $1.key }.map {
+          (UsageModelKey(providerID: providerID, model: $0.key), $0.value)
+        }, prices: list)
+    }
+    return costs
   }
 
   public func tokens() async -> TokenUsageSnapshot {

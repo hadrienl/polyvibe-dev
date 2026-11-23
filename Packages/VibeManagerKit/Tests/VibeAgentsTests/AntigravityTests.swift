@@ -285,7 +285,9 @@ struct AntigravityTests {
     #expect(object["conversation_id"] as? String == identifier)
     #expect(object["pending"] as? Bool == true)
     #expect(object["background"] as? Bool == true)
-    #expect(object.count == 4)
+    // No quota in the payload: an empty field (#599).
+    #expect(object["quota"] as? String == "")
+    #expect(object.count == 5)
   }
 
   @Test("The user's own command gets a payload over 64 KiB whole; the time is the log's")

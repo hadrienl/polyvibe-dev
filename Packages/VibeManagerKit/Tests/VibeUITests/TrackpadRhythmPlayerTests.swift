@@ -229,12 +229,21 @@ struct TrackpadRhythmPlayerTests {
     let runner = RhythmRunner(
       load: { trackpad.tapper(gap: 0.09) }, fallback: { trackpad.standIn() })
     let generation = runner.begin()
-    let done = Task.detached {
+    // On a thread of its own, as the player runs it: blocked in a task, it would hold one of the
+    // few threads every test shares — on a runner with three cores, enough to freeze them all.
+    let finished = DispatchSemaphore(value: 0)
+    Thread {
       runner.run(AlertSoundRhythm(taps: [0, 3_600]), generation: generation)
-    }
-    while trackpad.taps.isEmpty { await Task.yield() }
+      finished.signal()
+    }.start()
+    while trackpad.taps.isEmpty { try? await Task.sleep(for: .milliseconds(1)) }
     _ = runner.begin()
-    await done.value
+    await withCheckedContinuation { continuation in
+      Thread {
+        finished.wait()
+        continuation.resume()
+      }.start()
+    }
     #expect(trackpad.taps.count == 1)
   }
 

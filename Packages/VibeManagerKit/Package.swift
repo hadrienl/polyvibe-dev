@@ -58,7 +58,10 @@ let package = Package(
       name: "VibePersistence",
       dependencies: ["VibeApplication", "VibeDomain"],
       // The model prices for a first launch offline (#574), from Scripts/update-model-prices.sh.
-      resources: [.process("Localizable.xcstrings"), .copy("Resources/model-prices.json")]
+      resources: [
+        .process("Localizable.xcstrings"), .copy("Resources/model-prices.json"),
+        .copy("Resources/exchange-rates.json"),
+      ]
     ),
     // The one way to run a child that is not a terminal, and the guard that stops every child
     // group the application started when it exits. Depends on nothing: it is infrastructure.

@@ -454,6 +454,18 @@ public struct RootView: View {
                 set: { model.setPresentation($0, of: session.id) }))
           }
         }
+        // Every account's quota, always there (#599).
+        if let usage = model.usage {
+          ToolbarItem(placement: .primaryAction) {
+            QuotasToolbarButton(usage: usage) { url in
+              if model.browser != nil, model.selectedSessionID != nil {
+                model.openInWebView(url.absoluteString)
+              } else {
+                ExternalOpening.open(url)
+              }
+            }
+          }
+        }
         ToolbarItem(placement: .primaryAction) {
           Button {
             model.beginNewSession()

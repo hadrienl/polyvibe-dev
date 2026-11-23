@@ -15,6 +15,10 @@ import VibeDomain
 /// Codex: the context is `last_token_usage.total_tokens` of the last `token_count`, the window its
 /// `model_context_window`, compacted at nine tenths of it; a compaction is a `compacted` line, the context before it the last
 /// one read.
+///
+/// Antigravity: the context is the input with the cache read of the last `PLANNER_RESPONSE`; agy
+/// writes no window in its transcript, so none is said. A `CHECKPOINT` is the call that compacts
+/// the conversation, the context before it its own input.
 extension AgentUsageReader: ContextWindowReading {
   public func readContext(
     of conversation: SessionAgentConfiguration, session: WorkSession, from file: ContextWindowFile?
@@ -24,7 +28,7 @@ extension AgentUsageReader: ContextWindowReading {
         in: .whitespacesAndNewlines), !identifier.isEmpty
     else { return nil }
     let candidates: [URL]
-    let isCodex: Bool
+    let format: TranscriptFormat
     switch conversation.transcriptProviderID {
     case ClaudeCodeAgentProvider.id.rawValue:
       candidates = locator.claudeTranscripts(
@@ -32,19 +36,22 @@ extension AgentUsageReader: ContextWindowReading {
       ).filter {
         $0.lastPathComponent == "\(identifier).jsonl"
       }
-      isCodex = false
+      format = .claude
     case CodexAgentProvider.id.rawValue:
       candidates = locator.codexRollouts(
         for: identifier, providerID: conversation.providerID, since: session.createdAt,
         until: now())
-      isCodex = true
+      format = .codex
+    case AntigravityAgentProvider.id.rawValue:
+      candidates = locator.antigravityTranscripts(for: identifier)
+      format = .antigravity
     default:
       return nil
     }
     guard let url = candidates.max(by: { Self.modified($0) < Self.modified($1) }) else {
       return nil
     }
-    return Self.readContext(url, from: file ?? ContextWindowFile(), isCodex: isCodex, now: now())
+    return Self.readContext(url, from: file ?? ContextWindowFile(), format: format, now: now())
   }
 
   private static func modified(_ url: URL) -> Date {
@@ -52,7 +59,9 @@ extension AgentUsageReader: ContextWindowReading {
       ?? .distantPast
   }
 
-  static func readContext(_ url: URL, from entry: ContextWindowFile, isCodex: Bool, now: Date)
+  static func readContext(
+    _ url: URL, from entry: ContextWindowFile, format: TranscriptFormat, now: Date
+  )
     -> ContextWindowFile
   {
     var file = entry
@@ -77,10 +86,13 @@ extension AgentUsageReader: ContextWindowReading {
     file.offset += UInt64(complete.count)
     let timestamps = TimestampParser()
     for line in complete.split(separator: UInt8(ascii: "\n")) {
-      if isCodex {
-        readCodexContext(line: Data(line), into: &file, now: now, timestamps: timestamps)
-      } else {
+      switch format {
+      case .claude:
         readClaudeContext(line: Data(line), into: &file, now: now, timestamps: timestamps)
+      case .codex:
+        readCodexContext(line: Data(line), into: &file, now: now, timestamps: timestamps)
+      case .antigravity:
+        readAntigravityContext(line: Data(line), into: &file, now: now, timestamps: timestamps)
       }
     }
     return file
@@ -152,6 +164,31 @@ extension AgentUsageReader: ContextWindowReading {
       isEstimate: window != nil, measuredAt: date, source: window == nil ? nil : .reportedByCLI,
       lastCompaction: file.compaction ?? file.usage?.lastCompaction)
     file.compaction = nil
+  }
+
+  // MARK: - Antigravity
+
+  static func readAntigravityContext(
+    line: Data, into file: inout ContextWindowFile, now: Date, timestamps: TimestampParser
+  ) {
+    guard line.range(of: antigravityMarker) != nil,
+      let decoded = try? JSONDecoder().decode(AntigravityUsageLine.self, from: line)
+    else { return }
+    let date = decoded.createdAt.flatMap(timestamps.date) ?? now
+    let used = (decoded.input ?? 0) + (decoded.cacheRead ?? 0)
+    switch decoded.type {
+    case "CHECKPOINT":
+      file.compaction = .init(date: date, tokensBefore: used)
+    case "PLANNER_RESPONSE":
+      if let model = decoded.model, !model.isEmpty { file.model = model }
+      file.usage = ContextWindowUsage(
+        usedTokens: used, windowSize: nil, compactionThreshold: nil, isEstimate: false,
+        model: file.model, measuredAt: date,
+        lastCompaction: file.compaction ?? file.usage?.lastCompaction)
+      file.compaction = nil
+    default:
+      return
+    }
   }
 }
 

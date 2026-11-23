@@ -35,6 +35,24 @@ public final class UsageModel {
   /// The providers whose CLI writes usage the application can read; `nil` until the registry
   /// has answered, when no agent is said not to report any.
   public var reportingProviderIDs: Set<String>?
+  /// The quota of every account plugged in (#599).
+  public let quotas: QuotaModel
+  /// The currency costs are shown in (#599): the dollar the prices are in, or another converted
+  /// at the European Central Bank's rate of the day.
+  public var currencyCode: String {
+    didSet {
+      guard currencyCode != oldValue else { return }
+      defaults?.set(currencyCode, forKey: Self.currencyKey)
+      Task { await updateConversion(fetch: true) }
+    }
+  }
+  /// The conversion in use: the dollar while no rate of the currency chosen is known.
+  public private(set) var conversion = CostConversion.dollar
+  /// What each account's last thirty days would have cost at public prices (#599).
+  public private(set) var accountCosts: [String: UsageCost.Estimate] = [:]
+
+  static let currencyKey = "costCurrency"
+  @ObservationIgnored private let defaults: UserDefaults?
 
   private let service: UsageService
   private var sessions: () -> [WorkSession] = { [] }
@@ -50,10 +68,20 @@ public final class UsageModel {
   private var sleepObserver: SleepObserver?
   private let refreshInterval: Duration
 
-  public init(service: UsageService, refreshInterval: Duration = .seconds(30)) {
+  public init(
+    service: UsageService, refreshInterval: Duration = .seconds(30),
+    quotas: QuotaModel = QuotaModel(), defaults: UserDefaults? = nil
+  ) {
     self.service = service
     self.refreshInterval = refreshInterval
+    self.quotas = quotas
+    self.defaults = defaults
+    currencyCode =
+      defaults?.string(forKey: Self.currencyKey).flatMap {
+        CostCurrency.codes.contains($0) ? $0 : nil
+      } ?? CostCurrency.defaultCode()
     sleepObserver = SleepObserver(recorder: service.recorder)
+    quotas.isTrackingEnabled = { [weak self] in self?.isTrackingEnabled ?? false }
   }
 
   /// Where the sessions come from: the workspace's own list, archived ones included.
@@ -65,6 +93,20 @@ public final class UsageModel {
   ) {
     self.sessions = sessions
     self.endpointWindow = endpointWindow
+    // The accounts the sessions of the last day ran on: the ones the header's gauge follows.
+    quotas.recentlyUsed = {
+      Self.accounts(of: sessions(), since: Date().addingTimeInterval(-86_400))
+    }
+  }
+
+  /// The agents the sessions changed since `date` ran on.
+  static func accounts(of sessions: [WorkSession], since date: Date) -> Set<String> {
+    var accounts = Set<String>()
+    for session in sessions where session.updatedAt >= date {
+      accounts.formUnion(session.conversations.map(\.providerID))
+      if let agent = session.agent { accounts.insert(agent.providerID) }
+    }
+    return accounts
   }
 
   /// Settles what the previous run of the application left open, once the terminal host has
@@ -140,6 +182,7 @@ public final class UsageModel {
     Task { [service] in
       if await service.updatePricesIfDue() { await self.recompute() }
     }
+    Task { await updateConversion(fetch: true) }
     await refreshContexts(sessions().filter { sessionWatchers[$0.id] != nil })
     await recompute()
   }
@@ -181,6 +224,21 @@ public final class UsageModel {
     sessionUsage = overview.sessions
     runsRecordedSince = overview.runsRecordedSince
     pricesFetchedAt = overview.pricesFetchedAt
+    accountCosts = await service.accountCosts()
+  }
+
+  /// The rate of the currency chosen, fetched again when a day old; costs are drawn again.
+  func updateConversion(fetch: Bool) async {
+    let code = currencyCode
+    if fetch { await service.updateRatesIfDue(currency: code) }
+    let rates = await service.exchangeRates()
+    guard code == currencyCode else { return }
+    let next = CostConversion.make(code: code, rates: rates)
+    guard next != conversion else { return }
+    conversion = next
+    CostConversion.current = next
+    // The figures carry no currency: computed again, they are drawn in the new one.
+    await recompute()
   }
 
   private func loadTracking() async {
@@ -195,6 +253,7 @@ public final class UsageModel {
     await service.setTracking(enabled)
     await loadTracking()
     if !enabled { contextWindows = [:] }
+    await quotas.trackingChanged(enabled)
     if enabled { await refresh() } else { await recompute() }
   }
 

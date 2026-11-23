@@ -36,6 +36,9 @@ asks for another bound. It is registered with `ChildProcessGroupGuard` while it 
 | `ProcessGitCommandRunner` | `git -c core.fsmonitor=false -c core.hooksPath=/dev/null <verb> …`, verbs: `status --ignore-submodules=dirty`, `config --includes --get-regexp` (before a `status`), `rev-parse`, `symbolic-ref`, `reflog`, `for-each-ref`, `merge-base`, `rev-list`, `remote get-url`, `diff --no-ext-diff --no-textconv` between two commits | `HOME PATH USER LOGNAME TMPDIR SSH_AUTH_SOCK`, English locale, `GIT_TERMINAL_PROMPT=0`, `GIT_OPTIONAL_LOCKS=0`, `GIT_PAGER=cat`, `GIT_NO_LAZY_FETCH=1`; for `status`, `GIT_CONFIG_*` switching off the repository's filter drivers, aliases, Git LFS extensions and named hooks | 30 s for the inspector, 120 s otherwise | 64 MiB; beyond that the command is reported as failed, never parsed cut |
 | `GitExecutable` | `/usr/bin/xcode-select -p` | As `git` | 5 s | 4 KiB |
 | `CodexAppServerProcess` (#45) | `codex app-server -c hooks.<Event>=[…]…`, fed `initialize` and one call — `hooks/list`, or `config/batchWrite` of the approval of our hooks alone — on its standard input, kept open until the answer comes | The agent's launch plan: `AgentEnvironmentPolicy`, `CODEX_HOME` included | 5 s | 1 MiB |
+| `AccountQuotaProbe` (#599), through `CodexAppServerProcess` | `codex app-server`, fed `initialize` and `account/rateLimits/read` on its standard input, kept open until the answer comes. Codex asks its server with its own sign-in: no token is read by the application | The account's launch plan: `AgentEnvironmentPolicy`, `CODEX_HOME` of the account included; started in an empty folder of the temporary directory | 20 s: codex-cli 0.171 answers only once its refresh of the models has given up, five seconds in | 1 MiB; decoded into `CodexQuotaResult`, two windows and a plan |
+| `AccountQuotaProbe` (#599) | `claude -p /usage --output-format stream-json --verbose --no-session-persistence --allowed-tools "" --strict-mcp-config --settings {"disableAllHooks":true}`: a local command, answered without the model (`num_turns` 0, cost 0), no transcript written, no hook or MCP server started; standard input on `/dev/null`, or the CLI would read it | The account's launch plan, `CLAUDE_CONFIG_DIR` of the account included; empty folder | 20 s | 1 MiB; only the `usage_report` line is decoded, into `ClaudeQuotaLine`: kinds, shares, resets, a model's display name |
+| `AccountQuotaProbe` (#599) | `agy -p /usage --output-format json`: a local command, 0 token, 0 turn | The agent's launch plan; empty folder | 20 s | 1 MiB; decoded into `AntigravityQuotaAnswer`: group names, bucket ids, shares left, resets |
 | `DeviceCatalog` (`VibeDevices`, #480) | `/usr/bin/xcrun simctl list devices booted -j`, and `simctl shutdown <UDID>` when the user stops a simulator from its tab | As the bridges, without `EMU_TOKEN` | 20 s for the list, 60 s for a shutdown. Agent/companion listings share a simulator snapshot refreshed in the background (5 s freshness); a cold snapshot waits at most 200 ms. A failed probe retains the last successful snapshot. The Mac picker probes independently. | 8 MiB |
 | `DeviceCatalog` (`VibeDevices`, #526) | The user's `adb` — `$ANDROID_HOME`, `$ANDROID_SDK_ROOT`, Android Studio's `~/Library/Android/sdk`, then Homebrew's, the first executable — with `devices -l` to list the phones, every second while the Mac or companion device picker is open, and `start-server` as a phone's bridge starts. Either starts adb's server if it is not running; the server detaches itself (`setsid`), so it outlives the command's group, as when Android Studio starts it | As the bridges, without `EMU_TOKEN` | 20 s | 1 MiB |
 
@@ -84,7 +87,9 @@ account. Such a session is always Manual. The gateway's new Chat Completions rea
 
 Session-only `--settings` supplies an inline status command. It uses `/bin/sh`, `head`, `cat`,
 `plutil`, `awk` and `printf`, reads at most 4 MiB, drains stdin and extracts only the validated conversation
-UUID, allowlisted agent state and two boolean flags (confirmation pending/background work).
+UUID, allowlisted agent state, two boolean flags (confirmation pending/background work) and, since
+#599, the `quota` buckets' remaining fraction and reset time, stripped to `A-Za-z0-9._:;=@+-` and
+cut to eight buckets and 512 bytes so that no value can end the JSON string it is written in.
 Nothing from the state payload is evaluated as code. The existing enabled user status command is
 shell-quoted as a positional parameter and run with the same input and output, as the CLI already
 does. No global or project configuration is written. A malformed/unreadable settings file is not
@@ -206,3 +211,29 @@ executed by the app.
 Snapshots persist independently of CLI logs and later switches. They are not diagnostics, are not
 synced to the companion, and are not placed in repositories. Removing
 `Handovers/<session UUID>` removes that session's copies; no automatic retention period is imposed.
+
+## Account quotas and exchange rates (#599)
+
+The quota of each account is asked to its own CLI (see the inventory above): with the account's
+own sign-in, the CLI reaching its provider as it does for a turn. The application reads no token,
+no keychain item and no cookie; the OAuth endpoints a CLI uses for its quota and the browser's
+cookies were rejected for that reason. Each answer is decoded into types that declare only
+shares, windows, dates, a plan and the names of groups and models — the text of an answer, an
+account identifier, credits and the arguments the CLI echoes are never decoded. One exception:
+when Claude Code's report leaves its limits out — a subscription whose session is spent — the
+lines of its text that name a window (`Current session: 100% used · resets …`) are matched by a
+bounded pattern; the rest of the text, which describes the sessions, is skipped. What is read is
+kept in memory only, never written to disk, and nothing is asked while usage tracking is off. An
+account is asked at most once in 30 s: when the Quotas popover or a session's Usage popover
+opens, every minute while one stays open, and every ten minutes in the background while the
+application is in front, only for the accounts used in the last day.
+
+Costs in another currency than the dollar are converted at the European Central Bank's reference
+rates, `https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml`, fetched like the model
+prices: a plain `GET` of a public file, ephemeral session, no cookie, no cache, `User-Agent:
+VibeManager`, `Accept-Language: en`, at most 256 KiB, at most once a day and only while tracking
+is on and another currency is chosen. The XML is parsed without resolving external entities; a
+document without the day, without the dollar or with fewer than ten currencies is refused and the
+last good rates stay. They are kept in `Prices/exchange-rates.json`, beside the prices, with a copy
+shipped with the application.
+

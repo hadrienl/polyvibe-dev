@@ -2922,6 +2922,7 @@ public final class AppModel {
     name(descriptors)
     usage?.reportingProviderIDs = Set(
       descriptors.filter(\.capabilities.reportsUsage).map(\.id.rawValue))
+    await connectQuotas(descriptors)
     var diagnostics: [AgentProviderID: AgentDiagnostic] = [:]
 
     await withTaskGroup(of: (AgentProviderID, AgentAvailability?).self) { group in
@@ -3657,4 +3658,25 @@ public struct StatusClose: Sendable {
 public struct CloseRequest: Sendable {
   public let session: WorkSession
   public let status: SessionTaskStatus?
+}
+
+extension AppModel {
+  /// The accounts whose CLI can tell their quota, in the order of the agents (#599).
+  func connectQuotas(_ descriptors: [AgentDescriptor]) async {
+    guard let usage, let agents else { return }
+    var accounts: [(QuotaModel.Account, any AgentQuotaReporting)] = []
+    for descriptor in descriptors {
+      guard let reporter = await agents.provider(id: descriptor.id) as? any AgentQuotaReporting
+      else { continue }
+      accounts.append(
+        (
+          QuotaModel.Account(
+            id: descriptor.id.rawValue, name: descriptor.displayName,
+            symbolName: descriptor.symbolName, usageURL: reporter.quotaPageURL),
+          reporter
+        ))
+    }
+    usage.quotas.connect(accounts: accounts)
+    usage.quotas.startBackground()
+  }
 }

@@ -3,7 +3,7 @@ import Foundation
 import VibeApplication
 import VibeDomain
 
-/// Reads the token usage Claude Code and Codex write in their own transcripts.
+/// Reads the token usage Claude Code, Codex and Antigravity write in their own transcripts.
 ///
 /// What a line says is never read: a line is only decoded when its bytes hold one of the keys
 /// below, and it is decoded into types that declare nothing but counters, identifiers, a model and
@@ -16,8 +16,12 @@ import VibeDomain
 /// `turn_context` that opens a turn; a rollout written before those records has only the
 /// per-turn `token_count` events, counted by their `last_token_usage` instead.
 ///
-/// Codex counts cached input inside its input, Claude Code beside it: both are reported here as
-/// Claude Code does, input without the cache.
+/// agy writes `input_tokens`, `cache_read_tokens` and `output_tokens` on each `PLANNER_RESPONSE`,
+/// with its `model`, counted once by `step_index`; a `CHECKPOINT`, the call that compacts the
+/// conversation, carries the same counters without a model, and counts for the last one named.
+///
+/// Codex counts cached input inside its input, Claude Code and agy beside it: all are reported
+/// here as Claude Code does, input without the cache.
 public struct AgentUsageReader: TokenUsageReading {
   let locator: AgentTranscriptLocator
   private let calendar: Calendar
@@ -48,17 +52,20 @@ public struct AgentUsageReader: TokenUsageReading {
             in: .whitespacesAndNewlines), !identifier.isEmpty
         else { continue }
         let files: [URL]
-        let isCodex: Bool
+        let format: TranscriptFormat
         switch conversation.transcriptProviderID {
         case ClaudeCodeAgentProvider.id.rawValue:
           files = locator.claudeTranscripts(
             for: identifier, providerID: conversation.providerID)
-          isCodex = false
+          format = .claude
         case CodexAgentProvider.id.rawValue:
           files = locator.codexRollouts(
             for: identifier, providerID: conversation.providerID, since: session.createdAt,
             until: now)
-          isCodex = true
+          format = .codex
+        case AntigravityAgentProvider.id.rawValue:
+          files = locator.antigravityTranscripts(for: identifier)
+          format = .antigravity
         default:
           continue
         }
@@ -69,7 +76,7 @@ public struct AgentUsageReader: TokenUsageReading {
             next.files[key]
             ?? TokenUsageFile(sessionID: session.id, providerID: conversation.providerID)
           next.files[key] = read(
-            url, into: entry, isCodex: isCodex, now: now, isTracked: isTracked)
+            url, into: entry, format: format, now: now, isTracked: isTracked)
         }
       }
       // A transcript no longer found — the CLI deleted it — keeps what it reported.
@@ -90,7 +97,7 @@ public struct AgentUsageReader: TokenUsageReading {
   // MARK: - One file
 
   func read(
-    _ url: URL, into entry: TokenUsageFile, isCodex: Bool, now: Date,
+    _ url: URL, into entry: TokenUsageFile, format: TranscriptFormat, now: Date,
     isTracked: (Date) -> Bool
   ) -> TokenUsageFile {
     var file = entry
@@ -122,12 +129,17 @@ public struct AgentUsageReader: TokenUsageReading {
     // One parser for the whole file: a first reading goes through tens of megabytes.
     let timestamps = TimestampParser()
     for line in complete.split(separator: UInt8(ascii: "\n")) {
-      if isCodex {
+      switch format {
+      case .claude:
+        Self.readClaude(
+          line: Data(line), into: &file, calendar: calendar, now: now, timestamps: timestamps,
+          isTracked: isTracked)
+      case .codex:
         Self.readCodex(
           line: Data(line), into: &file, calendar: calendar, now: now, timestamps: timestamps,
           isTracked: isTracked)
-      } else {
-        Self.readClaude(
+      case .antigravity:
+        Self.readAntigravity(
           line: Data(line), into: &file, calendar: calendar, now: now, timestamps: timestamps,
           isTracked: isTracked)
       }
@@ -206,6 +218,36 @@ public struct AgentUsageReader: TokenUsageReading {
     }
   }
 
+  // MARK: - Antigravity
+
+  static let antigravityMarker = Data(#""input_tokens":"#.utf8)
+
+  static func readAntigravity(
+    line: Data, into file: inout TokenUsageFile, calendar: Calendar, now: Date,
+    timestamps: TimestampParser, isTracked: (Date) -> Bool
+  ) {
+    guard line.range(of: antigravityMarker) != nil,
+      let decoded = try? JSONDecoder().decode(AntigravityUsageLine.self, from: line),
+      decoded.type == "PLANNER_RESPONSE" || decoded.type == "CHECKPOINT"
+    else { return }
+    if let model = decoded.model, !model.isEmpty { file.currentModel = model }
+    let date = decoded.createdAt.flatMap(timestamps.date) ?? now
+    guard isTracked(date) else { return }
+    if let step = decoded.stepIndex {
+      guard file.isFirstSighting(of: "step:\(step)") else { return }
+    }
+    let tokens = TokenCounts(
+      input: decoded.input ?? 0, cacheRead: decoded.cacheRead ?? 0, cacheWrite: 0,
+      output: decoded.output ?? 0)
+    file.add(
+      tokens, model: file.currentModel ?? "unknown", day: LocalDay(date, calendar: calendar),
+      fallback: false)
+  }
+}
+
+/// The transcript a file is, by the CLI that wrote it.
+enum TranscriptFormat: Sendable {
+  case claude, codex, antigravity
 }
 
 /// The dates of a transcript, with and without fractional seconds.
@@ -311,5 +353,26 @@ struct CodexUsageLine: Decodable {
         input: max((input ?? 0) - cached, 0), cacheRead: cached, cacheWrite: cacheWrite ?? 0,
         output: output ?? 0, reasoning: reasoning ?? 0)
     }
+  }
+}
+
+/// An agy transcript step, reduced to what usage and context need: its content, its thinking and
+/// its tool calls are not declared, so none can be decoded, kept or logged.
+struct AntigravityUsageLine: Decodable {
+  let type: String?
+  let stepIndex: Int?
+  let createdAt: String?
+  let model: String?
+  let input: Int?
+  let cacheRead: Int?
+  let output: Int?
+
+  enum CodingKeys: String, CodingKey {
+    case type, model
+    case stepIndex = "step_index"
+    case createdAt = "created_at"
+    case input = "input_tokens"
+    case cacheRead = "cache_read_tokens"
+    case output = "output_tokens"
   }
 }

@@ -241,3 +241,51 @@ alternatives; the rest stands.
 - **Currency.** Dollars, written the way the user's language writes them, never converted: the
   prices are in dollars, and a rate would be one more figure to keep fresh. A cost that rounds to
   nothing without being nothing is “< $0.01”.
+
+## Amendment — Antigravity's usage, context and quota (#599)
+
+Measured on agy 1.5.14, 2026-11-22.
+
+- **Usage.** Each `PLANNER_RESPONSE` step of agy's transcript carries `model`, `input_tokens`,
+  `cache_read_tokens` and `output_tokens`; input leaves the cache out, as Claude Code's does. A
+  `CHECKPOINT`, the call that compacts the conversation, carries the same counters without a model:
+  it counts for the last model named. Steps are counted once by `step_index`. A line is decoded only
+  when its bytes hold `"input_tokens":`, into a type that declares nothing but those counters, the
+  step's type, index, date and model. `AgentCapabilities.reportsUsage` is now true for Antigravity.
+- **Context.** The input with the cache read of the last response. agy writes no window in its
+  transcript, so none is said; a `CHECKPOINT` is a compaction, its own input the context before it.
+- **Quota.** agy writes the error that ends a turn on a spent quota to its terminal only. Its status
+  line carries `quota.<bucket>.remaining_fraction` and `reset_time`, which the status command keeps
+  (see the security review). agy does not say which model a turn used: a turn that fails while
+  every bucket is spent becomes an account notice naming them and their reset; one spent among
+  others is said beside an ordinary failure, the error may be another. A bucket whose reset has
+  passed is no longer named.
+
+## Amendment — the quotas of the accounts, and costs in another currency (#599)
+
+Decided on 2026-11-22, with a mock-up validated by the user.
+
+- **Live shares, asked to each CLI.** `account/rateLimits/read` of Codex's app-server,
+  `claude -p /usage` and `agy -p /usage`, measured on codex-cli 0.169.0, claude 2.1.330 and agy
+  1.5.14: none calls a model or spends a turn. Each is asked through the agent's own launch plan,
+  so an extra account of #478 is asked with its folder. The formats are not contracts: an answer
+  that does not read says so, never a zero; a failure keeps the last figures with their age. What
+  is read is never written to disk.
+- **The Quotas button**, always in the toolbar: a dial, no badge. Its needle points at the window
+  nearest its limit, every account together; its colour is green under 80 % used, orange up to the
+  limit, red at it, grey without a figure. These colours belong to the dial alone: elsewhere,
+  orange still means an agent is waiting (ADR 0024). Its popover lists every account, its windows
+  and its last thirty days at public prices.
+- **Used or left** is one setting for every agent; Antigravity's share left is shown as used =
+  1 − left. The colour always follows what was used.
+- **Thirty days per account.** The API equivalent of #574, summed over the last thirty days, today
+  included, by the conversation's agent identifier (`claude-code`, `codex`, `account.<uuid>`),
+  from the tallies `TokenUsageFile` already keeps. Only the sessions run in Vibe Manager count; a
+  model without a price is said, never counted.
+- **Currency.** This amends “dollars, never converted” of #574: costs can be shown in a currency
+  chosen in Settings, converted from the dollar through the euro at the European Central Bank's
+  rate of the day, fetched at most once a day (see the security review). Without a rate, costs stay
+  in dollars. The rate is said under the costs.
+- **Not done here.** A quota reached in a conversation does not yet ask the account again at once;
+  the next popover or background reading does.
+

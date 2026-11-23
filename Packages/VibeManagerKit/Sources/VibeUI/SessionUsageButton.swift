@@ -42,7 +42,8 @@ struct SessionUsageButton: View {
     .instantTooltip(summary.help(locale: locale))
     .accessibilityLabel(
       Text(
-        LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading.")))
+        LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading."))
+    )
     .accessibilityValue(Text(verbatim: summary.spoken(locale: locale)))
     .task(id: isShown ? session.id : nil) {
       guard isShown else { return }
@@ -260,6 +261,7 @@ struct SessionUsagePopover: View {
   let usage: UsageModel
   let session: WorkSession
   let agentNames: [String: String]
+  @State private var watch: UUID?
 
   nonisolated static let width: CGFloat = 320
 
@@ -274,20 +276,71 @@ struct SessionUsagePopover: View {
         context: usage.contextWindows[session.id],
         contextUnavailability: usage.contextUnavailability(for: session),
         contextAgentName: session.agent.flatMap { agentNames[$0.transcriptProviderID] }),
-      pricesFetchedAt: usage.pricesFetchedAt)
+      pricesFetchedAt: usage.pricesFetchedAt,
+      quota: quota
+    )
+    .onAppear {
+      // The session's agent, whether or not it can tell its quota yet: the agents may still be
+      // found, and only the agent's own account is asked.
+      if let id = session.agent?.providerID { watch = usage.quotas.startWatching([id]) }
+    }
+    .onDisappear {
+      if let watch { usage.quotas.stopWatching(watch) }
+      watch = nil
+    }
   }
+
+  /// The account the session's agent runs on, when its CLI can tell its quota.
+  private var account: String? {
+    guard let id = session.agent?.providerID, usage.quotas.isAccount(id) else { return nil }
+    return id
+  }
+
+  private var quota: SessionQuota? {
+    guard let account, usage.isTrackingEnabled else { return nil }
+    return SessionQuota(
+      account: agentNames[account] ?? account, entry: usage.quotas.entry(for: account),
+      isAsking: usage.quotas.asking.contains(account), display: usage.quotas.display)
+  }
+}
+
+/// The quota of the account a session runs on, in its Usage popover (#599).
+struct SessionQuota {
+  let account: String
+  let entry: AccountQuotaService.Entry?
+  let isAsking: Bool
+  let display: QuotaModel.Display
 }
 
 /// The popover's layout, apart from the model it reads: what a test draws.
 struct SessionUsagePopoverContent: View {
   let figures: SessionUsageFigures
   let pricesFetchedAt: Date?
+  var quota: SessionQuota? = nil
 
   @Environment(\.locale) private var locale
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       figures
+      if let quota {
+        Divider()
+        VStack(alignment: .leading, spacing: 6) {
+          Text(
+            LocalizedStringResource(
+              "Quota · \(quota.account)", bundle: .module,
+              comment:
+                "A session's usage: the quota of the account it runs on, named after the dot."
+            )
+          )
+          .font(.headline)
+          TimelineView(.periodic(from: .now, by: 30)) { context in
+            AccountQuotaSection(
+              account: quota.account, entry: quota.entry, isAsking: quota.isAsking,
+              display: quota.display, now: context.date)
+          }
+        }
+      }
       Divider()
       VStack(alignment: .leading, spacing: 2) {
         if let pricesFetchedAt {
@@ -297,6 +350,9 @@ struct SessionUsagePopoverContent: View {
                 "Public prices from LiteLLM, read on \(pricesFetchedAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale))).",
                 locale: locale, bundle: .module,
                 comment: "Where the prices of the costs come from, and the day they were read.")))
+        }
+        if let note = UsagePresentation.conversionNote(CostConversion.current, locale: locale) {
+          Text(verbatim: note)
         }
         Text(UsagePresentation.privacyNote)
       }

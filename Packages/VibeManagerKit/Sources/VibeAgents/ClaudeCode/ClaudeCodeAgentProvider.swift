@@ -36,6 +36,7 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
       "http_proxy", "https_proxy", "no_proxy",
       "SSL_CERT_FILE", "SSL_CERT_DIR",
     ],
+    shellIgnoredEnvironmentKeys: ["CLAUDE_CONFIG_DIR"],
     documentationURL: URL(string: "https://docs.claude.com/en/docs/claude-code/setup"),
     authenticationCommandLine: "claude auth login",
     authenticationOutcome: ClaudeCodeAuthenticationStatus.isSignedIn
@@ -68,7 +69,8 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
     diagnostics: any DiagnosticLog = NullDiagnosticLog(),
     shellEnvironment: (any ShellEnvironmentSource)? = nil,
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
-    account: AgentDescriptor? = nil
+    account: AgentDescriptor? = nil,
+    accountFolders: @escaping @Sendable () -> Set<String> = { [] }
   ) -> ClaudeCodeAgentProvider {
     // The CLI and the catalog reader must agree on where the configuration lives, so a value
     // that cannot be resolved into an absolute path is dropped rather than forwarded.
@@ -99,7 +101,9 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
         argumentBuilder: ClaudeCodeArgumentBuilder(),
         availabilityProbe: availabilityProbe,
         environment: environment,
-        shellEnvironment: shellEnvironment
+        shellEnvironment: shellEnvironment,
+        // The extra accounts' folders, which the shell cannot hand the agent's own account.
+        accountFolders: accountFolders
       ),
       catalog: ClaudeCodeModelCatalog(environment: environment),
       transcriptLocations: transcriptLocations,

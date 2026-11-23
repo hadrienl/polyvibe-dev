@@ -37,24 +37,28 @@ enum UsagePresentation {
   static var privacyNote: String {
     String(
       localized:
-        "Usage is recorded on this Mac only. Only the public list of prices is downloaded.",
+        "Usage is recorded on this Mac only. Only the public lists of prices and exchange rates are downloaded.",
       bundle: .module,
       comment:
-        "What stays on the Mac, under the usage figures: only the public list of model prices is fetched (#574)."
+        "What stays on the Mac, under the usage figures: only the public lists of model prices (#574) and of the European Central Bank's exchange rates (#599) are fetched."
     )
   }
 
-  /// “≈ 4,82 $”: dollars written the way the language writes them, never converted (#574). A cost
-  /// that rounds to nothing without being nothing is “< 0,01 $”, never a zero.
-  static func cost(_ amount: Decimal, approximate: Bool = true, locale: Locale = .current)
-    -> String
-  {
-    let style = Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.narrow)
+  /// “≈ 4,82 $”: the cost in the currency chosen (#599), converted from the dollars the prices
+  /// are in at the bank's rate — in dollars while no rate is known. A cost that rounds to nothing
+  /// without being nothing is “< 0,01 $”, never a zero.
+  static func cost(
+    _ amount: Decimal, approximate: Bool = true, locale: Locale = .current,
+    conversion: CostConversion = CostConversion.current
+  ) -> String {
+    let style = Decimal.FormatStyle.Currency(code: conversion.code, locale: locale)
+      .presentation(.narrow)
+    let converted = amount * conversion.perDollar
     // Below a cent, never a rounding: half a cent rounds to the even “0,00 $”.
-    if amount > 0, amount < Decimal(1) / 100 {
+    if converted > 0, converted < Decimal(1) / 100 {
       return "< " + (Decimal(1) / 100).formatted(style)
     }
-    return (approximate ? "≈ " : "") + amount.formatted(style)
+    return (approximate ? "≈ " : "") + converted.formatted(style)
   }
 
   /// Said of a model without a known price, whose tokens are left out of a cost.
@@ -74,9 +78,29 @@ enum UsagePresentation {
   }
 
   /// “4.82 US dollars”: the cost as VoiceOver reads it.
-  static func spokenCost(_ amount: Decimal, locale: Locale = .current) -> String {
-    amount.formatted(
-      Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.fullName))
+  static func spokenCost(
+    _ amount: Decimal, locale: Locale = .current,
+    conversion: CostConversion = CostConversion.current
+  ) -> String {
+    (amount * conversion.perDollar).formatted(
+      Decimal.FormatStyle.Currency(code: conversion.code, locale: locale).presentation(.fullName))
+  }
+
+  /// “1 $ = 0,86 € · ECB, 21/11”: the rate a cost was converted at, under it.
+  static func conversionNote(_ conversion: CostConversion, locale: Locale = .current) -> String? {
+    guard conversion.code != "USD", let day = conversion.day else { return nil }
+    let one = Decimal(1).formatted(
+      Decimal.FormatStyle.Currency(code: "USD", locale: locale).presentation(.narrow)
+        .precision(.fractionLength(0)))
+    let rate = conversion.perDollar.formatted(
+      Decimal.FormatStyle.Currency(code: conversion.code, locale: locale).presentation(.narrow)
+        .precision(.fractionLength(2...4)))
+    return String(
+      localized: LocalizedStringResource(
+        "\(one) = \(rate) · European Central Bank, \(day)", locale: locale, bundle: .module,
+        comment:
+          "The rate costs are converted at, such as “1 $ = 0,86 € · European Central Bank, 2026-11-21”."
+      ))
   }
 
   static func duration(_ seconds: TimeInterval) -> String {
@@ -257,5 +281,24 @@ enum UsagePresentation {
         "Model", bundle: .module,
         comment: "What the Usage window groups its figures by: an agent's model.")
     }
+  }
+}
+
+/// The currency costs are drawn in, and its rate to the dollar (#599).
+public struct CostConversion: Hashable, Sendable {
+  public let code: String
+  public let perDollar: Decimal
+  /// The day of the bank's rate; `nil` for the dollar.
+  public let day: String?
+
+  public static let dollar = CostConversion(code: "USD", perDollar: 1, day: nil)
+
+  /// What every cost is drawn with: set by the usage model when the currency or its rate changes.
+  nonisolated(unsafe) public static var current = CostConversion.dollar
+
+  /// The currency chosen at the rate known; the dollar when it has none.
+  public static func make(code: String, rates: ExchangeRates?) -> CostConversion {
+    guard code != "USD", let rates, let rate = rates.perDollar(code) else { return .dollar }
+    return CostConversion(code: code, perDollar: rate, day: rates.day)
   }
 }

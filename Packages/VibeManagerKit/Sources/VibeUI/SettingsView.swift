@@ -457,8 +457,8 @@ struct SettingsPageView: View {
   }
 }
 
-/// Settings › General: the sessions, their summary, their side terminals, where a changed file
-/// opens, and the tutorial.
+/// Settings › General: the sessions, their summary, their side terminals, how quotas and costs
+/// show, and the tutorial.
 struct GeneralSettingsPage: View {
   @Bindable var model: AppModel
 
@@ -477,6 +477,13 @@ struct GeneralSettingsPage: View {
           SideTerminalsRow(terminals: terminals)
         } header: {
           Text("Side Terminals", bundle: .module, comment: "A section of the Settings window.")
+        }
+      }
+      if let usage = model.usage {
+        Section {
+          QuotaAndCurrencySettings(usage: usage)
+        } header: {
+          Text("Quotas and Costs", bundle: .module, comment: "A section of the Settings window.")
         }
       }
       Section {
@@ -1431,5 +1438,65 @@ private struct WebViewSettings: View {
       Text(
         "You will be signed out of every site in every session’s web view.", bundle: .module)
     }
+  }
+}
+
+/// How quotas and costs are shown (#599): used or left, the same for every agent, and the
+/// currency of every cost.
+private struct QuotaAndCurrencySettings: View {
+  @Bindable var usage: UsageModel
+  @Bindable var quotas: QuotaModel
+  @Environment(\.locale) private var locale
+
+  init(usage: UsageModel) {
+    self.usage = usage
+    quotas = usage.quotas
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Picker(selection: $quotas.display) {
+        Text("Used", bundle: .module).tag(QuotaModel.Display.used)
+        Text("Left", bundle: .module).tag(QuotaModel.Display.remaining)
+      } label: {
+        Text("Show quotas as", bundle: .module)
+      }
+      .pickerStyle(.segmented)
+      .fixedSize()
+      .disabled(!usage.isTrackingEnabled)
+      Picker(selection: $usage.currencyCode) {
+        ForEach(CostCurrency.codes, id: \.self) { code in
+          Text(verbatim: Self.name(of: code, locale: locale)).tag(code)
+        }
+      } label: {
+        Text("Currency of costs", bundle: .module)
+      }
+      .fixedSize()
+      .disabled(!usage.isTrackingEnabled)
+      Text(
+        "Prices are in US dollars, converted at the European Central Bank's reference rate, downloaded at most once a day.",
+        bundle: .module,
+        comment: "Under the currency of costs: where the rate comes from (#599)."
+      )
+      .font(.callout)
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
+      if !usage.isTrackingEnabled {
+        Text(
+          "Usage tracking is off: turn on Track agent usage in Privacy to see quotas and costs.",
+          bundle: .module,
+          comment: "Under the quota and currency settings while usage tracking is off (#599)."
+        )
+        .font(.callout)
+        .foregroundStyle(.orange)
+        .fixedSize(horizontal: false, vertical: true)
+      }
+    }
+  }
+
+  /// “Euro (EUR)”.
+  static func name(of code: String, locale: Locale) -> String {
+    let name = locale.localizedString(forCurrencyCode: code) ?? code
+    return "\(name.prefix(1).uppercased() + name.dropFirst()) (\(code))"
   }
 }

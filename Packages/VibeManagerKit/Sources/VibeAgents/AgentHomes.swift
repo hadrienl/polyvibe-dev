@@ -8,6 +8,7 @@ public final class AgentHomes: @unchecked Sendable {
   private let lock = NSLock()
   private var claude: [String: URL] = [:]
   private var codex: [String: URL] = [:]
+  private var folders: Set<String> = []
 
   public init() {}
 
@@ -19,11 +20,17 @@ public final class AgentHomes: @unchecked Sendable {
       $0.appendingPathComponent("projects", isDirectory: true)
     }
     let codex = codexHomes.mapValues { $0.appendingPathComponent("sessions", isDirectory: true) }
+    let folders = Set((claudeHomes.values.map(\.path) + codexHomes.values.map(\.path)))
     lock.withLock {
       self.claude = claude
       self.codex = codex
+      self.folders = folders
     }
   }
+
+  /// The extra accounts' folders themselves, standardized: a folder the login shell names for the
+  /// agent's own account is refused when it is one of them (#599).
+  public var accountFolders: Set<String> { lock.withLock { folders } }
 
   var claudeProjects: [String: URL] { lock.withLock { claude } }
   var codexSessions: [String: URL] { lock.withLock { codex } }

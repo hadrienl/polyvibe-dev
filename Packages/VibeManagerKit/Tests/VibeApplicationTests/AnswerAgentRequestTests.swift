@@ -160,7 +160,8 @@ private struct Fixture {
         guard let live else { return screen }
         return await live.text
       },
-      sleep: { _ in })
+      // Gives the thread up, so that what the test changes meanwhile gets to run.
+      sleep: { _ in await Task.yield() })
   }
 
   /// A running session whose agent asks to run `command`.
