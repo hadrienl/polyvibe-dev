@@ -190,6 +190,9 @@ struct ConversationOverview: View {
       }
       .contentShape(Rectangle())
       .gesture(drag(scale: scale))
+      // The click that brings the window forward goes there too, as on a scroll bar: else it
+      // only activated the window, and a bookmark took a second click (#596).
+      .modifier(TakesActivatingClick())
       .onContinuousHover { phase in
         switch phase {
         case .active(let point):
@@ -410,8 +413,8 @@ struct OverviewColors: Equatable {
     toolBorder = theme.border.color
     failure = theme.failure.color
     accent = theme.accent.color
-    viewport = theme.text.color.opacity(0.07)
-    viewportActive = theme.text.color.opacity(0.13)
+    viewport = theme.text.color.opacity(0.14)
+    viewportActive = theme.text.color.opacity(0.22)
     count = theme.secondaryText.color
     moments = Dictionary(
       uniqueKeysWithValues: ConversationMomentKind.allCases.map {
@@ -852,5 +855,42 @@ private struct WheelForwarder: NSViewRepresentable {
         super.scrollWheel(with: event)
       }
     }
+  }
+}
+
+/// A view whose gestures take the click that activates its window too (macOS 15 on).
+struct TakesActivatingClick: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(macOS 15, *) {
+      content.allowsWindowActivationEvents(true)
+    } else {
+      content
+    }
+  }
+}
+
+/// The overview dimmed at rest, plain under the pointer (#596): only the opacity of its container
+/// changes — nothing is laid out nor drawn again, the rows and the moments neither. Not flattened
+/// into a group: a bookmark's preview, over the messages, would blur that group, not them.
+struct OverviewBandFade: ViewModifier {
+  static let restingOpacity = 0.55
+  static let fadeDuration = 0.18
+  @State private var isHovered = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorSchemeContrast) private var contrast
+
+  /// Increase Contrast: never dimmed, its faint accents would fade out of sight.
+  static func opacity(isHovered: Bool, contrast: ColorSchemeContrast) -> Double {
+    isHovered || contrast == .increased ? 1 : restingOpacity
+  }
+
+  func body(content: Content) -> some View {
+    content
+      // Scoped to the opacity: a bookmark's preview, or the viewport's highlight, changing on the
+      // same hover, comes and goes at once, not in this fade. Reduce Motion: at once.
+      .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration)) {
+        $0.opacity(Self.opacity(isHovered: isHovered, contrast: contrast))
+      }
+      .onHover { isHovered = $0 }
   }
 }

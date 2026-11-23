@@ -141,6 +141,57 @@ struct OverviewWidthTests {
     try await waitUntil("narrowed", window, overviewIs: nominal(850))
   }
 
+  @Test("Wide, the overview is no wider than its maximum, held against the pane's right edge (#596)")
+  func wideOverviewHeldRight() async throws {
+    let (window, _) = host(width: 1700)
+    defer { window.close() }
+    #expect(nominal(1700) == ConversationOverviewLayout.maximumWidth)
+    try await waitUntil("wide", window, overviewIs: ConversationOverviewLayout.maximumWidth)
+    let laidOut = frames(in: window)
+    let overview = try #require(laidOut.overview)
+    let pane = try #require(window.contentView).bounds
+    #expect(overview.maxX == pane.maxX)
+    // The empty part of the margin lies between the text and the overview.
+    #expect(!laidOut.texts.isEmpty)
+    for text in laidOut.texts {
+      #expect(text.maxX + ConversationOverviewLayout.gap < overview.minX)
+    }
+  }
+
+  @Test("The click that brings the window forward reaches the overview, not the messages (#596)")
+  func overviewTakesTheActivatingClick() async throws {
+    let (window, _) = host(width: 1700)
+    defer { window.close() }
+    try await waitUntil("wide", window, overviewIs: ConversationOverviewLayout.maximumWidth)
+    let laidOut = frames(in: window)
+    let overview = try #require(laidOut.overview)
+    let text = try #require(laidOut.texts.first)
+    let content = try #require(window.contentView)
+    // What AppKit asks the view under a click in a window that is not the key one: whether the
+    // click goes to it, or only brings the window forward.
+    func takesFirstClick(at point: NSPoint) -> Bool {
+      let event = NSEvent.mouseEvent(
+        with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0,
+        windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
+        pressure: 1)
+      return content.hitTest(point)?.acceptsFirstMouse(for: event) ?? false
+    }
+    if #available(macOS 15, *) {
+      #expect(takesFirstClick(at: NSPoint(x: overview.midX, y: overview.midY)))
+    }
+    // The point lands on the text itself, or refusing the click there would prove nothing.
+    let textPoint = NSPoint(x: text.midX, y: text.midY)
+    #expect(content.hitTest(textPoint) is SegmentTextView)
+    #expect(!takesFirstClick(at: textPoint))
+  }
+
+  @Test("The overview rests dimmed, plain under the pointer or with Increase Contrast (#596)")
+  func bandOpacity() {
+    #expect(OverviewBandFade.opacity(isHovered: false, contrast: .standard) == 0.55)
+    #expect(OverviewBandFade.opacity(isHovered: true, contrast: .standard) == 1)
+    #expect(OverviewBandFade.opacity(isHovered: false, contrast: .increased) == 1)
+  }
+
   @Test("Held wide then let go in a narrow pane, the messages and the composer leave it its room")
   func narrowPaneLeavesTheOverviewItsRoom() async throws {
     let (window, slot) = host(width: 850)

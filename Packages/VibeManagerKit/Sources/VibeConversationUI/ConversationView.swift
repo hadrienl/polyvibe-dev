@@ -315,6 +315,7 @@ public struct ConversationView: View {
             )
           }
           .frame(width: overview.width)
+          .modifier(OverviewBandFade())
         }
       }
       .onAppear {
