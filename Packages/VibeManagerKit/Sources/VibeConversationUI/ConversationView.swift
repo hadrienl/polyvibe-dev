@@ -324,11 +324,6 @@ public struct ConversationView: View {
           .modifier(OverviewBandFade())
         }
       }
-      // Over the overview too: a wide preview may reach it.
-      .overlay { MarginPreviewOverlay(model: model, theme: theme) }
-      // Named around the preview as well as the icons: a space named on the scroll view alone is
-      // not found from its overlay, which then reads the window's and lands a title bar higher.
-      .coordinateSpace(name: Self.viewportSpace)
       .onAppear {
         let selection = selection
         model.selectedBlockID = {
@@ -381,6 +376,12 @@ public struct ConversationView: View {
           .padding(.bottom, 10)
         }
       }
+      // Over everything drawn on the messages — the overview, the pill read aloud, the buttons
+      // to the reply and to the new messages —: what the pointer asked for is not cut.
+      .overlay { MarginPreviewOverlay(model: model, theme: theme) }
+      // Named around the preview as well as the icons: a space named on the scroll view alone is
+      // not found from its overlay, which then reads the window's and lands a title bar higher.
+      .coordinateSpace(name: Self.viewportSpace)
       .accessibilityRotor(Text("Messages", bundle: .module)) {
         ForEach(model.promptBlocks) { block in
           AccessibilityRotorEntry(Text(Self.rotorLabel(block)), id: block.id)
