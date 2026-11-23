@@ -254,6 +254,23 @@ struct SessionAgentMenuTests {
     #expect(history.items[2].title.contains("Other Agent · O1"))
   }
 
+  @Test("A session that cannot be switched opens its menu: its state and history, Switch To greyed")
+  func unswitchableSessionStillOpens() async throws {
+    let subject = session()
+    let (model, repository) = await workspace(subject)
+    await repository.archive(subject.id)
+    await model.reload()
+    let archived = try #require(model.sessions.first)
+    #expect(!model.canSwitchAgent(archived))
+
+    // Not even a switch in its history: the menu opens all the same.
+    #expect(SessionAgentMenu.opens(for: archived))
+    let menu = await menu(of: archived, in: model)
+    #expect(menu.items.first?.isEnabled == true)
+    #expect(menu.items.last?.isEnabled == false)
+    #expect(!SessionAgentMenu.opens(for: WorkSession(name: "No agent")))
+  }
+
   @Test("Switch To: each agent under its logo, the model it runs checked, a model opens the sheet")
   func switchToSections() async throws {
     let subject = switched

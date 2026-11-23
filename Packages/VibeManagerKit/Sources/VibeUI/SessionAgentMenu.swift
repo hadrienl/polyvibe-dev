@@ -27,7 +27,6 @@ struct SessionAgentMenu: View {
   var body: some View {
     let names = AgentLabels(names: model.agentNames, models: choices?.modelNames ?? [:])
     let canSwitch = model.canSwitchAgent(session)
-    let history = AgentHistoryPresentation(session: session, names: names)
     // The bar's step, or a narrower one when even that does not fit.
     ViewThatFits(in: .horizontal) {
       ForEach(density.andNarrower, id: \.self) { form in
@@ -47,7 +46,7 @@ struct SessionAgentMenu: View {
       }
     }
     .background(MenuAnchor(holder: anchor))
-    .disabled(session.agent == nil || (!canSwitch && !history.hasChanges))
+    .disabled(!Self.opens(for: session))
     // Outside the disabled menu, so that it is shown on the menu greyed out too.
     .instantTooltip(Text(verbatim: help(names: names, canSwitch: canSwitch)))
     .accessibilityLabel(
@@ -111,6 +110,13 @@ struct SessionAgentMenu: View {
   }
 
   // MARK: - The menu
+
+  /// Whether the menu opens: whenever the session has an agent. One that cannot be switched now —
+  /// archived, restarting, closing, being restored — still shows its state and its history, with
+  /// only Switch To greyed out.
+  static func opens(for session: WorkSession) -> Bool {
+    session.agent != nil
+  }
 
   /// Opens the menu above the button, as it is now; the agents are read again meanwhile, for the
   /// next time — an agent installed since is offered then.
