@@ -153,6 +153,8 @@ enum AgentMenu {
           title: choice.title, action: #selector(Actions.choose(_:)), keyEquivalent: "")
         item.target = actions
         item.representedObject = choice.target
+        // Heard alone, a model would not say whose: two agents may well name theirs alike.
+        item.setAccessibilityLabel("\(section.name), \(choice.title)")
         item.state = choice.isCurrent ? .on : .off
         // The one it runs is no switch.
         item.isEnabled = !choice.isCurrent

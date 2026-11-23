@@ -51,6 +51,8 @@ struct SessionAgentMenu: View {
     .accessibilityLabel(
       Text("Agent", bundle: .module, comment: "The status bar's menu of the agent, for VoiceOver.")
     )
+    // A SwiftUI button that opens an AppKit menu: VoiceOver would not say it opens one.
+    .accessibilityHint(Self.hint)
     .accessibilityValue(
       Text(
         verbatim: session.agent.map { names.label($0, separator: ", ") }
@@ -116,6 +118,10 @@ struct SessionAgentMenu: View {
         "Help of the status bar's menu of the agent, while the session restarts, closes or is restored."
     )
   }
+
+  static let hint = Text(
+    "Opens a menu: the agent's state, its history, and the agents to switch to.", bundle: .module,
+    comment: "VoiceOver hint of the status bar's menu of the agent.")
 
   // MARK: - The menu
 

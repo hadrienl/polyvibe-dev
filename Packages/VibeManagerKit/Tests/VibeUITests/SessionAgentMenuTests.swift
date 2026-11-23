@@ -4,6 +4,7 @@ import SwiftUI
 import Testing
 import VibeApplication
 import VibeDomain
+import VibeLocalizationTesting
 import VibeTerminalUI
 
 @testable import VibeUI
@@ -335,6 +336,16 @@ struct SessionAgentMenuTests {
     #expect(withHistory.items.first?.isAccessibilityEnabled() == true)
   }
 
+  @Test("VoiceOver is told the button opens a menu, in every language")
+  func hintIsTranslated() {
+    #expect(
+      Localization.string(
+        "Opens a menu: the agent's state, its history, and the agents to switch to.",
+        module: "VibeUI", in: "fr")
+        == "Ouvre un menu\u{00A0}: l’état de l’agent, son historique "
+        + "et les agents vers lesquels changer.")
+  }
+
   @Test("Switch To: each agent under its logo, the model it runs checked, a model opens the sheet")
   func switchToSections() async throws {
     let subject = switched
@@ -352,6 +363,9 @@ struct SessionAgentMenuTests {
     }
     let fast = try #require(models.items.first { $0.title == "Fast" })
     #expect(fast.state == .on && !fast.isEnabled)
+    // VoiceOver hears whose model it is.
+    #expect(fast.accessibilityLabel() == "Stub Agent, Fast")
+    #expect(models.items.first { $0.title == "O1" }?.accessibilityLabel() == "Other Agent, O1")
 
     // The action is sent the way a click sends it, through the application.
     _ = NSApplication.shared
