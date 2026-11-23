@@ -121,6 +121,9 @@ enum AgentMenu {
     setSubtitle(content.current.state, of: item)
     setImage(logo(content.current.symbolName), of: item)
     item.setAccessibilityLabel("\(content.current.title), \(content.current.state)")
+    // Drawn enabled, to read in full; without a history it acts on nothing, and VoiceOver must
+    // not announce something to press.
+    item.setAccessibilityEnabled(!content.history.isEmpty)
     if !content.history.isEmpty {
       let history = NSMenu()
       history.autoenablesItems = false

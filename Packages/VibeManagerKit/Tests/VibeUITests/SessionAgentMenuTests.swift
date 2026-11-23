@@ -322,6 +322,19 @@ struct SessionAgentMenuTests {
     #expect(switchTo.items.map(\.title) == ["Other Settings…"])
   }
 
+  @Test("The first line acts only through its history: without one, VoiceOver offers no press")
+  func inertFirstLine() async throws {
+    let (model, _) = await workspace(session())
+    let alone = await menu(of: session(), in: model)
+    let withHistory = await menu(of: switched, in: model)
+
+    let line = try #require(alone.items.first)
+    #expect(line.submenu == nil)
+    #expect(line.isEnabled)
+    #expect(!line.isAccessibilityEnabled())
+    #expect(withHistory.items.first?.isAccessibilityEnabled() == true)
+  }
+
   @Test("Switch To: each agent under its logo, the model it runs checked, a model opens the sheet")
   func switchToSections() async throws {
     let subject = switched
