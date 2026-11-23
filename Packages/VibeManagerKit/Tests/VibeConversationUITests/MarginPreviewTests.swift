@@ -201,7 +201,17 @@ struct MarginPreviewTests {
     #expect(preview.hover?.blockID == "b1")
     preview.pointerOn(blockID: "b1", target: .bookmark, anchor: anchor)
     #expect(preview.hover?.target == .moments)
+    // Once the messages have stopped, the pointer moving onto another icon shows its own.
     now += ConversationMarginPreview.quietAfterScroll
+    preview.pointerOn(blockID: "b1", target: .bookmark, anchor: anchor)
+    #expect(preview.hover?.target == .bookmark)
+  }
+
+  @Test("The conversation put away: nothing shown when it comes back")
+  func hidden() {
+    let preview = ConversationMarginPreview()
+    preview.pointerOn(
+      blockID: "b1", target: .moments, anchor: CGRect(x: 10, y: 200, width: 18, height: 20))
     preview.hide()
     #expect(preview.hover == nil)
   }
