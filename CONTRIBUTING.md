@@ -38,7 +38,8 @@ Scripts/ci.sh
 ```
 
 It lints the formatting (`xcrun swift-format lint`, configured by `.swift-format`), checks the
-translations, runs the package tests and builds the application. To iterate faster:
+translations, runs the package tests and builds the application. CI runs its three parts at once,
+on three runners; `Scripts/ci.sh package`, `macos` or `companion` runs one. To iterate faster:
 
 ```sh
 swift test --package-path Packages/VibeManagerKit --filter SomeTests

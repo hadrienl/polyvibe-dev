@@ -178,6 +178,9 @@ struct SessionIdentityWindowTests {
 
     let list = try #require(workspace.list)
     workspace.window.makeFirstResponder(list)
+    // As the app gives the sidebar the keyboard: a window never shown, among those other suites
+    // open meanwhile, does not always tell SwiftUI's focus that the list took it.
+    model.focusSidebar()
     // Once the sidebar has been drawn again with something to undo.
     await waitUntil("the sidebar answers ⌘Z") { Self.answersUndo(before: list.window, from: list) }
 
@@ -190,6 +193,7 @@ struct SessionIdentityWindowTests {
     #expect(model.canUndoSidebarChange)
 
     workspace.window.makeFirstResponder(list)
+    model.focusSidebar()
     await waitUntil("the sidebar answers ⌘Z again") {
       Self.answersUndo(before: list.window, from: list)
     }
