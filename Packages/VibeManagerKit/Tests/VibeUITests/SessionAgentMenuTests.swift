@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 import Testing
 import VibeApplication
 import VibeDomain
@@ -182,6 +183,25 @@ struct SessionAgentMenuTests {
     #expect(
       SessionAgentMenu.symbol(of: SessionAgentConfiguration(providerID: "gone"), among: [claude])
         == AgentMenuContent.unknownAgentSymbol)
+  }
+
+  @Test("The menu opens above the button, on its leading edge: its right one, right to left")
+  func menuLinesUpOnTheLeadingEdge() {
+    let button = NSRect(x: 0, y: 0, width: 120, height: 22)
+    let menu = NSSize(width: 260, height: 90)
+
+    let leftToRight = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: false, direction: .leftToRight)
+    #expect(leftToRight == NSPoint(x: 0, y: 22 + 4 + 90))
+    // Arabic: the menu's right edge on the button's, the menu reaching left of it.
+    let rightToLeft = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: false, direction: .rightToLeft)
+    #expect(rightToLeft == NSPoint(x: 120 - 260, y: 22 + 4 + 90))
+    #expect(rightToLeft.x + menu.width == button.maxX)
+    // In a flipped view, above is towards smaller y.
+    let flipped = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: true, direction: .rightToLeft)
+    #expect(flipped == NSPoint(x: 120 - 260, y: -94))
   }
 
   @Test("Models are named as their catalogue names them, else by their identifier")

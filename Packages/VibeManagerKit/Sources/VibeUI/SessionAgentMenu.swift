@@ -19,6 +19,7 @@ struct SessionAgentMenu: View {
   let model: AppModel
   let session: WorkSession
   @Environment(\.statusBarDensity) private var density
+  @Environment(\.layoutDirection) private var layoutDirection
   /// The button's own view, which the menu opens above.
   @State private var anchor = MenuAnchor.Holder()
 
@@ -137,10 +138,26 @@ struct SessionAgentMenu: View {
     }
     Task { [model] in await model.refreshAgentChoices() }
     guard let view = anchor.view else { return }
+    menu.userInterfaceLayoutDirection =
+      layoutDirection == .rightToLeft ? .rightToLeft : .leftToRight
+    menu.popUp(
+      positioning: nil,
+      at: Self.menuOrigin(
+        menu: menu.size, button: view.bounds, isFlipped: view.isFlipped,
+        direction: layoutDirection),
+      in: view)
+  }
+
+  /// Where the menu's top left corner goes, in the button's own coordinates: above the button, a
+  /// little apart, lined up on its leading edge — its left one, or its right one in Arabic or
+  /// Hebrew, where the bar is mirrored but an AppKit view's coordinates are not.
+  static func menuOrigin(
+    menu: NSSize, button: NSRect, isFlipped: Bool, direction: LayoutDirection
+  ) -> NSPoint {
     let gap: CGFloat = 4
-    // The menu's top left corner: above the button, on its left edge.
-    let top = view.isFlipped ? -gap - menu.size.height : view.bounds.height + gap + menu.size.height
-    menu.popUp(positioning: nil, at: NSPoint(x: 0, y: top), in: view)
+    let top = isFlipped ? button.minY - gap - menu.height : button.maxY + gap + menu.height
+    let left = direction == .rightToLeft ? button.maxX - menu.width : button.minX
+    return NSPoint(x: left, y: top)
   }
 
   private var stateSentence: String {
