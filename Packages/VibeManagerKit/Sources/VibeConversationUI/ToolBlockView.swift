@@ -1013,6 +1013,20 @@ struct StandaloneRequestCard: View {
       }
       .font(theme.interfaceFont(size: appearance.textSize.scaled(12.5), weight: .semibold))
       .foregroundStyle(theme.text.color)
+      if let questions = request.questions {
+        ForEach(Array(questions.enumerated()), id: \.offset) { _, question in
+          Text(verbatim: DisplaySafeText.visible(question.text))
+            .font(theme.messageFont(size: appearance.textSize.scaled(13)))
+        }
+        if request.request.reference.tool == "request_user_input_async" {
+          Button {
+            Task { await model.openQuestionPanel(for: request.request.id) }
+          } label: {
+            Text("Questions", bundle: .module)
+          }
+          .disabled(model.terminalPanel != nil || !model.isProcessRunning)
+        }
+      }
       RequestActions(model: model, request: request, call: nil)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1025,10 +1039,11 @@ struct StandaloneRequestCard: View {
   }
 
   private var symbol: String {
+    if request.questions != nil { return "questionmark.bubble" }
     switch kind {
-    case .update: "arrow.down.circle"
-    case .trust: "folder.badge.questionmark"
-    default: "terminal"
+    case .update: return "arrow.down.circle"
+    case .trust: return "folder.badge.questionmark"
+    default: return "terminal"
     }
   }
 
