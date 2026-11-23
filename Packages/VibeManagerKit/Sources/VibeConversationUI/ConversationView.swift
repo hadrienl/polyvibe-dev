@@ -43,6 +43,8 @@ public struct ConversationView: View {
   static let pageTargetID = "conversation.page"
   /// The messages' own coordinates: where each row says it is (#567).
   static let contentSpace = "conversation.content"
+  /// The messages' frame, as it shows: where the margin's preview is placed (#608).
+  static let viewportSpace = "conversation.viewport"
 
   public init(
     model: ConversationModel, theme: ConversationTheme, appearance: ConversationAppearance,
@@ -153,6 +155,8 @@ public struct ConversationView: View {
       model.readAloud?.forget(ObjectIdentifier(model))
     }
     .onChange(of: isActive) { _, isActive in
+      // Kept mounted but hidden, its rows never tell the pointer left them (#608).
+      model.marginPreview.hide()
       if isActive {
         claimKeyboardOnActivation()
       } else {
@@ -286,6 +290,8 @@ public struct ConversationView: View {
         .onGeometryChange(for: CGRect.self) {
           $0.frame(in: .scrollView)
         } action: { frame in
+          // Moved: no row brought under the pointer shows its preview for a while (#608).
+          if frame.minY != contentFrame.minY { model.marginPreview.contentMoved() }
           contentFrame = frame
           model.scrollGeometryChanged(contentFrame: frame, viewportHeight: viewportHeight)
           trackReadablePart()
@@ -370,6 +376,12 @@ public struct ConversationView: View {
           .padding(.bottom, 10)
         }
       }
+      // Over everything drawn on the messages — the overview, the pill read aloud, the buttons
+      // to the reply and to the new messages —: what the pointer asked for is not cut.
+      .overlay { MarginPreviewOverlay(model: model, theme: theme) }
+      // Named around the preview as well as the icons: a space named on the scroll view alone is
+      // not found from its overlay, which then reads the window's and lands a title bar higher.
+      .coordinateSpace(name: Self.viewportSpace)
       .accessibilityRotor(Text("Messages", bundle: .module)) {
         ForEach(model.promptBlocks) { block in
           AccessibilityRotorEntry(Text(Self.rotorLabel(block)), id: block.id)
@@ -670,14 +682,16 @@ struct BlockRow: View {
   /// The block's moment and bookmark, left of it.
   private var gutter: some View {
     HStack(alignment: .top, spacing: 0) {
-      let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
+      let moments = MomentGutterMark.moments(of: block, model: model, appearance: appearance)
       if moments.isEmpty {
         Color.clear.frame(width: MomentGutterMark.width, height: 1)
       } else {
-        MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
+        MomentGutterMark(
+          moments: moments, block: block, preview: model.marginPreview, lineHeight: linePitch)
       }
       BookmarkGutter(
-        isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+        blockID: block.id, preview: model.marginPreview, isMarked: model.isBookmarked(block),
+        isRowHovered: isHovered, lineHeight: linePitch
       ) {
         model.toggleBookmark(block)
       }

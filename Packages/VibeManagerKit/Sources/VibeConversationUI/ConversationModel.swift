@@ -1139,6 +1139,8 @@ public final class ConversationModel {
   @ObservationIgnored var selectedBlockID: () -> String? = { nil }
   /// Where the rows are as they are built: what the overview and the commands start from.
   @ObservationIgnored public let overview = ConversationOverviewTracker()
+  /// The icon of the margin the pointer is on, which the preview over the messages shows (#608).
+  @ObservationIgnored let marginPreview = ConversationMarginPreview()
   /// Where the overview asked to go: a block and how far into it, with a counter so that the
   /// same place twice still moves.
   public struct OverviewScroll: Hashable, Sendable {
