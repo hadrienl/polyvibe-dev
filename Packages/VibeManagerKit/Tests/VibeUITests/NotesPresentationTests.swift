@@ -238,6 +238,7 @@ struct NotesPresentationViewTests {
     /// Whether each panel shown took the keyboard.
     var keyboard: [Bool] = []
     var shownPopovers: [NSPopover] = []
+    var popoverAnchors: [NSView] = []
 
     init(model: AppModel) {
       _ = NSApplication.shared
@@ -252,7 +253,11 @@ struct NotesPresentationViewTests {
         self.shownPanels.append(panel)
         self.keyboard.append(takesKeyboard)
       }
-      controller.showPopover = { [unowned self] popover, _ in self.shownPopovers.append(popover) }
+      controller.showPopover = { [unowned self] popover, anchor, _ in
+        self.shownPopovers.append(popover)
+        self.popoverAnchors.append(anchor)
+      }
+      controller.workspaceContent = { nil }
       model.notesPresentation.anchor = anchor
     }
 
@@ -372,6 +377,25 @@ struct NotesPresentationViewTests {
     await waitUntil("the editor's name follows") {
       Self.editor(in: panel.contentView)?.accessibilityLabel() == "Notes for Renamed"
     }
+  }
+
+  @Test("With the button in no window, the popover opens at the workspace window's corner")
+  func popoverWithoutTheButton() async throws {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    // The button folded into the toolbar's overflow menu: its view is in no window.
+    let folded = NSView()
+    model.notesPresentation.anchor = folded
+    let content = try #require(screen.anchorWindow.contentView)
+    screen.controller.workspaceContent = { content }
+
+    model.toggleNotes()
+
+    #expect(screen.controller.popover != nil)
+    #expect(screen.popoverAnchors.map(ObjectIdentifier.init) == [ObjectIdentifier(content)])
+    #expect(model.notesPresentation.isPopoverShown)
+    withExtendedLifetime(folded) {}
   }
 
   @Test("Each window that replaces the panel opens where the last one was left, and keeps its own")

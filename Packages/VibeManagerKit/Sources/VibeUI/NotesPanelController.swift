@@ -50,9 +50,10 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   var showPanel: (NotesPanel, Bool) -> Void = { panel, takesKeyboard in
     if takesKeyboard { panel.makeKeyAndOrderFront(nil) } else { panel.orderFront(nil) }
   }
-  /// Opens the popover under the toolbar's button. Tests keep it off the screen too.
-  var showPopover: (NSPopover, NSView) -> Void = { popover, anchor in
-    popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
+  /// Opens the popover under the toolbar's button, or under the place given in a view without one.
+  /// Tests keep it off the screen too.
+  var showPopover: (NSPopover, NSView, NSRect) -> Void = { popover, anchor, place in
+    popover.show(relativeTo: place, of: anchor, preferredEdge: .minY)
     popover.contentViewController?.view.window?.setAccessibilityIdentifier("notes-popover")
   }
 
@@ -79,13 +80,32 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       self.panel = panel
       showPanel(panel, request.activates || wasKey)
     case .popover:
-      guard let anchor = model.notesPresentation.anchor, anchor.window != nil else { return }
+      guard let (anchor, place) = popoverAnchor() else { return }
       displayed = request
       let popover = makePopover(session: session)
       self.popover = popover
-      showPopover(popover, anchor)
+      showPopover(popover, anchor, place)
     }
   }
+
+  /// Under the toolbar's button when it is in the window; otherwise — a window too narrow for it,
+  /// its button folded into the toolbar's overflow menu — at the top trailing corner of the
+  /// workspace window, rather than a popover asked for and never shown.
+  private func popoverAnchor() -> (NSView, NSRect)? {
+    if let anchor = model.notesPresentation.anchor, anchor.window != nil {
+      return (anchor, anchor.bounds)
+    }
+    guard let content = workspaceContent() else { return nil }
+    let bounds = content.bounds
+    let place = NSRect(
+      x: bounds.maxX - 48, y: content.isFlipped ? bounds.minY : bounds.maxY - 1, width: 28,
+      height: 1)
+    return (content, place)
+  }
+
+  /// The workspace window's content, for a popover whose button is in no window. Tests give
+  /// their own.
+  var workspaceContent: () -> NSView? = { NSApp.mainWindow?.contentView }
 
   /// Closes whatever is on screen and destroys its editor: hidden but alive, an editor would still
   /// answer focus requests, and bring its window back.
