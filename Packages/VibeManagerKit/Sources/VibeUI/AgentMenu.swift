@@ -156,7 +156,8 @@ enum AgentMenu {
         menu.addItem(item)
       }
     }
-    menu.addItem(.separator())
+    // Between the agents and the sheet: with no agent to offer, the submenu opens on the sheet.
+    if !content.sections.isEmpty { menu.addItem(.separator()) }
     let other = NSMenuItem(
       title: String(
         localized: "Other Settings…", bundle: .module,

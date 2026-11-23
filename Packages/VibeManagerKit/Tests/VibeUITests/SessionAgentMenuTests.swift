@@ -311,6 +311,17 @@ struct SessionAgentMenuTests {
     #expect(!SessionAgentMenu.opens(for: WorkSession(name: "No agent")))
   }
 
+  @Test("With no agent to offer, Switch To opens on the sheet, with no separator above it")
+  func noSeparatorWithoutAgents() throws {
+    let content = AgentMenuContent(
+      session: session(), names: AgentLabels(names: Self.names), choices: nil, state: "",
+      canSwitch: true)
+
+    let switchTo = try #require(AgentMenu.make(content) { _ in }.items.last?.submenu)
+
+    #expect(switchTo.items.map(\.title) == ["Other Settings…"])
+  }
+
   @Test("Switch To: each agent under its logo, the model it runs checked, a model opens the sheet")
   func switchToSections() async throws {
     let subject = switched
