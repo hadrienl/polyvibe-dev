@@ -198,7 +198,8 @@ struct ConversationOverview: View {
         case .active(let point):
           let cluster = Self.cluster(
             near: point, moments: model.shownMoments, layout: layout, scale: scale)
-          let hover = Hover(moment: cluster.map { model.shownMoments[$0.moments.lowerBound].moment })
+          let hover = Hover(
+            moment: cluster.map { model.shownMoments[$0.moments.lowerBound].moment })
           if hover != hovered { hovered = hover }
           // A moment is a link: the hand over the whole square of its icon, or its line.
           (cluster == nil ? NSCursor.arrow : NSCursor.pointingHand).set()
@@ -220,7 +221,9 @@ struct ConversationOverview: View {
               room: room)
           ) {
             MomentPreview(
-              model: model, moments: Array(model.shownMoments[cluster.moments]), theme: theme)
+              content: MomentPreviewContent(
+                placed: model.shownMoments[cluster.moments], model: model),
+              theme: theme)
           }
           .allowsHitTesting(false)
         }
@@ -662,109 +665,6 @@ private struct BookmarkPreviewPlacement: Layout {
   }
 }
 
-/// The type of the moments' preview, the conversation's own: a bookmark's words as the messages
-/// read them — the theme's font, at the conversation's size —, who wrote them as a relayed
-/// message's summary does.
-struct MomentPreviewStyle {
-  let textSize: Double
-  let headingFont: Font
-  /// A bookmark's message.
-  let excerptFont: Font
-  /// What happened, for the other moments.
-  let eventFont: Font
-  /// What the user answered a question.
-  let answerFont: Font
-
-  init(theme: ConversationTheme, appearance: ConversationAppearance) {
-    textSize = appearance.textSize.pointSize
-    headingFont = theme.interfaceFont(size: textSize * 0.86, weight: .semibold)
-    excerptFont = theme.messageFont(size: textSize)
-    eventFont = theme.interfaceFont(size: textSize)
-    answerFont = theme.interfaceFont(size: textSize * 0.86)
-  }
-}
-
-/// What the moments under the pointer are, beside the overview: a bookmark's message — who
-/// wrote it, when, its start —, or what happened and when, in the conversation's own type.
-private struct MomentPreview: View {
-  let model: ConversationModel
-  let moments: [ConversationMoments.Placed]
-  let theme: ConversationTheme
-  @Environment(\.conversationAppearance) private var appearance
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 7) {
-      ForEach(Array(moments.enumerated()), id: \.offset) { _, placed in
-        item(placed)
-      }
-    }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 7)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 7))
-    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-  }
-
-  private func item(_ placed: ConversationMoments.Placed) -> some View {
-    let block =
-      model.blocks.indices.contains(placed.blockIndex)
-      ? model.blocks[placed.blockIndex] : nil
-    let moment = placed.moment
-    let style = MomentPreviewStyle(theme: theme, appearance: appearance)
-    return VStack(alignment: .leading, spacing: 3) {
-      if let heading = heading(of: moment, block: block) {
-        Text(heading)
-          .font(style.headingFont)
-          .foregroundStyle(theme.secondaryText.color)
-          .lineLimit(1)
-      }
-      let label = MomentPresentation.label(of: moment, block: block)
-      if !label.isEmpty {
-        Text(label)
-          .font(moment.kind == .bookmark ? style.excerptFont : style.eventFont)
-          .foregroundStyle(theme.text.color)
-          .lineLimit(3)
-      }
-      if let answer = MomentPresentation.answer(of: moment) {
-        Text(answer)
-          .font(style.answerFont)
-          .foregroundStyle(theme.secondaryText.color)
-          .lineLimit(2)
-      }
-    }
-  }
-
-  /// A bookmark's: who wrote its message — Vibe Manager or a coordinator for one relayed to the
-  /// session (#568) —, and when. Another moment's: its kind, and when.
-  private func heading(of moment: ConversationMoment, block: ConversationBlock?) -> String? {
-    let time = MomentPresentation.time(of: moment.date)
-    let who: String
-    if moment.kind == .bookmark {
-      guard let block, let author = Self.author(of: block, agent: model.agentName) else {
-        return MomentPresentation.name(of: .bookmark)
-      }
-      who = author
-    } else {
-      who = MomentPresentation.name(of: moment.kind)
-    }
-    return time.map { "\(who) · \($0)" } ?? who
-  }
-
-  private static func author(of block: ConversationBlock, agent: String) -> String? {
-    guard case .entry(let entry) = block else { return nil }
-    switch entry.content {
-    case .userPrompt:
-      switch ConversationModel.relayedMessage(of: block)?.sender {
-      case .application: return "Vibe Manager"
-      case .coordinator(let name):
-        return String(localized: "Coordinator “\(name)”", bundle: .module)
-      case nil: return String(localized: "You", bundle: .module)
-      }
-    case .agentText: return agent
-    default: return nil
-    }
-  }
-}
-
 /// A point of an IDE's breakpoint: what marks a message, in the margin and in the overview.
 struct BookmarkShape: Shape {
   func path(in rect: CGRect) -> Path {
@@ -789,8 +689,11 @@ struct BookmarkShape: Shape {
 }
 
 /// The bookmark of a message, in the margin left of it: pale while the pointer is on the message,
-/// plain once set. A click sets it, another takes it away.
+/// plain once set. A click sets it, another takes it away. The pointer on one set shows the
+/// overview's preview of it (#608); on one not set, what a click does.
 struct BookmarkGutter: View {
+  let blockID: String
+  let preview: ConversationMarginPreview
   let isMarked: Bool
   let isRowHovered: Bool
   /// The height of the message's first line, which it is centred on.
@@ -823,7 +726,11 @@ struct BookmarkGutter: View {
       .onTapGesture(perform: toggle)
       .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
       .onHover { isHovered = $0 }
-      .help(label)
+      // Set, its preview tells it; a help tag would come over it.
+      .help(isMarked ? Text(verbatim: "") : label)
+      .modifier(
+        MarginPreviewSource(
+          preview: preview, blockID: blockID, target: .bookmark, isEnabled: isMarked))
       .accessibilityElement()
       .accessibilityLabel(label)
       .accessibilityAddTraits(.isButton)

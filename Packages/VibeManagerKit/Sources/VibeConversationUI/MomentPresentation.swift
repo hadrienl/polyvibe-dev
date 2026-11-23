@@ -175,11 +175,13 @@ struct MomentIcon: View {
 }
 
 /// The moments of a block, in the margin left of its bookmark (#572): the first one's icon, and
-/// how many there are when there are several. It does nothing: the pointer on it tells them.
+/// how many there are when there are several. It does nothing: the pointer on it shows them, in
+/// the overview's preview (#608).
 struct MomentGutterMark: View {
   /// Those of the kinds shown, bookmarks aside: a bookmark's shape is beside it already.
   let moments: [ConversationMoment]
   let block: ConversationBlock
+  let preview: ConversationMarginPreview
   /// The height of the block's first line, which it is centred on, as the bookmark is.
   let lineHeight: Double
   @Environment(\.conversationTheme) private var theme
@@ -188,6 +190,13 @@ struct MomentGutterMark: View {
   static let width = 18.0
   /// The height of its symbol: the bookmark's tag's.
   static let symbolSize = BookmarkGutter.tagHeight
+
+  /// What it shows of a block: its moments of the kinds shown, bookmarks aside.
+  static func moments(
+    of block: ConversationBlock, model: ConversationModel, appearance: ConversationAppearance
+  ) -> [ConversationMoment] {
+    model.moments(of: block).filter { appearance.shows($0.kind) }
+  }
 
   var body: some View {
     let first = moments[0]
@@ -208,7 +217,8 @@ struct MomentGutterMark: View {
     }
     .frame(width: Self.width, height: BookmarkGutter.boxHeight(lineHeight: lineHeight))
     .contentShape(Rectangle())
-    .help(Text(verbatim: description))
+    // The overview's preview rather than a help tag: the same words, at once (#608).
+    .modifier(MarginPreviewSource(preview: preview, blockID: block.id, target: .moments))
     .accessibilityElement()
     .accessibilityLabel(Text(verbatim: description))
   }

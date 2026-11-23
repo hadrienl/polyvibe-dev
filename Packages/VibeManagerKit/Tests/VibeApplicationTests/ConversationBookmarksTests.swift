@@ -252,6 +252,44 @@ struct ConversationOverviewLayoutTests {
     #expect(origin.y == ConversationOverviewLayout.previewMargin)
   }
 
+  // MARK: The margin's preview (#608)
+
+  private func marginOrigin(
+    iconX: Double = 40, iconY: Double, width: Double = 280, height: Double = 60,
+    paneWidth: Double = 900, paneHeight: Double = 700
+  ) -> (x: Double, y: Double) {
+    ConversationOverviewLayout.marginPreviewOrigin(
+      iconMinX: iconX, iconMinY: iconY, iconMaxY: iconY + 20, previewWidth: width,
+      previewHeight: height, paneWidth: paneWidth, paneHeight: paneHeight)
+  }
+
+  @Test("In the margin, the preview stands below the icon, from its left: the line stays read")
+  func marginPreviewBelow() {
+    let origin = marginOrigin(iconY: 300)
+    #expect(origin.x == 40)
+    #expect(origin.y == 320 + ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("Near the bottom of the pane, it stands above the icon")
+  func marginPreviewAbove() {
+    let origin = marginOrigin(iconY: 640)
+    #expect(origin.y + 60 == 640 - ConversationOverviewLayout.previewMargin)
+  }
+
+  @Test("At the pane's right edge it moves left, and never past its left edge")
+  func marginPreviewWithinThePane() {
+    #expect(marginOrigin(iconX: 700, iconY: 300).x == 900 - 280 - 4)
+    #expect(marginOrigin(iconX: 40, iconY: 300, width: 400, paneWidth: 300).x == 4)
+  }
+
+  @Test("Taller than the room on either side, it stays in the pane")
+  func marginPreviewTall() {
+    let origin = marginOrigin(iconY: 40, height: 90, paneHeight: 120)
+    #expect(origin.y == 120 - 4 - 90)
+    let taller = marginOrigin(iconY: 40, height: 200, paneHeight: 120)
+    #expect(taller.y == ConversationOverviewLayout.previewMargin)
+  }
+
   @Test("The preview grows with the text, and never wider than the messages left of the overview")
   func previewWidth() {
     #expect(ConversationOverviewLayout.previewWidth(textSize: 13, room: 1000) == 260)

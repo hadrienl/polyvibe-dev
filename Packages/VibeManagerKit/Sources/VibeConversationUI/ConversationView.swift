@@ -43,6 +43,8 @@ public struct ConversationView: View {
   static let pageTargetID = "conversation.page"
   /// The messages' own coordinates: where each row says it is (#567).
   static let contentSpace = "conversation.content"
+  /// The messages' frame, as it shows: where the margin's preview is placed (#608).
+  static let viewportSpace = "conversation.viewport"
 
   public init(
     model: ConversationModel, theme: ConversationTheme, appearance: ConversationAppearance,
@@ -286,6 +288,8 @@ public struct ConversationView: View {
         .onGeometryChange(for: CGRect.self) {
           $0.frame(in: .scrollView)
         } action: { frame in
+          // Scrolled: the margin's preview is no longer next to its icon (#608).
+          if frame.minY != contentFrame.minY { model.marginPreview.scrolled() }
           contentFrame = frame
           model.scrollGeometryChanged(contentFrame: frame, viewportHeight: viewportHeight)
           trackReadablePart()
@@ -300,6 +304,7 @@ public struct ConversationView: View {
         trackReadablePart()
       }
       .defaultScrollAnchor(.bottom)
+      .coordinateSpace(name: Self.viewportSpace)
       // The overview stands for the scroll bar (#567).
       .scrollIndicators(showsOverview ? .hidden : .automatic)
       .modifier(ToolbarVeil())
@@ -318,6 +323,8 @@ public struct ConversationView: View {
           .modifier(OverviewBandFade())
         }
       }
+      // Over the overview too: a wide preview may reach it.
+      .overlay { MarginPreviewOverlay(model: model, theme: theme) }
       .onAppear {
         let selection = selection
         model.selectedBlockID = {
@@ -670,14 +677,16 @@ struct BlockRow: View {
   /// The block's moment and bookmark, left of it.
   private var gutter: some View {
     HStack(alignment: .top, spacing: 0) {
-      let moments = model.moments(of: block).filter { appearance.shows($0.kind) }
+      let moments = MomentGutterMark.moments(of: block, model: model, appearance: appearance)
       if moments.isEmpty {
         Color.clear.frame(width: MomentGutterMark.width, height: 1)
       } else {
-        MomentGutterMark(moments: moments, block: block, lineHeight: linePitch)
+        MomentGutterMark(
+          moments: moments, block: block, preview: model.marginPreview, lineHeight: linePitch)
       }
       BookmarkGutter(
-        isMarked: model.isBookmarked(block), isRowHovered: isHovered, lineHeight: linePitch
+        blockID: block.id, preview: model.marginPreview, isMarked: model.isBookmarked(block),
+        isRowHovered: isHovered, lineHeight: linePitch
       ) {
         model.toggleBookmark(block)
       }
