@@ -39,10 +39,10 @@ struct AntigravityQuotaTests {
     #expect(AntigravityQuotaBucket.parse("").isEmpty)
   }
 
-  @Test("A failed turn with a spent bucket says so, and is an account matter, not a sign-in")
+  @Test("Every bucket spent, a failed turn is an account matter, not a sign-in")
   func failureWithSpentQuota() throws {
     let decoder = AntigravitySignalDecoder()
-    let spent = "3p-weekly=1@2099-11-29T15:17:37Z;gemini-weekly=0@2099-11-28T12:39:21Z"
+    let spent = "3p-weekly=0@2099-11-29T15:17:37Z;gemini-weekly=0@2099-11-28T12:39:21Z"
     _ = decoder.signal(for: event("working", quota: spent))
     let signal = try #require(decoder.signal(for: event("error", quota: spent)))
     guard case .turnFailed(let prompt) = signal else {
@@ -54,9 +54,35 @@ struct AntigravityQuotaTests {
     #expect(!prompt.asksToSignIn)
     let message = try #require(prompt.message)
     #expect(message.contains("Gemini models, weekly"))
-    #expect(!message.contains("Claude and GPT"))
+    #expect(message.contains("Claude and GPT"))
     // The next prompt is the user's, as after any failure.
     #expect(decoder.signal(for: event("working", quota: spent)) == .promptSubmitted(byUser: true))
+  }
+
+  @Test("One bucket spent among others: the failure says it, but is not the account's")
+  func failureWithOneBucketSpent() throws {
+    // The turn may have used the other bucket's models, and failed on the network.
+    let decoder = AntigravitySignalDecoder()
+    let quota = "3p-weekly=0.75@2099-11-29T15:17:37Z;gemini-weekly=0@2099-11-28T12:39:21Z"
+    _ = decoder.signal(for: event("working", quota: quota))
+    let signal = try #require(decoder.signal(for: event("error", quota: quota)))
+    guard case .turnFailed(let prompt) = signal else {
+      Issue.record("Expected a failed turn, got \(signal)")
+      return
+    }
+    #expect(prompt.kind == .other)
+    #expect(prompt.error == nil)
+    #expect(try #require(prompt.message).contains("Gemini models, weekly"))
+  }
+
+  @Test("A bucket whose reset has passed is no longer the reason of a failure")
+  func failureAfterReset() {
+    let decoder = AntigravitySignalDecoder(now: { Date(timeIntervalSince1970: 1_800_000_000) })
+    let stale = "gemini-weekly=0@2026-11-21T10:00:00Z"
+    _ = decoder.signal(for: event("working", quota: stale))
+    #expect(
+      decoder.signal(for: event("error", quota: stale))
+        == .turnFailed(AgentTerminalPrompt(kind: .other, message: nil)))
   }
 
   @Test("A failed turn with every bucket left stays an unexplained failure")
@@ -87,7 +113,9 @@ struct AntigravityQuotaTests {
       id: "gemini-weekly", remainingFraction: 0, resetsAt: Date(timeIntervalSince1970: 0))
     let unknown = AntigravityQuotaBucket(id: "other-bucket", remainingFraction: 0, resetsAt: nil)
     let message = try #require(AntigravityQuotaBucket.failure([past, unknown]))
-    #expect(message.contains("Gemini models, weekly, other-bucket"))
+    // The bucket come back is left out; the one without a known reset stays.
+    #expect(message.contains("other-bucket"))
+    #expect(!message.contains("Gemini models, weekly"))
     #expect(!message.contains("resets"))
     #expect(
       AntigravityQuotaBucket.failure([

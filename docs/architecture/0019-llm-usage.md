@@ -256,8 +256,10 @@ Measured on agy 1.5.14, 2026-11-22.
   transcript, so none is said; a `CHECKPOINT` is a compaction, its own input the context before it.
 - **Quota.** agy writes the error that ends a turn on a spent quota to its terminal only. Its status
   line carries `quota.<bucket>.remaining_fraction` and `reset_time`, which the status command keeps
-  (see the security review); a turn that fails while a bucket is spent becomes an account notice
-  naming the bucket and its reset.
+  (see the security review). agy does not say which model a turn used: a turn that fails while
+  every bucket is spent becomes an account notice naming them and their reset; one spent among
+  others is said beside an ordinary failure, the error may be another. A bucket whose reset has
+  passed is no longer named.
 
 ## Amendment — the quotas of the accounts, and costs in another currency (#599)
 

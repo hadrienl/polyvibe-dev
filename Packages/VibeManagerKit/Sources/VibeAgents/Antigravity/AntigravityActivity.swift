@@ -91,8 +91,11 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
   /// The account's quota as the last snapshot gave it: what a failed turn is explained by.
   private var quota: [AntigravityQuotaBucket] = []
   public let approvalAnswerKeys: Set<[UInt8]> = []
+  private let now: @Sendable () -> Date
 
-  public init() {}
+  public init(now: @escaping @Sendable () -> Date = { Date() }) {
+    self.now = now
+  }
 
   public func conversationIdentifier(in event: AgentActivityEvent) -> String? {
     guard event.name == AntigravityStatusCommand.event,
@@ -124,9 +127,15 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
       guard effective != previous else { return nil }
       let old = previous
       previous = effective
-      if effective == "error", let message = AntigravityQuotaBucket.failure(quota) {
-        // agy writes the refusal neither to the transcript nor to the status line: a spent
-        // bucket is what it was, and the user has to wait, not sign in again.
+      let at = now()
+      if effective == "error", let message = AntigravityQuotaBucket.failure(quota, now: at) {
+        // agy writes the refusal neither to the transcript nor to the status line, nor which
+        // model the turn used. Every bucket spent, the quota is the reason: the user has to wait,
+        // not sign in again. One spent among others, it may not be: the failure says it, as a
+        // fact beside the error, not as the account's.
+        guard quota.allSatisfy({ $0.isSpent(at: at) }) else {
+          return .turnFailed(AgentTerminalPrompt(kind: .other, message: message))
+        }
         return .turnFailed(
           AgentTerminalPrompt(kind: .account, message: message, error: Self.quotaError))
       }

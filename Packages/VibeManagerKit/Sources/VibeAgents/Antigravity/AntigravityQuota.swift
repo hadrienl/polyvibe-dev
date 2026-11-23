@@ -19,6 +19,13 @@ public struct AntigravityQuotaBucket: Hashable, Sendable {
   /// Nothing left: agy refuses the models of this bucket until it resets.
   public var isExhausted: Bool { remainingFraction <= 0 }
 
+  /// Spent, and not come back yet: a bucket whose reset has passed is no longer the reason.
+  public func isSpent(at now: Date) -> Bool {
+    guard isExhausted else { return false }
+    guard let resetsAt else { return true }
+    return resetsAt > now
+  }
+
   /// What the status command wrote: `bucket=fraction@reset;…`. A bucket without a share is left
   /// out; a reset that does not read as a date is unknown.
   static func parse(_ text: String) -> [AntigravityQuotaBucket] {
@@ -63,7 +70,7 @@ public struct AntigravityQuotaBucket: Hashable, Sendable {
   /// reached: Gemini models, weekly — resets Fri 28 Nov, 13:39.” agy does not say which bucket
   /// the turn needed, so the sentence states both facts without tying them.
   static func failure(_ buckets: [AntigravityQuotaBucket], now: Date = Date()) -> String? {
-    let spent = buckets.filter(\.isExhausted)
+    let spent = buckets.filter { $0.isSpent(at: now) }
     guard !spent.isEmpty else { return nil }
     let names = spent.map(\.displayName).joined(separator: ", ")
     let resets = spent.compactMap(\.resetsAt).filter { $0 > now }.min()
