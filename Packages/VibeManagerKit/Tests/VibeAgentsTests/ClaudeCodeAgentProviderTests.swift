@@ -261,8 +261,9 @@ struct ClaudeCodeAgentProviderTests {
     let prisme = "/Users/test/.claude-prisme"
 
     // A folder the user chose for the agent's own account, in their shell profile, is kept.
-    #expect(try folder(of: provider(own, claimed: [prisme]), shell: "/Users/test/.claude-work")
-      == "/Users/test/.claude-work")
+    #expect(
+      try folder(of: provider(own, claimed: [prisme]), shell: "/Users/test/.claude-work")
+        == "/Users/test/.claude-work")
     // The folder of an extra account would be the same account twice (#599), written however.
     #expect(try folder(of: provider(own, claimed: [prisme]), shell: prisme) == nil)
     #expect(try folder(of: provider(own, claimed: [prisme]), shell: "~/.claude-prisme/") == nil)
