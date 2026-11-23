@@ -179,7 +179,17 @@ struct OverviewWidthTests {
     if #available(macOS 15, *) {
       #expect(takesFirstClick(at: NSPoint(x: overview.midX, y: overview.midY)))
     }
-    #expect(!takesFirstClick(at: NSPoint(x: text.midX, y: text.midY)))
+    // The point lands on the text itself, or refusing the click there would prove nothing.
+    let textPoint = NSPoint(x: text.midX, y: text.midY)
+    #expect(content.hitTest(textPoint) is SegmentTextView)
+    #expect(!takesFirstClick(at: textPoint))
+  }
+
+  @Test("The overview rests dimmed, plain under the pointer or with Increase Contrast (#596)")
+  func bandOpacity() {
+    #expect(OverviewBandFade.opacity(isHovered: false, contrast: .standard) == 0.55)
+    #expect(OverviewBandFade.opacity(isHovered: true, contrast: .standard) == 1)
+    #expect(OverviewBandFade.opacity(isHovered: false, contrast: .increased) == 1)
   }
 
   @Test("Held wide then let go in a narrow pane, the messages and the composer leave it its room")

@@ -279,9 +279,8 @@ public struct ConversationOverviewLayout: Equatable, Sendable {
   public static let gap = 12.0
 
   /// The margin right of the column, less a gap, up to `maximumWidth`; or, narrower than the
-  /// minimum, the minimum, the
-  /// messages giving up what it lacks — no more, so that the text moves as the window narrows,
-  /// never in a jump.
+  /// minimum, the minimum, the messages giving up what it lacks — no more, so that the text moves
+  /// as the window narrows, never in a jump.
   ///
   /// The column is `contentWidth` at most, between its margins, centred in what the messages
   /// have: the pane, less what they give up.

@@ -877,12 +877,20 @@ struct OverviewBandFade: ViewModifier {
   static let fadeDuration = 0.18
   @State private var isHovered = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorSchemeContrast) private var contrast
+
+  /// Increase Contrast: never dimmed, its faint accents would fade out of sight.
+  static func opacity(isHovered: Bool, contrast: ColorSchemeContrast) -> Double {
+    isHovered || contrast == .increased ? 1 : restingOpacity
+  }
 
   func body(content: Content) -> some View {
     content
-      .opacity(isHovered ? 1 : Self.restingOpacity)
-      // Reduce Motion: at once.
-      .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration), value: isHovered)
+      // Scoped to the opacity: a bookmark's preview, or the viewport's highlight, changing on the
+      // same hover, comes and goes at once, not in this fade. Reduce Motion: at once.
+      .animation(reduceMotion ? nil : .easeInOut(duration: Self.fadeDuration)) {
+        $0.opacity(Self.opacity(isHovered: isHovered, contrast: contrast))
+      }
       .onHover { isHovered = $0 }
   }
 }
