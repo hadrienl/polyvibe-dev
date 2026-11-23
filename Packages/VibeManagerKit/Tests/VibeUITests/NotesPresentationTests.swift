@@ -354,6 +354,26 @@ struct NotesPresentationViewTests {
     #expect(secondDocument.text == "Only in Other")
   }
 
+  @Test("A session renamed while its notes are open: the panel's title and the editor's name follow")
+  func renameFollowed() async throws {
+    let (model, session) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.detachNotes()
+    let panel = try #require(screen.controller.panel)
+    await waitUntil("the editor") { Self.editor(in: panel.contentView) != nil }
+
+    #expect(await model.commitRename(session.id, to: "Renamed") == nil)
+
+    await waitUntil("the title follows") {
+      panel.contentView?.layoutSubtreeIfNeeded()
+      return panel.title == "Notes · Renamed"
+    }
+    await waitUntil("the editor's name follows") {
+      Self.editor(in: panel.contentView)?.accessibilityLabel() == "Notes for Renamed"
+    }
+  }
+
   @Test("Each window that replaces the panel opens where the last one was left, and keeps its own")
   func replacementKeepsThePlace() async throws {
     let (model, first) = await model()

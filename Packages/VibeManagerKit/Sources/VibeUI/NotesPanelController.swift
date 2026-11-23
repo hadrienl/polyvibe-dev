@@ -132,21 +132,28 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   func makePanel(session: WorkSession) -> NotesPanel {
     let panel = NotesPanel()
     panel.delegate = self
-    panel.contentView = NSHostingView(rootView: NotesPanelContent(model: model, session: session))
+    panel.contentView = NSHostingView(
+      rootView: NotesPanelContent(model: model, session: session) { [weak panel] name in
+        panel?.title = Self.title(of: name)
+      })
     let accessory = NSTitlebarAccessoryViewController()
     let button = NSHostingView(rootView: NotesReattachButton(model: model))
     button.frame.size = button.fittingSize
     accessory.view = button
     accessory.layoutAttribute = .trailing
     panel.addTitlebarAccessoryViewController(accessory)
-    panel.title = String(
-      localized: "Notes · \(session.name)", bundle: .module,
-      comment: "The title of the notes' floating window: the session's name.")
+    panel.title = Self.title(of: session.name)
     if !panel.setFrameUsingName(Self.frameName) {
       place(panel)
     }
     panel.setFrameAutosaveName(Self.frameName)
     return panel
+  }
+
+  static func title(of name: String) -> String {
+    String(
+      localized: "Notes · \(name)", bundle: .module,
+      comment: "The title of the notes' floating window: the session's name.")
   }
 
   /// The first time: at the top right of the workspace window, over the conversation.

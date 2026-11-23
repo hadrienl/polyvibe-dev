@@ -50,6 +50,8 @@ struct NotesPopoverContent: View {
 
   var body: some View {
     let document = model.notes.document(for: session.id)
+    // As it is named now: a rename while the notes are open shows at once.
+    let session = model.session(withID: session.id) ?? session
     VStack(alignment: .leading, spacing: 0) {
       HStack(spacing: 8) {
         Text("Notes", bundle: .module, comment: "The heading of a session's notes.")
@@ -86,13 +88,16 @@ struct NotesPopoverContent: View {
   }
 }
 
-/// The panel captures its session once, together with the document it edits.
+/// The panel captures its session once, together with the document it edits. Its name is read as
+/// it is now, and handed to the window's title when it changes.
 struct NotesPanelContent: View {
   let model: AppModel
   let session: WorkSession
+  var retitle: (String) -> Void = { _ in }
 
   var body: some View {
     let document = model.notes.document(for: session.id)
+    let session = model.session(withID: session.id) ?? session
     VStack(alignment: .leading, spacing: 0) {
       HStack {
         Spacer(minLength: 0)
@@ -106,6 +111,7 @@ struct NotesPanelContent: View {
     }
     .id(session.id)
     .frame(minWidth: 260, maxWidth: .infinity, minHeight: 200, maxHeight: .infinity)
+    .onChange(of: session.name) { _, name in retitle(name) }
   }
 }
 
