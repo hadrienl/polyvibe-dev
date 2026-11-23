@@ -123,16 +123,54 @@ struct GPUProcessRecoveryTests {
     let window = screenWindow()
     defer { window.close() }
     let old = putOnScreen(tab, workspace, in: window)
-    await waitUntil("the page looked at when shown") { probe.looks >= 1 }
-    let looks = probe.looks
+    await workspace.checkRendering().value
+    // The first look after the change finds the page drawing, the next one does not.
+    probe.blank = [ObjectIdentifier(old)]
+    probe.blankFromLook = probe.looks + 2
 
     NotificationCenter.default.post(
       name: NSApplication.didChangeScreenParametersNotification, object: NSApp)
-    await waitUntil("a first look after the change") { probe.looks > looks }
-    #expect(tab.webView === old)
+
+    await waitUntil("the page replaced at the second look") { tab.webView !== old }
+    #expect(probe.looks >= probe.blankFromLook)
+  }
+
+  @Test("A page put on screen while a look is under way is looked at by the next one")
+  func pageShownDuringALookIsLookedAt() async throws {
+    let probe = ScriptedProbe()
+    let workspace = BrowserWorkspace()
+    workspace.watchPageRendering(probe: probe, afterScreenChange: [])
+    let first = openTab("first", in: workspace)
+    let second = openTab("second", in: workspace)
+    let window = screenWindow()
+    defer { window.close() }
+    probe.isHeld = true
+    _ = putOnScreen(first, workspace, in: window)
+    await waitUntil("a look under way") { probe.waiting > 0 }
+
+    let shownLater = putOnScreen(second, workspace, in: window)
+    probe.blank = [ObjectIdentifier(shownLater)]
+    probe.release()
+
+    await waitUntil("the page shown during the look replaced") { second.webView !== shownLater }
+  }
+
+  @Test("A page an agent is acting on is left to it")
+  func agentPageIsLeft() async {
+    let probe = ScriptedProbe()
+    let workspace = BrowserWorkspace()
+    workspace.watchPageRendering(probe: probe, afterScreenChange: [])
+    let tab = openTab("a", in: workspace)
+    let window = screenWindow()
+    defer { window.close() }
+    let old = putOnScreen(tab, workspace, in: window)
+    await workspace.checkRendering().value
+    tab.isAgentActing = true
     probe.blank = [ObjectIdentifier(old)]
 
-    await waitUntil("the page replaced at the next look") { tab.webView !== old }
+    await workspace.checkRendering().value
+
+    #expect(tab.webView === old)
   }
 
   @Test("A page that gives a picture of itself draws")
@@ -152,12 +190,26 @@ struct GPUProcessRecoveryTests {
 @MainActor
 private final class ScriptedProbe: PageRenderingProbe {
   var blank: [ObjectIdentifier] = []
+  /// The pages in `blank` stop drawing from this look on.
+  var blankFromLook = 0
   var asked: Set<ObjectIdentifier> = []
   var looks = 0
+  /// Looks wait for `release()` while set.
+  var isHeld = false
+  private var held: [CheckedContinuation<Void, Never>] = []
+  var waiting: Int { held.count }
 
   func draws(_ webView: WKWebView) async -> Bool {
     looks += 1
+    let look = looks
     asked.insert(ObjectIdentifier(webView))
-    return !blank.contains(ObjectIdentifier(webView))
+    if isHeld { await withCheckedContinuation { held.append($0) } }
+    return look < blankFromLook || !blank.contains(ObjectIdentifier(webView))
+  }
+
+  func release() {
+    isHeld = false
+    for continuation in held { continuation.resume() }
+    held = []
   }
 }

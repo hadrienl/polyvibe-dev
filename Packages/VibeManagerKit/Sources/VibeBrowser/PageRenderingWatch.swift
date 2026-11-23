@@ -53,12 +53,13 @@ private final class ProbeAnswer {
 
 /// Says when to look whether the pages still draw: in the minutes after the displays change
 /// (WebKit gave up on the hung GPU process 49 and 56 seconds after the change, and starts the next
-/// one only when a page needs it), and when the application comes back to the front. A page put on
+/// one only when a page needs it: a page replaced before would be tied to the hung one, and
+/// replaced again), and when the application comes back to the front. A page put on
 /// screen is looked at by the workspace itself.
 @MainActor
 final class PageRenderingWatch {
   static let afterScreenChange: [Duration] = [
-    .seconds(30), .seconds(60), .seconds(90), .seconds(120), .seconds(180),
+    .seconds(60), .seconds(90), .seconds(120), .seconds(180), .seconds(240),
   ]
 
   private let delays: [Duration]

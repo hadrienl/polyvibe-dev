@@ -236,7 +236,8 @@ public final class BrowserTabModel: NSObject, Identifiable {
   /// place, at the same address. One on screen is replaced where it is, with the keyboard if it
   /// had it; one waiting in the parking window is let go, and loads again when it is next shown.
   func replaceWebView() {
-    guard let old = webView else { return }
+    // A page in full screen belongs to WebKit's full-screen window until it leaves it.
+    guard let old = webView, old.fullscreenState == .notInFullscreen else { return }
     let holder = old.window is ParkingWindow ? nil : old.superview
     let window = old.window
     let hadKeyboard = (window?.firstResponder as? NSView)?.isDescendant(of: old) ?? false
