@@ -164,6 +164,26 @@ struct SessionAgentMenuTests {
     #expect(AgentHistoryPresentation.state(of: nil, resolution: ready) == "Ready to resume.")
   }
 
+  @Test("At the narrowest step, the button shows the agent's own logo, a generic one if unknown")
+  func logoAtTheNarrowestStep() {
+    let claude = AgentDescriptor(
+      id: AgentProviderID("claude-code"), displayName: "Claude Code", symbolName: "asterisk")
+    let codex = AgentDescriptor(
+      id: AgentProviderID("codex"), displayName: "Codex",
+      symbolName: "chevron.left.forwardslash.chevron.right")
+    #expect(
+      SessionAgentMenu.symbol(
+        of: SessionAgentConfiguration(providerID: "codex"), among: [claude, codex])
+        == "chevron.left.forwardslash.chevron.right")
+    #expect(
+      SessionAgentMenu.symbol(
+        of: SessionAgentConfiguration(providerID: "claude-code", modelID: "opus"),
+        among: [claude, codex]) == "asterisk")
+    #expect(
+      SessionAgentMenu.symbol(of: SessionAgentConfiguration(providerID: "gone"), among: [claude])
+        == AgentMenuContent.unknownAgentSymbol)
+  }
+
   @Test("Models are named as their catalogue names them, else by their identifier")
   func catalogueNames() {
     let labels = AgentLabels(names: Self.names, models: ["other": ["o1": "O1 Pro"]])

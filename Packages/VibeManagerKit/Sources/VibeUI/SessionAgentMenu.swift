@@ -71,13 +71,23 @@ struct SessionAgentMenu: View {
         // The agent's name when it runs its default model: there is no model to name.
         Text(verbatim: names.model(of: agent) ?? names.name(of: agent.providerID))
       case .icons:
-        Image(systemName: "cpu")
+        // The agent's own logo: at this width, it is what tells Claude Code from Codex.
+        Image(systemName: Self.symbol(of: agent, among: model.agentDescriptors))
       }
     } else if form == .icons {
-      Image(systemName: "cpu")
+      Image(systemName: AgentMenuContent.unknownAgentSymbol)
     } else {
       Text("No agent recorded", bundle: .module)
     }
+  }
+
+  /// The logo of the session's agent, as its provider describes itself — known before any
+  /// detection — or a generic one for an agent this build does not know.
+  static func symbol(
+    of agent: SessionAgentConfiguration, among descriptors: [AgentDescriptor]
+  ) -> String {
+    descriptors.first { $0.id.rawValue == agent.providerID }?.symbolName
+      ?? AgentMenuContent.unknownAgentSymbol
   }
 
   /// The full value, whatever the label leaves out, or why nothing can be chosen.
