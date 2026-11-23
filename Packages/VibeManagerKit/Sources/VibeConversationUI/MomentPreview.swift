@@ -168,7 +168,7 @@ struct MomentPreview: View {
 /// passing under a still pointer would show and hide it at each frame.
 @MainActor
 @Observable
-public final class ConversationMarginPreview {
+final class ConversationMarginPreview {
   enum Target: Hashable, Sendable {
     /// The icon of the block's moments.
     case moments
@@ -189,7 +189,7 @@ public final class ConversationMarginPreview {
   /// How long after the last step of a scroll the pointer shows nothing.
   static let quietAfterScroll = Duration.milliseconds(250)
 
-  public init() {}
+  init() {}
 
   /// The pointer is on an icon, or the icon it is on moved: under a pointer that stayed, the
   /// messages scrolled.
