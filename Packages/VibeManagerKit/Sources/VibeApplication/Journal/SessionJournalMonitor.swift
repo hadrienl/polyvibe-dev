@@ -254,7 +254,7 @@ public actor SessionJournalMonitor {
       let reading = await reader.read(current.session, from: current.journal.cursors)
       let date = now()
       var sightings: [ResourceSighting] = []
-      for (_, event) in reading.events {
+      for event in reading.events {
         sightings += ResourceRecognizer.sightings(in: event, now: date)
       }
       let resources = await resolution.resources(for: sightings)

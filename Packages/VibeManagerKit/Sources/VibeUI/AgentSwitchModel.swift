@@ -158,10 +158,6 @@ public final class AgentSwitchModel {
     label(current.providerID, current.modelID, among: currentModels)
   }
 
-  public var targetLabel: String {
-    label(providerID, modelID, among: models)
-  }
-
   public var changesSomething: Bool {
     !target.matches(session.agent)
   }

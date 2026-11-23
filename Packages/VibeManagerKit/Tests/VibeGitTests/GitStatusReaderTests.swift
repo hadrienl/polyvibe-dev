@@ -63,7 +63,7 @@ struct GitStatusReaderTests {
     #expect(kind(status, "Generated/") == .untrackedDirectory)
     #expect(kind(status, "loose.txt") == .untracked)
     #expect(status.branch.branchName == "main")
-    #expect(!status.isClean)
+    #expect(!status.counts.isEmpty)
   }
 
   @Test("A merge that stopped on a conflict is said, file and operation")
@@ -123,6 +123,25 @@ struct GitStatusReaderTests {
     #expect(initial.branch.branchName == "main")
   }
 
+  @Test("The branch alone is read as git status names it: a branch, none when detached, unborn")
+  func branchName() async throws {
+    let sandbox = try Sandbox()
+    defer { sandbox.remove() }
+    let reader = GitStatusReader()
+    let repository = sandbox.path("api")
+    try await makeRepository(at: repository)
+    try await git(["checkout", "-q", "-b", "fix/parser"], in: repository)
+    #expect(await reader.branchName(atPath: repository) == "fix/parser")
+    try await git(["checkout", "-q", "--detach"], in: repository)
+    #expect(await reader.branchName(atPath: repository) == nil)
+
+    let empty = sandbox.path("empty")
+    try FileManager.default.createDirectory(atPath: empty, withIntermediateDirectories: true)
+    try await git(["init", "-q", "-b", "main"], in: empty)
+    #expect(await reader.branchName(atPath: empty) == "main")
+    #expect(await reader.branchName(atPath: sandbox.path("missing")) == nil)
+  }
+
   @Test("Ahead and behind come from the local references, with no network")
   func aheadAndBehind() async throws {
     let sandbox = try Sandbox()
@@ -178,7 +197,6 @@ struct GitStatusReaderTests {
     let status = try await status(repository)
 
     #expect(kind(status, "README") == .tracked(staged: nil, unstaged: .modified))
-    #expect(status.indexLock?.path.hasSuffix(".git/index.lock") == true)
     #expect(try Data(contentsOf: URL(fileURLWithPath: index)) == before)
     #expect(
       try FileManager.default.attributesOfItem(atPath: index)[.modificationDate] as? Date
@@ -186,48 +204,6 @@ struct GitStatusReaderTests {
     #expect(
       try FileManager.default.contentsOfDirectory(atPath: repository + "/.git").sorted()
         == (beforeListing + ["index.lock"]).sorted())
-  }
-
-  @Test(
-    "An untracked folder unfolds into its files, names as they are on disk, and nothing written")
-  func untrackedFolder() async throws {
-    let sandbox = try Sandbox()
-    defer { sandbox.remove() }
-    let repository = sandbox.path("api")
-    try await makeRepository(at: repository)
-    let odd = "line\nbreak.txt"
-    try write("a\n", to: repository + "/Generated/one.swift")
-    try write("b\n", to: repository + "/Generated/deep/two.swift")
-    try write("c\n", to: repository + "/Generated/" + odd)
-    // A sibling whose name the folder's name is a prefix of, and a folder named like a pattern:
-    // neither may leak into the other's listing.
-    try write("d\n", to: repository + "/Generated-old/three.swift")
-    try write("e\n", to: repository + "/[draft]*/four.swift")
-    let beforeListing = try FileManager.default.contentsOfDirectory(atPath: repository + "/.git")
-
-    let status = try await status(repository)
-    #expect(kind(status, "Generated/") == .untrackedDirectory)
-
-    let listing = try await reader.untrackedFiles(
-      in: "Generated/", atPath: repository, limit: 100
-    ).get()
-    #expect(
-      Set(listing.paths)
-        == ["Generated/one.swift", "Generated/deep/two.swift", "Generated/" + odd])
-    #expect(listing.totalCount == 3)
-    #expect(!listing.isTruncated)
-
-    let pattern = try await reader.untrackedFiles(in: "[draft]*/", atPath: repository, limit: 100)
-      .get()
-    #expect(pattern.paths == ["[draft]*/four.swift"])
-
-    let cut = try await reader.untrackedFiles(in: "Generated/", atPath: repository, limit: 2).get()
-    #expect(cut.paths.count == 2)
-    #expect(cut.totalCount == 3)
-    #expect(cut.isTruncated)
-    #expect(
-      try FileManager.default.contentsOfDirectory(atPath: repository + "/.git").sorted()
-        == beforeListing.sorted())
   }
 
   @Test("A linked worktree says where its own state lives, outside the worktree")

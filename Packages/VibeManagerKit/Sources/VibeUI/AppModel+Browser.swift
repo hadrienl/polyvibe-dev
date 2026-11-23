@@ -92,12 +92,6 @@ extension AppModel {
     layout.setShowsBrowserWhenAlternating(true)
   }
 
-  public func hideWebView() {
-    guard let browser, let id = selectedSessionID else { return }
-    browser.setVisible(false, for: id)
-    focusSession()
-  }
-
   /// Focus Web View, ⌥⌘4: the page takes the keyboard.
   public func focusWebView() {
     showWebView()
@@ -325,11 +319,6 @@ extension AppModel {
     _ = try? await SetSessionTicket(repository: repository).reset(for: id)
     await reload()
     refreshTicket(of: id)
-  }
-
-  /// The ticket the selected session shows, and where it comes from.
-  public var selectedTicket: TicketResolution.Resolved? {
-    selectedBrowser?.ticket
   }
 
   /// Whether a session has something in its web view the user has not seen: a page an agent opened,

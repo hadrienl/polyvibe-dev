@@ -140,12 +140,31 @@ extension AppModel {
     }
   }
 
-  /// The branch the session works on: as last read on disk, or as recorded when it started.
+  /// The branch the session works on: as read when its request arrived, or as recorded when it
+  /// started.
   func branch(of session: WorkSession) -> String? {
     guard let repository = session.repositories.first else { return nil }
-    let live = repositoryStatus(for: session.id, path: repository.path)?.lastValid?.branch
-      .branchName
-    return live ?? repository.git?.branchName
+    return requestBranches[session.id] ?? repository.git?.branchName
+  }
+
+  /// Reads the branch of each session whose request just arrived, once (#578): nothing keeps a
+  /// repository read in between.
+  func readBranches(of sessions: [WorkSession]) {
+    guard let readGit else { return }
+    for session in sessions {
+      guard let path = session.repositories.first?.path else { continue }
+      let id = session.id
+      // The last reading asked for wins, whichever answers first.
+      let reading = (requestBranchReadings[id] ?? 0) + 1
+      requestBranchReadings[id] = reading
+      Task { [weak self] in
+        let branch = await readGit.branch(atPath: path)
+        guard let self, self.requestBranchReadings[id] == reading else { return }
+        self.requestBranchReadings[id] = nil
+        guard let branch, self.requestBranches[id] != branch else { return }
+        self.requestBranches[id] = branch
+      }
+    }
   }
 
   public var isRequestPaletteCollapsed: Bool {
@@ -298,6 +317,14 @@ extension AppModel {
     knownRequestIDs.formIntersection(ids)
     let unknown = all.filter { !knownRequestIDs.contains($0.id) }
     knownRequestIDs.formUnion(unknown.map(\.id))
+    var arrivedIn: [SessionID: WorkSession] = [:]
+    for pending in unknown { arrivedIn[pending.session.id] = pending.session }
+    readBranches(of: Array(arrivedIn.values))
+    // A session with nothing left in the palette needs no branch: read again with its next request.
+    let waiting = Set(all.map(\.session.id))
+    if requestBranches.keys.contains(where: { !waiting.contains($0) }) {
+      requestBranches = requestBranches.filter { waiting.contains($0.key) }
+    }
     // Only what arrives while the application is in the background is notified: what arrived
     // while it was in front has been seen in the palette.
     // The floating panel shows them where the user is (#41): a notification would say the same

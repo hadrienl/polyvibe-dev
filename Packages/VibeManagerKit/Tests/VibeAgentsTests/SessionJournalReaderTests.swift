@@ -42,7 +42,7 @@ struct SessionJournalReaderTests {
     #"{"type":"system","subtype":"turn_duration","timestamp":"2026-09-25T10:01:00.000Z"}"#,
   ]
 
-  @Test("Claude Code: prompts, tool calls, creation outputs, agent text and ends of turn")
+  @Test("Claude Code: prompts, tool calls, creation outputs and agent text")
   func claudeCode() async throws {
     let root = try scratch()
     defer { try? FileManager.default.removeItem(at: root) }
@@ -55,9 +55,8 @@ struct SessionJournalReaderTests {
       claudeProjects: root.appendingPathComponent("projects"),
       codexSessions: root.appendingPathComponent("sessions"))
     let reading = await reader.read(session("claude-code", identifier), from: [:])
-    let events = reading.events.map(\.event)
-    #expect(reading.foundTranscript)
-    #expect(events.count == 7)
+    let events = reading.events
+    #expect(events.count == 5)
     #expect(
       events.first
         == .prompt(
@@ -69,18 +68,14 @@ struct SessionJournalReaderTests {
     }
     #expect(bash.command == "gh pr create --fill")
     #expect(bash.branch == "feat/x")
-    #expect(bash.summary == "Bash: gh pr create --fill")
     // What an edit writes is code, not a resource used.
     #expect(edit.strings.isEmpty)
-    #expect(edit.summary == "Edit: a.swift")
     #expect(
       events[3]
         == .creationOutput(
           command: "gh pr create --fill", directory: "/r",
           output: "https://github.com/o/r/pull/80\n", at: nil))
     #expect(events[4] == .agentText("Opened the PR.", at: nil))
-    #expect(events[5] == .turnEnded(at: nil))
-    #expect(events[6] == .turnEnded(at: Date(timeIntervalSince1970: 1_790_330_460)))
   }
 
   @Test("The agent's folder is watched before it has named its conversation")
@@ -114,13 +109,13 @@ struct SessionJournalReaderTests {
       claudeProjects: root.appendingPathComponent("projects"),
       codexSessions: root.appendingPathComponent("sessions"))
     let second = await relaunched.read(session, from: first.cursors)
-    #expect(second.events.map(\.event) == [.prompt("two", at: nil)])
+    #expect(second.events == [.prompt("two", at: nil)])
     let third = await relaunched.read(session, from: second.cursors)
     #expect(third.events.isEmpty)
     try FileManager.default.removeItem(at: file)
     try append(#"{"type":"user","message":{"content":"new"}}"# + "\n", to: file)
     let fourth = await relaunched.read(session, from: third.cursors)
-    #expect(fourth.events.map(\.event) == [.prompt("new", at: nil)])
+    #expect(fourth.events == [.prompt("new", at: nil)])
   }
 
   @Test("A line longer than a chunk is skipped, and the lines after it read at once")
@@ -139,7 +134,7 @@ struct SessionJournalReaderTests {
       claudeProjects: root.appendingPathComponent("projects"),
       codexSessions: root.appendingPathComponent("sessions"), chunkSize: 64)
     let reading = await reader.read(session("claude-code", identifier), from: [:])
-    #expect(reading.events.map(\.event) == [.prompt("after", at: nil)])
+    #expect(reading.events == [.prompt("after", at: nil)])
   }
 
   @Test("Codex: user messages but not its instructions, exec commands, outputs and task ends")
@@ -168,7 +163,7 @@ struct SessionJournalReaderTests {
     let reader = SessionJournalReader(
       claudeProjects: root.appendingPathComponent("projects"),
       codexSessions: root.appendingPathComponent("sessions"))
-    let events = await reader.read(session("codex", identifier), from: [:]).events.map(\.event)
+    let events = await reader.read(session("codex", identifier), from: [:]).events
     #expect(events.first == .prompt("Fix #3", at: nil))
     let calls = events.compactMap { event -> TranscriptToolCall? in
       if case .toolCall(let call) = event { return call }
@@ -176,13 +171,12 @@ struct SessionJournalReaderTests {
     }
     #expect(calls.map(\.command) == ["glab mr create --fill", "git push -u origin x", nil])
     #expect(calls.map(\.directory) == ["/w/api", "/w/web", "/w"])
-    #expect(calls.last?.summary == "apply_patch: a.swift")
     #expect(
       events.contains(
         .creationOutput(
           command: "glab mr create --fill", directory: "/w/api",
           output: "https://gitlab.com/g/p/-/merge_requests/7", at: nil)))
-    #expect(events.suffix(2) == [.agentText("Done.", at: nil), .turnEnded(at: nil)])
+    #expect(events.last == .agentText("Done.", at: nil))
   }
 }
 

@@ -37,8 +37,7 @@ struct ArchiveReportTests {
       finishedAt: date.addingTimeInterval(-3_600), runningTime: running,
       entries: entries.enumerated().map {
         JournalEntry(
-          text: $0.element, at: date.addingTimeInterval(Double(-$0.offset) * 86_400),
-          providerID: "claude")
+          text: $0.element, at: date.addingTimeInterval(Double(-$0.offset) * 86_400))
       }.reversed(),
       resources: resources)
   }
@@ -88,7 +87,7 @@ struct ArchiveReportTests {
     try session.setTaskStatus(.doing, at: evening.addingTimeInterval(-7_000), cause: .launch)
     try session.setTaskStatus(.done, at: evening.addingTimeInterval(-60), cause: .user)
     var journal = SessionJournal()
-    journal.entries = [JournalEntry(text: "Moved the icons", at: evening, providerID: "claude")]
+    journal.entries = [JournalEntry(text: "Moved the icons", at: evening)]
     let photo = ArchivedSessionSnapshot(
       session: session, archivedAt: evening, project: "App", journal: journal,
       runningTime: 3_600, tokens: TokenCounts(input: 10, output: 5))

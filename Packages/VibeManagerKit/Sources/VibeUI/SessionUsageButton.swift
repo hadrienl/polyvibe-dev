@@ -8,9 +8,8 @@ import VibeTerminalUI
 /// a ring of the context, its share and the cost — “◔ 55 % · 4,82 $” — and every figure in a
 /// popover above it.
 ///
-/// The transcripts are read while the session is the one shown, the way the inspector's section
-/// read them while it was on screen. Every session keeps its status bar in the window's stack,
-/// hidden: the others read nothing.
+/// The transcripts are read while the session is the one shown. Every session keeps its status
+/// bar in the window's stack, hidden: the others read nothing.
 struct SessionUsageButton: View {
   let usage: UsageModel
   let session: WorkSession
@@ -255,8 +254,8 @@ struct ContextRing: View {
   }
 }
 
-/// Every figure of the session's usage, as the inspector's section showed them, then where the
-/// prices come from and what stays on the Mac.
+/// Every figure of the session's usage, then where the prices come from and what stays on the
+/// Mac.
 struct SessionUsagePopover: View {
   let usage: UsageModel
   let session: WorkSession

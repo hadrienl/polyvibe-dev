@@ -129,61 +129,6 @@ public enum RepositoryOperation: String, Hashable, Sendable {
   case bisecting
 }
 
-/// Another Git process holding the index, and since when.
-public struct IndexLock: Hashable, Sendable {
-  public let path: String
-  public let since: Date
-
-  public init(path: String, since: Date) {
-    self.path = path
-    self.since = since
-  }
-}
-
-/// One file a branch changed in its commits, as `git diff --name-status` names it.
-public struct CommittedFile: Hashable, Sendable, Identifiable {
-  /// Relative to the root of the repository, exactly as Git wrote it.
-  public let path: String
-  public let change: FileChange
-
-  public init(path: String, change: FileChange) {
-    self.path = path
-    self.change = change
-  }
-
-  public var id: String { path }
-}
-
-/// What the commits of the checked-out branch changed, compared with the branch it will be merged
-/// into — what a pull request of it would show.
-///
-/// `git status` forgets a file the moment it is committed, and an agent commits at the end of
-/// nearly every task: without this, a finished session would show nothing of what it did.
-public struct BranchCommits: Hashable, Sendable {
-  /// The reference compared with, as the user knows it: `origin/main`, `main`.
-  public let base: String
-  /// Where `HEAD` and the base parted.
-  public let mergeBase: String
-  /// Commits on `HEAD` that the base does not have.
-  public let commitCount: Int
-  /// At most the reader's limit, in Git's order.
-  public let files: [CommittedFile]
-  /// Every file, even past the limit.
-  public let totalCount: Int
-
-  public init(
-    base: String, mergeBase: String, commitCount: Int, files: [CommittedFile], totalCount: Int
-  ) {
-    self.base = base
-    self.mergeBase = mergeBase
-    self.commitCount = commitCount
-    self.files = files
-    self.totalCount = totalCount
-  }
-
-  public var isTruncated: Bool { totalCount > files.count }
-}
-
 /// What `git status` said about one repository, at one moment. Never stored: it is only true for
 /// as long as nothing moves on the disk.
 public struct WorkingTreeStatus: Hashable, Sendable {
@@ -194,11 +139,7 @@ public struct WorkingTreeStatus: Hashable, Sendable {
   public let entries: [WorkingTreeEntry]
   public let counts: WorkingTreeCounts
   public let isTruncated: Bool
-  public let indexLock: IndexLock?
-  /// `nil` without a base to compare with, or without a commit the base does not have.
-  public let committed: BranchCommits?
   public let observedAt: Date
-  public let duration: Duration
 
   public init(
     repositoryPath: String,
@@ -207,10 +148,7 @@ public struct WorkingTreeStatus: Hashable, Sendable {
     entries: [WorkingTreeEntry],
     counts: WorkingTreeCounts,
     isTruncated: Bool = false,
-    indexLock: IndexLock? = nil,
-    committed: BranchCommits? = nil,
-    observedAt: Date,
-    duration: Duration = .zero
+    observedAt: Date
   ) {
     self.repositoryPath = repositoryPath
     self.branch = branch
@@ -218,21 +156,6 @@ public struct WorkingTreeStatus: Hashable, Sendable {
     self.entries = entries
     self.counts = counts
     self.isTruncated = isTruncated
-    self.indexLock = indexLock
-    self.committed = committed
     self.observedAt = observedAt
-    self.duration = duration
-  }
-
-  public var isClean: Bool { counts.isEmpty }
-
-  /// Whether two readings describe the same repository, whenever and however fast they were
-  /// made. A reading that only moved the clock is not news, and publishing it would redraw a list
-  /// for nothing.
-  public func hasSameContent(as other: WorkingTreeStatus) -> Bool {
-    repositoryPath == other.repositoryPath && branch == other.branch
-      && operation == other.operation && entries == other.entries && counts == other.counts
-      && isTruncated == other.isTruncated && indexLock == other.indexLock
-      && committed == other.committed
   }
 }

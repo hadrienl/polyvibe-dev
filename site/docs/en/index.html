@@ -1,7 +1,7 @@
 <h1 data-short="Overview">Vibe Manager documentation</h1>
 <p class="lede">Vibe Manager is a native macOS app that runs several Claude Code and Codex sessions side by side, and keeps track of each one: its folder, its agent, its terminal, its notes and what it changed in Git.</p>
 
-<vm-shot name="overview" alt="The Vibe Manager window: the sessions on the left, a conversation with Claude Code in the middle, the session's activity, Git changes and notes on the right.">The main window: the sessions, the session on screen, and its context.</vm-shot>
+<vm-shot name="overview" alt="The Vibe Manager window: the sessions on the left, a conversation with Claude Code beside them.">The main window: the sessions, and the session on screen.</vm-shot>
 
 <h2 id="the-idea">The idea</h2>
 <p>A <strong>session</strong> is one task given to one coding agent in one working folder: “fix the cart VAT calculation” in <code>storefront-web</code>, with Claude Code. Vibe Manager launches the agent's own command-line tool, in a real terminal, and keeps everything around it:</p>
@@ -20,10 +20,8 @@
   <dd>Your sessions, one column per status behind four tabs, with what each agent is doing: working, waiting for approval, a new reply. Below, the <strong>Pending Requests</strong> palette. At the foot, the archive, the sort order and the filters. See <a href="organize.html">Organize your sessions</a>.</dd>
   <dt>The session, in the middle</dt>
   <dd>The conversation with the agent or its terminal, the composer to write to it, and a status bar. See <a href="conversation.html">Conversation and terminal</a>.</dd>
-  <dt>The inspector, on the right</dt>
-  <dd>The context of the session: its activity and summary, its Git changes, its notes, its agent, what it used. See <a href="inspector.html">The inspector</a>.</dd>
 </dl>
-<p>The toolbar holds the <strong>Conversation | Terminal</strong> switch and three buttons: new session, web view, and inspector.</p>
+<p>The toolbar holds the <strong>Conversation | Terminal</strong> switch and buttons: new session, web view, simulators, and the session's notes.</p>
 
 <h2 id="where-to-start">Where to start</h2>
 <div class="doc-cards">

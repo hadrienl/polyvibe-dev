@@ -580,15 +580,64 @@ struct HandoverBriefTests {
     )
   }
 
-  private func input(_ session: WorkSession, branches: SessionBranchReport? = nil)
-    -> SessionBriefInput
-  {
+  private func input(
+    _ session: WorkSession, branches: SessionBranchReport? = nil,
+    statuses: [String: WorkingTreeStatus] = [:]
+  ) -> SessionBriefInput {
     SessionBriefInput(
       session: session,
       branches: branches,
+      statuses: statuses,
       agentNames: ["claude-code": "Claude Code", "codex": "Codex"],
       notes: "Keep lodash."
     )
+  }
+
+  @Test(
+    "Git read when the sheet opens gives the branch, the uncommitted files and what is under way"
+  )
+  func readStatuses() throws {
+    let detached = SessionBranchReport(
+      sessionID: SessionID(),
+      repositories: [
+        RepositoryBranchReport(
+          path: "/work/app", name: "app", involvement: .attached, checkedOutBranch: nil,
+          change: nil, isDirty: false),
+        RepositoryBranchReport(
+          path: "/work/docs", name: "docs", involvement: .edited, checkedOutBranch: "main",
+          change: nil, isDirty: true),
+      ],
+      readAt: Date(timeIntervalSince1970: 1_700_000_000))
+    let app = WorkingTreeStatus(
+      repositoryPath: "/work/app", branch: BranchStatus(branchName: "fix/parser"),
+      operation: .rebasing, entries: [],
+      counts: WorkingTreeCounts(staged: 1, unstaged: 1, untracked: 1, conflicted: 1),
+      observedAt: Date())
+    let docs = WorkingTreeStatus(
+      repositoryPath: "/work/docs", branch: BranchStatus(branchName: "main"), entries: [],
+      counts: WorkingTreeCounts(), observedAt: Date())
+
+    let brief = SessionContextBriefBuilder().handover(
+      input(try session(), branches: detached, statuses: ["/work/app": app, "/work/docs": docs]),
+      to: SessionAgentConfiguration(providerID: "codex"))
+
+    #expect(
+      brief.text.contains(
+        "- app — /work/app, branch fix/parser, 4 uncommitted files (1 in conflict), a rebase in progress"
+      ))
+    // The status is what was true when the sheet opened: it outranks the report's guess.
+    #expect(brief.text.contains("- docs — /work/docs, branch main, clean"))
+  }
+
+  @Test("A repository whose status could not be read falls back on the report")
+  func unreadStatus() throws {
+    let brief = SessionContextBriefBuilder().handover(
+      input(try session(), branches: report(), statuses: [:]),
+      to: SessionAgentConfiguration(providerID: "codex"))
+
+    #expect(
+      brief.text.contains(
+        "branch feat/audit (created in this session, 3 commits since), with uncommitted changes"))
   }
 
   @Test("Where the work is comes from the branch report, with the order to stay on it")

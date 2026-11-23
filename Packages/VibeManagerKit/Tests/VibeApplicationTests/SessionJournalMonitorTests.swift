@@ -6,11 +6,11 @@ import VibeDomain
 
 /// Hands each session the events the test queues, once, and moves its cursor.
 actor QueuedJournalReader: SessionJournalReading {
-  private var queued: [SessionID: [(String, TranscriptEvent)]] = [:]
+  private var queued: [SessionID: [TranscriptEvent]] = [:]
   private(set) var readCount = 0
 
-  func queue(_ id: SessionID, _ events: [TranscriptEvent], provider: String = "claude-code") {
-    queued[id, default: []] += events.map { (provider, $0) }
+  func queue(_ id: SessionID, _ events: [TranscriptEvent]) {
+    queued[id, default: []] += events
   }
 
   func read(_ session: WorkSession, from cursors: [String: TranscriptCursor]) -> TranscriptReading {
@@ -19,7 +19,7 @@ actor QueuedJournalReader: SessionJournalReading {
     var cursors = cursors
     let path = "/t/\(session.id).jsonl"
     cursors[path, default: TranscriptCursor()].offset += UInt64(events.count)
-    return TranscriptReading(events: events, cursors: cursors, foundTranscript: true)
+    return TranscriptReading(events: events, cursors: cursors)
   }
 
   func transcriptDirectories(for session: WorkSession) -> [String] { ["/t"] }
@@ -55,10 +55,8 @@ struct SessionJournalMonitorTests {
   private func turn(_ prompt: String) -> [TranscriptEvent] {
     [
       .prompt(prompt, at: nil),
-      .toolCall(
-        TranscriptToolCall(name: "Bash", command: "git status", summary: "Bash: git status")),
+      .toolCall(TranscriptToolCall(command: "git status")),
       .agentText("Done.", at: nil),
-      .turnEnded(at: Date()),
     ]
   }
 
@@ -94,7 +92,7 @@ struct SessionJournalMonitorTests {
   @Test("No summary is written any more: a turn that ends adds no line, old lines are kept (#572)")
   func noSummary() async throws {
     let reader = QueuedJournalReader()
-    let old = JournalEntry(text: "Reviewed the PR", at: Date(), providerID: "claude-code")
+    let old = JournalEntry(text: "Reviewed the PR", at: Date())
     let session = session()
     let store = InMemorySessionJournalStore(journals: [session.id: SessionJournal(entries: [old])])
     let monitor = make(reader: reader, store: store)
@@ -171,7 +169,7 @@ struct SessionJournalMonitorTests {
     await second.track([session])
     let journal = await second.journal(for: session.id)
     #expect(journal?.resources.count == 1)
-    #expect(journal?.cursors["/t/\(session.id).jsonl"]?.offset == 4)
+    #expect(journal?.cursors["/t/\(session.id).jsonl"]?.offset == 3)
     await second.stop()
   }
 

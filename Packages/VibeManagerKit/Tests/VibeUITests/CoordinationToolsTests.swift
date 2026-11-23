@@ -260,7 +260,6 @@ struct CoordinationToolsTests {
     #expect(created.coordination == .child(of: parent.id))
     #expect(created.taskStatus == .todo)
     #expect(created.initialPrompt == "[Coordinator “V2”] Implement #351.")
-    #expect(model.coordinationTrace(of: created.id).map(\.action) == [.created])
     // Listed under its coordinator, in the coordinator's column, not selected.
     #expect(model.visibleSessions.map(\.name).prefix(2) == ["V2", "#351 Dictation"])
     #expect(model.selectedSessionID != created.id)
@@ -356,7 +355,6 @@ struct CoordinationToolsTests {
       ["id": .string(mine.id.rawValue.uuidString), "status": "done"], as: parent.id)
     #expect(!result.isError, "\(text(result))")
     #expect(model.sessions.first { $0.id == mine.id }?.taskStatus == .done)
-    #expect(model.coordinationTrace(of: mine.id).map(\.action) == [.movedTo(.done)])
     let archived = await call(
       model, "session_set_status",
       ["id": .string(mine.id.rawValue.uuidString), "status": "archived"], as: parent.id)

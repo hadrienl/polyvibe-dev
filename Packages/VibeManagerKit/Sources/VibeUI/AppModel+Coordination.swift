@@ -129,16 +129,6 @@ extension AppModel {
     coordination.calls[id] != nil
   }
 
-  /// What coordinators did to this child, oldest first.
-  public func coordinationTrace(of id: SessionID) -> [CoordinationTraceEntry] {
-    coordination.traces[id] ?? []
-  }
-
-  /// Reads the trace of a child shown in the inspector.
-  public func loadCoordinationTrace(of id: SessionID) async {
-    await coordination.loadTrace(of: id)
-  }
-
   /// A coordinator that called the user has been answered: its session came in front of them, or
   /// they wrote to it — from its terminal, its composer or the phone (#417).
   func coordinationCallAnswered(_ id: SessionID?) {
@@ -792,11 +782,6 @@ extension AppModel {
     }
     await publish(creation, launching: start, tracked: false, follows: false)
     let id = creation.session.id
-    coordination.record(
-      CoordinationTraceEntry(
-        date: coordination.now(), coordinatorName: coordinator.name, action: .created,
-        detail: CoordinationDigest.cut(mission, to: CoordinationTraceEntry.detailLimit)),
-      for: id)
     diagnostics.record(
       .session, .info, "coordination.childCreated",
       ["session": diagnostics.pseudonym(id), "coordinator": diagnostics.pseudonym(coordinator.id)])
@@ -880,11 +865,6 @@ extension AppModel {
       to: child, isRunning: launcher?.isRunning(child.id) == true,
       activity: activity(for: child.id)?.activity, showsPanel: false)
     let message = CoordinationPolicy.fromCoordinator(text, coordinatorName: coordinator.name)
-    coordination.record(
-      CoordinationTraceEntry(
-        date: coordination.now(), coordinatorName: coordinator.name, action: .messaged,
-        detail: CoordinationDigest.cut(text, to: CoordinationTraceEntry.detailLimit)),
-      for: child.id)
     // Typed now only into a child at rest, and after the messages kept for it; otherwise kept,
     // and typed once it finishes its turn.
     if coordination.outbox[child.id] == nil {
@@ -951,18 +931,10 @@ extension AppModel {
     if child.taskStatus != status {
       try await changeTaskStatus(id: child.id, to: status, cause: .coordinator(coordinator.id))
       await reload()
-      coordination.record(
-        CoordinationTraceEntry(
-          date: coordination.now(), coordinatorName: coordinator.name, action: .movedTo(status)),
-        for: child.id)
     }
     guard starts else { return "“\(child.name)” is now \(status.rawValue)." }
     let result = await restartInBatch(child.id)
     await reload()
-    coordination.record(
-      CoordinationTraceEntry(
-        date: coordination.now(), coordinatorName: coordinator.name, action: .started),
-      for: child.id)
     switch result {
     case .done, .doneWithWarning:
       return "“\(child.name)” is now \(status.rawValue), and its agent is starting."
@@ -983,10 +955,6 @@ extension AppModel {
     }
     _ = await closeInBatch(child.id)
     await reload()
-    coordination.record(
-      CoordinationTraceEntry(
-        date: coordination.now(), coordinatorName: coordinator.name, action: .closed),
-      for: child.id)
     return "The agent of “\(child.name)” is stopped. The session stays in its column."
   }
 

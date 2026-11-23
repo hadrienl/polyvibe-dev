@@ -161,6 +161,7 @@ public final class AppEnvironment {
     // One shell for every agent and account.
     let loginShell = LoginShellEnvironment(
       inherited: configuration.environment, probe: SystemProcessProbe())
+    RetiredPreferences.remove(suiteName: data.defaultsSuite)
     // One store for every agent that offers an approval mode, under each one's identifier.
     let approvals = UserDefaultsAgentApprovalPreferences(suiteName: data.defaultsSuite)
     let providers =
@@ -403,14 +404,6 @@ public final class AppEnvironment {
       })
     self.terminals = terminals
     let transcripts = AgentTranscriptReader(locations: transcriptLocations)
-    // Read only, and only when the disk says something moved: no timer reads a repository. One
-    // transcript reader for it and the branch report, so each file is read once, incrementally.
-    let repositoryStatus = RepositoryStatusMonitor(
-      reader: GitStatusReader(
-        git: ProcessGitCommandRunner(timeout: .seconds(30), diagnostics: diagnostics.log)),
-      events: FSEventsFileChangeObserver(),
-      transcripts: transcripts
-    )
     // Each session's journal (#36): the resources read from the transcripts of every active
     // session, kept in a file per session beside the notes. No summary any more (#572).
     let journal = SessionJournalModel(
@@ -462,19 +455,15 @@ public final class AppEnvironment {
       permissions: permissions,
       runtimeRecorder: recorder,
       terminalHost: supervisor,
-      // Read only: the application reports the branches and worktrees the agent made, and never
-      // makes one itself.
-      // The uncommitted work of a repository the monitor watches is taken from its status: one
-      // `git status` for both.
-      branchReader: ReadSessionBranchReport(
-        reader: GitActivityReader(git: ProcessGitCommandRunner(diagnostics: diagnostics.log)),
-        transcripts: transcripts,
-        knownStatus: { [repositoryStatus] session, root in
-          await repositoryStatus.knownStatus(of: session, atPath: root)
-        }),
-      repositoryStatus: repositoryStatus,
+      // Read only, and only when asked (#578): the handover summary reads the branches and
+      // worktrees the agent made when its sheet opens, and nothing watches a repository.
+      gitReader: ReadSessionGit(
+        branches: ReadSessionBranchReport(
+          reader: GitActivityReader(git: ProcessGitCommandRunner(diagnostics: diagnostics.log)),
+          transcripts: transcripts),
+        statuses: GitStatusReader(
+          git: ProcessGitCommandRunner(timeout: .seconds(30), diagnostics: diagnostics.log))),
       closePreferences: UserDefaultsSessionClosePreferences(suiteName: data.defaultsSuite),
-      fileOpeningPreferences: UserDefaultsFileOpeningPreferences(suiteName: data.defaultsSuite),
       notesStore: notes,
       notesFileLocation: { notes.fileURL(for: $0) },
       quitPreferences: UserDefaultsQuitPreferences(suiteName: data.defaultsSuite),
@@ -717,12 +706,6 @@ public final class AppEnvironment {
     context.file.flush()
     let facts = ApplicationFacts.current()
     let runtime = await context.runtime.read()
-    let editor: DiagnosticToken
-    switch model.fileEditor {
-    case nil: editor = "unset"
-    case .defaultApplication: editor = "defaultApplication"
-    case .application: editor = "application"
-    }
     return DiagnosticSnapshot(
       createdAt: Date(),
       application: DiagnosticSnapshot.Application(
@@ -735,7 +718,6 @@ public final class AppEnvironment {
       settings: DiagnosticSnapshot.Settings(
         quitBehavior: model.quitBehavior.diagnosticToken,
         confirmsStoppingRunningAgent: model.confirmsStoppingRunningAgent,
-        fileEditor: editor,
         verboseDiagnostics: DiagnosticsVerbosity.minimumLevel() == .debug,
         isolatedData: context.data.defaultsSuite != nil,
         terminalHost: context.hostEnabled),
@@ -808,7 +790,7 @@ public final class AppEnvironment {
     // a separator drag cheap would otherwise be thrown away.
     await appModel.layout.flush()
     // No FSEvents stream and no new `git status` outlive the window they were reading for.
-    await appModel.stopWatchingRepositories()
+    await appModel.stopWatching()
     // A restoration under way is called off *and waited for*: cancelling only asks, and a resume
     // already in flight would otherwise write `reopen` after this shutdown had decided what to
     // close.

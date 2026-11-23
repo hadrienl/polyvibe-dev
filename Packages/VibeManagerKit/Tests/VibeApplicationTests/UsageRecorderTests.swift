@@ -371,7 +371,7 @@ struct UsageServiceTests {
 
     await service.clear()
 
-    #expect(await service.sessionReport(session).hasReportedTokens == false)
+    #expect(await total(of: session, in: service)?.hasReportedTokens != true)
     #expect(await store.load().buckets.isEmpty)
   }
 
@@ -388,13 +388,13 @@ struct UsageServiceTests {
       reader: StubReader(sessionID: session, when: clock.now().addingTimeInterval(-3_600)),
       clock: clock)
     await service.refreshTokens(for: [])
-    #expect(await service.sessionReport(session).tokens.input == 5)
+    #expect(await total(of: session, in: service)?.tokens.input == 5)
 
     await service.clear()
     await service.refreshTokens(for: [])
 
     // Read again after the clear, but from before it: it does not come back.
-    #expect(await service.sessionReport(session).hasReportedTokens == false)
+    #expect(await total(of: session, in: service)?.hasReportedTokens != true)
     #expect(await store.load().buckets.isEmpty)
   }
 }
@@ -445,4 +445,10 @@ private actor HookedTokenUsageStore: TokenUsageStore {
       await hook()
     }
   }
+}
+
+/// The whole usage of one session, as the usage screen reads it.
+private func total(of session: SessionID, in service: UsageService) async -> UsageRow? {
+  await service.overview(period: .allTime, grouping: .model, sessions: [session]).sessions[session]?
+    .total
 }

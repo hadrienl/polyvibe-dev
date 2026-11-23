@@ -25,7 +25,7 @@ struct FileSessionJournalStoreTests {
     var journal = SessionJournal()
     journal.entries = [
       JournalEntry(
-        text: "Pushed", at: Date(timeIntervalSince1970: 1_800_000_000), providerID: "codex")
+        text: "Pushed", at: Date(timeIntervalSince1970: 1_800_000_000))
     ]
     try await store.save(journal, for: id)
     #expect(try await store.journal(for: id) == journal)

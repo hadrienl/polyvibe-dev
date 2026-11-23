@@ -54,10 +54,9 @@ public actor SessionJournalReader: SessionJournalReading {
         continue
       }
       for file in files {
-        reading.foundTranscript = true
         let (events, cursor) = advance(file, from: cursors[file.path], isCodex: isCodex)
         reading.cursors[file.path] = cursor
-        reading.events += events.map { (conversation.providerID, $0) }
+        reading.events += events
       }
     }
     return reading
@@ -205,13 +204,6 @@ public actor SessionJournalReader: SessionJournalReading {
           break
         }
       }
-      if !isSidechain, message?["stop_reason"] as? String == "end_turn" {
-        events.append(.turnEnded(at: at))
-      }
-    case "system":
-      if !isSidechain, object["subtype"] as? String == "turn_duration" {
-        events.append(.turnEnded(at: at))
-      }
     default:
       break
     }
@@ -239,32 +231,12 @@ public actor SessionJournalReader: SessionJournalReading {
     name: String, input: [String: Any], directory: String?, branch: String?, at: Date?
   ) -> TranscriptToolCall {
     let command = name == "Bash" ? input["command"] as? String : nil
-    let subject: String?
-    switch name {
-    case "Bash":
-      subject = command
-    case "Edit", "Write", "MultiEdit", "Read", "NotebookEdit":
-      subject = (input["file_path"] ?? input["notebook_path"]).flatMap { $0 as? String }.map {
-        relative($0, to: directory)
-      }
-    case "Grep", "Glob":
-      subject = input["pattern"] as? String
-    case "WebFetch":
-      subject = input["url"] as? String
-    case "WebSearch":
-      subject = input["query"] as? String
-    case "Task", "Agent":
-      subject = input["description"] as? String
-    default:
-      subject = compact(input)
-    }
     var strings: [String] = []
     if !writingTools.contains(name) {
       collectStrings(input, into: &strings, skipping: name == "Bash" ? ["command"] : [])
     }
     return TranscriptToolCall(
-      name: name, command: command, directory: directory, branch: branch, strings: strings,
-      summary: subject.map { "\(toolName(name)): \($0)" } ?? toolName(name), at: at)
+      command: command, directory: directory, branch: branch, strings: strings, at: at)
   }
 
   // MARK: - Codex
@@ -292,8 +264,6 @@ public actor SessionJournalReader: SessionJournalReading {
     case "session_meta", "turn_context":
       if let cwd = payload["cwd"] as? String, cwd.hasPrefix("/") { directory = cwd }
       return []
-    case "event_msg":
-      return payload["type"] as? String == "task_complete" ? [.turnEnded(at: at)] : []
     case "response_item":
       break
     default:
@@ -392,34 +362,12 @@ public actor SessionJournalReader: SessionJournalReading {
     }
     if !commands.isEmpty {
       return commands.map { command in
-        TranscriptToolCall(
-          name: name, command: command.command, directory: command.directory,
-          summary: "\(name): \(command.command)", at: at)
+        TranscriptToolCall(command: command.command, directory: command.directory, at: at)
       }
     }
     var strings: [String] = []
     if name != "apply_patch" { collectStrings(arguments, into: &strings, skipping: []) }
-    let subject: String
-    if name == "apply_patch", let input = payload["input"] as? String {
-      subject = patchedFiles(input).map { relative($0, to: directory) }.joined(separator: ", ")
-    } else {
-      subject = compact(arguments) ?? ""
-    }
-    return [
-      TranscriptToolCall(
-        name: name, directory: directory, strings: strings,
-        summary: subject.isEmpty ? name : "\(name): \(subject)", at: at)
-    ]
-  }
-
-  static func patchedFiles(_ patch: String) -> [String] {
-    patch.split(separator: "\n").compactMap { line in
-      for prefix in ["*** Update File: ", "*** Add File: ", "*** Delete File: "]
-      where line.hasPrefix(prefix) {
-        return String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
-      }
-      return nil
-    }
+    return [TranscriptToolCall(directory: directory, strings: strings, at: at)]
   }
 
   // MARK: - Helpers
@@ -448,26 +396,5 @@ public actor SessionJournalReader: SessionJournalReading {
     } else if let array = value as? [Any] {
       for inner in array { collectStrings(inner, into: &strings, skipping: []) }
     }
-  }
-
-  /// `mcp__gitlab__issues` reads `gitlab.issues`.
-  static func toolName(_ name: String) -> String {
-    guard name.hasPrefix("mcp__") else { return name }
-    let parts = name.dropFirst(5).components(separatedBy: "__")
-    return "mcp " + parts.joined(separator: ".")
-  }
-
-  /// The arguments of a call on one line, its keys sorted.
-  static func compact(_ arguments: [String: Any]) -> String? {
-    guard !arguments.isEmpty,
-      let data = try? JSONSerialization.data(
-        withJSONObject: arguments, options: [.sortedKeys, .withoutEscapingSlashes])
-    else { return nil }
-    return String(decoding: data.prefix(200), as: UTF8.self)
-  }
-
-  static func relative(_ path: String, to directory: String?) -> String {
-    guard let directory, path.hasPrefix(directory + "/") else { return path }
-    return String(path.dropFirst(directory.count + 1))
   }
 }
