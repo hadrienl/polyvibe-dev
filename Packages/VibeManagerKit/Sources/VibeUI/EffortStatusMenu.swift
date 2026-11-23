@@ -6,11 +6,25 @@ import VibeTerminalUI
 /// What the status bar of a session's terminal and conversation shows beside its Close: the
 /// agent (#575), the menu of reasoning effort (#411), the usage (#574), then the button of the
 /// drawer.
+///
+/// Drawn in the shown session's bar alone. Every session keeps its bar in the window's stack, and
+/// a hidden bar is laid out all the same: the three menus each measure every form they may take,
+/// and drawn behind every session they kept the main thread laying them out at rest. A hidden bar
+/// holds only what keeps it as tall as a shown one, so that its terminal is told the same size.
 struct SessionStatusAccessory: View {
   let model: AppModel
   let session: WorkSession
+  var isShown = true
 
   var body: some View {
+    if isShown {
+      menus
+    } else {
+      StatusBarHeightHolder()
+    }
+  }
+
+  @ViewBuilder private var menus: some View {
     let isRunning = model.launcher?.isRunning(session.id) ?? false
     StatusAccessoryStack {
       SessionAgentMenu(model: model, session: session)
@@ -38,6 +52,27 @@ struct SessionStatusAccessory: View {
   private struct EffortRefresh: Equatable {
     let agent: SessionAgentConfiguration?
     let isRunning: Bool
+  }
+}
+
+/// As tall as the menus of a shown bar, and nothing else: one button and one menu of the bar's
+/// size, never drawn, never measured in several forms.
+struct StatusBarHeightHolder: View {
+  var body: some View {
+    HStack(spacing: 8) {
+      Button {
+      } label: {
+        Text(verbatim: " ")
+      }
+      Menu {
+      } label: {
+        Text(verbatim: " ")
+      }
+      .fixedSize()
+    }
+    .controlSize(.small)
+    .hidden()
+    .accessibilityHidden(true)
   }
 }
 

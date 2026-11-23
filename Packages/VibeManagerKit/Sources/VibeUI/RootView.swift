@@ -2588,7 +2588,7 @@ private struct SessionTerminalSlot: View {
       TerminalPaneView(
         model: pane, autoStart: false, isActive: isActive,
         accessibilityTitle: terminalTitle(for: session, pane: pane, in: model),
-        statusAccessory: SessionStatusAccessory(model: model, session: session),
+        statusAccessory: SessionStatusAccessory(model: model, session: session, isShown: isActive),
         claimsKeyboardOnActivation: model.terminalClaimsKeyboardOnActivation,
         restart: sessionRestart(for: id, in: model), canRestart: model.canRestart(session),
         close: sessionClose(for: id, in: model)
@@ -2656,7 +2656,7 @@ private struct SessionConversationSlot: View {
           Divider()
           TerminalStatusBar(
             pane: pane,
-            accessory: SessionStatusAccessory(model: model, session: listed),
+            accessory: SessionStatusAccessory(model: model, session: listed, isShown: isActive),
             restart: sessionRestart(for: id, in: model), canRestart: model.canRestart(listed),
             close: sessionClose(for: id, in: model))
         }
