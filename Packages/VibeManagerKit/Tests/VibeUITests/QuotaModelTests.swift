@@ -170,6 +170,9 @@ struct QuotaModelTests {
       id: "primary", kind: .minutes(300), usedFraction: 0.82,
       resetsAt: now.addingTimeInterval(2 * 3_600))
     #expect(QuotaPresentation.name(of: window, locale: english) == "5 hours")
+    // A window whose CLI gave no length is not “0 minutes”.
+    let unknown = QuotaWindow(id: "primary", kind: .minutes(0), usedFraction: 0.1, resetsAt: nil)
+    #expect(QuotaPresentation.name(of: unknown, locale: english) == "Usage limit")
     #expect(QuotaPresentation.share(of: window, display: .used, locale: english) == "82% used")
     #expect(QuotaPresentation.share(of: window, display: .remaining, locale: english) == "18% left")
     #expect(

@@ -17,6 +17,12 @@ enum QuotaPresentation {
         localized: LocalizedStringResource(
           "\(hours) hours", locale: locale, bundle: .module,
           comment: "A quota window of so many hours, such as Codex's five hours."))
+    case .minutes(let minutes) where minutes <= 0:
+      // A window whose CLI did not give its length: no “0 minutes”.
+      return String(
+        localized: LocalizedStringResource(
+          "Usage limit", locale: locale, bundle: .module,
+          comment: "A quota window whose length the agent's CLI did not give."))
     case .minutes(let minutes):
       return String(
         localized: LocalizedStringResource(
