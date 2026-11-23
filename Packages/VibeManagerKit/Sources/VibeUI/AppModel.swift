@@ -2814,6 +2814,10 @@ public final class AppModel {
     // asked whether that session still exists instead of selecting its first row and losing it.
     preferredSelection = await layout.restore()
     if let agents { name(await agents.descriptors()) }
+    // Beside the load: the catalogues are files the agents wrote, read in a moment, so that a
+    // model is named "Opus 5.5" from the first frame rather than `opus` until the agents are
+    // detected, a label that would change its width under the user's eyes (#575).
+    Task { await readAgentModelNames() }
     await loadFolderLabels()
     // Beside the load rather than before it: the notes only serve the search, and the list must
     // not wait on reading them.
@@ -2918,6 +2922,26 @@ public final class AppModel {
     if choices != agentChoices { agentChoices = choices }
     for agent in choices.agents where !agent.models.isEmpty {
       nameModels(agent.catalogue.names, of: agent.id.rawValue)
+    }
+  }
+
+  /// Names every agent's models, from its catalogue and its configuration, without waiting for
+  /// any agent to be detected.
+  func readAgentModelNames() async {
+    guard let agents else { return }
+    let descriptors = await agents.descriptors()
+    await withTaskGroup(of: (String, [String: String]).self) { group in
+      for descriptor in descriptors {
+        group.addTask {
+          let provider = await agents.provider(id: descriptor.id)
+          let catalogue = AgentCatalogue(
+            models: await provider?.models() ?? [], aliases: await provider?.modelAliases() ?? [:])
+          return (descriptor.id.rawValue, catalogue.names)
+        }
+      }
+      for await (providerID, names) in group where !names.isEmpty {
+        nameModels(names, of: providerID)
+      }
     }
   }
 
