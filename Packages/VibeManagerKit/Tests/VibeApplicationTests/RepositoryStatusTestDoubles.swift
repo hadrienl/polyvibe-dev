@@ -19,10 +19,6 @@ actor ScriptedStatusReader: RepositoryStatusReading {
     reads[path, default: 0] += 1
     return answers[path] ?? .success(.sample(path, entries: []))
   }
-
-  func gitDirectories(atPath path: String) async -> Result<GitDirectories, RepositoryStatusIssue> {
-    .success(GitDirectories(gitDirectory: path + "/.git", commonDirectory: path + "/.git"))
-  }
 }
 
 /// File system events sent by hand, to every stream open at the time.
@@ -84,8 +80,7 @@ func eventually(
 
 extension WorkingTreeStatus {
   static func sample(
-    _ path: String, entries: [WorkingTreeEntry], lock: IndexLock? = nil,
-    observedAt: Date = Date()
+    _ path: String, entries: [WorkingTreeEntry], observedAt: Date = Date()
   ) -> WorkingTreeStatus {
     var counts = WorkingTreeCounts()
     for entry in entries {
@@ -102,7 +97,6 @@ extension WorkingTreeStatus {
       branch: BranchStatus(headRevision: "abc", branchName: "main"),
       entries: entries,
       counts: counts,
-      indexLock: lock,
       observedAt: observedAt
     )
   }

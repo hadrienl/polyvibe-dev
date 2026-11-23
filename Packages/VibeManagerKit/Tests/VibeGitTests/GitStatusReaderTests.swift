@@ -197,7 +197,6 @@ struct GitStatusReaderTests {
     let status = try await status(repository)
 
     #expect(kind(status, "README") == .tracked(staged: nil, unstaged: .modified))
-    #expect(status.indexLock?.path.hasSuffix(".git/index.lock") == true)
     #expect(try Data(contentsOf: URL(fileURLWithPath: index)) == before)
     #expect(
       try FileManager.default.attributesOfItem(atPath: index)[.modificationDate] as? Date

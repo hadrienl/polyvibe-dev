@@ -189,18 +189,6 @@ struct SessionBranchReportCacheTests {
     #expect(second.visitedOnly == first.visitedOnly)
     #expect(await reader.total() == before)
   }
-
-  @Test("Two readings that differ only by their date say the same thing")
-  func sameContent() {
-    let id = SessionID()
-    let first = SessionBranchReport(sessionID: id, repositories: [], readAt: start)
-    let later = SessionBranchReport(
-      sessionID: id, repositories: [], readAt: start.addingTimeInterval(60))
-
-    #expect(first.hasSameContent(as: later))
-    #expect(first != later)
-    #expect(first.checked(at: later.readAt) == later)
-  }
 }
 
 /// Counts what the report asks Git, and says the references never move unless told.

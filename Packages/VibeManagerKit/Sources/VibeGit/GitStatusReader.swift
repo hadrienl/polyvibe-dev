@@ -40,23 +40,17 @@ public struct GitStatusReader: RepositoryStatusReading {
     } catch {
       return .failure(.failed(summary: error.localizedDescription))
     }
-    var duration = clock.now - started
-
     guard result.succeeded else {
       // The runner answers -1 when it had to stop a Git that would not finish.
-      if result.exitCode == -1 { return .failure(.timedOut(after: duration)) }
+      if result.exitCode == -1 { return .failure(.timedOut(after: clock.now - started)) }
       return .failure(RepositoryStatusIssue.classify(errorOutput: result.errorOutput, path: path))
     }
 
     let parsed = parser.parse(result.output, limit: limit)
     var operation: RepositoryOperation?
-    var lock: IndexLock?
     if case .success(let found) = await gitDirectories(atPath: path) {
       operation = Self.operation(in: found.gitDirectory)
-      lock = Self.indexLock(in: found.gitDirectory)
     }
-    // How long the reading took, Git and the folder it keeps its state in.
-    duration = clock.now - started
     return .success(
       WorkingTreeStatus(
         repositoryPath: path,
@@ -65,9 +59,7 @@ public struct GitStatusReader: RepositoryStatusReading {
         entries: parsed.entries,
         counts: parsed.counts,
         isTruncated: parsed.isTruncated,
-        indexLock: lock,
-        observedAt: Date(),
-        duration: duration
+        observedAt: Date()
       ))
   }
 
@@ -133,15 +125,6 @@ public struct GitStatusReader: RepositoryStatusReading {
     if exists("REVERT_HEAD") { return .reverting }
     if exists("BISECT_LOG") { return .bisecting }
     return nil
-  }
-
-  static func indexLock(in gitDirectory: String) -> IndexLock? {
-    let path = (gitDirectory as NSString).appendingPathComponent("index.lock")
-    guard
-      let attributes = try? FileManager.default.attributesOfItem(atPath: path),
-      let created = attributes[.creationDate] as? Date ?? attributes[.modificationDate] as? Date
-    else { return nil }
-    return IndexLock(path: path, since: created)
   }
 }
 

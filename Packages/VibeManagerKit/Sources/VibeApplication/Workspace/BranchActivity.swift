@@ -178,20 +178,6 @@ public struct SessionBranchReport: Hashable, Sendable {
     self.hasTranscript = hasTranscript
     self.readAt = readAt
   }
-
-  /// Whether two readings say the same thing, whenever they were made. A reading that only moved
-  /// the clock is not news, and publishing it would redraw the Git section for nothing.
-  public func hasSameContent(as other: SessionBranchReport) -> Bool {
-    sessionID == other.sessionID && repositories == other.repositories
-      && visitedOnly == other.visitedOnly && hasTranscript == other.hasTranscript
-  }
-
-  /// The same report, as checked again at `date`.
-  public func checked(at date: Date) -> SessionBranchReport {
-    SessionBranchReport(
-      sessionID: sessionID, repositories: repositories, visitedOnly: visitedOnly,
-      hasTranscript: hasTranscript, readAt: date)
-  }
 }
 
 /// Tells a session which repositories its agent worked in, on which branch, and what moved.

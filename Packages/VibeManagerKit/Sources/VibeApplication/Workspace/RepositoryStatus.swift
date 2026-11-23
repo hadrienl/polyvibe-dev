@@ -21,7 +21,6 @@ public protocol RepositoryStatusReading: Sendable {
   func status(atPath path: String, limit: Int) async -> Result<
     WorkingTreeStatus, RepositoryStatusIssue
   >
-  func gitDirectories(atPath path: String) async -> Result<GitDirectories, RepositoryStatusIssue>
   /// The branch checked out, nil when none is or it cannot be read: what the request palette
   /// shows, without a whole `git status`.
   func branchName(atPath path: String) async -> String?

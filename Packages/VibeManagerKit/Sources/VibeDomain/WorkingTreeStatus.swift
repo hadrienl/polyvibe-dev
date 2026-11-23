@@ -129,17 +129,6 @@ public enum RepositoryOperation: String, Hashable, Sendable {
   case bisecting
 }
 
-/// Another Git process holding the index, and since when.
-public struct IndexLock: Hashable, Sendable {
-  public let path: String
-  public let since: Date
-
-  public init(path: String, since: Date) {
-    self.path = path
-    self.since = since
-  }
-}
-
 /// What `git status` said about one repository, at one moment. Never stored: it is only true for
 /// as long as nothing moves on the disk.
 public struct WorkingTreeStatus: Hashable, Sendable {
@@ -150,9 +139,7 @@ public struct WorkingTreeStatus: Hashable, Sendable {
   public let entries: [WorkingTreeEntry]
   public let counts: WorkingTreeCounts
   public let isTruncated: Bool
-  public let indexLock: IndexLock?
   public let observedAt: Date
-  public let duration: Duration
 
   public init(
     repositoryPath: String,
@@ -161,9 +148,7 @@ public struct WorkingTreeStatus: Hashable, Sendable {
     entries: [WorkingTreeEntry],
     counts: WorkingTreeCounts,
     isTruncated: Bool = false,
-    indexLock: IndexLock? = nil,
-    observedAt: Date,
-    duration: Duration = .zero
+    observedAt: Date
   ) {
     self.repositoryPath = repositoryPath
     self.branch = branch
@@ -171,17 +156,6 @@ public struct WorkingTreeStatus: Hashable, Sendable {
     self.entries = entries
     self.counts = counts
     self.isTruncated = isTruncated
-    self.indexLock = indexLock
     self.observedAt = observedAt
-    self.duration = duration
-  }
-
-  /// Whether two readings describe the same repository, whenever and however fast they were
-  /// made. A reading that only moved the clock is not news, and publishing it would redraw a list
-  /// for nothing.
-  public func hasSameContent(as other: WorkingTreeStatus) -> Bool {
-    repositoryPath == other.repositoryPath && branch == other.branch
-      && operation == other.operation && entries == other.entries && counts == other.counts
-      && isTruncated == other.isTruncated && indexLock == other.indexLock
   }
 }

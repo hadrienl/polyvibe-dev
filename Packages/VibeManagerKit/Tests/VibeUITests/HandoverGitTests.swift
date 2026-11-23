@@ -132,8 +132,4 @@ private actor CountingStatuses: RepositoryStatusReading {
         operation: .rebasing, entries: [],
         counts: WorkingTreeCounts(staged: 1, untracked: 1, conflicted: 1), observedAt: Date()))
   }
-
-  func gitDirectories(atPath path: String) async -> Result<GitDirectories, RepositoryStatusIssue> {
-    .success(GitDirectories(gitDirectory: path + "/.git", commonDirectory: path + "/.git"))
-  }
 }
