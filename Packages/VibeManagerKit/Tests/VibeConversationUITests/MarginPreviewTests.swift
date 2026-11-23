@@ -190,6 +190,18 @@ struct MarginPreviewTests {
     #expect(preview.hover?.blockID == "b2")
   }
 
+  @Test("An icon that moves shows no preview of its own: only the pointer does")
+  func iconMovedShowsNothing() {
+    let preview = ConversationMarginPreview()
+    let anchor = CGRect(x: 10, y: 200, width: 18, height: 20)
+    // A row still taken for hovered, its conversation put away and back, laid out again.
+    preview.iconMoved(blockID: "b1", target: .moments, anchor: anchor)
+    #expect(preview.hover == nil)
+    preview.pointerOn(blockID: "b1", target: .moments, anchor: anchor)
+    preview.iconMoved(blockID: "b1", target: .moments, anchor: anchor.offsetBy(dx: 0, dy: -40))
+    #expect(preview.hover == nil)
+  }
+
   @Test("The messages moving elsewhere keep what is shown, and show nothing new for a while")
   func contentMoved() {
     var now = ContinuousClock.now

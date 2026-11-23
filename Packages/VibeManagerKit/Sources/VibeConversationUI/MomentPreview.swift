@@ -216,6 +216,16 @@ final class ConversationMarginPreview {
     if hover != self.hover { self.hover = hover }
   }
 
+  /// The icon moved, the pointer not seen moving: the preview it shows, if any, is hidden as by a
+  /// scroll; none is shown for it. Only the pointer itself shows one — a row whose hover was
+  /// never told ended, its conversation put away, would bring one back for an icon nobody points
+  /// at.
+  func iconMoved(blockID: String, target: Target, anchor: CGRect) {
+    guard let hover, hover.blockID == blockID, hover.target == target, hover.anchor != anchor
+    else { return }
+    scrolled()
+  }
+
   /// The pointer left an icon, or it has nothing to show any more: hidden if it was its preview.
   func pointerLeft(blockID: String, target: Target) {
     guard hover?.blockID == blockID, hover?.target == target else { return }
@@ -277,8 +287,14 @@ struct MarginPreviewSource: ViewModifier {
           Color.clear.onGeometryChange(for: CGRect.self) {
             $0.frame(in: .named(ConversationView.viewportSpace))
           } action: { frame in
+            let moved = anchor != nil
             anchor = frame
-            show(at: frame)
+            if moved {
+              preview.iconMoved(blockID: blockID, target: target, anchor: frame)
+            } else {
+              // Its place read for the first time, the pointer just come onto it.
+              show(at: frame)
+            }
           }
         }
       }
@@ -291,7 +307,11 @@ struct MarginPreviewSource: ViewModifier {
       }
       // Its row gone with the pointer on it.
       .onDisappear {
-        if isHovered { preview.pointerLeft(blockID: blockID, target: target) }
+        guard isHovered else { return }
+        isHovered = false
+        anchor = nil
+        hovered?(false)
+        preview.pointerLeft(blockID: blockID, target: target)
       }
   }
 

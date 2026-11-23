@@ -299,6 +299,13 @@ struct ConversationOverviewLayoutTests {
     #expect(taller.y == ConversationOverviewLayout.previewMargin)
   }
 
+  @Test("With room on neither side, it takes the side with more, covering as little of the icon")
+  func marginPreviewMoreRoomAbove() {
+    // Icon at 150–170 in a pane 200 high: 22 points below, 142 above.
+    let origin = marginOrigin(iconY: 150, height: 160, paneHeight: 200)
+    #expect(origin.y == ConversationOverviewLayout.previewMargin)
+  }
+
   @Test("The preview grows with the text, and never wider than the messages left of the overview")
   func previewWidth() {
     #expect(ConversationOverviewLayout.previewWidth(textSize: 13, room: 1000) == 260)
