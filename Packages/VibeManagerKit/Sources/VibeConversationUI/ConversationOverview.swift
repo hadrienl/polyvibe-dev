@@ -413,8 +413,8 @@ struct OverviewColors: Equatable {
     toolBorder = theme.border.color
     failure = theme.failure.color
     accent = theme.accent.color
-    viewport = theme.text.color.opacity(0.07)
-    viewportActive = theme.text.color.opacity(0.13)
+    viewport = theme.text.color.opacity(0.14)
+    viewportActive = theme.text.color.opacity(0.22)
     count = theme.secondaryText.color
     moments = Dictionary(
       uniqueKeysWithValues: ConversationMomentKind.allCases.map {
