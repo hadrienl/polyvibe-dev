@@ -103,6 +103,8 @@ public actor AccountQuotaService {
   private var entries: [String: Entry] = [:]
   private var asked: [String: Date] = [:]
   private var pending: [String: Task<Entry, Never>] = [:]
+  /// Moved on by `clear`: a reading asked before is not kept.
+  private var generation = 0
 
   public init(
     minimumInterval: TimeInterval = 30, now: @escaping @Sendable () -> Date = { Date() }
@@ -126,9 +128,12 @@ public actor AccountQuotaService {
     }
     asked[providerID] = now()
     let clock = now
+    let generation = generation
     let task = Task { Entry(reading: await reporter.readQuota(), readAt: clock()) }
     pending[providerID] = task
     let entry = await task.value
+    // Cleared meanwhile, as when tracking is turned off: the answer is not kept.
+    guard generation == self.generation else { return entry }
     pending[providerID] = nil
     // A failure does not hide what was measured before: the last figures stay, with their age.
     if case .unavailable(let reason) = entry.reading, reason == .failed,
@@ -140,14 +145,10 @@ public actor AccountQuotaService {
     return entry
   }
 
-  /// What a conversation said of the account, a quota reached above all: kept until the CLI is
-  /// asked again.
-  public func record(_ reading: AccountQuotaReading, for providerID: String) {
-    entries[providerID] = Entry(reading: reading, readAt: now())
-  }
-
   public func clear() {
+    generation += 1
     entries = [:]
     asked = [:]
+    pending = [:]
   }
 }

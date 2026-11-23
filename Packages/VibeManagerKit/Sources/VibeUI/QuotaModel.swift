@@ -50,7 +50,10 @@ public final class QuotaModel {
   @ObservationIgnored private var reporters: [String: any AgentQuotaReporting] = [:]
   @ObservationIgnored var isTrackingEnabled: () -> Bool = { true }
   @ObservationIgnored var recentlyUsed: () -> Set<String> = { [] }
-  @ObservationIgnored private var watchers = 0
+  /// What each popover open watches: its accounts, or every one for `nil`.
+  @ObservationIgnored private var watches: [UUID: [String]?] = [:]
+  /// Moved on when tracking is turned off: a reading asked before is not kept.
+  @ObservationIgnored private var generation = 0
   @ObservationIgnored private var watchTask: Task<Void, Never>?
   @ObservationIgnored private var backgroundTask: Task<Void, Never>?
   @ObservationIgnored private let watchInterval: Duration
@@ -87,6 +90,7 @@ public final class QuotaModel {
   public func refresh(_ providerIDs: [String]? = nil) async {
     guard isTrackingEnabled() else { return }
     let ids = providerIDs ?? accounts.map(\.id)
+    let generation = generation
     await withTaskGroup(of: (String, AccountQuotaService.Entry).self) { group in
       for id in ids {
         guard let reporter = reporters[id], !asking.contains(id) else { continue }
@@ -94,6 +98,8 @@ public final class QuotaModel {
         group.addTask { [service] in (id, await service.refresh(id, with: reporter)) }
       }
       for await (id, entry) in group {
+        // Tracking turned off meanwhile: what comes back is not kept.
+        guard generation == self.generation, isTrackingEnabled() else { continue }
         entries[id] = entry
         asking.remove(id)
       }
@@ -102,26 +108,42 @@ public final class QuotaModel {
 
   // MARK: - When
 
-  /// A popover that shows quotas opened: asked now, then every minute until the last one closes.
-  public func startWatching(_ providerIDs: [String]? = nil) {
-    watchers += 1
+  /// A popover that shows quotas opened: its accounts — every one for `nil` — asked now, then
+  /// every minute until it closes. The watch returned is the one to stop: each popover stops its
+  /// own, whatever changed meanwhile.
+  @discardableResult
+  public func startWatching(_ providerIDs: [String]? = nil) -> UUID {
+    let watch = UUID()
+    watches[watch] = .some(providerIDs)
     Task { await refresh(providerIDs) }
-    guard watchTask == nil else { return }
-    let interval = watchInterval
-    watchTask = Task { [weak self] in
-      while !Task.isCancelled {
-        try? await Task.sleep(for: interval)
-        guard !Task.isCancelled, let self else { return }
-        await self.refresh()
+    if watchTask == nil {
+      let interval = watchInterval
+      watchTask = Task { [weak self] in
+        while !Task.isCancelled {
+          try? await Task.sleep(for: interval)
+          guard !Task.isCancelled, let self else { return }
+          await self.refresh(self.watched)
+        }
       }
     }
+    return watch
   }
 
-  public func stopWatching() {
-    watchers = max(0, watchers - 1)
-    guard watchers == 0 else { return }
+  public func stopWatching(_ watch: UUID) {
+    watches[watch] = nil
+    guard watches.isEmpty else { return }
     watchTask?.cancel()
     watchTask = nil
+  }
+
+  /// The accounts the popovers open show: every one as soon as one shows them all.
+  var watched: [String]? {
+    var ids: Set<String> = []
+    for scope in watches.values {
+      guard let scope else { return nil }
+      ids.formUnion(scope)
+    }
+    return accounts.map(\.id).filter(ids.contains)
   }
 
   /// The gauge of the header follows the accounts used in the last day, every ten minutes while
@@ -152,7 +174,9 @@ public final class QuotaModel {
   /// Tracking turned off: nothing more is shown or asked.
   func trackingChanged(_ enabled: Bool) async {
     if !enabled {
+      generation += 1
       entries = [:]
+      asking = []
       await service.clear()
     }
   }

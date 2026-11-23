@@ -84,6 +84,77 @@ struct QuotaModelTests {
     #expect(off.gauge(at: now).level == .unknown)
   }
 
+  @Test("Each popover watches its own accounts, and stops its own watch")
+  func watches() {
+    let model = QuotaModel(watchInterval: .seconds(3_600))
+    model.connect(accounts: [
+      (QuotaModel.Account(id: "claude-code", name: "Claude Code", symbolName: "c"), Fixed(quota())),
+      (QuotaModel.Account(id: "codex", name: "Codex", symbolName: "c"), Fixed(quota())),
+      (QuotaModel.Account(id: "antigravity", name: "Antigravity", symbolName: "s"), Fixed(quota())),
+    ])
+    // A session's popover: its account alone, every minute.
+    let session = model.startWatching(["codex"])
+    #expect(model.watched == ["codex"])
+    // The Quotas popover opened beside it: every account.
+    let all = model.startWatching()
+    #expect(model.watched == nil)
+    model.stopWatching(all)
+    #expect(model.watched == ["codex"])
+    // The same watch stopped twice changes nothing more.
+    model.stopWatching(all)
+    #expect(model.watched == ["codex"])
+    model.stopWatching(session)
+    #expect(model.watched == [])
+  }
+
+  /// A reading that answers once released.
+  final class Held: AgentQuotaReporting, @unchecked Sendable {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+    private let lock = NSLock()
+    let reading: AccountQuotaReading
+    init(_ reading: AccountQuotaReading) { self.reading = reading }
+    func readQuota() async -> AccountQuotaReading {
+      await withCheckedContinuation { continuation in
+        let now = lock.withLock {
+          if released { return true }
+          self.continuation = continuation
+          return false
+        }
+        if now { continuation.resume() }
+      }
+      return reading
+    }
+    func release() {
+      let waiting = lock.withLock {
+        released = true
+        defer { continuation = nil }
+        return continuation
+      }
+      waiting?.resume()
+    }
+    var quotaPageURL: URL? { nil }
+  }
+
+  @Test("Tracking turned off while an account is asked: its answer is not kept")
+  func trackingOffMeanwhile() async {
+    let model = QuotaModel()
+    let held = Held(quota(0.5))
+    model.connect(accounts: [
+      (QuotaModel.Account(id: "codex", name: "Codex", symbolName: "c"), held)
+    ])
+    let asking = Task { await model.refresh() }
+    while model.asking.isEmpty { await Task.yield() }
+    var tracking = true
+    model.isTrackingEnabled = { tracking }
+    tracking = false
+    await model.trackingChanged(false)
+    held.release()
+    await asking.value
+    #expect(model.entry(for: "codex") == nil)
+    #expect(model.asking.isEmpty)
+  }
+
   @Test("Used or left is kept, the same for every agent")
   func display() throws {
     let defaults = try #require(UserDefaults(suiteName: "QuotaModelTests-\(UUID().uuidString)"))
@@ -135,9 +206,11 @@ struct CostConversionTests {
     #expect(CostConversion.make(code: "EUR", rates: nil) == .dollar)
     #expect(UsagePresentation.cost(10, locale: french, conversion: .dollar).hasPrefix("≈ 10,00"))
     // Below a cent once converted: never a zero.
-    #expect(UsagePresentation.cost(Decimal(string: "0.005")!, locale: french, conversion: euro)
-      .hasPrefix("< 0,01"))
-    let note = try #require(UsagePresentation.conversionNote(euro, locale: Locale(identifier: "en_US")))
+    #expect(
+      UsagePresentation.cost(Decimal(string: "0.005")!, locale: french, conversion: euro)
+        .hasPrefix("< 0,01"))
+    let note = try #require(
+      UsagePresentation.conversionNote(euro, locale: Locale(identifier: "en_US")))
     #expect(note.contains("2026-11-20"))
     #expect(UsagePresentation.conversionNote(.dollar) == nil)
   }

@@ -261,6 +261,7 @@ struct SessionUsagePopover: View {
   let usage: UsageModel
   let session: WorkSession
   let agentNames: [String: String]
+  @State private var watch: UUID?
 
   nonisolated static let width: CGFloat = 320
 
@@ -279,10 +280,13 @@ struct SessionUsagePopover: View {
       quota: quota
     )
     .onAppear {
-      if let account { usage.quotas.startWatching([account]) }
+      // The session's agent, whether or not it can tell its quota yet: the agents may still be
+      // found, and only the agent's own account is asked.
+      if let id = session.agent?.providerID { watch = usage.quotas.startWatching([id]) }
     }
     .onDisappear {
-      if account != nil { usage.quotas.stopWatching() }
+      if let watch { usage.quotas.stopWatching(watch) }
+      watch = nil
     }
   }
 

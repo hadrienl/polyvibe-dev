@@ -114,6 +114,7 @@ struct QuotasPopover: View {
 
   @Environment(\.locale) private var locale
   @Environment(\.openWindow) private var openWindow
+  @State private var watch: UUID?
 
   var body: some View {
     let quotas = usage.quotas
@@ -155,12 +156,13 @@ struct QuotasPopover: View {
     .padding(14)
     .frame(width: 380, alignment: .leading)
     .onAppear {
-      quotas.startWatching()
+      watch = quotas.startWatching()
       // The costs of thirty days need every session's transcripts, as the Usage window reads.
       usage.startWatching()
     }
     .onDisappear {
-      quotas.stopWatching()
+      if let watch { quotas.stopWatching(watch) }
+      watch = nil
       usage.stopWatching()
     }
   }
