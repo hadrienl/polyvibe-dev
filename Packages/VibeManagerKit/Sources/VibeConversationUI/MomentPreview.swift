@@ -186,10 +186,23 @@ final class ConversationMarginPreview {
   private(set) var hover: Hover?
   @ObservationIgnored private var quietUntil: ContinuousClock.Instant?
   @ObservationIgnored var now: () -> ContinuousClock.Instant = { ContinuousClock.now }
+  /// Where the block shown was last found: blocks are added after it, seldom before, and the
+  /// preview drawn again at each one finds it there rather than through them all.
+  @ObservationIgnored private var lastIndex: Int?
   /// How long after the last step of a scroll the pointer shows nothing.
   static let quietAfterScroll = Duration.milliseconds(250)
 
   init() {}
+
+  /// The block of the icon the pointer is on, among `blocks`: where it was last, or else sought.
+  func hoveredBlock(in blocks: [ConversationBlock]) -> ConversationBlock? {
+    guard let id = hover?.blockID else { return nil }
+    if let lastIndex, blocks.indices.contains(lastIndex), blocks[lastIndex].id == id {
+      return blocks[lastIndex]
+    }
+    lastIndex = blocks.firstIndex { $0.id == id }
+    return lastIndex.map { blocks[$0] }
+  }
 
   /// The pointer is on an icon, or the icon it is on moved: under a pointer that stayed, the
   /// messages scrolled.
@@ -298,7 +311,7 @@ struct MarginPreviewOverlay: View {
 
   var body: some View {
     if let hover = model.marginPreview.hover,
-      let block = model.blocks.first(where: { $0.id == hover.blockID }),
+      let block = model.marginPreview.hoveredBlock(in: model.blocks),
       let content = MomentPreviewContent(
         margin: hover.target, of: block, model: model, appearance: appearance)
     {

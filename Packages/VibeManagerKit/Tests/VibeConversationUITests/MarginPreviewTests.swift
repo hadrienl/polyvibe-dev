@@ -207,6 +207,25 @@ struct MarginPreviewTests {
     #expect(preview.hover?.target == .bookmark)
   }
 
+  @Test("The block shown is found where it was, and again once others come before it")
+  func hoveredBlock() throws {
+    let model = Self.model()
+    let preview = ConversationMarginPreview()
+    let blocks = model.blocks
+    #expect(preview.hoveredBlock(in: blocks) == nil)
+    let shown = blocks[2]
+    preview.pointerOn(blockID: shown.id, target: .moments, anchor: .zero)
+    #expect(preview.hoveredBlock(in: blocks)?.id == shown.id)
+    // Blocks added after it, then one before it: the same block still.
+    let later = blocks + [blocks[0]]
+    #expect(preview.hoveredBlock(in: later)?.id == shown.id)
+    let earlier = [blocks[4]] + blocks
+    #expect(preview.hoveredBlock(in: earlier)?.id == shown.id)
+    #expect(preview.hoveredBlock(in: blocks)?.id == shown.id)
+    // Gone from the conversation: nothing.
+    #expect(preview.hoveredBlock(in: blocks.filter { $0.id != shown.id }) == nil)
+  }
+
   @Test("The conversation put away: nothing shown when it comes back")
   func hidden() {
     let preview = ConversationMarginPreview()
