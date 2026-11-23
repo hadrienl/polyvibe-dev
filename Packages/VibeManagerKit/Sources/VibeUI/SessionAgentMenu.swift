@@ -165,13 +165,6 @@ struct SessionAgentMenu: View {
       of: model.pane(for: session.id)?.status, resolution: model.resolution(forID: session.id))
   }
 
-  /// Opens the Switch Agent sheet set on `choice`, or on nothing: the switch itself is the
-  /// sheet's, which says what will be stopped, resumed or handed over.
-  static func open(
-    _ choice: AgentSwitchChoices.Choice?, of id: SessionID, in model: AppModel
-  ) {
-    model.beginAgentSwitch(id, preselected: choice?.target)
-  }
 }
 
 /// What the history of a session's agents says (#575), in words: the menu's lines, and what

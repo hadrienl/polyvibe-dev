@@ -54,7 +54,7 @@ struct SessionAgentMenuTests {
     let other = try #require(choices.agent("other"))
     let choice = try #require(choices.choices(for: other, current: subject.agent).first)
 
-    SessionAgentMenu.open(choice, of: subject.id, in: model)
+    model.beginAgentSwitch(subject.id, preselected: choice.target)
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "other", modelID: "o1"))
@@ -68,10 +68,7 @@ struct SessionAgentMenuTests {
     let subject = session()
     let (model, _) = await workspace(subject)
 
-    SessionAgentMenu.open(
-      AgentSwitchChoices.Choice(
-        target: AgentTarget(providerID: "other"), modelName: nil, isCurrent: false),
-      of: subject.id, in: model)
+    model.beginAgentSwitch(subject.id, preselected: AgentTarget(providerID: "other"))
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "other"))
@@ -81,8 +78,13 @@ struct SessionAgentMenuTests {
   func otherSettingsPreselectsNothing() async throws {
     let subject = session()
     let (model, _) = await workspace(subject)
+    let menu = await menu(of: subject, in: model)
+    let switchTo = try #require(menu.items.last?.submenu)
 
-    SessionAgentMenu.open(nil, of: subject.id, in: model)
+    // Chosen the way a click chooses it, through the application.
+    _ = NSApplication.shared
+    let other = try #require(switchTo.items.firstIndex { $0.title == "Other Settings…" })
+    switchTo.performActionForItem(at: other)
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "stub", modelID: "fast"))
@@ -96,10 +98,8 @@ struct SessionAgentMenuTests {
     await repository.archive(subject.id)
     await model.reload()
 
-    SessionAgentMenu.open(
-      AgentSwitchChoices.Choice(
-        target: AgentTarget(providerID: "other", modelID: "o1"), modelName: "O1", isCurrent: false),
-      of: subject.id, in: model)
+    model.beginAgentSwitch(
+      subject.id, preselected: AgentTarget(providerID: "other", modelID: "o1"))
 
     #expect(model.pendingSwitch == nil)
   }
