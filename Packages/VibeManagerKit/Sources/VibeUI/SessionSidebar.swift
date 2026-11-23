@@ -159,7 +159,12 @@ struct SessionSidebar: View {
               get: { model.isExpanded(group) },
               set: { model.setExpanded($0, group: group) })
           ) {
-            rows(group.sessions, positions: positions, width: width)
+            // A folded group holds no rows. Folded with rows inside, a change to them during an
+            // update made the outline view ask for children SwiftUI no longer had, and its
+            // assertion ended the application (crash reports of 2026-11-23).
+            if model.isExpanded(group) {
+              rows(group.sessions, positions: positions, width: width)
+            }
           } header: {
             groupHeader(group)
           }
