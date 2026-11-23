@@ -6,12 +6,4 @@ enum AgentNaming {
   static func name(of providerID: String, names: [String: String]) -> String {
     names[providerID] ?? providerID
   }
-
-  /// The agent, then its model when the session has one of its own.
-  static func label(
-    _ agent: SessionAgentConfiguration, names: [String: String], separator: String = " · "
-  ) -> String {
-    let name = name(of: agent.providerID, names: names)
-    return agent.modelID.map { "\(name)\(separator)\($0)" } ?? name
-  }
 }

@@ -56,7 +56,7 @@ struct SessionIdentityBar: View {
           }
         }
         if let agent = session.agent {
-          Text(AgentNaming.label(agent, names: model.agentNames))
+          Text(model.agentLabels.label(agent))
             .font(.callout)
             .foregroundStyle(.secondary)
             .lineLimit(1)

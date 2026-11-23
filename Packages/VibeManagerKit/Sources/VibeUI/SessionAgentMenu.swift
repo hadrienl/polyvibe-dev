@@ -19,13 +19,11 @@ struct SessionAgentMenu: View {
   let model: AppModel
   let session: WorkSession
   @Environment(\.statusBarDensity) private var density
-  /// The agents and models to switch to, read when the menu is shown and when it opens.
-  @State private var choices: AgentSwitchChoices?
   /// The button's own view, which the menu opens above.
   @State private var anchor = MenuAnchor.Holder()
 
   var body: some View {
-    let names = AgentLabels(names: model.agentNames, models: choices?.modelNames ?? [:])
+    let names = model.agentLabels
     let canSwitch = model.canSwitchAgent(session)
     // The bar's step, or a narrower one when even that does not fit.
     ViewThatFits(in: .horizontal) {
@@ -57,7 +55,6 @@ struct SessionAgentMenu: View {
         verbatim: session.agent.map { names.label($0, separator: ", ") }
           ?? String(localized: "No agent recorded", bundle: .module))
     )
-    .task(id: session.agent) { await readChoices() }
   }
 
   // MARK: - The button
@@ -122,13 +119,13 @@ struct SessionAgentMenu: View {
   /// next time — an agent installed since is offered then.
   private func openMenu(names: AgentLabels, canSwitch: Bool) {
     let content = AgentMenuContent(
-      session: session, names: names, choices: choices, state: stateSentence,
+      session: session, names: names, choices: model.agentChoices, state: stateSentence,
       canSwitch: canSwitch)
     let id = session.id
     let menu = AgentMenu.make(content) { [model] target in
       model.beginAgentSwitch(id, preselected: target)
     }
-    Task { await readChoices() }
+    Task { [model] in await model.refreshAgentChoices() }
     guard let view = anchor.view else { return }
     let gap: CGFloat = 4
     // The menu's top left corner: above the button, on its left edge.
@@ -147,12 +144,6 @@ struct SessionAgentMenu: View {
     _ choice: AgentSwitchChoices.Choice?, of id: SessionID, in model: AppModel
   ) {
     model.beginAgentSwitch(id, preselected: choice?.target)
-  }
-
-  private func readChoices() async {
-    guard let registry = model.agents else { return }
-    let read = await AgentSwitchChoices.read(from: registry)
-    if read != choices { choices = read }
   }
 }
 
@@ -311,8 +302,9 @@ struct AgentHistoryPresentation: Equatable {
   }
 }
 
-/// How the menu names an agent and its model: the agent's name, and the model's as its catalogue
-/// gives it — "Claude Code · Opus 5.5" — or its identifier when the catalogue does not list it.
+/// How a session's agent and its model are named, wherever they are (#575): the agent's name,
+/// and the model's as its catalogue gives it — "Claude Code · Opus 5.5" — or its identifier when
+/// the catalogue does not list it. The one source of that label: `AppModel.agentLabels`.
 struct AgentLabels: Equatable {
   let names: [String: String]
   /// Provider, then model identifier, to the model's name.

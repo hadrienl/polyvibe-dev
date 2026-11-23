@@ -140,16 +140,16 @@ public struct SessionStatusPresentation: Equatable, Sendable {
   }
 
   /// The label read out by VoiceOver, where the symbol and the colour say nothing.
-  public static func accessibilityLabel(
+  static func accessibilityLabel(
     for session: WorkSession,
     status: SessionStatusPresentation,
-    agentNames: [String: String] = [:]
+    labels: AgentLabels = AgentLabels(names: [:])
   ) -> String {
     var parts = [session.name]
     if let agent = session.agent {
       // A session may have no model of its own: the agent then uses whatever it is configured
       // with, and naming a model here would be inventing one.
-      parts.append(AgentNaming.label(agent, names: agentNames, separator: " "))
+      parts.append(labels.label(agent, separator: " "))
     }
     var state = String(localized: status.label)
     if let detail = status.detail { state += " (\(detail))" }
