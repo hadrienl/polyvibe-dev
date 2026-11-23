@@ -14,23 +14,30 @@ public struct AgentSwitchChoices: Equatable, Sendable {
     /// Empty when the catalogue has not answered, or lists nothing — and for an agent that cannot
     /// run, whose catalogue is not read.
     public let models: [AgentModel]
+    /// What the agent's configuration makes of its aliases, keyed in lowercase.
+    public let aliases: [String: AgentModelAlias]
 
-    public init(descriptor: AgentDescriptor, availability: AgentAvailability, models: [AgentModel])
-    {
+    public init(
+      descriptor: AgentDescriptor, availability: AgentAvailability, models: [AgentModel],
+      aliases: [String: AgentModelAlias] = [:]
+    ) {
       self.descriptor = descriptor
       self.availability = availability
       self.models = models
+      self.aliases = aliases
     }
 
     public var id: AgentProviderID { descriptor.id }
     public var name: String { descriptor.displayName }
 
-    /// The catalogue's model `id` names: itself, or the newest of the family an alias names —
-    /// `opus`, which Claude Code takes for its newest Opus. The catalogue lists the newest first.
+    /// What its catalogue and its configuration make of a model's identifier, or of an alias.
+    public var catalogue: AgentCatalogue {
+      AgentCatalogue(models: models, aliases: aliases)
+    }
+
+    /// The model `id` names, an alias resolved: see `AgentCatalogue.model(named:)`.
     public func model(named id: String?) -> AgentModel? {
-      guard let id else { return nil }
-      return models.first { $0.id == id }
-        ?? models.first { $0.shortName?.lowercased() == id.lowercased() }
+      catalogue.model(named: id)
     }
   }
 
@@ -62,23 +69,39 @@ public struct AgentSwitchChoices: Equatable, Sendable {
   /// Reads the registry: its agents, whether each can run, and the models of each one that can.
   /// The catalogues are read side by side: one that is slow to answer — a CLI asked for its
   /// models — holds the list back no longer than itself.
+  ///
+  /// `availabilities`, when the caller has just detected the agents, are used rather than asked
+  /// for again.
   public static func read(
-    from registry: any AgentProviderResolving, forceRefresh: Bool = false
+    from registry: any AgentProviderResolving,
+    availabilities known: [AgentProviderID: AgentAvailability]? = nil, forceRefresh: Bool = false
   ) async -> AgentSwitchChoices {
     let descriptors = await registry.descriptors()
-    let availabilities = await registry.availabilities(forceRefresh: forceRefresh)
+    let availabilities: [AgentProviderID: AgentAvailability]
+    if let known {
+      availabilities = known
+    } else {
+      availabilities = await registry.availabilities(forceRefresh: forceRefresh)
+    }
     let usable = descriptors.filter { availabilities[$0.id]?.isUsable == true }.map(\.id)
-    let catalogues = await withTaskGroup(of: (AgentProviderID, [AgentModel]).self) { group in
+    typealias Catalogue = (models: [AgentModel], aliases: [String: AgentModelAlias])
+    let catalogues = await withTaskGroup(of: (AgentProviderID, Catalogue).self) { group in
       for id in usable {
-        group.addTask { (id, await registry.provider(id: id)?.models() ?? []) }
+        group.addTask {
+          let provider = await registry.provider(id: id)
+          return (id, (await provider?.models() ?? [], await provider?.modelAliases() ?? [:]))
+        }
       }
-      var catalogues: [AgentProviderID: [AgentModel]] = [:]
-      for await (id, models) in group { catalogues[id] = models }
+      var catalogues: [AgentProviderID: Catalogue] = [:]
+      for await (id, catalogue) in group { catalogues[id] = catalogue }
       return catalogues
     }
     let agents = descriptors.compactMap { descriptor in
       availabilities[descriptor.id].map {
-        Agent(descriptor: descriptor, availability: $0, models: catalogues[descriptor.id] ?? [])
+        Agent(
+          descriptor: descriptor, availability: $0,
+          models: catalogues[descriptor.id]?.models ?? [],
+          aliases: catalogues[descriptor.id]?.aliases ?? [:])
       }
     }
     return AgentSwitchChoices(agents: agents)
@@ -90,20 +113,11 @@ public struct AgentSwitchChoices: Equatable, Sendable {
   }
 
   /// Each agent's models by identifier, to their names: how a model the session ran is named.
-  /// An alias of a family — `opus` — is named after the model it stands for.
+  /// An alias — `opus` — is named after the model it stands for, when that can be known.
   public var modelNames: [String: [String: String]] {
     Dictionary(
       agents.map { agent in
-        let aliases = agent.models.compactMap { model in
-          model.shortName.map { ($0.lowercased(), model.displayName) }
-        }
-        let names = agent.models.map { ($0.id, $0.displayName) }
-        // The identifiers first, then the newest model of each family: a real identifier is
-        // never renamed by an alias.
-        return (
-          agent.id.rawValue,
-          Dictionary(aliases.reversed() + names, uniquingKeysWith: { _, later in later })
-        )
+        (agent.id.rawValue, agent.catalogue.names)
       }, uniquingKeysWith: { a, _ in a })
   }
 
@@ -137,8 +151,52 @@ public struct AgentSwitchChoices: Equatable, Sendable {
       choices.append(
         Choice(
           target: AgentTarget(providerID: providerID, modelID: current.modelID),
-          modelName: current.modelID, isCurrent: true))
+          modelName: agent.model(named: current.modelID)?.displayName ?? current.modelID,
+          isCurrent: true))
     }
     return choices
+  }
+}
+
+/// An agent's models and what its configuration makes of its aliases (#575): how a model a
+/// session runs — an identifier, or an alias such as `opus` — is named, wherever it is named.
+public struct AgentCatalogue: Equatable, Sendable {
+  public let models: [AgentModel]
+  /// Keyed in lowercase.
+  public let aliases: [String: AgentModelAlias]
+
+  public init(models: [AgentModel], aliases: [String: AgentModelAlias] = [:]) {
+    self.models = models
+    self.aliases = aliases
+  }
+
+  /// The model `id` names: itself; for an alias, the model the agent's configuration gives it —
+  /// listed by the catalogue or not — or else the newest of its family, `opus` being Claude
+  /// Code's newest Opus. `nil` when what an alias names cannot be known: no model is invented.
+  public func model(named id: String?) -> AgentModel? {
+    guard let id else { return nil }
+    if let model = models.first(where: { $0.id == id }) { return model }
+    switch aliases[id.lowercased()] {
+    case .model(let configured):
+      return models.first { $0.id == configured }
+        ?? AgentModel(id: configured, displayName: configured)
+    case .unknown:
+      return nil
+    case nil:
+      // The catalogue lists the newest first.
+      return models.first { $0.shortName?.lowercased() == id.lowercased() }
+    }
+  }
+
+  /// Each model's name by its identifier, and each alias's by the model it stands for; an alias
+  /// whose model cannot be known is left out, to be shown as it is. A real identifier is never
+  /// renamed by an alias.
+  public var names: [String: String] {
+    let aliases = Set(models.compactMap { $0.shortName?.lowercased() }).union(self.aliases.keys)
+    let aliasNames = Dictionary(
+      aliases.compactMap { alias in model(named: alias).map { (alias, $0.displayName) } },
+      uniquingKeysWith: { first, _ in first })
+    return aliasNames.merging(
+      models.map { ($0.id, $0.displayName) }, uniquingKeysWith: { _, identifier in identifier })
   }
 }

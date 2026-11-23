@@ -44,6 +44,8 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
 
   private let base: CommandLineAgentProvider
   private let catalog: any ClaudeCodeModelCatalogSource
+  /// What its aliases stand for, read from its settings (#575).
+  private let aliases: ClaudeCodeModelAliases
   /// Lists the skills and commands a prompt may invoke (#219).
   let commandReader: any ClaudeCodeCommandReading
   /// Where its transcripts were found, shared with the branch report (#276).
@@ -55,11 +57,13 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
     base: CommandLineAgentProvider, catalog: any ClaudeCodeModelCatalogSource,
     commandReader: any ClaudeCodeCommandReading = ClaudeCodeCommandProcess(),
     transcriptLocations: TranscriptLocationCache = TranscriptLocationCache(),
-    projectsDirectory: URL = ClaudeCodeHome.projectsDirectory()
+    projectsDirectory: URL = ClaudeCodeHome.projectsDirectory(),
+    aliases: ClaudeCodeModelAliases = ClaudeCodeModelAliases()
   ) {
     self.projectsDirectory = projectsDirectory
     self.base = base
     self.catalog = catalog
+    self.aliases = aliases
     self.commandReader = commandReader
     self.transcriptLocations = transcriptLocations
   }
@@ -107,7 +111,8 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
       ),
       catalog: ClaudeCodeModelCatalog(environment: environment),
       transcriptLocations: transcriptLocations,
-      projectsDirectory: ClaudeCodeHome.projectsDirectory(environment: environment)
+      projectsDirectory: ClaudeCodeHome.projectsDirectory(environment: environment),
+      aliases: ClaudeCodeModelAliases(environment: environment)
     )
   }
 
@@ -142,6 +147,10 @@ public struct ClaudeCodeAgentProvider: AgentProvider {
 
   public func models() async -> [AgentModel] {
     await catalog.models()
+  }
+
+  public func modelAliases() async -> [String: AgentModelAlias] {
+    aliases.aliases()
   }
 
   public func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {

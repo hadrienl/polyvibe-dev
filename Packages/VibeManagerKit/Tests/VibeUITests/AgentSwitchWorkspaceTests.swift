@@ -70,6 +70,29 @@ struct AgentSwitchWorkspaceTests {
     return sheet
   }
 
+  @Test("The sheet reads each catalogue once: picking an agent does not read it again")
+  func catalogueReadOnce() async throws {
+    let reads = CatalogReads()
+    var other = Self.other
+    other.catalogReads = reads
+    let subject = session(path: folder())
+    let repository = WorkspaceRepository(sessions: [subject])
+    let registry = WorkspaceRegistry(providers: [Self.stub, other])
+    let model = AppModel(
+      repository: repository, agents: registry,
+      launcher: SessionLauncher(
+        supervisor: WorkspaceSupervisor(), repository: repository, agents: registry,
+        viewportTimeout: .zero))
+    await model.reload()
+
+    let sheet = try await openSheet(model, for: subject.id)
+    let listed = await reads.total
+    await sheet.select(agent: "other")
+
+    #expect(sheet.models.map(\.id) == ["o1"])
+    #expect(await reads.total == listed)
+  }
+
   /// A copy of the logs that records what the switch asked of it.
   private actor RecordingHistory: ConversationHandoverExporting {
     let isAvailable: Bool

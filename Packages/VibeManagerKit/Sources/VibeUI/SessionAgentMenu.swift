@@ -19,15 +19,13 @@ struct SessionAgentMenu: View {
   let model: AppModel
   let session: WorkSession
   @Environment(\.statusBarDensity) private var density
-  /// The agents and models to switch to, read when the menu is shown and when it opens.
-  @State private var choices: AgentSwitchChoices?
+  @Environment(\.layoutDirection) private var layoutDirection
   /// The button's own view, which the menu opens above.
   @State private var anchor = MenuAnchor.Holder()
 
   var body: some View {
-    let names = AgentLabels(names: model.agentNames, models: choices?.modelNames ?? [:])
+    let names = model.agentLabels
     let canSwitch = model.canSwitchAgent(session)
-    let history = AgentHistoryPresentation(session: session, names: names)
     // The bar's step, or a narrower one when even that does not fit.
     ViewThatFits(in: .horizontal) {
       ForEach(density.andNarrower, id: \.self) { form in
@@ -47,18 +45,19 @@ struct SessionAgentMenu: View {
       }
     }
     .background(MenuAnchor(holder: anchor))
-    .disabled(session.agent == nil || (!canSwitch && !history.hasChanges))
+    .disabled(!Self.opens(for: session))
     // Outside the disabled menu, so that it is shown on the menu greyed out too.
     .instantTooltip(Text(verbatim: help(names: names, canSwitch: canSwitch)))
     .accessibilityLabel(
       Text("Agent", bundle: .module, comment: "The status bar's menu of the agent, for VoiceOver.")
     )
+    // A SwiftUI button that opens an AppKit menu: VoiceOver would not say it opens one.
+    .accessibilityHint(Self.hint)
     .accessibilityValue(
       Text(
         verbatim: session.agent.map { names.label($0, separator: ", ") }
           ?? String(localized: "No agent recorded", bundle: .module))
     )
-    .task(id: session.agent) { await readChoices() }
   }
 
   // MARK: - The button
@@ -75,13 +74,23 @@ struct SessionAgentMenu: View {
         // The agent's name when it runs its default model: there is no model to name.
         Text(verbatim: names.model(of: agent) ?? names.name(of: agent.providerID))
       case .icons:
-        Image(systemName: "cpu")
+        // The agent's own logo: at this width, it is what tells Claude Code from Codex.
+        Image(systemName: Self.symbol(of: agent, among: model.agentDescriptors))
       }
     } else if form == .icons {
-      Image(systemName: "cpu")
+      Image(systemName: AgentMenuContent.unknownAgentSymbol)
     } else {
       Text("No agent recorded", bundle: .module)
     }
+  }
+
+  /// The logo of the session's agent, as its provider describes itself — known before any
+  /// detection — or a generic one for an agent this build does not know.
+  static func symbol(
+    of agent: SessionAgentConfiguration, among descriptors: [AgentDescriptor]
+  ) -> String {
+    descriptors.first { $0.id.rawValue == agent.providerID }?.symbolName
+      ?? AgentMenuContent.unknownAgentSymbol
   }
 
   /// The full value, whatever the label leaves out, or why nothing can be chosen.
@@ -110,48 +119,58 @@ struct SessionAgentMenu: View {
     )
   }
 
+  static let hint = Text(
+    "Opens a menu: the agent's state, its history, and the agents to switch to.", bundle: .module,
+    comment: "VoiceOver hint of the status bar's menu of the agent.")
+
   // MARK: - The menu
+
+  /// Whether the menu opens: whenever the session has an agent. One that cannot be switched now —
+  /// archived, restarting, closing, being restored — still shows its state and its history, with
+  /// only Switch To greyed out.
+  static func opens(for session: WorkSession) -> Bool {
+    session.agent != nil
+  }
 
   /// Opens the menu above the button, as it is now; the agents are read again meanwhile, for the
   /// next time — an agent installed since is offered then.
   private func openMenu(names: AgentLabels, canSwitch: Bool) {
     let content = AgentMenuContent(
-      session: session, names: names, choices: choices, state: stateSentence,
+      session: session, names: names, choices: model.agentChoices, state: stateSentence,
       canSwitch: canSwitch)
     let id = session.id
     let menu = AgentMenu.make(content) { [model] target in
       model.beginAgentSwitch(id, preselected: target)
     }
-    Task { await readChoices() }
+    Task { [model] in await model.refreshAgentChoices() }
     guard let view = anchor.view else { return }
+    menu.userInterfaceLayoutDirection =
+      layoutDirection == .rightToLeft ? .rightToLeft : .leftToRight
+    menu.popUp(
+      positioning: nil,
+      at: Self.menuOrigin(
+        menu: menu.size, button: view.bounds, isFlipped: view.isFlipped,
+        direction: layoutDirection),
+      in: view)
+  }
+
+  /// Where the menu's top left corner goes, in the button's own coordinates: above the button, a
+  /// little apart, lined up on its leading edge — its left one, or its right one in Arabic or
+  /// Hebrew, where the bar is mirrored but an AppKit view's coordinates are not.
+  static func menuOrigin(
+    menu: NSSize, button: NSRect, isFlipped: Bool, direction: LayoutDirection
+  ) -> NSPoint {
     let gap: CGFloat = 4
-    // The menu's top left corner: above the button, on its left edge.
-    let top = view.isFlipped ? -gap - menu.size.height : view.bounds.height + gap + menu.size.height
-    menu.popUp(positioning: nil, at: NSPoint(x: 0, y: top), in: view)
+    let top = isFlipped ? button.minY - gap - menu.height : button.maxY + gap + menu.height
+    let left = direction == .rightToLeft ? button.maxX - menu.width : button.minX
+    return NSPoint(x: left, y: top)
   }
 
-  /// The process's own state when it does not run — stopped, failed, starting — and otherwise
-  /// whether the agent can be resumed.
   private var stateSentence: String {
-    if let status = model.pane(for: session.id)?.status, status != .running {
-      return status.label
-    }
-    return AgentHistoryPresentation.state(of: model.resolution(forID: session.id))
+    AgentHistoryPresentation.state(
+      of: model.pane(for: session.id)?.status, resolution: model.resolution(forID: session.id))
   }
 
-  /// Opens the Switch Agent sheet set on `choice`, or on nothing: the switch itself is the
-  /// sheet's, which says what will be stopped, resumed or handed over.
-  static func open(
-    _ choice: AgentSwitchChoices.Choice?, of id: SessionID, in model: AppModel
-  ) {
-    model.beginAgentSwitch(id, preselected: choice?.target)
-  }
-
-  private func readChoices() async {
-    guard let registry = model.agents else { return }
-    let read = await AgentSwitchChoices.read(from: registry)
-    if read != choices { choices = read }
-  }
 }
 
 /// What the history of a session's agents says (#575), in words: the menu's lines, and what
@@ -202,8 +221,8 @@ struct AgentHistoryPresentation: Equatable {
   }
 
   private static func entry(_ change: AgentChange, names: AgentLabels) -> Entry {
-    let from = names.label(change.previous)
-    let to = names.label(change.next)
+    let from = side(change.previous, of: change, names: names)
+    let to = side(change.next, of: change, names: names)
     switch change.outcome {
     case .completed:
       let handover = handover(change.handover)
@@ -232,6 +251,26 @@ struct AgentHistoryPresentation: Equatable {
           bundle: .module,
           comment: "What VoiceOver says of a failed agent switch: a date, the agent, and why."))
     }
+  }
+
+  /// One side of a switch. Between two models of the same agent, a side without a model of its
+  /// own is the agent's default model, said so: "Claude Code · Opus 5.5 → Claude Code" would not
+  /// say that a model was changed at all.
+  private static func side(
+    _ agent: SessionAgentConfiguration, of change: AgentChange, names: AgentLabels
+  ) -> String {
+    guard !change.changesProvider, agent.modelID == nil else { return names.label(agent) }
+    let defaultModel = String(localized: "Default model of the agent", bundle: .module)
+    return "\(names.name(of: agent.providerID)) · \(defaultModel)"
+  }
+
+  /// The state of the session's agent: its process's own when it has one — running, starting,
+  /// stopped, failed — and otherwise whether it can be resumed. A running agent is never said to
+  /// be ready to resume: the status bar has no other word that it runs.
+  static func state(
+    of status: TerminalPaneModel.Status?, resolution: SessionAgentResolution?
+  ) -> String {
+    status?.label ?? state(of: resolution)
   }
 
   /// Whether the agent can be resumed, or why not.
@@ -289,8 +328,9 @@ struct AgentHistoryPresentation: Equatable {
   }
 }
 
-/// How the menu names an agent and its model: the agent's name, and the model's as its catalogue
-/// gives it — "Claude Code · Opus 5.5" — or its identifier when the catalogue does not list it.
+/// How a session's agent and its model are named, wherever they are (#575): the agent's name,
+/// and the model's as its catalogue gives it — "Claude Code · Opus 5.5" — or its identifier when
+/// the catalogue does not list it. The one source of that label: `AppModel.agentLabels`.
 struct AgentLabels: Equatable {
   let names: [String: String]
   /// Provider, then model identifier, to the model's name.

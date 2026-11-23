@@ -91,18 +91,68 @@ struct AgentSwitchChoicesTests {
     #expect(offered.map(\.modelName) == ["Opus 5.5", "Sonnet 5.5", "Opus 5"])
     #expect(offered.map(\.isCurrent) == [true, false, false])
   }
+
+  /// A catalogue whose newest Opus is not the one the agent's configuration sets.
+  private static let configured = [
+    AgentModel(id: "claude-opus-5-5", displayName: "Opus 5.5", shortName: "Opus"),
+    AgentModel(id: "claude-sonnet-5-5", displayName: "Sonnet 5.5", shortName: "Sonnet"),
+    AgentModel(id: "claude-opus-5", displayName: "Opus 5", shortName: "Opus"),
+  ]
+
+  @Test("An alias the configuration sets names, and checks, that model rather than the newest")
+  func configuredAlias() async throws {
+    let claude = ChoicesProvider(
+      id: "claude-code", name: "Claude Code", models: Self.configured,
+      aliases: ["opus": .model("claude-opus-5"), "sonnet": .model("eu.anthropic.sonnet")])
+    let choices = await read([claude])
+    let agent = try #require(choices.agent("claude-code"))
+
+    #expect(choices.modelNames["claude-code"]?["opus"] == "Opus 5")
+    // A model the catalogue does not list is named by its identifier, never by a listed one.
+    #expect(choices.modelNames["claude-code"]?["sonnet"] == "eu.anthropic.sonnet")
+    let opus = choices.choices(
+      for: agent, current: SessionAgentConfiguration(providerID: "claude-code", modelID: "opus"))
+    #expect(opus.map(\.isCurrent) == [false, false, true])
+    let sonnet = choices.choices(
+      for: agent, current: SessionAgentConfiguration(providerID: "claude-code", modelID: "sonnet"))
+    #expect(sonnet.last?.modelName == "eu.anthropic.sonnet")
+    #expect(sonnet.last?.isCurrent == true)
+  }
+
+  @Test("An alias whose model cannot be known is shown as it is, and checks no model")
+  func unknownAlias() async throws {
+    let claude = ChoicesProvider(
+      id: "claude-code", name: "Claude Code", models: Self.configured,
+      aliases: ["opus": .unknown])
+    let choices = await read([claude])
+    let agent = try #require(choices.agent("claude-code"))
+
+    #expect(choices.modelNames["claude-code"]?["opus"] == nil)
+    #expect(choices.modelNames["claude-code"]?["sonnet"] == "Sonnet 5.5")
+    let offered = choices.choices(
+      for: agent, current: SessionAgentConfiguration(providerID: "claude-code", modelID: "opus"))
+    #expect(offered.map(\.modelName) == ["Opus 5.5", "Sonnet 5.5", "Opus 5", "opus"])
+    #expect(offered.map(\.isCurrent) == [false, false, false, true])
+  }
 }
 
 private struct ChoicesProvider: AgentProvider {
   let descriptor: AgentDescriptor
   let catalogue: [AgentModel]
   let isUsable: Bool
+  let aliases: [String: AgentModelAlias]
 
-  init(id: String, name: String, models: [AgentModel], isUsable: Bool = true) {
+  init(
+    id: String, name: String, models: [AgentModel], isUsable: Bool = true,
+    aliases: [String: AgentModelAlias] = [:]
+  ) {
     descriptor = AgentDescriptor(id: AgentProviderID(id), displayName: name)
     catalogue = models
     self.isUsable = isUsable
+    self.aliases = aliases
   }
+
+  func modelAliases() async -> [String: AgentModelAlias] { aliases }
 
   func availability(forceRefresh: Bool) async -> AgentAvailability {
     let state: AgentAvailabilityState = isUsable ? .available : .notFound

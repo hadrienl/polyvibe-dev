@@ -52,6 +52,16 @@ struct WebViewToggleTests {
         .first { !$0.bounds.isEmpty }
     }
 
+    /// How many attachments each session's terminal has had.
+    func attachCounts() async -> [Int] {
+      var counts: [Int] = []
+      for session in sessions {
+        let terminal = await supervisor.session(for: session.id.agentTerminal) as? WorkspaceTerminal
+        counts.append(await terminal?.attachCount ?? 0)
+      }
+      return counts
+    }
+
     /// How many times a view attached to each terminal, replaying its history.
     func attachCount() async -> Int {
       var total = 0
@@ -147,6 +157,19 @@ struct WebViewToggleTests {
       else { return false }
       return shown.frame.width > 1000 && shown.frame.height > 500
         && terminals.allSatisfy { !$0.frame.isEmpty }
+    }
+    // The launch watches each terminal from tasks of its own — its exit, its output, its first
+    // byte, the launch observer — each attaching to it when it gets to run, which a busy machine
+    // can leave for after the counts below were read: one landing between two counts read as a
+    // terminal remade. The counts are read once none of them changes any more while the main
+    // actor is given the time to run what is left.
+    var settled = 0
+    var last: [Int] = []
+    for _ in 0..<1_000 where settled < 20 {
+      let counts = await workspace.attachCounts()
+      settled = counts == last ? settled + 1 : 0
+      last = counts
+      try await Task.sleep(for: .milliseconds(10))
     }
     return workspace
   }

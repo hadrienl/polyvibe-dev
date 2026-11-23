@@ -78,6 +78,12 @@ public final class AppModel {
   /// (#247). Read from what the providers say of themselves, not from their detection: a session
   /// is named “Claude Code” from the first frame, and through every refresh.
   public private(set) var agentNames: [String: String] = [:]
+  /// Each agent's models by identifier, and its aliases by the model they stand for, to the
+  /// names its catalogue gives them (#575).
+  public private(set) var agentModelNames: [String: [String: String]] = [:]
+  /// The agents and models a session can be switched to, as last read: what the status bar's
+  /// menus offer, read once for all of them rather than by each.
+  public private(set) var agentChoices: AgentSwitchChoices?
   public private(set) var isRefreshingAgents = false
   public private(set) var selectedSessionID: SessionID?
   /// Whether the new session's draft is what the main area shows (#177), over the session
@@ -2808,6 +2814,10 @@ public final class AppModel {
     // asked whether that session still exists instead of selecting its first row and losing it.
     preferredSelection = await layout.restore()
     if let agents { name(await agents.descriptors()) }
+    // Beside the load: the catalogues are files the agents wrote, read in a moment, so that a
+    // model is named "Opus 5.5" from the first frame rather than `opus` until the agents are
+    // detected, a label that would change its width under the user's eyes (#575).
+    Task { await readAgentModelNames() }
     await loadFolderLabels()
     // Beside the load rather than before it: the notes only serve the search, and the list must
     // not wait on reading them.
@@ -2895,6 +2905,50 @@ public final class AppModel {
     if names != agentNames { agentNames = names }
   }
 
+  /// How a session's agent and model are named (#575) — "Claude Code · Opus 5.5" — wherever one
+  /// is: the sidebar, the session's header, the archive card, the status bar and its menu.
+  var agentLabels: AgentLabels {
+    AgentLabels(names: agentNames, models: agentModelNames)
+  }
+
+  /// Reads again the agents and models a session can be switched to, and their names. Called once
+  /// the agents are detected, and when a menu opens, for the next time: an agent installed or
+  /// signed in since is offered then.
+  public func refreshAgentChoices(
+    availabilities: [AgentProviderID: AgentAvailability]? = nil
+  ) async {
+    guard let agents else { return }
+    let choices = await AgentSwitchChoices.read(from: agents, availabilities: availabilities)
+    if choices != agentChoices { agentChoices = choices }
+    for agent in choices.agents where !agent.models.isEmpty {
+      nameModels(agent.catalogue.names, of: agent.id.rawValue)
+    }
+  }
+
+  /// Names every agent's models, from its catalogue and its configuration, without waiting for
+  /// any agent to be detected.
+  func readAgentModelNames() async {
+    guard let agents else { return }
+    let descriptors = await agents.descriptors()
+    await withTaskGroup(of: (String, [String: String]).self) { group in
+      for descriptor in descriptors {
+        group.addTask {
+          let provider = await agents.provider(id: descriptor.id)
+          let catalogue = AgentCatalogue(
+            models: await provider?.models() ?? [], aliases: await provider?.modelAliases() ?? [:])
+          return (descriptor.id.rawValue, catalogue.names)
+        }
+      }
+      for await (providerID, names) in group where !names.isEmpty {
+        nameModels(names, of: providerID)
+      }
+    }
+  }
+
+  private func nameModels(_ names: [String: String], of providerID: String) {
+    if agentModelNames[providerID] != names { agentModelNames[providerID] = names }
+  }
+
   /// After the list of agents changed: a detection under way read the old one (#478).
   public func refreshAgentsAfterChange() async {
     while isRefreshingAgents { try? await Task.sleep(for: .milliseconds(50)) }
@@ -2924,6 +2978,7 @@ public final class AppModel {
       descriptors.filter(\.capabilities.reportsUsage).map(\.id.rawValue))
     await connectQuotas(descriptors)
     var diagnostics: [AgentProviderID: AgentDiagnostic] = [:]
+    var found: [AgentProviderID: AgentAvailability] = [:]
 
     await withTaskGroup(of: (AgentProviderID, AgentAvailability?).self) { group in
       for descriptor in descriptors {
@@ -2937,6 +2992,7 @@ public final class AppModel {
 
       for await (id, availability) in group {
         guard let availability else { continue }
+        found[id] = availability
         diagnostics[id] = availability.diagnostic
         agentDiagnostics = descriptors.compactMap { diagnostics[$0.id] }
       }
@@ -2948,6 +3004,8 @@ public final class AppModel {
     // The notices name the agent, and offer only what it can do.
     publishSignIns()
     publishAgentUpdates()
+    // What was just detected: the agents are not asked again.
+    await refreshAgentChoices(availabilities: found)
   }
 
   public func resolution(for session: WorkSession) async -> SessionAgentResolution {

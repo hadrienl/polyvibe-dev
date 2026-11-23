@@ -1,10 +1,12 @@
 import Testing
+import VibeApplication
 import VibeDomain
 
 @testable import VibeUI
 
 /// An agent is named as people know it, never by its identifier while its provider is known
 /// (#247): the sidebar, the Agent filter, the inspector, an archived session and VoiceOver.
+@MainActor
 @Suite("An agent's readable name")
 struct AgentNamingTests {
   private let names = ["claude-code": "Claude Code", "codex": "Codex"]
@@ -13,9 +15,9 @@ struct AgentNamingTests {
   func known() {
     let agent = SessionAgentConfiguration(providerID: "claude-code", modelID: "sonnet")
     #expect(AgentNaming.name(of: "claude-code", names: names) == "Claude Code")
-    #expect(AgentNaming.label(agent, names: names) == "Claude Code · sonnet")
-    #expect(
-      AgentNaming.label(SessionAgentConfiguration(providerID: "codex"), names: names) == "Codex")
+    let labels = AgentLabels(names: names)
+    #expect(labels.label(agent) == "Claude Code · sonnet")
+    #expect(labels.label(SessionAgentConfiguration(providerID: "codex")) == "Codex")
   }
 
   @Test("An agent no longer detected keeps its identifier: there is no other name for it")
@@ -30,7 +32,61 @@ struct AgentNamingTests {
       agent: SessionAgentConfiguration(providerID: "claude-code", modelID: "sonnet"))
     let status = SessionStatusPresentation.make(session: session, paneStatus: .running)
     #expect(
-      SessionStatusPresentation.accessibilityLabel(for: session, status: status, agentNames: names)
+      SessionStatusPresentation.accessibilityLabel(
+        for: session, status: status, labels: AgentLabels(names: names))
         == "Refactor the supervisor, Claude Code sonnet, Idle")
+  }
+
+  @Test("The sidebar names a model as the status bar does: by its catalogue, an alias resolved")
+  func oneLabelEverywhere() async {
+    let provider = WorkspaceProvider(
+      catalog: [AgentModel(id: "stub-opus-2", displayName: "Opus 2", shortName: "Opus")])
+    let session = WorkSession(
+      name: "Refactor the supervisor",
+      agent: SessionAgentConfiguration(providerID: "stub", modelID: "opus"))
+    let repository = WorkspaceRepository(sessions: [session])
+    let registry = WorkspaceRegistry(providers: [provider])
+    let model = AppModel(
+      repository: repository, agents: registry,
+      launcher: SessionLauncher(
+        supervisor: WorkspaceSupervisor(), repository: repository, agents: registry,
+        viewportTimeout: .zero))
+    await model.reload()
+    await model.refreshAgents()
+
+    let agent = session.agent!
+    #expect(model.agentLabels.label(agent) == "\(provider.descriptor.displayName) · Opus 2")
+    let status = SessionStatusPresentation.make(session: session, paneStatus: .running)
+    #expect(
+      SessionStatusPresentation.accessibilityLabel(
+        for: session, status: status, labels: model.agentLabels)
+        == "Refactor the supervisor, \(provider.descriptor.displayName) Opus 2, Idle")
+  }
+
+  @Test("A model is named from launch, before any agent is detected: its label does not change")
+  func namedBeforeDetection() async {
+    let gate = ProbeGate()
+    let provider = WorkspaceProvider(
+      probeGate: gate,
+      catalog: [AgentModel(id: "stub-opus-2", displayName: "Opus 2", shortName: "Opus")])
+    let session = WorkSession(
+      name: "Refactor the supervisor",
+      agent: SessionAgentConfiguration(providerID: "stub", modelID: "opus"))
+    let repository = WorkspaceRepository(sessions: [session])
+    let registry = WorkspaceRegistry(providers: [provider])
+    let model = AppModel(
+      repository: repository, agents: registry,
+      launcher: SessionLauncher(
+        supervisor: WorkspaceSupervisor(), repository: repository, agents: registry,
+        viewportTimeout: .zero))
+
+    let load = Task { await model.load() }
+    // Every detection held: none has answered.
+    await waitUntil("the model named") {
+      model.agentLabels.label(session.agent!) == "Stub Agent · Opus 2"
+    }
+    #expect(model.agentDiagnostics.isEmpty)
+    await gate.open()
+    await load.value
   }
 }

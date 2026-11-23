@@ -218,6 +218,11 @@ The command is in the Session menu (⌃⌘M), the sidebar's context menu and acc
 inspector's Agent section, and #10's refusal banner. The inspector lists the history, failed
 switches included, each entry read in full by VoiceOver.
 
+> Superseded in part by #575: the inspector's Agent section is gone. The agent, its state and the
+> history of its switches are the agent's menu in the status bar, under the terminal and the
+> conversation — and on the card of an archived session or of one without a terminal, which have
+> no status bar. Its Switch To offers each agent's models, a model opening the sheet set on it.
+
 ## Consequences
 
 - `VibeDomain` and `VibeApplication` still know nothing of SwiftUI, AppKit or a process: the plan,

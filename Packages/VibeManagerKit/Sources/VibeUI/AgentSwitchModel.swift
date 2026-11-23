@@ -93,6 +93,8 @@ public final class AgentSwitchModel {
   public private(set) var models: [AgentModel] = []
   /// The models of the agent the session runs now, to name its model the way the CLI does.
   private var currentModels: [AgentModel] = []
+  /// Each agent's catalogue as the list was read with it: picking an agent does not read it again.
+  private var catalogues: [String: [AgentModel]] = [:]
   public private(set) var isLoadingAgents = false
   public private(set) var isCheckingHistory = false
   public private(set) var providerID: String
@@ -359,6 +361,9 @@ public final class AgentSwitchModel {
     agents = choices.agents.map {
       AgentOption(descriptor: $0.descriptor, availability: $0.availability)
     }
+    catalogues = Dictionary(
+      choices.agents.filter { !$0.models.isEmpty }.map { ($0.id.rawValue, $0.models) },
+      uniquingKeysWith: { first, _ in first })
     // The current agent's catalogue, read here when it cannot run and the list left it out.
     if let models = choices.agent(current.providerID)?.models, !models.isEmpty {
       currentModels = models
@@ -409,11 +414,19 @@ public final class AgentSwitchModel {
   private func loadModels() async {
     // Another agent may be picked while this one's models load: its list is not this one's.
     let providerID = providerID
-    guard let provider = await registry.provider(id: AgentProviderID(providerID)) else {
-      if providerID == self.providerID { models = [] }
-      return
+    let loaded: [AgentModel]
+    if let listed = catalogues[providerID] ?? (providerID == current.providerID ? currentModels : nil),
+      !listed.isEmpty
+    {
+      // Read with the list a moment ago.
+      loaded = listed
+    } else {
+      guard let provider = await registry.provider(id: AgentProviderID(providerID)) else {
+        if providerID == self.providerID { models = [] }
+        return
+      }
+      loaded = await provider.models()
     }
-    let loaded = await provider.models()
     guard providerID == self.providerID else { return }
     models = loaded
     // A model this agent does not list is dropped, as at creation — except the one the session

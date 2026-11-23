@@ -2298,7 +2298,7 @@ struct SessionRow: View {
     .accessibilityIdentifier("session-row")
     .accessibilityLabel(
       SessionStatusPresentation.accessibilityLabel(
-        for: session, status: status, agentNames: commands.model.agentNames)
+        for: session, status: status, labels: commands.model.agentLabels)
     )
     .accessibilityValue(accessibilityValue)
     // The same commands, reachable without a pointer and without the menu bar: only those that

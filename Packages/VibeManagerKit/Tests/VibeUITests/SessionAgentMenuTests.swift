@@ -1,8 +1,11 @@
 import AppKit
 import Foundation
+import SwiftUI
 import Testing
 import VibeApplication
 import VibeDomain
+import VibeLocalizationTesting
+import VibeTerminalUI
 
 @testable import VibeUI
 
@@ -52,7 +55,7 @@ struct SessionAgentMenuTests {
     let other = try #require(choices.agent("other"))
     let choice = try #require(choices.choices(for: other, current: subject.agent).first)
 
-    SessionAgentMenu.open(choice, of: subject.id, in: model)
+    model.beginAgentSwitch(subject.id, preselected: choice.target)
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "other", modelID: "o1"))
@@ -66,10 +69,7 @@ struct SessionAgentMenuTests {
     let subject = session()
     let (model, _) = await workspace(subject)
 
-    SessionAgentMenu.open(
-      AgentSwitchChoices.Choice(
-        target: AgentTarget(providerID: "other"), modelName: nil, isCurrent: false),
-      of: subject.id, in: model)
+    model.beginAgentSwitch(subject.id, preselected: AgentTarget(providerID: "other"))
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "other"))
@@ -79,8 +79,13 @@ struct SessionAgentMenuTests {
   func otherSettingsPreselectsNothing() async throws {
     let subject = session()
     let (model, _) = await workspace(subject)
+    let menu = await menu(of: subject, in: model)
+    let switchTo = try #require(menu.items.last?.submenu)
 
-    SessionAgentMenu.open(nil, of: subject.id, in: model)
+    // Chosen the way a click chooses it, through the application.
+    _ = NSApplication.shared
+    let other = try #require(switchTo.items.firstIndex { $0.title == "Other Settings…" })
+    switchTo.performActionForItem(at: other)
 
     let sheet = try #require(model.pendingSwitch)
     #expect(sheet.target == AgentTarget(providerID: "stub", modelID: "fast"))
@@ -94,10 +99,8 @@ struct SessionAgentMenuTests {
     await repository.archive(subject.id)
     await model.reload()
 
-    SessionAgentMenu.open(
-      AgentSwitchChoices.Choice(
-        target: AgentTarget(providerID: "other", modelID: "o1"), modelName: "O1", isCurrent: false),
-      of: subject.id, in: model)
+    model.beginAgentSwitch(
+      subject.id, preselected: AgentTarget(providerID: "other", modelID: "o1"))
 
     #expect(model.pendingSwitch == nil)
   }
@@ -129,6 +132,77 @@ struct SessionAgentMenuTests {
     #expect(history.entries[1].spoken.contains("Other Agent · o1"))
     // The first agent is the one the first real switch left.
     #expect(history.entries[2].title.contains("Other Agent · o1"))
+  }
+
+  @Test("A switch back to the agent's default model says so, rather than naming the agent alone")
+  func defaultModelIsNamed() {
+    let back = AgentChange(
+      date: Date(timeIntervalSince1970: 1_699_500_000),
+      previous: SessionAgentConfiguration(providerID: "stub", modelID: "fast"),
+      next: SessionAgentConfiguration(providerID: "stub"),
+      handover: .resumedConversation)
+    let away = AgentChange(
+      date: Date(timeIntervalSince1970: 1_699_600_000),
+      previous: SessionAgentConfiguration(providerID: "stub"),
+      next: SessionAgentConfiguration(providerID: "other"),
+      handover: .resumedConversation)
+
+    let history = AgentHistoryPresentation(
+      session: session(history: [back, away]), names: AgentLabels(names: Self.names))
+
+    // Within one agent, the default model is named; to another agent, the agent alone says it.
+    #expect(
+      history.entries[1].title == "Stub Agent · fast → Stub Agent · Default model of the agent")
+    #expect(history.entries[0].title == "Stub Agent → Other Agent")
+  }
+
+  @Test("A running agent is said to run, not to be ready to resume; without a process, the resume")
+  func stateOfARunningAgent() async {
+    let ready = SessionAgentResolution.ready(
+      descriptor: Self.stub.descriptor,
+      availability: await Self.stub.availability(forceRefresh: false))
+    #expect(AgentHistoryPresentation.state(of: .running, resolution: ready) == "Running")
+    #expect(AgentHistoryPresentation.state(of: .exited(code: 0), resolution: ready) == "Finished")
+    #expect(AgentHistoryPresentation.state(of: nil, resolution: ready) == "Ready to resume.")
+  }
+
+  @Test("At the narrowest step, the button shows the agent's own logo, a generic one if unknown")
+  func logoAtTheNarrowestStep() {
+    let claude = AgentDescriptor(
+      id: AgentProviderID("claude-code"), displayName: "Claude Code", symbolName: "asterisk")
+    let codex = AgentDescriptor(
+      id: AgentProviderID("codex"), displayName: "Codex",
+      symbolName: "chevron.left.forwardslash.chevron.right")
+    #expect(
+      SessionAgentMenu.symbol(
+        of: SessionAgentConfiguration(providerID: "codex"), among: [claude, codex])
+        == "chevron.left.forwardslash.chevron.right")
+    #expect(
+      SessionAgentMenu.symbol(
+        of: SessionAgentConfiguration(providerID: "claude-code", modelID: "opus"),
+        among: [claude, codex]) == "asterisk")
+    #expect(
+      SessionAgentMenu.symbol(of: SessionAgentConfiguration(providerID: "gone"), among: [claude])
+        == AgentMenuContent.unknownAgentSymbol)
+  }
+
+  @Test("The menu opens above the button, on its leading edge: its right one, right to left")
+  func menuLinesUpOnTheLeadingEdge() {
+    let button = NSRect(x: 0, y: 0, width: 120, height: 22)
+    let menu = NSSize(width: 260, height: 90)
+
+    let leftToRight = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: false, direction: .leftToRight)
+    #expect(leftToRight == NSPoint(x: 0, y: 22 + 4 + 90))
+    // Arabic: the menu's right edge on the button's, the menu reaching left of it.
+    let rightToLeft = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: false, direction: .rightToLeft)
+    #expect(rightToLeft == NSPoint(x: 120 - 260, y: 22 + 4 + 90))
+    #expect(rightToLeft.x + menu.width == button.maxX)
+    // In a flipped view, above is towards smaller y.
+    let flipped = SessionAgentMenu.menuOrigin(
+      menu: menu, button: button, isFlipped: true, direction: .rightToLeft)
+    #expect(flipped == NSPoint(x: 120 - 260, y: -94))
   }
 
   @Test("Models are named as their catalogue names them, else by their identifier")
@@ -221,6 +295,57 @@ struct SessionAgentMenuTests {
     #expect(history.items[2].title.contains("Other Agent · O1"))
   }
 
+  @Test("A session that cannot be switched opens its menu: its state and history, Switch To greyed")
+  func unswitchableSessionStillOpens() async throws {
+    let subject = session()
+    let (model, repository) = await workspace(subject)
+    await repository.archive(subject.id)
+    await model.reload()
+    let archived = try #require(model.sessions.first)
+    #expect(!model.canSwitchAgent(archived))
+
+    // Not even a switch in its history: the menu opens all the same.
+    #expect(SessionAgentMenu.opens(for: archived))
+    let menu = await menu(of: archived, in: model)
+    #expect(menu.items.first?.isEnabled == true)
+    #expect(menu.items.last?.isEnabled == false)
+    #expect(!SessionAgentMenu.opens(for: WorkSession(name: "No agent")))
+  }
+
+  @Test("With no agent to offer, Switch To opens on the sheet, with no separator above it")
+  func noSeparatorWithoutAgents() throws {
+    let content = AgentMenuContent(
+      session: session(), names: AgentLabels(names: Self.names), choices: nil, state: "",
+      canSwitch: true)
+
+    let switchTo = try #require(AgentMenu.make(content) { _ in }.items.last?.submenu)
+
+    #expect(switchTo.items.map(\.title) == ["Other Settings…"])
+  }
+
+  @Test("The first line acts only through its history: without one, VoiceOver offers no press")
+  func inertFirstLine() async throws {
+    let (model, _) = await workspace(session())
+    let alone = await menu(of: session(), in: model)
+    let withHistory = await menu(of: switched, in: model)
+
+    let line = try #require(alone.items.first)
+    #expect(line.submenu == nil)
+    #expect(line.isEnabled)
+    #expect(!line.isAccessibilityEnabled())
+    #expect(withHistory.items.first?.isAccessibilityEnabled() == true)
+  }
+
+  @Test("VoiceOver is told the button opens a menu, in every language")
+  func hintIsTranslated() {
+    #expect(
+      Localization.string(
+        "Opens a menu: the agent's state, its history, and the agents to switch to.",
+        module: "VibeUI", in: "fr")
+        == "Ouvre un menu\u{00A0}: l’état de l’agent, son historique "
+        + "et les agents vers lesquels changer.")
+  }
+
   @Test("Switch To: each agent under its logo, the model it runs checked, a model opens the sheet")
   func switchToSections() async throws {
     let subject = switched
@@ -238,6 +363,9 @@ struct SessionAgentMenuTests {
     }
     let fast = try #require(models.items.first { $0.title == "Fast" })
     #expect(fast.state == .on && !fast.isEnabled)
+    // VoiceOver hears whose model it is.
+    #expect(fast.accessibilityLabel() == "Stub Agent, Fast")
+    #expect(models.items.first { $0.title == "O1" }?.accessibilityLabel() == "Other Agent, O1")
 
     // The action is sent the way a click sends it, through the application.
     _ = NSApplication.shared
