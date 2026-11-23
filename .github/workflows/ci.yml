@@ -15,11 +15,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Three parts of `Scripts/ci.sh` at once, on three runners: run one after the other they took
+  # past forty minutes on a slow runner. Each part's name is the check a pull request waits for.
   build-and-test:
+    name: build-and-test (${{ matrix.stage }})
     runs-on: xcode-27
-    # The tests, then the application's build in Release: about 30 minutes on a quick runner,
-    # past 40 on a slow one, with every test passed.
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [package, macos, companion]
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,8 +36,19 @@ jobs:
       - name: Install the Metal toolchain
         run: xcodebuild -downloadComponent MetalToolchain
 
+      # Xcode's compilation cache is keyed by what is compiled, not by the dates a fresh checkout
+      # changes: the last run's, restored, spares what did not change. Saved under each commit,
+      # restored from the newest of the same part. The package's own build, by SwiftPM, has none.
+      - name: Restore the compilation cache
+        if: matrix.stage != 'package'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: DerivedData/CompilationCache
+          key: compilation-xcode27-${{ matrix.stage }}-${{ github.sha }}
+          restore-keys: compilation-xcode27-${{ matrix.stage }}-
+
       - name: Build and test
-        run: Scripts/ci.sh
+        run: Scripts/ci.sh ${{ matrix.stage }}
 
   # The landing page renders in every language: a missing text stops the build, and on `main` that
   # would also hold back the Sparkle feed deployed with it (Scripts/publish-appcast.sh).

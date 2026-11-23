@@ -7,6 +7,29 @@ readonly package_path="$repository_root/Packages/VibeManagerKit"
 readonly derived_data_path="${DERIVED_DATA_PATH:-$repository_root/DerivedData/CI}"
 readonly module_cache_path="$repository_root/.build/ModuleCache"
 readonly source_packages_path="$derived_data_path/SourcePackages"
+# Xcode's compilation cache, keyed by what is compiled rather than by dates: a fresh checkout finds
+# what an earlier run compiled when CI restores this folder. SwiftPM has no such cache.
+readonly compilation_cache_path="${COMPILATION_CACHE_PATH:-$repository_root/DerivedData/CompilationCache}"
+
+# What to run: `package` (checks and the package's tests), `macos` (the application, Debug and
+# Release), `companion` (the iOS companion), or everything, in that order, by default. CI runs the
+# three at once, on three runners.
+readonly stage="${1:-all}"
+case "$stage" in
+  all|package|macos|companion) ;;
+  *) echo "usage: $0 [all|package|macos|companion]" >&2; exit 64;;
+esac
+runs() { [[ "$stage" == all || "$stage" == "$1" ]]; }
+
+xcodebuild_cached() {
+  xcodebuild "$@" \
+    -derivedDataPath "$derived_data_path" \
+    -clonedSourcePackagesDirPath "$source_packages_path" \
+    -skipPackagePluginValidation \
+    CODE_SIGNING_ALLOWED=NO \
+    COMPILATION_CACHE_ENABLE_CACHING=YES \
+    COMPILATION_CACHE_CAS_PATH="$compilation_cache_path"
+}
 
 # Run from an agent's terminal, the suites would find its session's activity log and report into
 # it: a mock agent's `SessionEnd` takes the real agent's pending question away (#271).
@@ -17,6 +40,7 @@ export SWIFTPM_MODULECACHE_OVERRIDE="$module_cache_path"
 
 cd "$repository_root"
 
+if runs package; then
 echo "Checking Swift formatting"
 xcrun swift-format lint --recursive \
   App \
@@ -63,58 +87,47 @@ swift build \
 swift test \
   --package-path "$package_path" \
   --skip-build
+fi
 
+if runs macos; then
 echo "Building the macOS application, and its interface smoke test"
 # The smoke test is compiled here so that a pull request cannot break it; it is run by the
 # `ui-smoke` job, which needs a graphical session (`Scripts/ui-smoke.sh`).
-xcodebuild \
+xcodebuild_cached \
   -project VibeManager.xcodeproj \
   -scheme VibeManager \
   -configuration Debug \
   -destination 'platform=macOS' \
-  -derivedDataPath "$derived_data_path" \
-  -clonedSourcePackagesDirPath "$source_packages_path" \
-  -skipPackagePluginValidation \
-  CODE_SIGNING_ALLOWED=NO \
   build-for-testing
 
 echo "Building the macOS application in Release"
 # Whole-module optimization, -O and dead stripping are otherwise first compiled on the day of a
 # release. Unsigned here: signing and notarization are `Scripts/release.sh`'s, on the maintainer's
 # Mac.
-xcodebuild \
+xcodebuild_cached \
   -project VibeManager.xcodeproj \
   -scheme VibeManager \
   -configuration Release \
   -destination 'platform=macOS' \
-  -derivedDataPath "$derived_data_path" \
-  -clonedSourcePackagesDirPath "$source_packages_path" \
-  -skipPackagePluginValidation \
-  CODE_SIGNING_ALLOWED=NO \
   build
+fi
 
+if runs companion; then
 echo "Building the mobile companion for the iOS simulator"
 # Unsigned: its App ID, iCloud container and push entitlement are the maintainer's (#347).
-xcodebuild \
+xcodebuild_cached \
   -project VibeManager.xcodeproj \
   -scheme VibeCompanion \
   -configuration Debug \
   -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath "$derived_data_path" \
-  -clonedSourcePackagesDirPath "$source_packages_path" \
-  -skipPackagePluginValidation \
-  CODE_SIGNING_ALLOWED=NO \
   build
 
 echo "Building the mobile companion in Release for the iPhone"
 # What Scripts/testflight.sh archives at a release, first compiled on a pull request. Unsigned.
-xcodebuild \
+xcodebuild_cached \
   -project VibeManager.xcodeproj \
   -scheme VibeCompanion \
   -configuration Release \
   -destination 'generic/platform=iOS' \
-  -derivedDataPath "$derived_data_path" \
-  -clonedSourcePackagesDirPath "$source_packages_path" \
-  -skipPackagePluginValidation \
-  CODE_SIGNING_ALLOWED=NO \
   build
+fi
