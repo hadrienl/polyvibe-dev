@@ -154,6 +154,8 @@ struct WorkspaceProvider: AgentProvider, AgentLaunchObserverProviding {
   var id = "stub"
   var name = "Stub Agent"
   var catalog: [AgentModel] = []
+  /// Counts how many times the catalogue is read, when a test asks.
+  var catalogReads: CatalogReads?
   var takesInitialPrompt = true
   /// The identifier the launch observer records for the session's conversation, as a real
   /// capture does once the agent has written it down; `nil` records none.
@@ -199,7 +201,10 @@ struct WorkspaceProvider: AgentProvider, AgentLaunchObserverProviding {
     )
   }
 
-  func models() async -> [AgentModel] { catalog }
+  func models() async -> [AgentModel] {
+    await catalogReads?.count()
+    return catalog
+  }
 
   func launchPlan(for request: AgentLaunchRequest) async throws -> AgentLaunchPlan {
     var arguments: [String] = []
@@ -318,4 +323,11 @@ actor WorkspaceRepository: SessionRepository {
     stored[index] = session
     return session
   }
+}
+
+/// How many times a catalogue was read.
+actor CatalogReads {
+  private(set) var total = 0
+
+  func count() { total += 1 }
 }
