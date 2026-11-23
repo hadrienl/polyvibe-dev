@@ -19,9 +19,6 @@ public struct SessionGitReading: Sendable {
 /// Nothing watches a repository: the handover summary reads its branches and their status when
 /// its sheet opens, the request palette the branch of a session when one of its requests arrives.
 public struct ReadSessionGit: Sendable {
-  /// As many entries as `git status` keeps; every one of them is counted anyway.
-  public static let statusLimit = 5_000
-
   private let branches: ReadSessionBranchReport
   private let statuses: (any RepositoryStatusReading)?
 
@@ -36,7 +33,7 @@ public struct ReadSessionGit: Sendable {
     var read: [String: WorkingTreeStatus] = [:]
     for repository in report.repositories {
       if case .success(let status) = await statuses.status(
-        atPath: repository.path, limit: Self.statusLimit)
+        atPath: repository.path, limit: 0)
       {
         read[repository.path] = status
       }
@@ -46,8 +43,6 @@ public struct ReadSessionGit: Sendable {
 
   /// The branch checked out at `path`, or nil when it cannot be read or none is.
   public func branch(atPath path: String) async -> String? {
-    guard let statuses, case .success(let status) = await statuses.status(atPath: path, limit: 0)
-    else { return nil }
-    return status.branch.branchName
+    await statuses?.branchName(atPath: path)
   }
 }

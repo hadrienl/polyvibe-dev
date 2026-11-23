@@ -71,6 +71,17 @@ public struct GitStatusReader: RepositoryStatusReading {
       ))
   }
 
+  /// `git symbolic-ref`: the branch's name alone, nothing read in the working tree. Nil on a
+  /// detached `HEAD`, as `git status` says it.
+  public func branchName(atPath path: String) async -> String? {
+    guard Self.accessIssue(at: path) == nil,
+      let result = try? await git.run(["symbolic-ref", "--short", "-q", "HEAD"], in: path),
+      result.succeeded
+    else { return nil }
+    let name = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+    return name.isEmpty ? nil : name
+  }
+
   public func gitDirectories(atPath path: String) async -> Result<
     GitDirectories, RepositoryStatusIssue
   > {

@@ -22,6 +22,16 @@ public protocol RepositoryStatusReading: Sendable {
     WorkingTreeStatus, RepositoryStatusIssue
   >
   func gitDirectories(atPath path: String) async -> Result<GitDirectories, RepositoryStatusIssue>
+  /// The branch checked out, nil when none is or it cannot be read: what the request palette
+  /// shows, without a whole `git status`.
+  func branchName(atPath path: String) async -> String?
+}
+
+extension RepositoryStatusReading {
+  public func branchName(atPath path: String) async -> String? {
+    guard case .success(let status) = await status(atPath: path, limit: 0) else { return nil }
+    return status.branch.branchName
+  }
 }
 
 /// What the file system says about the folders being watched — never what changed in them, only

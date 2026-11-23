@@ -123,6 +123,25 @@ struct GitStatusReaderTests {
     #expect(initial.branch.branchName == "main")
   }
 
+  @Test("The branch alone is read as git status names it: a branch, none when detached, unborn")
+  func branchName() async throws {
+    let sandbox = try Sandbox()
+    defer { sandbox.remove() }
+    let reader = GitStatusReader()
+    let repository = sandbox.path("api")
+    try await makeRepository(at: repository)
+    try await git(["checkout", "-q", "-b", "fix/parser"], in: repository)
+    #expect(await reader.branchName(atPath: repository) == "fix/parser")
+    try await git(["checkout", "-q", "--detach"], in: repository)
+    #expect(await reader.branchName(atPath: repository) == nil)
+
+    let empty = sandbox.path("empty")
+    try FileManager.default.createDirectory(atPath: empty, withIntermediateDirectories: true)
+    try await git(["init", "-q", "-b", "main"], in: empty)
+    #expect(await reader.branchName(atPath: empty) == "main")
+    #expect(await reader.branchName(atPath: sandbox.path("missing")) == nil)
+  }
+
   @Test("Ahead and behind come from the local references, with no network")
   func aheadAndBehind() async throws {
     let sandbox = try Sandbox()
