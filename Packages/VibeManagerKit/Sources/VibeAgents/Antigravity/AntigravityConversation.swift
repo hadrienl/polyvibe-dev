@@ -125,7 +125,7 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
     var dirty: Set<Int> = [index]
     if case .failure = step.kind { failures.insert(index) } else { failures.remove(index) }
     if index > lastStep {
-      // The errors before it were retried: they are shown no more.
+      // The errors before it were retried, unless it is the user's next prompt: read again.
       dirty.formUnion(failures.filter { $0 < index && $0 >= lastStep })
       lastStep = index
     }
@@ -272,11 +272,22 @@ public final class AntigravityConversationDecoder: ConversationDecoding {
       if !text.isEmpty {
         append("information", .notice(.information(AntigravityTools.shorteningTasks(text))))
       }
-    case .failure(let error) where index == lastStep:
+    case .failure(let error) where !isRetried(index):
       append("error", .notice(.error(error)))
     default: break
     }
     replaceEntries(of: index, with: additions)
+  }
+
+  /// Whether agy went on after the error at `index`, its retry answering: a step follows it that
+  /// is not the user's next prompt. An error the user's prompt follows is the one agy gave up on,
+  /// and stays in the history.
+  private func isRetried(_ index: Int) -> Bool {
+    guard index < lastStep, let next = steps.keys.filter({ $0 > index }).min(),
+      let step = steps[next]
+    else { return false }
+    if case .prompt(.some) = step.kind { return false }
+    return true
   }
 
   /// A call, its result applied when it has one, and what was said later of the task or the

@@ -202,4 +202,19 @@ struct AntigravityQuotaTests {
     line(decoder, ["step_index": 5, "type": "ERROR_MESSAGE", "error": ["code": 429]])
     #expect(decoder.entries.count == 2)
   }
+
+  @Test("The error agy gave up on stays once the user writes again")
+  func errorGivenUpOn() {
+    let decoder = AntigravityConversationDecoder()
+    line(decoder, ["step_index": 0, "type": "PLANNER_RESPONSE", "content": "first"])
+    let error = "API error (attempt 3): RESOURCE_EXHAUSTED (code 429): Resets in 2h."
+    line(decoder, ["step_index": 1, "type": "ERROR_MESSAGE", "status": "DONE", "error": error])
+    line(
+      decoder,
+      [
+        "step_index": 2, "type": "USER_INPUT", "source": "USER_EXPLICIT",
+        "content": "<USER_REQUEST>\nAgain\n</USER_REQUEST>",
+      ])
+    #expect(decoder.entries.map(\.content).contains(.notice(.error(error))))
+  }
 }
