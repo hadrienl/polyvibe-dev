@@ -306,7 +306,6 @@ public struct ConversationView: View {
         trackReadablePart()
       }
       .defaultScrollAnchor(.bottom)
-      .coordinateSpace(name: Self.viewportSpace)
       // The overview stands for the scroll bar (#567).
       .scrollIndicators(showsOverview ? .hidden : .automatic)
       .modifier(ToolbarVeil())
@@ -327,6 +326,9 @@ public struct ConversationView: View {
       }
       // Over the overview too: a wide preview may reach it.
       .overlay { MarginPreviewOverlay(model: model, theme: theme) }
+      // Named around the preview as well as the icons: a space named on the scroll view alone is
+      // not found from its overlay, which then reads the window's and lands a title bar higher.
+      .coordinateSpace(name: Self.viewportSpace)
       .onAppear {
         let selection = selection
         model.selectedBlockID = {
