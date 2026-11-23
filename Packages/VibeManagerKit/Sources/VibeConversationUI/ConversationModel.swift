@@ -1760,8 +1760,10 @@ public final class ConversationModel {
 
   /// The request, while the agent waits on it and it can be answered from here.
   public var request: ConversationRequest? {
-    guard answerRequest != nil, case .awaitingUser = activity else { return nil }
-    return pendingRequest()
+    guard answerRequest != nil, let pending = pendingRequest() else { return nil }
+    if pending.request.isAsynchronous { return pending }
+    guard case .awaitingUser = activity else { return nil }
+    return pending
   }
 
   /// The request, under the block of the call it is about. A permission names what it would run:
@@ -1778,11 +1780,15 @@ public final class ConversationModel {
     // A permission or a question goes under its call, which the transcript brings in a moment.
     switch request.request.content {
     case .inTerminal, .elicitation: return request
+    case .questions where request.request.isAsynchronous: return request
     default: return nil
     }
   }
 
   private func requestCall(of request: ConversationRequest) -> ToolCall? {
+    // Async tools return immediately. Their question outlives the running call, and must not
+    // attach to whichever unrelated tool the agent started next.
+    if request.request.isAsynchronous { return nil }
     let unfinished = { [shownEntries] in
       ConversationEntry.allCalls(in: shownEntries)
         .filter { !$0.state.isFinished || $0.state == .awaitingPermission }
@@ -2163,8 +2169,25 @@ public final class ConversationModel {
     }
   }
 
-  /// A session's initial command — a command of its CLI, typed once the agent was ready — may open
-  /// a panel as well.
+  /// Opens Codex's pending asynchronous questions in the conversation's live terminal.
+  public func openQuestionPanel(for id: AgentRequestID) async {
+    guard let pending = request, pending.request.id == id,
+      pending.request.isAsynchronous,
+      pending.request.reference.tool == "request_user_input_async",
+      isProcessRunning, terminalPanel == nil, let write
+    else { return }
+    let screen = await readScreen?()
+    guard request?.request.id == id, terminalPanel == nil, isProcessRunning else { return }
+    openTerminalPanel(TerminalPanel(echoID: nil, command: nil))
+    if let screen, AgentPanelRecognition.showsPanel(screen: screen) {
+      terminalScreenChanged(screen)
+    } else {
+      // Codex keeps asynchronous questions behind Shift+Left while its turn continues.
+      await write([0x1B, 0x5B, 0x31, 0x3B, 0x32, 0x44])
+    }
+  }
+
+  /// A session's initial command may open a panel as well.
   public func expectTerminalPanel(forInitialPrompt prompt: String) {
     let command = String(prompt.prefix { !$0.isWhitespace })
     guard command.hasPrefix("/"), command.count > 1 else { return }

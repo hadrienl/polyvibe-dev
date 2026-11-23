@@ -63,6 +63,42 @@ struct DialogOnScreenTests {
     #expect(model.draft == "!git status")
   }
 
+  @Test("An asynchronous Codex question stays visible while working and opens its form once")
+  func asynchronousQuestions() async {
+    let screen = Screen()
+    screen.text = "Working…\n› \nshift+left to answer"
+    let model = model(screen: screen)
+    let id = AgentRequestID(sessionID: model.sessionID, key: "codex:call_a")
+    let pending = AgentRequest(
+      id: id, receivedAt: Date(), kind: .question,
+      content: .questions([AgentQuestion(header: nil, text: "Which port?", options: [])]),
+      reference: AgentToolReference(tool: "request_user_input_async", subject: "call_a"),
+      isShown: false, isAsynchronous: true)
+    model.pendingRequest = {
+      ConversationRequest(request: pending, answers: [], isSending: false)
+    }
+    model.answerRequest = { _, _ in false }
+    model.activity = .working
+    model.draft = "Keep this draft"
+    #expect(model.standaloneRequest?.request.id == id)
+    await model.openQuestionPanel(for: id)
+    #expect(screen.written == [Array("\u{1B}[1;2D".utf8)])
+    #expect(model.terminalPanel != nil)
+    #expect(model.draft == "Keep this draft")
+    await model.openQuestionPanel(for: id)
+    #expect(screen.written.count == 1)
+    await model.closeTerminalPanel()
+    screen.text = Self.dialog
+    await model.openQuestionPanel(for: id)
+    #expect(model.terminalPanel != nil)
+    #expect(screen.written.count == 2)  // An already open form needs no navigation key.
+    await model.closeTerminalPanel()
+    model.pendingRequest = { nil }
+    await model.openQuestionPanel(for: id)
+    #expect(screen.written.count == 3)  // Closing wrote Escape; the stale request wrote nothing.
+    #expect(model.terminalPanel == nil)
+  }
+
   @Test(
     "The dialog answered, the block goes and the draft can be sent", .timeLimit(.minutes(1)))
   func dialogAnswered() async {
