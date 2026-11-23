@@ -139,25 +139,37 @@ final class TooltipPresenter {
   private var panel: NSPanel?
   private var hosting: NSHostingView<TooltipBubble>?
   private var monitor: Any?
-  /// While a menu is open — the status bar's, opened from the very button the bubble names — no
-  /// bubble is shown: it would sit over the menu (#575).
-  private var isMenuOpen = false
+  /// The menus being tracked. While one is open — the status bar's, opened from the very button
+  /// the bubble names — no bubble is shown: it would sit over the menu (#575). Each menu counts
+  /// for itself: a submenu that closes leaves the menu it opened from open.
+  private var openMenus: Set<ObjectIdentifier> = []
+
+  var isMenuOpen: Bool { !openMenus.isEmpty }
 
   private init() {
     let center = NotificationCenter.default
     center.addObserver(
       forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main
-    ) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.isMenuOpen = true
-        self?.hide()
-      }
+    ) { [weak self] notification in
+      let menu = (notification.object as AnyObject?).map(ObjectIdentifier.init)
+      MainActor.assumeIsolated { self?.menuBegan(menu) }
     }
     center.addObserver(
       forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main
-    ) { [weak self] _ in
-      MainActor.assumeIsolated { self?.isMenuOpen = false }
+    ) { [weak self] notification in
+      let menu = (notification.object as AnyObject?).map(ObjectIdentifier.init)
+      MainActor.assumeIsolated { self?.menuEnded(menu) }
     }
+  }
+
+  func menuBegan(_ menu: ObjectIdentifier?) {
+    // A menu that does not say which: one entry of its own, that its end takes back.
+    openMenus.insert(menu ?? ObjectIdentifier(Self.self))
+    hide()
+  }
+
+  func menuEnded(_ menu: ObjectIdentifier?) {
+    openMenus.remove(menu ?? ObjectIdentifier(Self.self))
   }
 
   func show(_ text: Text, from view: NSView, edge: TooltipEdge? = nil) {
