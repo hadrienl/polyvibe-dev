@@ -11,6 +11,7 @@
 		A0000000000000000000000C /* WindowFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000008 /* WindowFocus.swift */; };
 		A00000000000000000000436 /* SingleInstance.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000436 /* SingleInstance.swift */; };
 		A00000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* Assets.xcassets */; };
+		A000000000000000000000F1 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B000000000000000000000F1 /* AppIcon.icon */; };
 		A00000000000000000000004 /* VibeUI in Frameworks */ = {isa = PBXBuildFile; productRef = J00000000000000000000001 /* VibeUI */; };
 		A00000000000000000000005 /* VibePersistence in Frameworks */ = {isa = PBXBuildFile; productRef = J00000000000000000000002 /* VibePersistence */; };
 		A00000000000000000000006 /* VibeAgents in Frameworks */ = {isa = PBXBuildFile; productRef = J00000000000000000000003 /* VibeAgents */; };
@@ -70,6 +71,7 @@
 		B00000000000000000000008 /* WindowFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowFocus.swift; sourceTree = "<group>"; };
 		B00000000000000000000436 /* SingleInstance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleInstance.swift; sourceTree = "<group>"; };
 		B00000000000000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B000000000000000000000F1 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		B00000000000000000000004 /* Polyvibe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Polyvibe.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B00000000000000000000005 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		B00000000000000000000006 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
@@ -255,6 +257,7 @@
 				B00000000000000000000008 /* WindowFocus.swift */,
 				B00000000000000000000436 /* SingleInstance.swift */,
 				B00000000000000000000003 /* Assets.xcassets */,
+				B000000000000000000000F1 /* AppIcon.icon */,
 				B0000000000000000000000C /* Localizable.xcstrings */,
 				B0000000000000000000000D /* InfoPlist.xcstrings */,
 			);
@@ -561,6 +564,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A00000000000000000000003 /* Assets.xcassets in Resources */,
+				A000000000000000000000F1 /* AppIcon.icon in Resources */,
 				A0000000000000000000000F /* Localizable.xcstrings in Resources */,
 				A00000000000000000000010 /* InfoPlist.xcstrings in Resources */,
 			);

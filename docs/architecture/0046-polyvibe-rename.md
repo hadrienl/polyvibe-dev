@@ -17,8 +17,10 @@ three sources whose waves meet, in the session colors (coral, violet, green).
 Everything the user reads: the application's name (`PRODUCT_NAME`, `CFBundleDisplayName`, the
 bundle's folder and executable), every string of the 17 languages, the privacy prompts, the
 companion's names (`Polyvibe Companion` on the Mac and on the iPhone), the icon
-(`Design/AppIcon.svg`, `AppIcon-small.svg` for 16 and 32 points, `AppIcon-iOS.svg` without
-transparency), the site at `https://polyvibe.dev/`, the documentation and the release titles. The
+(`Design/AppIcon.svg` and `AppIcon-small.svg` for the site, `AppIcon-iOS.svg` without transparency,
+`AppIcon-macOS.svg` edge to edge as the layer of `App/VibeManagerApp/AppIcon.icon`: macOS 26 and later
+draw the tile's shape themselves, and put a tile of its own in a white frame; Xcode makes the icon
+of macOS 14 and 15 from it), the site at `https://polyvibe.dev/`, the documentation and the release titles. The
 former name is not mentioned on the site: few people know it.
 
 The repository becomes `hadrienl/polyvibe-dev`, under the same account: `polyvibe` is taken on
