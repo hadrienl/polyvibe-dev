@@ -203,6 +203,7 @@ struct ReplyButton: View {
       ReplyLabel()
     }
     .buttonStyle(.plain)
+    .pointingHand()
   }
 }
 

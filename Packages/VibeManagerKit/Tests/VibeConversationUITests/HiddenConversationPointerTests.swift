@@ -98,6 +98,29 @@ struct HiddenConversationPointerTests {
     }
   }
 
+  @Test("A field placed after its gate is hidden as soon as it is there, not at the next switch")
+  func fieldPlacedLater() async throws {
+    let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 200))
+    let window = window(container)
+    defer { window.close() }
+    let place = NSRect(x: 20, y: 20, width: 300, height: 40)
+    let gate = HiddenFieldGate.GateView(frame: place)
+    container.addSubview(gate)
+    // Launched behind the conversation shown: SwiftUI lays the gate out before the field.
+    gate.isShown = false
+    gate.layoutSubtreeIfNeeded()
+    let field = NSScrollView(frame: .zero)
+    field.documentView = NSTextView(frame: NSRect(origin: .zero, size: place.size))
+    container.addSubview(field)
+    field.frame = place
+    for _ in 0..<20 where !field.isHidden {
+      try await Task.sleep(for: .milliseconds(25))
+    }
+    #expect(field.isHidden)
+    gate.isShown = true
+    #expect(!field.isHidden)
+  }
+
   @Test("Hidden, its text follows no pointer: no « Reply » under it, and none left shown")
   func hiddenFollowsNoPointer() throws {
     let view = SegmentTextView()

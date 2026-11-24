@@ -73,6 +73,23 @@ final class ReplyAccessoryButton: NSButton {
   override func resetCursorRects() {
     addCursorRect(bounds, cursor: .pointingHand)
   }
+
+  private var pointerArea: NSTrackingArea?
+
+  /// Its pointing hand, set again whenever AppKit updates the pointer over it: the text it lies on
+  /// has its I-beam on the same place.
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    if let pointerArea { removeTrackingArea(pointerArea) }
+    let area = NSTrackingArea(
+      rect: .zero, options: [.cursorUpdate, .activeInKeyWindow, .inVisibleRect], owner: self)
+    addTrackingArea(area)
+    pointerArea = area
+  }
+
+  override func cursorUpdate(with event: NSEvent) {
+    NSCursor.pointingHand.set()
+  }
 }
 
 extension SegmentTextView {
@@ -94,10 +111,10 @@ extension SegmentTextView {
 
   override func mouseMoved(with event: NSEvent) {
     guard isLive else { return }
-    let point = convert(event.locationInWindow, from: nil)
     // Over « Reply », its pointing hand: the text's own handling would put the I-beam back.
-    if let button = replyButton, !button.isHidden, button.frame.contains(point) { return }
+    if replyButtonContains(event) { return }
     super.mouseMoved(with: event)
+    let point = convert(event.locationInWindow, from: nil)
     guard offersParagraphReply, replyAction != nil, selectionReplyOffset == nil else { return }
     if let button = replyButton, !button.isHidden,
       button.frame.insetBy(dx: -4, dy: -4).contains(point)
@@ -132,6 +149,7 @@ extension SegmentTextView {
   }
 
   func hideReplyButton() {
+    if replyButton?.isHidden == false { window?.invalidateCursorRects(for: self) }
     replyButton?.isHidden = true
     repliedParagraph = nil
     selectionReplyOffset = nil
@@ -222,6 +240,13 @@ extension SegmentTextView {
       self?.hideReplyButton()
     }
     button.isHidden = false
+    window?.invalidateCursorRects(for: self)
+  }
+
+  /// Whether `event` is over « Reply », while it shows.
+  func replyButtonContains(_ event: NSEvent) -> Bool {
+    guard let button = replyButton, !button.isHidden else { return false }
+    return button.frame.contains(convert(event.locationInWindow, from: nil))
   }
 }
 

@@ -430,10 +430,15 @@ final class SegmentTextView: NSTextView {
   override func resetCursorRects() {
     guard isLive else { return }
     super.resetCursorRects()
+    // « Reply » lies on the text: its pointing hand, not the I-beam under it.
+    if let replyButton, !replyButton.isHidden {
+      addCursorRect(replyButton.frame, cursor: .pointingHand)
+    }
   }
 
   override func cursorUpdate(with event: NSEvent) {
     guard isLive else { return }
+    if replyButtonContains(event) { return NSCursor.pointingHand.set() }
     super.cursorUpdate(with: event)
   }
 
