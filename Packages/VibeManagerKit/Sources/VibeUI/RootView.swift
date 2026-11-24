@@ -466,18 +466,6 @@ public struct RootView: View {
             }
           }
         }
-        ToolbarItem(placement: .primaryAction) {
-          Button {
-            model.beginNewSession()
-          } label: {
-            Label(LocalizedStringResource("New Session", bundle: .module), systemImage: "plus")
-          }
-          .disabled(!model.canCreateSession)
-          .tourPopover(
-            model, on: .toolbarNewSession,
-            // Without a session on screen, the bubble is on "No session yet"'s own (#338).
-            isEligible: model.selectedSession != nil)
-        }
         if model.browser != nil {
           // In a window too narrow for both, the terminal and the web view take turns, and this
           // is where the user picks which one (#69).
@@ -522,6 +510,10 @@ public struct RootView: View {
               )
             }
             .disabled(!model.isWebViewAvailable)
+            .instantTooltip(
+              model.isWebViewOpen
+                ? Text("Hide Web View (⌥⌘B)", bundle: .module)
+                : Text("Show Web View (⌥⌘B)", bundle: .module))
             .accessibilityValue(
               model.isWebViewOpen
                 ? Text("Shown", bundle: .module, comment: "The web view is shown.")
@@ -535,6 +527,21 @@ public struct RootView: View {
         // under the button or in their panel (#578).
         ToolbarItem(placement: .primaryAction) {
           NotesToolbarButton(model: model)
+        }
+        // Last of the group, at the window's edge: the buttons added before it pushed it among the
+        // others.
+        ToolbarItem(placement: .primaryAction) {
+          Button {
+            model.beginNewSession()
+          } label: {
+            Label(LocalizedStringResource("New Session", bundle: .module), systemImage: "plus")
+          }
+          .disabled(!model.canCreateSession)
+          .instantTooltip(Text("New Session (⌘N)", bundle: .module))
+          .tourPopover(
+            model, on: .toolbarNewSession,
+            // Without a session on screen, the bubble is on "No session yet"'s own (#338).
+            isEligible: model.selectedSession != nil)
         }
       }
     }

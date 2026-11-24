@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import CompanionCore
 import SwiftUI
+import VibeConversationUI
 import VibeDevices
 
 /// A simulator in a tab of the web view. `sim-bridge`, a process of its own, holds the
@@ -135,6 +136,7 @@ struct DeviceMirrorToolbarButton: View {
       }
     }
     .disabled(!model.isWebViewAvailable)
+    .instantTooltip(Text("Simulators", bundle: .module))
     .popover(isPresented: $isShowingDevices, arrowEdge: .bottom) {
       DeviceMirrorPicker { udid, name in
         isShowingDevices = false
