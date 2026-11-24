@@ -724,6 +724,7 @@ struct BookmarkGutter: View {
       .frame(width: Self.reach - 4, height: Self.boxHeight(lineHeight: lineHeight))
       .contentShape(Rectangle())
       .onTapGesture(perform: toggle)
+      .pointingHand()
       .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
       // Set, its preview tells it; a tooltip would come over it. Shown on the pointer the
       // preview's tracking follows: no second one for every message.

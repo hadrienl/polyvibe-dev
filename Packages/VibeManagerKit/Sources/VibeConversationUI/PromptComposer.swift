@@ -52,6 +52,7 @@ struct PromptComposer: View {
           .scrollContentBackground(.hidden)
           .frame(minHeight: size * 1.6, maxHeight: size * 1.5 * 8)
           .fixedSize(horizontal: false, vertical: true)
+          .background(HiddenFieldGate(isShown: isActive))
           // A file dropped on the field is a chip, as anywhere else on the conversation (#146).
           .overlay(ComposerFileDropCatcher())
           .focused($isFocused)
