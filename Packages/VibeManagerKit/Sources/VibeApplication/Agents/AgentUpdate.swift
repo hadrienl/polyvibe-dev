@@ -78,10 +78,16 @@ public enum AgentUpdateRestartReadiness {
     screen: String?,
     runsSubagents: Bool
   ) -> Bool {
-    guard let activity, activity.activity == .idle, activity.requests.isEmpty, !runsSubagents
-    else { return false }
+    guard agentRests(activity), !runsSubagents else { return false }
     guard let screen, promptIsEmpty(screen: screen) else { return false }
     return !runsInBackground(screen: screen)
+  }
+
+  /// The agent is idle and asks nothing: what is known without reading the screen or the
+  /// transcript, and so asked first (#601).
+  public static func agentRests(_ activity: AgentActivityState?) -> Bool {
+    guard let activity else { return false }
+    return activity.activity == .idle && activity.requests.isEmpty
   }
 
   /// Whether the agent's prompt is drawn, and empty. A prompt that cannot be read is not taken
