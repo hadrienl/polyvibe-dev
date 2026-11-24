@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import VibeApplication
 import VibeDomain
+import VibeTerminalUI
 
 @testable import VibeUI
 
@@ -83,6 +84,32 @@ struct AgentUpdateRestartTests {
     #expect(model.agentUpdateNotice(for: subject.id) == nil)
   }
 
+  @Test("A session waiting reads its screen only once its agent rests, by a follower of its own")
+  func waitingSessionReadsItsScreenOnlyAtRest() async throws {
+    let subject = session(path: folder())
+    let (model, _, supervisor) = try await running(subject)
+    model.noteAgentUpdates([subject.id: update])
+    model.pendingUpdateRestarts.insert(subject.id)
+
+    // #601: without an activity, or busy, nothing is read.
+    await model.restartPendingUpdates()
+    model.activityCells.set(AgentActivityState(activity: .working), for: subject.id)
+    await model.restartPendingUpdates()
+    #expect(model.updateRestartScreens.isEmpty)
+
+    model.activityCells.set(AgentActivityState(activity: .idle), for: subject.id)
+    await model.restartPendingUpdates()
+    let follower = try #require(model.updateRestartScreens[subject.id])
+    await model.restartPendingUpdates()
+    #expect(model.updateRestartScreens[subject.id] === follower)
+    // The stub's screen shows no empty prompt: it is not restarted.
+    #expect(await supervisor.startCount == 1)
+
+    model.closeUpdateNotice(subject.id)
+    await model.restartPendingUpdates()
+    #expect(model.updateRestartScreens.isEmpty)
+  }
+
   @Test("The restart stops the agent and resumes its conversation under an update separator")
   func restartResumesTheConversation() async throws {
     let subject = session(path: folder())
@@ -90,8 +117,12 @@ struct AgentUpdateRestartTests {
     model.noteAgentUpdates([subject.id: update])
     _ = launcher.pane(for: subject.id)?.takePendingNotice()
 
+    model.updateRestartScreens[subject.id] = TerminalScreenFollower()
+
     await model.restartInPlace(subject.id, update: update)
 
+    // #601: the follower read the terminal that ended.
+    #expect(model.updateRestartScreens[subject.id] == nil)
     #expect(await supervisor.startCount == 2)
     #expect(await supervisor.lastSpec?.arguments == ["--resume", "kept-identifier"])
     #expect(model.agentUpdates.isEmpty)

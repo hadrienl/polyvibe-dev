@@ -2,6 +2,7 @@ import Foundation
 import VibeApplication
 import VibeConversationUI
 import VibeDomain
+import VibeTerminalUI
 
 /// A CLI updated on disk while sessions still run its previous build (#409): found by comparing
 /// the file each agent process runs with the one its executable resolves to now, offered in the
@@ -83,6 +84,8 @@ extension AppModel {
 
   /// The session's process ended or was replaced: what was found of the previous one is gone.
   func forgetAgentUpdate(_ id: SessionID) {
+    // Whatever else is known: the screen followed was the terminal's that ended (#601).
+    updateRestartScreens[id] = nil
     guard agentUpdates[id] != nil || pendingUpdateRestarts.contains(id) else { return }
     agentUpdates[id] = nil
     pendingUpdateRestarts.remove(id)
@@ -96,6 +99,7 @@ extension AppModel {
     agentUpdateWatch?.cancel()
     agentUpdateWatch = nil
     pendingUpdateRestarts = []
+    updateRestartScreens = [:]
   }
 
   /// Records what was found: a session no longer on an old build is forgotten, and one an
@@ -165,6 +169,7 @@ extension AppModel {
   // MARK: - Restarting
 
   func restartPendingUpdates() async {
+    updateRestartScreens = updateRestartScreens.filter { pendingUpdateRestarts.contains($0.key) }
     for id in pendingUpdateRestarts {
       await restartForUpdateIfReady(id)
     }
@@ -180,14 +185,21 @@ extension AppModel {
     }
   }
 
+  /// Tried every half minute for each session waiting, for as long as it waits (#601): what
+  /// costs — the screen, the transcript — is read only once what is free says the agent rests,
+  /// the screen followed and the transcript read again only once it changed.
   func restartForUpdateIfReady(_ id: SessionID) async {
-    guard let launcher, pendingUpdateRestarts.contains(id), isFreeForUpdateRestart(id) else {
-      return
-    }
-    let screen = await launcher.screen(of: id)
+    guard let launcher, pendingUpdateRestarts.contains(id), isFreeForUpdateRestart(id),
+      AgentUpdateRestartReadiness.agentRests(activity(for: id))
+    else { return }
+    let follower = updateRestartScreens[id] ?? TerminalScreenFollower()
+    updateRestartScreens[id] = follower
+    let screen = await launcher.screen(of: id, following: follower)
     // Everything asked again after the screen was read: the user may have cancelled, closed the
     // session or started another command in the meantime, and the process may be another one.
     guard pendingUpdateRestarts.contains(id), isFreeForUpdateRestart(id),
+      AgentUpdateRestartReadiness.isReady(
+        activity: activity(for: id), screen: screen, runsSubagents: false),
       let processIdentifier = await launcher.runningProcessIdentifiers()[id],
       let update = agentUpdate(of: id, processIdentifier: processIdentifier)
     else { return }

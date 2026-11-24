@@ -422,6 +422,9 @@ public final class AppModel {
   var declinedUpdateRestarts: [SessionID: AgentUpdate] = [:]
   /// The automatic restart onto an updated CLI, per agent, as the settings show it.
   public internal(set) var restartsOnAgentUpdate: [AgentProviderID: Bool] = [:]
+  /// The screen of each session waiting for an update restart, followed rather than replayed
+  /// whole at each look (#601).
+  @ObservationIgnored var updateRestartScreens: [SessionID: TerminalScreenFollower] = [:]
   /// The look at the CLIs on disk, every half minute while the application runs.
   var agentUpdateWatch: Task<Void, Never>?
   /// A detection the update asked for that a detection already under way kept from running.
@@ -2153,6 +2156,8 @@ public final class AppModel {
       restartingSessionIDs.insert(id).inserted
     else { return false }
     pendingUpdateRestarts.remove(id)
+    // The screen followed was the terminal's that ends here (#601).
+    updateRestartScreens[id] = nil
     publishAgentUpdates()
     let name = sessions.first { $0.id == id }?.name ?? Self.unnamedSession
     let stopped: Bool
