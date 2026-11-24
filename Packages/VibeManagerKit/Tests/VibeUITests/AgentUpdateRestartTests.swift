@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import VibeApplication
 import VibeDomain
+import VibeTerminalUI
 
 @testable import VibeUI
 
@@ -116,8 +117,12 @@ struct AgentUpdateRestartTests {
     model.noteAgentUpdates([subject.id: update])
     _ = launcher.pane(for: subject.id)?.takePendingNotice()
 
+    model.updateRestartScreens[subject.id] = TerminalScreenFollower()
+
     await model.restartInPlace(subject.id, update: update)
 
+    // #601: the follower read the terminal that ended.
+    #expect(model.updateRestartScreens[subject.id] == nil)
     #expect(await supervisor.startCount == 2)
     #expect(await supervisor.lastSpec?.arguments == ["--resume", "kept-identifier"])
     #expect(model.agentUpdates.isEmpty)

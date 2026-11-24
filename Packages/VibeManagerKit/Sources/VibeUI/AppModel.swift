@@ -2156,6 +2156,8 @@ public final class AppModel {
       restartingSessionIDs.insert(id).inserted
     else { return false }
     pendingUpdateRestarts.remove(id)
+    // The screen followed was the terminal's that ends here (#601).
+    updateRestartScreens[id] = nil
     publishAgentUpdates()
     let name = sessions.first { $0.id == id }?.name ?? Self.unnamedSession
     let stopped: Bool
