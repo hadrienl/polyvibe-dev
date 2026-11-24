@@ -6,10 +6,11 @@ import VibeTerminalUI
 
 /// The session's usage in its status bar (#574), under the terminal and under the conversation:
 /// a ring of the context, its share and the cost — “◔ 55 % · 4,82 $” — and every figure in a
-/// popover above it.
+/// popover above it. A coordinator with children adds their total to its own (#606): “◔ 55 % ·
+/// 4,82 $ · total 31,40 $”.
 ///
-/// The transcripts are read while the session is the one shown. Every session keeps its status
-/// bar in the window's stack, hidden: the others read nothing.
+/// The transcripts are read while the session is the one shown — a coordinator's children's too.
+/// Every session keeps its status bar in the window's stack, hidden: the others read nothing.
 struct SessionUsageButton: View {
   let usage: UsageModel
   let session: WorkSession
@@ -25,7 +26,8 @@ struct SessionUsageButton: View {
     // again. Shown, the bar reads them at once.
     let summary = SessionUsageSummary(
       figures: isShown ? usage.sessionUsage[session.id] : nil,
-      percent: isShown ? usage.contextWindows[session.id]?.percentUsed : nil)
+      percent: isShown ? usage.contextWindows[session.id]?.percentUsed : nil,
+      family: isShown ? usage.familyUsage[session.id] : nil)
     Button {
       isPresented.toggle()
     } label: {
@@ -66,19 +68,28 @@ struct SessionUsageSummary: Equatable {
   let figures: SessionUsage?
   /// The share of the context used, when the window is known.
   let percent: Int?
+  /// A coordinator's figures with every session under it (#606); `nil` without children.
+  var family: SessionUsage? = nil
 
   /// The cost, when a model of the session has a price.
   var cost: Decimal? {
     figures.flatMap { $0.cost.hasPrice ? $0.cost.total : nil }
   }
 
-  /// Whether the cost leaves out models without a price: said wherever the whole value is.
-  var leavesModelsOut: Bool {
-    cost != nil && figures?.cost.unpriced.isEmpty == false
+  /// The cost of the coordinator and every session under it, when a model of theirs has a price.
+  var familyCost: Decimal? {
+    family.flatMap { $0.cost.hasPrice ? $0.cost.total : nil }
   }
 
-  /// “context 55%, cost about 4.82 US dollars”: the figures of the label, whole, for VoiceOver —
-  /// then that models without a price are left out of the cost, when some are.
+  /// Whether a cost said leaves out models without a price: said wherever the whole value is.
+  var leavesModelsOut: Bool {
+    (cost != nil && figures?.cost.unpriced.isEmpty == false)
+      || (familyCost != nil && family?.cost.unpriced.isEmpty == false)
+  }
+
+  /// “context 55%, cost about 4.82 US dollars, total with child sessions about 31.40 US dollars”:
+  /// the figures of the label, whole, for VoiceOver — then that models without a price are left
+  /// out of the cost, when some are.
   func spoken(locale: Locale) -> String {
     var parts: [String] = []
     if let percent {
@@ -100,6 +111,16 @@ struct SessionUsageSummary: Equatable {
               "The status bar's Usage button, for VoiceOver: the session's cost, such as “4.82 US dollars”."
           )))
     }
+    if let familyCost {
+      parts.append(
+        String(
+          localized: LocalizedStringResource(
+            "total with child sessions about \(UsagePresentation.spokenCost(familyCost, locale: locale))",
+            locale: locale, bundle: .module,
+            comment:
+              "The status bar's Usage button, for VoiceOver: what a coordinator and its child sessions cost together, such as “31.40 US dollars”."
+          )))
+    }
     guard !parts.isEmpty else { return "—" }
     let value = parts.joined(separator: ", ")
     guard leavesModelsOut else { return value }
@@ -107,9 +128,21 @@ struct SessionUsageSummary: Equatable {
   }
 
   /// “Context 55% · ≈ $4.82 (API equivalent)”: the whole value of the label, on hover, whichever
-  /// form it takes — and, under it, that models without a price are left out of the cost.
+  /// form it takes; a coordinator's total under it — and, last, that models without a price are
+  /// left out of the cost.
   func help(locale: Locale) -> String {
-    let value = value(locale: locale)
+    var value = value(locale: locale)
+    if let familyCost {
+      value +=
+        "\n"
+        + String(
+          localized: LocalizedStringResource(
+            "With child sessions: \(UsagePresentation.cost(familyCost, locale: locale))",
+            locale: locale, bundle: .module,
+            comment:
+              "Help of the status bar's Usage button: what a coordinator and its child sessions cost together."
+          ))
+    }
     guard leavesModelsOut else { return value }
     return value + "\n" + UsagePresentation.unpricedModelsLeftOut(locale: locale)
   }
@@ -148,7 +181,8 @@ struct SessionUsageSummary: Equatable {
 /// “◔ 55 % · 4,82 $”: the ring and share of the context — or the running time, when the window is
 /// unknown — then the cost. A dash while nothing was read.
 ///
-/// Three forms, from the widest to the narrowest — “◔ 55 % · 4,82 $”, “◔ 55 %”, the ring alone.
+/// Four forms, from the widest to the narrowest — “◔ 55 % · 4,82 $ · total 31,40 $” for a
+/// coordinator with children (#606), “◔ 55 % · 4,82 $”, “◔ 55 %”, the ring alone.
 /// The status bar's step chooses the widest one, for all its buttons together (#575); a narrower
 /// one is shown when even that does not fit. The tooltip and VoiceOver always have the whole
 /// value.
@@ -156,16 +190,19 @@ struct SessionUsageLabel: View {
   let summary: SessionUsageSummary
   let isReading: Bool
 
-  enum Form: Int, CaseIterable {
+  enum Form: Int, CaseIterable, Comparable {
+    case withTotal
     case full
     case withoutCost
     case ringAlone
 
-    /// The widest form a bar drawn at `density` gives the usage: the cost goes at `.level`, the
+    /// The widest form a bar drawn at `density` gives the usage: the costs go at `.level`, the
     /// share at `.gauge`.
+    static func < (lhs: Self, rhs: Self) -> Bool { lhs.rawValue < rhs.rawValue }
+
     init(_ density: StatusBarDensity) {
       switch density {
-      case .full, .model: self = .full
+      case .full, .model: self = .withTotal
       case .level: self = .withoutCost
       case .gauge, .icons: self = .ringAlone
       }
@@ -190,11 +227,12 @@ struct SessionUsageLabel: View {
     return allowed.isEmpty ? Array(forms.suffix(1)) : allowed
   }
 
-  /// The forms this summary has, widest first: no cost to leave out without a price, and no ring
-  /// alone without a known window.
+  /// The forms this summary has, widest first: no total without children that cost, no cost to
+  /// leave out without a price, and no ring alone without a known window.
   var forms: [Form] {
     Form.allCases.filter { form in
       switch form {
+      case .withTotal: summary.familyCost != nil
       case .full: summary.cost != nil
       case .withoutCost: true
       case .ringAlone: summary.percent != nil
@@ -222,9 +260,19 @@ struct SessionUsageLabel: View {
           Text(verbatim: "—")
         }
       }
-      if form == .full, let cost = summary.cost {
+      if form <= .full, let cost = summary.cost {
         Text(verbatim: "·").foregroundStyle(.secondary)
         Text(verbatim: UsagePresentation.cost(cost, approximate: false, locale: locale))
+      }
+      if form == .withTotal, let total = summary.familyCost {
+        Text(verbatim: "·").foregroundStyle(.secondary)
+        Text(
+          LocalizedStringResource(
+            "total \(UsagePresentation.cost(total, approximate: false, locale: locale))",
+            bundle: .module,
+            comment:
+              "The status bar's Usage button: what a coordinator and its child sessions cost together, such as “total 31,40 $”."
+          ))
       }
     }
     .monospacedDigit()
@@ -255,8 +303,8 @@ struct ContextRing: View {
   }
 }
 
-/// Every figure of the session's usage, then where the prices come from and what stays on the
-/// Mac.
+/// Every figure of the session's usage — a coordinator's with its children after (#606) — then
+/// where the prices come from and what stays on the Mac.
 struct SessionUsagePopover: View {
   let usage: UsageModel
   let session: WorkSession
@@ -277,7 +325,8 @@ struct SessionUsagePopover: View {
         contextUnavailability: usage.contextUnavailability(for: session),
         contextAgentName: session.agent.flatMap { agentNames[$0.transcriptProviderID] }),
       pricesFetchedAt: usage.pricesFetchedAt,
-      quota: quota
+      quota: quota,
+      family: usage.family(of: session.id)
     )
     .onAppear {
       // The session's agent, whether or not it can tell its quota yet: the agents may still be
@@ -317,12 +366,18 @@ struct SessionUsagePopoverContent: View {
   let figures: SessionUsageFigures
   let pricesFetchedAt: Date?
   var quota: SessionQuota? = nil
+  /// A coordinator's figures with its children (#606), after its own.
+  var family: SessionFamilyUsage? = nil
 
   @Environment(\.locale) private var locale
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       figures
+      if let family {
+        Divider()
+        SessionFamilyUsageSection(family: family, agentNames: figures.agentNames)
+      }
       if let quota {
         Divider()
         VStack(alignment: .leading, spacing: 6) {

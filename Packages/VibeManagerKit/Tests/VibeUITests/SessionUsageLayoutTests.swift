@@ -40,7 +40,22 @@ struct SessionUsageLayoutTests {
       cost: cost)
   }
 
-  static func popover(language: String) -> some View {
+  /// A coordinator's family (#606): a child with the same figures, and a child of it that read
+  /// nothing yet.
+  static func family() -> SessionFamilyUsage {
+    var total = figures()
+    total.total.tokens = TokenCounts(
+      input: 12, cacheRead: 222_000, cacheWrite: 43_000, output: 2_200)
+    total.cost.total = Decimal(string: "2469.22")!
+    return SessionFamilyUsage(
+      total: total,
+      children: [
+        .init(id: SessionID(), name: "Implement the quotas (#599)", depth: 1, figures: figures()),
+        .init(id: SessionID(), name: "Review", depth: 2, figures: nil),
+      ])
+  }
+
+  static func popover(language: String, family: SessionFamilyUsage? = nil) -> some View {
     SessionUsagePopoverContent(
       figures: SessionUsageFigures(
         figures: figures(), isTrackingEnabled: true, runsRecordedSince: nil,
@@ -49,7 +64,8 @@ struct SessionUsageLayoutTests {
           usedTokens: 182_000, windowSize: 200_000, measuredAt: Date(),
           lastCompaction: .init(date: Date().addingTimeInterval(-720), tokensBefore: 190_000)),
         contextAgentName: "Claude Code"),
-      pricesFetchedAt: Date(timeIntervalSince1970: 1_795_000_000)
+      pricesFetchedAt: Date(timeIntervalSince1970: 1_795_000_000),
+      family: family
     )
     .environment(\.locale, Locale(identifier: language))
   }
@@ -95,15 +111,21 @@ struct SessionUsageLayoutTests {
   /// The lines of the popover: the context, the cost and a line for each of its two models, the
   /// running time, the runs, the tokens and a line for each model, the responses.
   static let lineCount = 10
+  /// With a family: a single line, whose menu holds the children (#606). It measures no width of
+  /// its own: the menu's button is as wide as its text.
+  static let familyLineCount = 0
 
   /// Draws the popover in a window never shown, until its lines have said how wide their texts
   /// were drawn: no deadline of its own, the suite's time limit stops one that never does. Writes
   /// it as a PNG in the folder `VIBE_USAGE_SNAPSHOTS` names, when it names one, to be looked at.
-  private func draw(language: String) async throws -> [DrawnWidth] {
+  private func draw(language: String, family: SessionFamilyUsage? = nil) async throws
+    -> [DrawnWidth]
+  {
     _ = NSApplication.shared
     let probe = Probe()
+    let lineCount = Self.lineCount + (family == nil ? 0 : Self.familyLineCount)
     let host = NSHostingView(
-      rootView: Self.popover(language: language)
+      rootView: Self.popover(language: language, family: family)
         .environment(\.measuresDrawnWidths, true)
         .onPreferenceChange(DrawnWidths.self) { widths in
           MainActor.assumeIsolated { probe.widths = widths }
@@ -117,7 +139,7 @@ struct SessionUsageLayoutTests {
     window.contentView = host
     defer { window.close() }
     // Every line has a label and a value.
-    while probe.widths.count < 2 * Self.lineCount {
+    while probe.widths.count < 2 * lineCount {
       host.layoutSubtreeIfNeeded()
       await Task.yield()
     }
@@ -128,7 +150,7 @@ struct SessionUsageLayoutTests {
       let data = try #require(image.representation(using: .png, properties: [:]))
       try data.write(
         to: URL(fileURLWithPath: folder).appendingPathComponent(
-          "usage-\(language).png"))
+          "usage-\(language)\(family == nil ? "" : "-family").png"))
     }
     return probe.widths
   }
@@ -140,6 +162,60 @@ struct SessionUsageLayoutTests {
     for width in widths {
       #expect(width.drawn >= width.minimum - 0.5, "\(width.name)")
     }
+  }
+
+  @Test(
+    "The line of a coordinator's total is cut nowhere (#606)",
+    arguments: ["en", "fr", "de"])
+  func familyIsNotCut(language: String) async throws {
+    let widths = try await draw(language: language, family: Self.family())
+    #expect(widths.count == 2 * (Self.lineCount + Self.familyLineCount))
+    for width in widths {
+      #expect(width.drawn >= width.minimum - 0.5, "\(width.name)")
+    }
+  }
+
+  @Test("A child's menu says its cost, each model's, its running time, tokens and responses (#606)")
+  func childDetails() {
+    let en = Locale(identifier: "en_US")
+    let figures = Self.figures()
+    #expect(SessionFamilyUsageSection.cost(of: figures, locale: en) == "≈ $1,234.61")
+    #expect(SessionFamilyUsageSection.cost(of: nil, locale: en) == "—")
+    var unpriced = figures
+    unpriced.cost = UsageCost.Estimate(unpriced: [UsageModelKey(providerID: "claude", model: nil)])
+    #expect(SessionFamilyUsageSection.cost(of: unpriced, locale: en) == "Unknown price")
+    // VoiceOver hears the line's cost whole, not its sign.
+    #expect(
+      SessionFamilyUsageSection.spokenCost(of: figures, locale: en) == "1,234.61 US dollars")
+    #expect(SessionFamilyUsageSection.spokenCost(of: unpriced, locale: en) == "Unknown price")
+    let lines = SessionFamilyUsageSection.details(
+      of: figures, agentNames: ["claude": "Claude Code"], locale: en)
+    #expect(
+      lines == [
+        "Cost: ≈ $1,234.61",
+        "Claude Code · claude-opus-5-5: ≈ $1,234.61",
+        "Claude Code · Default: Unknown price",
+        "Running time: 3 h 12 min",
+        "Tokens: ≈ "
+          + UsagePresentation.tokenParts(figures.total.tokens, locale: en).joined(separator: " · "),
+        "Responses: 48",
+      ])
+  }
+
+  @Test("A family's children are named once its figures are computed; a child gone keeps its place")
+  func familyNames() {
+    let coordinator = SessionID()
+    let named = WorkSession(name: "Quotas", coordination: .child(of: coordinator))
+    let gone = SessionID()
+    let families = UsageModel.families(
+      [coordinator: [.init(id: named.id, depth: 1), .init(id: gone, depth: 1)]],
+      totals: [coordinator: Self.figures()], figures: [named.id: Self.figures()],
+      sessions: [named])
+    let family = families[coordinator]
+    #expect(family?.children.map(\.name) == ["Quotas", gone.description])
+    #expect(family?.children.first?.figures == Self.figures())
+    #expect(family?.children.last?.figures == nil)
+    #expect(UsageModel.families([:], totals: [:], figures: [:], sessions: [named]).isEmpty)
   }
 
   @Test("The cost comes with each model's, and a model without a price says so")
@@ -225,6 +301,53 @@ struct SessionUsageButtonTests {
       SessionUsageLabel(
         summary: SessionUsageSummary(figures: unpriced, percent: nil), isReading: false
       ).forms == [.withoutCost])
+  }
+
+  @Test(
+    "A coordinator with children says its total after its own cost, in every form it fits (#606)")
+  func familyTotal() {
+    _ = NSApplication.shared
+    var own = SessionUsageLayoutTests.figures()
+    own.cost.unpriced = []
+    var family = SessionUsageLayoutTests.family().total
+    family.cost.unpriced = []
+    let summary = SessionUsageSummary(figures: own, percent: 55, family: family)
+    #expect(summary.familyCost == Decimal(string: "2469.22"))
+    #expect(
+      summary.spoken(locale: en)
+        == "context 55%, cost about 1,234.61 US dollars, total with child sessions about 2,469.22 US dollars"
+    )
+    #expect(
+      summary.help(locale: en)
+        == "Context 55% · ≈ $1,234.61 (API equivalent)\nWith child sessions: ≈ $2,469.22")
+    let label = SessionUsageLabel(summary: summary, isReading: false)
+    #expect(label.forms == [.withTotal, .full, .withoutCost, .ringAlone])
+    #expect(label.forms(at: .full) == [.withTotal, .full, .withoutCost, .ringAlone])
+    #expect(label.forms(at: .level) == [.withoutCost, .ringAlone])
+    let widths = label.forms.map { form in
+      NSHostingView(rootView: label.form(form).environment(\.locale, en)).fittingSize.width
+    }
+    #expect(widths == widths.sorted(by: >))
+    #expect(Set(widths).count == 4)
+  }
+
+  @Test("A child's model without a price is said with the total; no family, nothing changes")
+  func familyUnpricedAndNone() {
+    var own = SessionUsageLayoutTests.figures()
+    own.cost.unpriced = []
+    let family = SessionUsageLayoutTests.family().total
+    let leftOut = "Models without a known price are left out of the total."
+    #expect(
+      SessionUsageSummary(figures: own, percent: 55, family: family).help(locale: en)
+        == "Context 55% · ≈ $1,234.61 (API equivalent)\nWith child sessions: ≈ $2,469.22\n"
+        + leftOut)
+    let alone = SessionUsageSummary(figures: own, percent: 55)
+    #expect(alone.familyCost == nil)
+    #expect(alone.spoken(locale: en) == "context 55%, cost about 1,234.61 US dollars")
+    #expect(
+      SessionUsageLabel(summary: alone, isReading: false).forms == [
+        .full, .withoutCost, .ringAlone,
+      ])
   }
 
   @Test("Dollars in the language's own way, to the cent, and never a zero for a little")

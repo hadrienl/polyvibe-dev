@@ -69,12 +69,12 @@ struct SessionUsageFigures: View {
     LocalizedStringResource("Usage", bundle: .module, comment: "A session's usage, heading.")
   }
 
-  private static var costTitle: LocalizedStringResource {
+  static var costTitle: LocalizedStringResource {
     LocalizedStringResource(
       "Cost", bundle: .module, comment: "A session's usage: what it cost.")
   }
 
-  private static var tokensTitle: LocalizedStringResource {
+  static var tokensTitle: LocalizedStringResource {
     LocalizedStringResource(
       "Tokens", bundle: .module, comment: "A session's usage: the tokens its agent reported.")
   }
@@ -90,12 +90,7 @@ struct SessionUsageFigures: View {
         value: UsagePresentation.unavailable(reason, locale: locale),
         help: UsagePresentation.tokensExplanation)
     } else if let figures, figures.total.hasReportedTokens {
-      let parts = UsagePresentation.tokenParts(figures.total.tokens, locale: locale)
-      UsageLine(
-        label: Text(Self.tokensTitle),
-        value: "≈ " + parts.joined(separator: " · "),
-        parts: parts.enumerated().map { $0.offset == 0 ? "≈ " + $0.element : $0.element },
-        help: UsagePresentation.tokensExplanation)
+      UsageTokensLine(tokens: figures.total.tokens)
       ForEach(figures.models) { row in
         if case .model(let providerID, let model) = row.key {
           // The model's name is never cut: two models of an agent differ only at its end.
@@ -134,26 +129,14 @@ struct SessionUsageFigures: View {
   private func cost(_ figures: SessionUsage?) -> some View {
     if let figures, figures.total.hasReportedTokens {
       let estimate = figures.cost
+      UsageCostLine(estimate: estimate)
       if estimate.hasPrice {
-        let total = UsagePresentation.cost(estimate.total, locale: locale)
-        UsageLine(
-          label: Text(Self.costTitle), value: total,
-          help: UsagePresentation.costExplanation,
-          accessibilityValue: UsagePresentation.spokenCost(estimate.total, locale: locale))
         caption(
           String(
             localized: LocalizedStringResource(
               "API equivalent, at public prices", locale: locale, bundle: .module,
               comment:
                 "Under a session's cost: what the tokens would have cost paid by the token.")))
-      } else if !estimate.unpriced.isEmpty {
-        UsageLine(
-          label: Text(Self.costTitle), value: unknownPrice, help: UsagePresentation.costExplanation
-        )
-        .foregroundStyle(Color.usageWarning)
-      } else {
-        // Only empty answers: nothing to price.
-        UsageLine(label: Text(Self.costTitle), value: "—", help: UsagePresentation.costExplanation)
       }
       ForEach(figures.models) { row in
         if case .model(let providerID, let model) = row.key, !row.tokens.isZero {
@@ -176,7 +159,8 @@ struct SessionUsageFigures: View {
       UsageLine(
         label: Text(Self.costTitle),
         value: figures == nil
-          ? "—" : UsagePresentation.unavailable(tokenUnavailability ?? .noTranscript, locale: locale),
+          ? "—"
+          : UsagePresentation.unavailable(tokenUnavailability ?? .noTranscript, locale: locale),
         help: UsagePresentation.costExplanation)
     }
   }
@@ -202,6 +186,50 @@ struct SessionUsageFigures: View {
       localized: LocalizedStringResource(
         "Default", locale: locale, bundle: .module,
         comment: "The model an agent uses when none is chosen."))
+  }
+}
+
+/// The tokens a session reported, all models together: “≈ 6 input · 1.1 k output · …”, a part
+/// per line when they do not fit beside the label.
+struct UsageTokensLine: View {
+  let tokens: TokenCounts
+
+  @Environment(\.locale) private var locale
+
+  var body: some View {
+    let parts = UsagePresentation.tokenParts(tokens, locale: locale)
+    UsageLine(
+      label: Text(SessionUsageFigures.tokensTitle),
+      value: "≈ " + parts.joined(separator: " · "),
+      parts: parts.enumerated().map { $0.offset == 0 ? "≈ " + $0.element : $0.element },
+      help: UsagePresentation.tokensExplanation)
+  }
+}
+
+/// What tokens cost at the public prices (#574): the total of the models with a price, an unknown
+/// price when none has one, a dash when there was nothing to price.
+struct UsageCostLine: View {
+  let estimate: UsageCost.Estimate
+
+  @Environment(\.locale) private var locale
+
+  var body: some View {
+    let label = Text(SessionUsageFigures.costTitle)
+    if estimate.hasPrice {
+      UsageLine(
+        label: label, value: UsagePresentation.cost(estimate.total, locale: locale),
+        help: UsagePresentation.costExplanation,
+        accessibilityValue: UsagePresentation.spokenCost(estimate.total, locale: locale))
+    } else if !estimate.unpriced.isEmpty {
+      UsageLine(
+        label: label, value: UsagePresentation.unknownPrice(locale: locale),
+        help: UsagePresentation.costExplanation
+      )
+      .foregroundStyle(Color.usageWarning)
+    } else {
+      // Only empty answers: nothing to price.
+      UsageLine(label: label, value: "—", help: UsagePresentation.costExplanation)
+    }
   }
 }
 
