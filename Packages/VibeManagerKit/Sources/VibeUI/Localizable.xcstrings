@@ -13639,7 +13639,7 @@
       }
     },
     "%@: %@" : {
-      "comment" : "A session's name, then a sentence about it.\nA session's name, then what a command on several sessions could not do with it.\nA session's name, then what happened to it when the sessions were restored.",
+      "comment" : "A session's name, then a sentence about it.\nA session's name, then what a command on several sessions could not do with it.\nA session's name, then what happened to it when the sessions were restored.\nA figure of a child session in the menu of its coordinator's usage: its name, then its value, such as “Cost: ≈ €37.23”.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -200207,7 +200207,7 @@
       }
     },
     "With its child sessions" : {
-      "comment" : "A coordinator's usage popover: the heading of what it and every session it created cost together.",
+      "comment" : "A coordinator's usage popover: the line of what it and every session it created cost together; it opens the list of the children.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {

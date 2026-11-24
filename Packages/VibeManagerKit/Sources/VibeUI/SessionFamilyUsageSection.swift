@@ -20,64 +20,115 @@ struct SessionFamilyUsage: Equatable {
   let children: [Child]
 }
 
-/// The part of a coordinator's Usage popover that adds its children (#606): the tokens and the
-/// cost of all of them with it, then a line per child with its own cost.
+/// The line of a coordinator's Usage popover that adds its children (#606): what it and all of
+/// them cost together, opening a menu with each child and its own cost, each one opening the
+/// child's own figures.
 struct SessionFamilyUsageSection: View {
   let family: SessionFamilyUsage
+  let agentNames: [String: String]
 
   @Environment(\.locale) private var locale
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 4) {
+    HStack(alignment: .firstTextBaseline, spacing: 8) {
       Text(
         LocalizedStringResource(
           "With its child sessions", bundle: .module,
           comment:
-            "A coordinator's usage popover: the heading of what it and every session it created cost together."
+            "A coordinator's usage popover: the line of what it and every session it created cost together; it opens the list of the children."
         )
       )
-      .font(.headline)
-      .padding(.bottom, 2)
-      tokens
-      UsageCostLine(estimate: family.total.cost)
-      ForEach(family.children) { child in
-        let cost = childCost(child)
-        UsageLine(
-          label: Text(verbatim: child.name), value: cost.text, partPerLine: false, font: .caption
-        )
-        .foregroundStyle(cost.isUnpriced ? Color.usageWarning : Color.secondary)
-        .padding(.leading, 12 * CGFloat(child.depth))
+      .fixedSize()
+      Spacer(minLength: 0)
+      Menu {
+        ForEach(family.children) { child in
+          let title = "\(child.name) · \(Self.cost(of: child.figures, locale: locale))"
+          if let figures = child.figures, figures.total.hasReportedTokens {
+            Menu(title) {
+              ForEach(
+                Self.details(of: figures, agentNames: agentNames, locale: locale), id: \.self
+              ) { line in
+                Text(verbatim: line)
+              }
+            }
+          } else {
+            Text(verbatim: title)
+          }
+        }
+        if family.total.cost.hasPrice, !family.total.cost.unpriced.isEmpty {
+          Divider()
+          Text(UsagePresentation.unpricedModelsLeftOut(locale: locale))
+        }
+      } label: {
+        Text(verbatim: Self.cost(of: family.total, locale: locale))
       }
-      if family.total.cost.hasPrice, !family.total.cost.unpriced.isEmpty {
-        Text(UsagePresentation.unpricedModelsLeftOut(locale: locale))
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .foregroundStyle(Color.usageWarning)
-          .fixedSize(horizontal: false, vertical: true)
-      }
+      .menuStyle(.borderlessButton)
+      .fixedSize()
     }
+    .font(.callout)
+    .help(UsagePresentation.costExplanation)
   }
 
-  @ViewBuilder private var tokens: some View {
-    if family.total.total.hasReportedTokens {
-      UsageTokensLine(tokens: family.total.total.tokens)
-    } else {
-      UsageLine(
-        label: Text(SessionUsageFigures.tokensTitle), value: "—",
-        help: UsagePresentation.tokensExplanation)
-    }
+  /// What a session cost: “≈ 37,23 €”, its unknown price when no model of it has one, a dash
+  /// when it reported nothing.
+  static func cost(of figures: SessionUsage?, locale: Locale) -> String {
+    guard let figures, figures.total.hasReportedTokens else { return "—" }
+    if figures.cost.hasPrice { return UsagePresentation.cost(figures.cost.total, locale: locale) }
+    if !figures.cost.unpriced.isEmpty { return UsagePresentation.unknownPrice(locale: locale) }
+    return "—"
   }
 
-  /// A child's own cost; its unknown price, said as the session's; a dash when it reported
-  /// nothing.
-  private func childCost(_ child: SessionFamilyUsage.Child) -> (text: String, isUnpriced: Bool) {
-    guard let figures = child.figures, figures.total.hasReportedTokens else { return ("—", false) }
-    if figures.cost.hasPrice {
-      return (UsagePresentation.cost(figures.cost.total, locale: locale), false)
+  /// A child's own figures, a line each, as its popover says them: the cost and each model's,
+  /// the running time, the tokens, the responses.
+  static func details(of figures: SessionUsage, agentNames: [String: String], locale: Locale)
+    -> [String]
+  {
+    func line(_ label: String, _ value: String) -> String {
+      String(
+        localized: LocalizedStringResource(
+          "\(label): \(value)", locale: locale, bundle: .module,
+          comment:
+            "A figure of a child session in the menu of its coordinator's usage: its name, then its value, such as “Cost: ≈ €37.23”."
+        ))
     }
-    if !figures.cost.unpriced.isEmpty {
-      return (UsagePresentation.unknownPrice(locale: locale), true)
+    func named(_ label: LocalizedStringResource, _ value: String) -> String {
+      var label = label
+      label.locale = locale
+      return line(String(localized: label), value)
     }
-    return ("—", false)
+    var lines = [named(SessionUsageFigures.costTitle, cost(of: figures, locale: locale))]
+    for row in figures.models {
+      guard case .model(let providerID, let model) = row.key, !row.tokens.isZero else { continue }
+      let price = figures.cost.priced[UsageModelKey(providerID: providerID, model: model)]
+      let name =
+        model
+        ?? String(
+          localized: LocalizedStringResource(
+            "Default", locale: locale, bundle: .module,
+            comment: "The model an agent uses when none is chosen."))
+      lines.append(
+        line(
+          "\(agentNames[providerID] ?? providerID) · \(name)",
+          price.map { UsagePresentation.cost($0, locale: locale) }
+            ?? UsagePresentation.unknownPrice(locale: locale)))
+    }
+    lines.append(
+      named(
+        LocalizedStringResource(
+          "Running time", bundle: .module, comment: "A session's usage: how long its agent ran."),
+        UsagePresentation.duration(figures.total.runningTime)))
+    lines.append(
+      named(
+        SessionUsageFigures.tokensTitle,
+        "≈ "
+          + UsagePresentation.tokenParts(figures.total.tokens, locale: locale)
+          .joined(separator: " · ")))
+    lines.append(
+      named(
+        LocalizedStringResource(
+          "Responses", bundle: .module,
+          comment: "A session's usage: how many answers the agent wrote."),
+        "\(figures.total.responses)"))
+    return lines
   }
 }

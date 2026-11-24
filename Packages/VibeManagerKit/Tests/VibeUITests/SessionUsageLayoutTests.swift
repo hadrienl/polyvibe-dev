@@ -111,8 +111,9 @@ struct SessionUsageLayoutTests {
   /// The lines of the popover: the context, the cost and a line for each of its two models, the
   /// running time, the runs, the tokens and a line for each model, the responses.
   static let lineCount = 10
-  /// With a family: its tokens, its cost, and a line for each of its two children.
-  static let familyLineCount = 4
+  /// With a family: a single line, whose menu holds the children (#606). It measures no width of
+  /// its own: the menu's button is as wide as its text.
+  static let familyLineCount = 0
 
   /// Draws the popover in a window never shown, until its lines have said how wide their texts
   /// were drawn: no deadline of its own, the suite's time limit stops one that never does. Writes
@@ -164,7 +165,7 @@ struct SessionUsageLayoutTests {
   }
 
   @Test(
-    "A coordinator's total and each child's line are cut nowhere (#606)",
+    "The line of a coordinator's total is cut nowhere (#606)",
     arguments: ["en", "fr", "de"])
   func familyIsNotCut(language: String) async throws {
     let widths = try await draw(language: language, family: Self.family())
@@ -172,10 +173,29 @@ struct SessionUsageLayoutTests {
     for width in widths {
       #expect(width.drawn >= width.minimum - 0.5, "\(width.name)")
     }
-    if language == "en" {
-      let names = widths.map(\.name)
-      #expect(names.contains("value beside “≈ $2,469.22”"))
-    }
+  }
+
+  @Test("A child's menu says its cost, each model's, its running time, tokens and responses (#606)")
+  func childDetails() {
+    let en = Locale(identifier: "en_US")
+    let figures = Self.figures()
+    #expect(SessionFamilyUsageSection.cost(of: figures, locale: en) == "≈ $1,234.61")
+    #expect(SessionFamilyUsageSection.cost(of: nil, locale: en) == "—")
+    var unpriced = figures
+    unpriced.cost = UsageCost.Estimate(unpriced: [UsageModelKey(providerID: "claude", model: nil)])
+    #expect(SessionFamilyUsageSection.cost(of: unpriced, locale: en) == "Unknown price")
+    let lines = SessionFamilyUsageSection.details(
+      of: figures, agentNames: ["claude": "Claude Code"], locale: en)
+    #expect(
+      lines == [
+        "Cost: ≈ $1,234.61",
+        "Claude Code · claude-opus-5-5: ≈ $1,234.61",
+        "Claude Code · Default: Unknown price",
+        "Running time: 3 h 12 min",
+        "Tokens: ≈ "
+          + UsagePresentation.tokenParts(figures.total.tokens, locale: en).joined(separator: " · "),
+        "Responses: 48",
+      ])
   }
 
   @Test("The cost comes with each model's, and a model without a price says so")

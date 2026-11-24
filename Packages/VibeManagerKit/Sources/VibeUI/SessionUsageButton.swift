@@ -376,7 +376,7 @@ struct SessionUsagePopoverContent: View {
       figures
       if let family {
         Divider()
-        SessionFamilyUsageSection(family: family)
+        SessionFamilyUsageSection(family: family, agentNames: figures.agentNames)
       }
       if let quota {
         Divider()
