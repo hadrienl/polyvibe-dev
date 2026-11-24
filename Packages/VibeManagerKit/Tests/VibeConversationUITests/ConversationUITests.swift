@@ -401,6 +401,25 @@ struct ConversationScrollStateTests {
     #expect(state.isFollowing && state.unseenCount == 0)
   }
 
+  @Test("The button back to the end: nothing at the end, an arrow above, the count once some arrive")
+  func jumpToBottomButton() {
+    var state = ConversationScrollState()
+    #expect(state.jumpToBottom == .hidden)
+    _ = state.blocksAppended(2)
+    #expect(state.jumpToBottom == .hidden)
+    state.scrolled(distanceToBottom: 300, contentMovedDown: 300)
+    #expect(state.jumpToBottom == .arrow)
+    _ = state.blocksAppended(3)
+    #expect(state.jumpToBottom == .newMessages(3))
+    state.jumpedToBottom()
+    #expect(state.jumpToBottom == .hidden)
+    // Sent up to a block, by the overview or a reply: the arrow too.
+    state.jumpedAway()
+    #expect(state.jumpToBottom == .arrow)
+    state.scrolled(distanceToBottom: 10, contentMovedDown: -290)
+    #expect(state.jumpToBottom == .hidden)
+  }
+
   @MainActor
   @Test("The model tells a scroll up from content growing at the end")
   func geometry() {
