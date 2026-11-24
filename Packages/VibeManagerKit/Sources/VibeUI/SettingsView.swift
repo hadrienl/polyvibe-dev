@@ -263,6 +263,7 @@ struct SettingsSidebarContent {
     if model.browser != nil { tools.append(.webView) }
     tools.append(.templates)
     tools.append(.coordination)
+    if model.usage != nil { tools.append(.backupAccounts) }
     tools.append(.worktrees)
     if model.companion != nil { tools.append(.companion) }
     if model.dictation != nil { tools.append(.dictation) }
@@ -425,6 +426,12 @@ struct SettingsPageView: View {
       }
     case .coordination:
       CoordinationSettingsView(coordination: model.coordination)
+    case .backupAccounts:
+      if let usage = model.usage {
+        BackupAccountsSettingsView(
+          fallback: model.accountFallback, accounts: usage.quotas.accounts,
+          isTrackingEnabled: usage.isTrackingEnabled)
+      }
     case .worktrees:
       WorktreesSettingsView(worktrees: model.worktrees, sessions: { model.sessions })
     case .companion:

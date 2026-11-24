@@ -533,7 +533,10 @@ public struct RecordAgentSwitch: Sendable {
     self.clock = clock
   }
 
-  public func callAsFunction(_ plan: AgentSwitchPlan, wasEdited: Bool) async throws -> AgentChange {
+  /// - Parameter cause: why the session is moved, when the user did not ask for it (#600).
+  public func callAsFunction(
+    _ plan: AgentSwitchPlan, wasEdited: Bool, cause: AgentChange.Cause? = nil
+  ) async throws -> AgentChange {
     let now = clock.now()
     let next = plan.nextConfiguration
     let handover = plan.mode.handover(wasEdited: wasEdited)
@@ -543,7 +546,7 @@ public struct RecordAgentSwitch: Sendable {
       updated = try await repository.mutate(id: plan.session.id) { session in
         // Decided on the copy the write is made on: the stop just before may have raced an
         // archive, and an archived session is not handed to anyone.
-        try session.switchAgent(to: next, handover: handover, at: now, id: id)
+        try session.switchAgent(to: next, handover: handover, at: now, id: id, cause: cause)
       }
     } catch AgentSwitchError.notClosed {
       throw AgentSwitchRefusal.sessionMoved

@@ -64,6 +64,9 @@ public enum ConversationNotice: Hashable, Sendable {
   /// Another conversation of the same session starts here: a switch of agent, or a new
   /// conversation of the same one.
   case chapter(providerName: String, date: Date?)
+  /// Another conversation starts here because the account of the previous one reached its limit
+  /// (#600): the session went on with the next account of the backup chain.
+  case accountLimit(previousName: String, providerName: String, resetsAt: Date?, date: Date?)
   /// The transcript is older than the shapes this reader knows: only the messages are shown.
   case olderFormat
 }

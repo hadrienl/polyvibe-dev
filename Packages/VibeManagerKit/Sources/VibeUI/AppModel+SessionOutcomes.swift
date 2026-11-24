@@ -36,6 +36,7 @@ extension AppModel {
       usage?.agentTurnEnded(id)
     }
     if !isReplayed { agentUpdateActivityChanged(id, to: state) }
+    if !isReplayed { accountFallbackActivityChanged(id, from: previous, to: state) }
     guard !isReplayed, let previous, previous.unreadSince == nil, state.unreadSince != nil,
       state.requests.isEmpty
     else { return }

@@ -196,6 +196,15 @@ public struct AgentTerminalPrompt: Hashable, Codable, Sendable {
     if let error { return error == "authentication_failed" }
     return message?.contains("/login") == true
   }
+
+  /// The name given to a turn stopped on a spent quota, when the CLI wrote the refusal nowhere
+  /// else: Antigravity's (#599).
+  public static let quotaExhaustedError = "quota_exhausted"
+
+  /// The turn stopped because the account's quota is spent (#600).
+  public var reportsQuotaExhausted: Bool {
+    kind == .account && error == Self.quotaExhaustedError
+  }
 }
 
 /// A tool the agent wants to run.

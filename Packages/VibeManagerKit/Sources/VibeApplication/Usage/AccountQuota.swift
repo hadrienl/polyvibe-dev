@@ -117,12 +117,16 @@ public actor AccountQuotaService {
 
   public var all: [String: Entry] { entries }
 
-  /// The account's quota, asked again unless it was in the last `minimumInterval`.
+  /// The account's quota, asked again unless it was in the last `minimumInterval` — or `asked`
+  /// already later than `freshSince`, when given: what was read before a turn failed does not
+  /// say whether the account is at its limit now (#600).
   @discardableResult
-  public func refresh(_ providerID: String, with reporter: any AgentQuotaReporting) async -> Entry {
+  public func refresh(
+    _ providerID: String, with reporter: any AgentQuotaReporting, freshSince: Date? = nil
+  ) async -> Entry {
     if let pending = pending[providerID] { return await pending.value }
     if let entry = entries[providerID], let asked = asked[providerID],
-      now().timeIntervalSince(asked) < minimumInterval
+      now().timeIntervalSince(asked) < minimumInterval, asked >= (freshSince ?? .distantPast)
     {
       return entry
     }
