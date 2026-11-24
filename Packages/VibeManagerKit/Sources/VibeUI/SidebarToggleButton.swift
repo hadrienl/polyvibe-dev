@@ -27,15 +27,18 @@ struct SidebarToggleButton: View {
 }
 
 /// In the sidebar's part of the toolbar, where the system's button stood: against the sidebar's
-/// right edge from macOS 26, beside the traffic lights before it.
+/// right edge from macOS 26, beside the traffic lights before it. The sidebar folded, the window
+/// keeps it beside the traffic lights: no second one is needed to bring the sidebar back.
 struct SidebarToggleToolbarItem: ToolbarContent {
+  let model: AppModel
+
   var body: some ToolbarContent {
     if #available(macOS 26, *) {
       // Without it the button follows the traffic lights.
       ToolbarSpacer(.flexible)
     }
     ToolbarItem(placement: .automatic) {
-      SidebarToggleButton(isSidebarVisible: true)
+      SidebarToggleButton(isSidebarVisible: model.layout.columns.isSidebarVisible)
     }
   }
 }
