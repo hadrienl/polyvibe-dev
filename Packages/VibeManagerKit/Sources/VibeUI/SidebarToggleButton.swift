@@ -22,7 +22,7 @@ struct SidebarToggleButton: View {
         Image(systemName: "sidebar.left")
       }
     }
-    .instantTooltip(title)
+    .toolbarTooltip(title)
   }
 }
 

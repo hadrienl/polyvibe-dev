@@ -31,6 +31,15 @@ extension View {
   public func instantTooltip(_ text: Text?, isHovered: Bool) -> some View {
     modifier(HoveredTooltip(text: text, side: nil, isHovered: isHovered))
   }
+
+  /// The same tooltip for a button of the sidebar's part of the toolbar, the pointer followed by
+  /// AppKit: there SwiftUI's hover ends a few milliseconds after it begins, as soon as the bubble's
+  /// anchor comes behind the button, and the bubble never shows (#617). Its anchor is there all
+  /// along: for a few buttons, not for a list's rows.
+  public func toolbarTooltip(_ text: Text) -> some View {
+    background(TooltipAnchor(text: text, edge: nil, tracksPointer: true))
+      .accessibilityHint(text)
+  }
 }
 
 /// The side of the view a tooltip opens on, in the layout's direction (#458).
@@ -80,20 +89,25 @@ private struct HoveredTooltip: ViewModifier {
     content
       // Only while the pointer is over the view: a list of rows pays for nothing else.
       .background {
-        if isHovered, let text { TooltipAnchor(text: text, edge: side?.edge(in: direction)) }
+        if isHovered, let text {
+          TooltipAnchor(text: text, edge: side?.edge(in: direction), tracksPointer: false)
+        }
       }
       .accessibilityHint(text ?? Text(verbatim: ""))
   }
 }
 
 /// Stands behind the hovered view, the size of it: once in its window, it shows the bubble a
-/// quarter of a second later, and takes it down when it leaves.
+/// quarter of a second later, and takes it down when it leaves. One that `tracksPointer` stands
+/// there all along, and does the same when the pointer comes over it and leaves it.
 private struct TooltipAnchor: NSViewRepresentable {
   let text: Text
   let edge: TooltipEdge?
+  let tracksPointer: Bool
 
   func makeNSView(context: Context) -> TooltipAnchorView {
     let view = TooltipAnchorView()
+    view.tracksPointer = tracksPointer
     view.edge = edge
     view.text = text
     return view
@@ -119,6 +133,7 @@ private final class TooltipAnchorView: NSView {
     }
   }
   var edge: TooltipEdge?
+  var tracksPointer = false
   private var appearing: Task<Void, Never>?
 
   override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -129,6 +144,23 @@ private final class TooltipAnchorView: NSView {
       leave()
       return
     }
+    if !tracksPointer { appear() }
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    guard tracksPointer, trackingAreas.isEmpty else { return }
+    addTrackingArea(
+      NSTrackingArea(
+        rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+        owner: self))
+  }
+
+  override func mouseEntered(with event: NSEvent) { appear() }
+
+  override func mouseExited(with event: NSEvent) { leave() }
+
+  private func appear() {
     appearing?.cancel()
     appearing = Task { @MainActor [weak self] in
       try? await Task.sleep(for: .milliseconds(250))
