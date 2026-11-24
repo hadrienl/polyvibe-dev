@@ -36,14 +36,16 @@ final class NotesPanel: NSPanel {
 /// The panel's place and size are AppKit's to keep, under its frame name: the user finds it where
 /// they left it, from one launch to the next.
 @MainActor
-public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDelegate {
+public final class NotesPanelController: NSObject, NSWindowDelegate {
   /// Where AppKit keeps the panel's place. A name a test gives its own controller: AppKit lends a
   /// name to one window at a time, and tests run side by side.
   let frameName: String
 
   private let model: AppModel
   private(set) var panel: NotesPanel?
-  private(set) var popover: NSPopover?
+  /// Under the toolbar's button, as the simulators' list.
+  let toolbarPopover = ToolbarPopover()
+  var popover: NSPopover? { toolbarPopover.popover }
   /// The request the window on screen shows; `nil` with nothing on screen, including a popover
   /// waiting for the toolbar's button to be back in the toolbar.
   private(set) var displayed: NotesPresentation.Request?
@@ -52,12 +54,6 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   var showPanel: (NotesPanel, Bool) -> Void = { panel, takesKeyboard in
     if takesKeyboard { panel.makeKeyAndOrderFront(nil) } else { panel.orderFront(nil) }
   }
-  /// Opens the popover under the toolbar's button, or under the place given in a view without one.
-  /// Tests keep it off the screen too.
-  var showPopover: (NSPopover, NSView, NSRect) -> Void = { popover, anchor, place in
-    popover.show(relativeTo: place, of: anchor, preferredEdge: .minY)
-    popover.contentViewController?.view.window?.setAccessibilityIdentifier("notes-popover")
-  }
 
   public init(model: AppModel, frameName: String = "VibeNotesPanel") {
     self.model = model
@@ -65,6 +61,15 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     super.init()
     model.notesPresentation.returnFromPanel = { [weak self] in self?.returnKeyboard() }
     model.notesPresentation.changed = { [weak self] in self?.update() }
+    model.notesPresentation.pressEndsClosingClick = { [weak self] in
+      self?.toolbarPopover.pressEndsClosingClick() ?? false
+    }
+    toolbarPopover.identifier = "notes-popover"
+    // A click elsewhere, or Escape outside the editor.
+    toolbarPopover.didClose = { [weak self] in
+      guard let self, let request = self.displayed else { return }
+      self.model.notesPresentation.dismiss(request.id)
+    }
     update()
   }
 
@@ -72,7 +77,8 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     let request = model.notesPresentation.active
     guard request != displayed else { return }
     let wasKey = panel?.isKeyWindow == true
-    closeCurrent()
+    // Put away, the popover fades as the simulators' does; replaced, it goes at once.
+    closeCurrent(animated: request == nil)
     guard let request,
       let session = model.sessions.first(where: { $0.id == request.sessionID })
     else { return }
@@ -83,45 +89,26 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       self.panel = panel
       showPanel(panel, request.activates || wasKey)
     case .popover:
-      guard let (anchor, place) = popoverAnchor() else { return }
+      toolbarPopover.anchor = model.notesPresentation.anchor
       displayed = request
-      let popover = makePopover(session: session)
-      self.popover = popover
-      showPopover(popover, anchor, place)
+      if !toolbarPopover.show(NotesPopoverContent(model: model, session: session)) {
+        displayed = nil
+      }
     }
-  }
-
-  /// Under the toolbar's button when it is in the window; otherwise — a window too narrow for it,
-  /// its button folded into the toolbar's overflow menu — at the top trailing corner of the
-  /// workspace window, rather than a popover asked for and never shown.
-  private func popoverAnchor() -> (NSView, NSRect)? {
-    if let anchor = model.notesPresentation.anchor, anchor.window != nil {
-      return (anchor, anchor.bounds)
-    }
-    guard let content = workspaceContent() else { return nil }
-    let bounds = content.bounds
-    let place = NSRect(
-      x: bounds.maxX - 48, y: content.isFlipped ? bounds.minY : bounds.maxY - 1, width: 28,
-      height: 1)
-    return (content, place)
   }
 
   /// The workspace window's content, for a popover whose button is in no window. Tests give
   /// their own.
-  var workspaceContent: () -> NSView? = { NSApp.mainWindow?.contentView }
+  var workspaceContent: () -> NSView? {
+    get { toolbarPopover.fallbackView }
+    set { toolbarPopover.fallbackView = newValue }
+  }
 
   /// Closes whatever is on screen and destroys its editor: hidden but alive, an editor would still
   /// answer focus requests, and bring its window back.
-  private func closeCurrent() {
+  private func closeCurrent(animated: Bool) {
     displayed = nil
-    if let popover {
-      self.popover = nil
-      popover.delegate = nil
-      popover.close()
-      popover.contentViewController = nil
-      // The Detach button closing its own popover: the objects outlive the click.
-      DispatchQueue.main.async { withExtendedLifetime(popover) {} }
-    }
+    toolbarPopover.close(animated: animated)
     if let panel {
       self.panel = nil
       panel.delegate = nil
@@ -137,18 +124,6 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
       // The Reattach button, in the panel's title bar, closing its own window.
       DispatchQueue.main.async { withExtendedLifetime(panel) {} }
     }
-  }
-
-  func makePopover(session: WorkSession) -> NSPopover {
-    let popover = NSPopover()
-    popover.behavior = .transient
-    // Gone at once: no fading copy of the editor beside the window replacing it.
-    popover.animates = false
-    popover.delegate = self
-    popover.contentViewController = NSHostingController(
-      rootView: NotesPopoverContent(model: model, session: session))
-    popover.contentSize = NSSize(width: 380, height: 440)
-    return popover
   }
 
   /// The panel and everything in it, never shown here: tests read it without a window on screen.
@@ -195,27 +170,6 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   private func returnKeyboard() {
     let workspace = NSApp.mainWindow ?? NSApp.windows.first { $0.isVisible && !($0 is NSPanel) }
     workspace?.makeKeyAndOrderFront(nil)
-  }
-
-  // MARK: NSPopoverDelegate
-
-  /// A click on the toolbar's button closes the transient popover before the button acts: that
-  /// click puts the notes away, it must not open them again.
-  public func popoverWillClose(_ notification: Notification) {
-    guard notification.object as? NSPopover === popover,
-      let event = NSApp.currentEvent, event.type == .leftMouseDown,
-      let anchor = model.notesPresentation.anchor, event.window === anchor.window
-    else { return }
-    let point = anchor.convert(event.locationInWindow, from: nil)
-    if anchor.bounds.insetBy(dx: -4, dy: -4).contains(point) {
-      model.notesPresentation.closedByButtonClick(at: event.timestamp)
-    }
-  }
-
-  /// A click elsewhere, or Escape outside the editor.
-  public func popoverDidClose(_ notification: Notification) {
-    guard notification.object as? NSPopover === popover, let request = displayed else { return }
-    model.notesPresentation.dismiss(request.id)
   }
 
   // MARK: NSWindowDelegate
