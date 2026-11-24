@@ -168,11 +168,12 @@ public actor UsageService {
       calendar: calendar, cost: Self.cost(at: list))
   }
 
-  /// Everything a screen shows, from one reading of the journal: the report for the period, and
-  /// the whole usage of each of `sessions`.
+  /// Everything a screen shows, from one reading of the journal: the report for the period, the
+  /// whole usage of each of `sessions`, and of each family of `families` (#606) — a coordinator
+  /// together with every session under it.
   public func overview(
     period: UsagePeriod, grouping: UsageGrouping, sessions: [SessionID],
-    calendar: Calendar = .current
+    families: [SessionID: [SessionID]] = [:], calendar: Calendar = .current
   ) async -> UsageOverview {
     let now = clock.now()
     let runs = await runs()
@@ -182,33 +183,41 @@ public actor UsageService {
     let report = UsageAggregator.report(
       runs: runs, tokens: buckets, period: period.interval(now: now, calendar: calendar),
       grouping: grouping, now: now, calendar: calendar, cost: Self.cost(at: list))
-    let wanted = Set(sessions)
+    let wanted = Set(sessions).union(families.keys).union(families.values.joined())
     let runsBySession = Dictionary(grouping: runs.filter { wanted.contains($0.sessionID) }) {
       $0.sessionID
     }
     let bucketsBySession = Dictionary(
       grouping: buckets.filter { wanted.contains($0.sessionID) }
     ) { $0.sessionID }
-    var perSession: [SessionID: UsageOverview.Session] = [:]
-    for id in sessions {
+    func usage(of ids: [SessionID]) -> UsageOverview.Session {
+      let runs = ids.flatMap { runsBySession[$0] ?? [] }
+      let buckets = ids.flatMap { bucketsBySession[$0] ?? [] }
       let whole = UsageAggregator.report(
-        runs: runsBySession[id] ?? [], tokens: bucketsBySession[id] ?? [], period: nil,
-        grouping: .model, now: now, calendar: calendar)
+        runs: runs, tokens: buckets, period: nil, grouping: .model, now: now, calendar: calendar)
       let models = UsageAggregator.report(
-        runs: [], tokens: bucketsBySession[id] ?? [], period: nil, grouping: .model, now: now,
-        calendar: calendar)
+        runs: [], tokens: buckets, period: nil, grouping: .model, now: now, calendar: calendar)
       let cost = UsageCost.estimate(
         models.rows.compactMap { row in
           guard case .model(let providerID, let model) = row.key else { return nil }
           return (UsageModelKey(providerID: providerID, model: model), row.tokens)
         }, prices: list)
-      perSession[id] = UsageOverview.Session(
-        total: whole.total, models: models.rows, hasTranscript: tokens.hasTranscript(for: id),
-        transcriptMissingSince: tokens.missingSince(for: id), cost: cost)
+      return UsageOverview.Session(
+        total: whole.total, models: models.rows,
+        hasTranscript: ids.contains { tokens.hasTranscript(for: $0) },
+        transcriptMissingSince: ids.compactMap { tokens.missingSince(for: $0) }.max(), cost: cost)
+    }
+    var perSession: [SessionID: UsageOverview.Session] = [:]
+    for id in sessions {
+      perSession[id] = usage(of: [id])
+    }
+    var perFamily: [SessionID: UsageOverview.Session] = [:]
+    for (id, members) in families where !members.isEmpty {
+      perFamily[id] = usage(of: [id] + members)
     }
     return UsageOverview(
-      report: report, sessions: perSession, runsRecordedSince: runs.map(\.startedAt).min(),
-      pricesFetchedAt: list?.fetchedAt)
+      report: report, sessions: perSession, families: perFamily,
+      runsRecordedSince: runs.map(\.startedAt).min(), pricesFetchedAt: list?.fetchedAt)
   }
 
   /// The cost of a bucket at its model's price, `nil` without one.
@@ -268,6 +277,9 @@ public struct UsageOverview: Sendable {
 
   public var report: UsageReport
   public var sessions: [SessionID: Session]
+  /// A coordinator's usage together with that of every session under it (#606), for the
+  /// coordinators that have any.
+  public var families: [SessionID: Session] = [:]
   /// When the first run was recorded: running time and runs start there, tokens do not.
   public var runsRecordedSince: Date?
   /// When the prices the costs were computed with were read; `nil` without any.
