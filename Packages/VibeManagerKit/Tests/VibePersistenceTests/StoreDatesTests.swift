@@ -52,8 +52,17 @@ func storeDatesWriteWhatTheFormatterWrites() {
   }
 
   for date in dates {
-    #expect(StoreDates.format(date) == formatter.string(from: date), "\(date.timeIntervalSince1970)")
+    #expect(
+      StoreDates.format(date) == formatter.string(from: date), "\(date.timeIntervalSince1970)")
   }
+}
+
+@Test(
+  "Before year 1, or not a number, a date is written by the formatter",
+  arguments: [-1e11, -62_135_596_800.001, .nan, .infinity, -.infinity])
+func outOfRangeDatesAreWrittenByTheFormatter(interval: Double) {
+  let date = Date(timeIntervalSince1970: interval)
+  #expect(StoreDates.format(date) == makeFormatter(fractional: true).string(from: date))
 }
 
 @Test("Every date the store writes takes the fast path")

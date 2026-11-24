@@ -185,6 +185,8 @@ enum StoreDates {
   private static let lock = NSLock()
   /// A value, made once and safe to share.
   private static let wholeSeconds = Date.ISO8601FormatStyle()
+  /// 0001-01-01T00:00:00Z, since 1970.
+  private static let firstYear: TimeInterval = -62_135_596_800
 
   static func parse(_ text: String) -> Date? {
     utcMilliseconds(text)
@@ -241,11 +243,17 @@ enum StoreDates {
     }
   }
 
-  /// What `fractional` writes, character for character, without it (#602).
+  /// What `fractional` writes, character for character, without it (#602), from year 1 on.
   /// `ISO8601FormatStyle` cuts the milliseconds where the formatter rounds them, half up: the
   /// milliseconds are rounded here, the formatter's way, and the whole seconds formatted alone.
+  /// Before year 1 the style signs its years where the formatter does not, and a date that is
+  /// not a number has no milliseconds: the formatter writes those.
   static func format(_ date: Date) -> String {
-    let milliseconds = (date.timeIntervalSince1970 * 1_000 + 0.5).rounded(.down)
+    let interval = date.timeIntervalSince1970
+    guard interval.isFinite, interval >= firstYear else {
+      return lock.withLock { fractional.string(from: date) }
+    }
+    let milliseconds = (interval * 1_000 + 0.5).rounded(.down)
     let seconds = (milliseconds / 1_000).rounded(.down)
     let digits = String(Int(milliseconds - seconds * 1_000))
     var text = wholeSeconds.format(Date(timeIntervalSince1970: seconds))

@@ -68,6 +68,21 @@ struct FileUsageStoresTests {
     #expect(try await ledger.events().count == 1)
   }
 
+  @Test("A line appended after one a crash cut short is kept")
+  func appendAfterCutLine() async throws {
+    let directory = makeDirectory()
+    defer { try? FileManager.default.removeItem(at: directory.deletingLastPathComponent()) }
+    let ledger = FileUsageLedger(directory: directory)
+    let subject = run(at: start)
+    try await ledger.append(.start(subject))
+    try append(Data(#"{"type":"end","at":"20"#.utf8), to: await ledger.journalURL(for: start))
+
+    try await ledger.append(.suspend(at: start.addingTimeInterval(10)))
+
+    #expect(
+      try await ledger.events() == [.start(subject), .suspend(at: start.addingTimeInterval(10))])
+  }
+
   @Test("A line cut short is read once it is complete")
   func lineCompletedLater() async throws {
     let directory = makeDirectory()
@@ -107,7 +122,8 @@ struct FileUsageStoresTests {
     try handle.close()
     try await ledger.append(.suspend(at: start.addingTimeInterval(10)))
 
-    #expect(try await ledger.events() == [.start(subject), .suspend(at: start.addingTimeInterval(10))])
+    #expect(
+      try await ledger.events() == [.start(subject), .suspend(at: start.addingTimeInterval(10))])
   }
 
   @Test("A journal that shrank, or was cleared, is read again from the start")

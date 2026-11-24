@@ -112,9 +112,18 @@ public actor FileUsageLedger: UsageLedger {
     var line = try UsageStorage.encoder().encode(LedgerLine(event))
     line.append(UInt8(ascii: "\n"))
     let url = journalURL(for: event.date)
-    let descriptor = open(url.path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0o600)
+    let descriptor = open(url.path, O_RDWR | O_APPEND | O_CREAT | O_CLOEXEC, 0o600)
     guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     defer { close(descriptor) }
+    // A last line a crash cut short is ended first: written after it, this one would be lost
+    // with it.
+    var info = stat()
+    var last: UInt8 = 0
+    if fstat(descriptor, &info) == 0, info.st_size > 0,
+      pread(descriptor, &last, 1, info.st_size - 1) == 1, last != UInt8(ascii: "\n")
+    {
+      line.insert(UInt8(ascii: "\n"), at: line.startIndex)
+    }
     let written = line.withUnsafeBytes { write(descriptor, $0.baseAddress, $0.count) }
     guard written == line.count else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     fsync(descriptor)
@@ -126,7 +135,9 @@ public actor FileUsageLedger: UsageLedger {
     var read: [String: ReadFile] = [:]
     for url in journalURLs() {
       let name = url.lastPathComponent
-      guard let (file, tail) = follow(url, from: readFiles[name], decoder: decoder) else { continue }
+      guard let (file, tail) = follow(url, from: readFiles[name], decoder: decoder) else {
+        continue
+      }
       read[name] = file
       events += file.events
       if let tail { events.append(tail) }
@@ -138,7 +149,8 @@ public actor FileUsageLedger: UsageLedger {
 
   /// The events of one month: those already read, plus the lines appended since. A last line
   /// without its newline is not kept, since it may still be being written or have been cut
-  /// short; it is returned on its own when it decodes, and read again next time.
+  /// short; it is returned on its own when it decodes, and read again next time. The next
+  /// append ends it.
   private func follow(_ url: URL, from known: ReadFile?, decoder: JSONDecoder)
     -> (ReadFile, tail: UsageLedgerEvent?)?
   {
