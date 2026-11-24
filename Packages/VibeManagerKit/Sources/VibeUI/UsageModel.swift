@@ -26,8 +26,9 @@ public final class UsageModel {
   /// A coordinator's whole usage with every session under it, for the coordinators shown that
   /// have any (#606).
   public private(set) var familyUsage: [SessionID: SessionUsage] = [:]
-  /// The sessions under each coordinator of `familyUsage`, each one followed by its own.
-  public private(set) var familyMembers: [SessionID: [UsageFamily.Member]] = [:]
+  /// Each coordinator of `familyUsage` with its children's names and figures, named when the
+  /// figures were computed: the popover that shows them reads no list of sessions.
+  private(set) var families: [SessionID: SessionFamilyUsage] = [:]
   /// The context of the current conversation of each session, for its status bar (#407).
   public private(set) var contextWindows: [SessionID: ContextWindowUsage] = [:]
   public private(set) var isReading = false
@@ -238,7 +239,8 @@ public final class UsageModel {
     report = overview.report
     sessionUsage = overview.sessions
     familyUsage = overview.families
-    familyMembers = families.filter { overview.families[$0.key] != nil }
+    self.families = Self.families(
+      families, totals: overview.families, figures: overview.sessions, sessions: sessions())
     runsRecordedSince = overview.runsRecordedSince
     pricesFetchedAt = overview.pricesFetchedAt
     accountCosts = await service.accountCosts()
@@ -282,15 +284,29 @@ public final class UsageModel {
   /// A coordinator's figures with every session under it, and each one's own (#606): `nil`
   /// while it has no children, or nothing was read for them yet.
   func family(of id: SessionID) -> SessionFamilyUsage? {
-    guard let total = familyUsage[id], let members = familyMembers[id] else { return nil }
-    let byID = Dictionary(sessions().map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    return SessionFamilyUsage(
-      total: total,
-      children: members.map { member in
-        SessionFamilyUsage.Child(
-          id: member.id, name: byID[member.id]?.name ?? "", depth: member.depth,
-          figures: sessionUsage[member.id])
-      })
+    families[id]
+  }
+
+  /// Each family whose total was computed, its children named. A child no longer in the list
+  /// keeps its place under the name it was last given — none here: its identifier.
+  static func families(
+    _ members: [SessionID: [UsageFamily.Member]], totals: [SessionID: SessionUsage],
+    figures: [SessionID: SessionUsage], sessions: [WorkSession]
+  ) -> [SessionID: SessionFamilyUsage] {
+    guard !totals.isEmpty else { return [:] }
+    let names = Dictionary(
+      sessions.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    var families: [SessionID: SessionFamilyUsage] = [:]
+    for (id, total) in totals {
+      families[id] = SessionFamilyUsage(
+        total: total,
+        children: (members[id] ?? []).map { member in
+          SessionFamilyUsage.Child(
+            id: member.id, name: names[member.id] ?? member.id.description,
+            depth: member.depth, figures: figures[member.id])
+        })
+    }
+    return families
   }
 
   // MARK: - What a figure means

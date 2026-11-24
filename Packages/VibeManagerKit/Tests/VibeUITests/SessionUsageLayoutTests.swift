@@ -184,6 +184,10 @@ struct SessionUsageLayoutTests {
     var unpriced = figures
     unpriced.cost = UsageCost.Estimate(unpriced: [UsageModelKey(providerID: "claude", model: nil)])
     #expect(SessionFamilyUsageSection.cost(of: unpriced, locale: en) == "Unknown price")
+    // VoiceOver hears the line's cost whole, not its sign.
+    #expect(
+      SessionFamilyUsageSection.spokenCost(of: figures, locale: en) == "1,234.61 US dollars")
+    #expect(SessionFamilyUsageSection.spokenCost(of: unpriced, locale: en) == "Unknown price")
     let lines = SessionFamilyUsageSection.details(
       of: figures, agentNames: ["claude": "Claude Code"], locale: en)
     #expect(
@@ -196,6 +200,22 @@ struct SessionUsageLayoutTests {
           + UsagePresentation.tokenParts(figures.total.tokens, locale: en).joined(separator: " · "),
         "Responses: 48",
       ])
+  }
+
+  @Test("A family's children are named once its figures are computed; a child gone keeps its place")
+  func familyNames() {
+    let coordinator = SessionID()
+    let named = WorkSession(name: "Quotas", coordination: .child(of: coordinator))
+    let gone = SessionID()
+    let families = UsageModel.families(
+      [coordinator: [.init(id: named.id, depth: 1), .init(id: gone, depth: 1)]],
+      totals: [coordinator: Self.figures()], figures: [named.id: Self.figures()],
+      sessions: [named])
+    let family = families[coordinator]
+    #expect(family?.children.map(\.name) == ["Quotas", gone.description])
+    #expect(family?.children.first?.figures == Self.figures())
+    #expect(family?.children.last?.figures == nil)
+    #expect(UsageModel.families([:], totals: [:], figures: [:], sessions: [named]).isEmpty)
   }
 
   @Test("The cost comes with each model's, and a model without a price says so")

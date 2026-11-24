@@ -1,5 +1,6 @@
 import SwiftUI
 import VibeApplication
+import VibeConversationUI
 import VibeDomain
 
 /// A coordinator's usage together with every session under it (#606): its own children, closed,
@@ -31,24 +32,18 @@ struct SessionFamilyUsageSection: View {
 
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: 8) {
-      Text(
-        LocalizedStringResource(
-          "With its child sessions", bundle: .module,
-          comment:
-            "A coordinator's usage popover: the line of what it and every session it created cost together; it opens the list of the children."
-        )
-      )
-      .fixedSize()
+      Text(Self.title)
+        .fixedSize()
       Spacer(minLength: 0)
       Menu {
         ForEach(family.children) { child in
           let title = "\(child.name) · \(Self.cost(of: child.figures, locale: locale))"
           if let figures = child.figures, figures.total.hasReportedTokens {
             Menu(title) {
-              ForEach(
-                Self.details(of: figures, agentNames: agentNames, locale: locale), id: \.self
-              ) { line in
-                Text(verbatim: line)
+              // By place: two lines may read the same (two agents of one name, one model).
+              let lines = Self.details(of: figures, agentNames: agentNames, locale: locale)
+              ForEach(lines.indices, id: \.self) { index in
+                Text(verbatim: lines[index])
               }
             }
           } else {
@@ -66,7 +61,27 @@ struct SessionFamilyUsageSection: View {
       .fixedSize()
     }
     .font(.callout)
-    .help(UsagePresentation.costExplanation)
+    .instantTooltip(UsagePresentation.costExplanation)
+    // One element, as every line of the popover: the line's name, then its whole value.
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(Text(Self.title))
+    .accessibilityValue(Text(verbatim: Self.spokenCost(of: family.total, locale: locale)))
+  }
+
+  private static var title: LocalizedStringResource {
+    LocalizedStringResource(
+      "With its child sessions", bundle: .module,
+      comment:
+        "A coordinator's usage popover: the line of what it and every session it created cost together; it opens the list of the children."
+    )
+  }
+
+  /// The family's cost as VoiceOver says it: “1,377.10 euros”; the line's own text otherwise.
+  static func spokenCost(of figures: SessionUsage, locale: Locale) -> String {
+    guard figures.total.hasReportedTokens, figures.cost.hasPrice else {
+      return cost(of: figures, locale: locale)
+    }
+    return UsagePresentation.spokenCost(figures.cost.total, locale: locale)
   }
 
   /// What a session cost: “≈ 37,23 €”, its unknown price when no model of it has one, a dash
