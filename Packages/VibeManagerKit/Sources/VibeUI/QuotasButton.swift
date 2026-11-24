@@ -29,7 +29,11 @@ struct QuotasToolbarButton: View {
           QuotaDial(gauge: gauge, display: quotas.display)
         }
       }
-      .instantTooltip(Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale))
+      // Not over its own popover, which opens under it.
+      .instantTooltip(
+        isPresented
+          ? "" : Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale)
+      )
       .accessibilityValue(
         Text(verbatim: Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale)))
     }

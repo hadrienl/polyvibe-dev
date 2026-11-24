@@ -257,9 +257,7 @@ public struct RootView: View {
           max: WorkspaceLayout.sidebarWidthRange.upperBound
         )
         .background(WidthReporter { model.layout.sidebarWidthChanged(to: $0) })
-        // The system's button replaced by one that wears the application's tooltip.
-        .toolbar(removing: .sidebarToggle)
-        .toolbar { SidebarToggleToolbarItem(model: model) }
+        .replacingSystemSidebarToggle(model: model)
     } detail: {
       VStack(spacing: 0) {
         if let failure = model.refreshFailure {
@@ -516,7 +514,8 @@ public struct RootView: View {
             .instantTooltip(
               model.isWebViewOpen
                 ? Text("Hide Web View (⌥⌘B)", bundle: .module)
-                : Text("Show Web View (⌥⌘B)", bundle: .module))
+                : Text("Show Web View (⌥⌘B)", bundle: .module)
+            )
             .accessibilityValue(
               model.isWebViewOpen
                 ? Text("Shown", bundle: .module, comment: "The web view is shown.")

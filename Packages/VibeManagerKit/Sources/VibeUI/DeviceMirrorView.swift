@@ -136,7 +136,8 @@ struct DeviceMirrorToolbarButton: View {
       }
     }
     .disabled(!model.isWebViewAvailable)
-    .instantTooltip(Text("Simulators", bundle: .module))
+    // Not over its own popover, which opens under it.
+    .instantTooltip(isShowingDevices ? nil : Text("Simulators", bundle: .module))
     .popover(isPresented: $isShowingDevices, arrowEdge: .bottom) {
       DeviceMirrorPicker { udid, name in
         isShowingDevices = false

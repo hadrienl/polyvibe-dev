@@ -178,6 +178,7 @@ struct VibeManagerApp: App {
         ) {
           environment.appModel.toggleWebView()
         }
+        // The toolbar's tooltip says it too ("Show Web View (⌥⌘B)", RootView).
         .keyboardShortcut("b", modifiers: [.command, .option])
         .disabled(!environment.appModel.isWebViewAvailable)
 
@@ -854,6 +855,7 @@ private struct NewSessionButton: View {
       if !focus.hasWorkspace { openWindow(id: VibeManagerApp.workspaceWindowID) }
       model.beginNewSession()
     }
+    // The toolbar's tooltip says it too ("New Session (⌘N)", RootView).
     .keyboardShortcut("n", modifiers: .command)
     .disabled(!model.canCreateSession)
   }

@@ -322,6 +322,8 @@ private struct BrowserTabRow: View {
       }
       .buttonStyle(.plain)
       .focused($focus, equals: .tab)
+      // On the tab's own button, not the row: the pin and the close button have their own.
+      .instantTooltip(Text(verbatim: tab.url.absoluteString))
 
       if tab.isPinnedTicket {
         Image(systemName: "pin.fill")
@@ -370,7 +372,6 @@ private struct BrowserTabRow: View {
         move: { [browser] id, target, after in browser.move(id, nextTo: target, after: after) })
     )
     .pointerHover($isHovering)
-    .instantTooltip(Text(verbatim: tab.url.absoluteString))
     .contextMenu {
       BrowserTabMenu(tab: tab, browser: browser, model: model, close: close)
     }

@@ -80,7 +80,8 @@ public final class ReadAloudController {
   /// The files of a cancelled download, being removed.
   @ObservationIgnored private var removal: Task<Void, Never>?
   /// The answers the audio mode will read next, in their order, with their conversation.
-  @ObservationIgnored private var queue: [(id: String, text: String, conversation: ObjectIdentifier)] = []
+  @ObservationIgnored private var queue:
+    [(id: String, text: String, conversation: ObjectIdentifier)] = []
   /// The answers each conversation already had: only the ones after are new.
   @ObservationIgnored private var seen: [ObjectIdentifier: Set<String>] = [:]
   /// When each conversation came on screen: an answer written before, while it was out of sight,

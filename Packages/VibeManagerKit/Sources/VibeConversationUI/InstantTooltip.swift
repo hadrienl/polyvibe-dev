@@ -162,10 +162,14 @@ private final class TooltipAnchorView: NSView {
 
   private func appear() {
     appearing?.cancel()
+    let start = ProcessInfo.processInfo.systemUptime
+    let presenter = TooltipPresenter.shared
     appearing = Task { @MainActor [weak self] in
       try? await Task.sleep(for: .milliseconds(250))
-      guard !Task.isCancelled, let self, self.window != nil else { return }
-      TooltipPresenter.shared.show(self.text, from: self, edge: self.edge)
+      guard !Task.isCancelled, let self, self.window != nil,
+        !presenter.wasClicked(since: start - TooltipPresenter.clickQuiet)
+      else { return }
+      presenter.show(self.text, from: self, edge: self.edge)
     }
   }
 
@@ -188,6 +192,12 @@ final class TooltipPresenter {
   private var panel: NSPanel?
   private var hosting: NSHostingView<TooltipBubble>?
   private var monitor: Any?
+  /// When the last click was, on the clock of the events.
+  private var lastClick: TimeInterval = -.infinity
+  /// After a click no bubble comes, as the system's: neither one asked for just before it, which
+  /// would show once the click moved its button away (the sidebar's), nor one that the click
+  /// itself brings, as a bookmark taken away brings "Add a Bookmark" under the pointer.
+  static let clickQuiet: TimeInterval = 0.25
   /// The menus being tracked. While one is open — the status bar's, opened from the very button
   /// the bubble names — no bubble is shown: it would sit over the menu (#575). Each menu counts
   /// for itself: a submenu that closes leaves the menu it opened from open.
@@ -195,7 +205,18 @@ final class TooltipPresenter {
 
   var isMenuOpen: Bool { !openMenus.isEmpty }
 
+  /// Whether a click came after `time`.
+  func wasClicked(since time: TimeInterval) -> Bool { lastClick > time }
+
   private init() {
+    // For the life of the application: one closure called per click is all it costs.
+    _ = NSEvent.addLocalMonitorForEvents(
+      matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+    ) { [weak self] event in
+      let time = event.timestamp
+      MainActor.assumeIsolated { self?.lastClick = time }
+      return event
+    }
     let center = NotificationCenter.default
     center.addObserver(
       forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main
