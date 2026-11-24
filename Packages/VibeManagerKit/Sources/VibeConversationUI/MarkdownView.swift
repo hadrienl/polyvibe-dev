@@ -230,6 +230,7 @@ struct CodeBlockView: View {
           .buttonStyle(.plain)
           .foregroundStyle(theme.secondaryText.color)
           .disabled(!runner.canRunShellCommand)
+          .pointingHand(runner.canRunShellCommand)
           .instantTooltip(Text("Run the command in the session", bundle: .module))
           .padding(.trailing, 8)
         }
@@ -247,6 +248,7 @@ struct CodeBlockView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.secondaryText.color)
+        .pointingHand()
         .instantTooltip(Text("Copy the code", bundle: .module))
       }
       .padding(.horizontal, 12)
