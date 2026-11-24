@@ -170,6 +170,7 @@ struct SessionStoreCodec {
 /// Even made once, a formatter still takes 0.2 to 0.7 ms per date on macOS 27: nearly a second
 /// for a store of two hundred sessions (#253). The one shape the store writes is therefore read
 /// by arithmetic, and the formatters only read the others: older documents, or edited by hand.
+/// The usage files share these dates (#602).
 enum StoreDates {
   nonisolated(unsafe) private static let fractional: ISO8601DateFormatter = {
     let formatter = ISO8601DateFormatter()
@@ -182,6 +183,8 @@ enum StoreDates {
     return formatter
   }()
   private static let lock = NSLock()
+  /// A value, made once and safe to share.
+  private static let wholeSeconds = Date.ISO8601FormatStyle()
 
   static func parse(_ text: String) -> Date? {
     utcMilliseconds(text)
@@ -238,8 +241,16 @@ enum StoreDates {
     }
   }
 
+  /// What `fractional` writes, character for character, without it (#602).
+  /// `ISO8601FormatStyle` cuts the milliseconds where the formatter rounds them, half up: the
+  /// milliseconds are rounded here, the formatter's way, and the whole seconds formatted alone.
   static func format(_ date: Date) -> String {
-    lock.withLock { fractional.string(from: date) }
+    let milliseconds = (date.timeIntervalSince1970 * 1_000 + 0.5).rounded(.down)
+    let seconds = (milliseconds / 1_000).rounded(.down)
+    let digits = String(Int(milliseconds - seconds * 1_000))
+    var text = wholeSeconds.format(Date(timeIntervalSince1970: seconds))
+    text.removeLast()  // the "Z"
+    return text + "." + String(repeating: "0", count: 3 - digits.count) + digits + "Z"
   }
 }
 

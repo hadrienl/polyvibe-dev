@@ -47,6 +47,8 @@ public enum UsageStorage {
     try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: destination.path)
   }
 
+  /// The session store's dates (`StoreDates`): one shape, written and read without building a
+  /// formatter per date, which cost more than everything else in reading the journal (#602).
   static func encoder(pretty: Bool = false) -> JSONEncoder {
     let encoder = JSONEncoder()
     encoder.outputFormatting =
@@ -55,7 +57,7 @@ public enum UsageStorage {
       : [.sortedKeys, .withoutEscapingSlashes]
     encoder.dateEncodingStrategy = .custom { date, encoder in
       var container = encoder.singleValueContainer()
-      try container.encode(timestampFormatter().string(from: date))
+      try container.encode(StoreDates.format(date))
     }
     return encoder
   }
@@ -64,7 +66,7 @@ public enum UsageStorage {
     let decoder = JSONDecoder()
     decoder.dateDecodingStrategy = .custom { decoder in
       let value = try decoder.singleValueContainer().decode(String.self)
-      guard let date = timestampFormatter().date(from: value) else {
+      guard let date = StoreDates.parse(value) else {
         throw DecodingError.dataCorrupted(
           DecodingError.Context(codingPath: decoder.codingPath, debugDescription: value))
       }
@@ -74,23 +76,31 @@ public enum UsageStorage {
     }
     return decoder
   }
-
-  private static func timestampFormatter() -> ISO8601DateFormatter {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return formatter
-  }
 }
 
 // MARK: - Run journal
 
 /// The run journal, one file per month, one event per line.
 ///
-/// Appended to rather than rewritten: a line costs the same whatever the history, and a month
-/// holds a few kilobytes. A last line cut short by a crash is ignored when read.
+/// Appended to rather than rewritten: a line costs the same whatever the history. A last line cut
+/// short by a crash is ignored when read.
+///
+/// A month grows to several thousand lines and the usage views read the journal every 30 s, so
+/// each file is decoded once and then followed: a read decodes only the lines appended since
+/// the last one (#602). A file that shrank, was replaced or went away is read again from the
+/// start.
 public actor FileUsageLedger: UsageLedger {
   private let directory: URL
   private let calendar: Calendar
+  /// What was read of each month, by file name.
+  private var readFiles: [String: ReadFile] = [:]
+
+  private struct ReadFile {
+    var inode: UInt64
+    /// Just past the last complete line read.
+    var offset: UInt64
+    var events: [UsageLedgerEvent]
+  }
 
   public init(directory: URL = UsageStorage.defaultDirectory(), calendar: Calendar = .current) {
     self.directory = directory
@@ -113,17 +123,49 @@ public actor FileUsageLedger: UsageLedger {
   public func events() throws -> [UsageLedgerEvent] {
     let decoder = UsageStorage.decoder()
     var events: [UsageLedgerEvent] = []
+    var read: [String: ReadFile] = [:]
     for url in journalURLs() {
-      guard let data = try? Data(contentsOf: url) else { continue }
-      for line in data.split(separator: UInt8(ascii: "\n")) {
-        guard let decoded = try? decoder.decode(LedgerLine.self, from: Data(line)),
-          let event = decoded.event
-        else { continue }
-        events.append(event)
-      }
+      let name = url.lastPathComponent
+      guard let (file, tail) = follow(url, from: readFiles[name], decoder: decoder) else { continue }
+      read[name] = file
+      events += file.events
+      if let tail { events.append(tail) }
     }
+    readFiles = read
     // Months in order, and inside a month the order they were written in.
     return events
+  }
+
+  /// The events of one month: those already read, plus the lines appended since. A last line
+  /// without its newline is not kept, since it may still be being written or have been cut
+  /// short; it is returned on its own when it decodes, and read again next time.
+  private func follow(_ url: URL, from known: ReadFile?, decoder: JSONDecoder)
+    -> (ReadFile, tail: UsageLedgerEvent?)?
+  {
+    guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+    defer { try? handle.close() }
+    var info = stat()
+    guard fstat(handle.fileDescriptor, &info) == 0 else { return nil }
+    let inode = UInt64(info.st_ino)
+    let size = UInt64(max(info.st_size, 0))
+    var file = ReadFile(inode: inode, offset: 0, events: [])
+    if let known, known.inode == inode, known.offset <= size { file = known }
+    guard file.offset < size else { return (file, nil) }
+    guard (try? handle.seek(toOffset: file.offset)) != nil,
+      let data = try? handle.readToEnd()
+    else { return nil }
+    let newline = UInt8(ascii: "\n")
+    let complete = data.lastIndex(of: newline).map { data.index(after: $0) } ?? data.startIndex
+    for line in data[data.startIndex..<complete].split(separator: newline) {
+      if let event = Self.decode(line, decoder) { file.events.append(event) }
+    }
+    file.offset += UInt64(data.distance(from: data.startIndex, to: complete))
+    return (file, Self.decode(data[complete...], decoder))
+  }
+
+  private static func decode(_ line: Data, _ decoder: JSONDecoder) -> UsageLedgerEvent? {
+    guard !line.isEmpty else { return nil }
+    return (try? decoder.decode(LedgerLine.self, from: Data(line)))?.event
   }
 
   public func writeHeartbeat(_ heartbeat: UsageHeartbeat?) throws {
@@ -146,6 +188,7 @@ public actor FileUsageLedger: UsageLedger {
   public func clear() throws {
     let manager = FileManager.default
     for url in journalURLs() { try manager.removeItem(at: url) }
+    readFiles = [:]
     try writeHeartbeat(nil)
   }
 
