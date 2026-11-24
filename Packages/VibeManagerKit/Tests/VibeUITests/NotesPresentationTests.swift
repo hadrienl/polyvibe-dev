@@ -253,7 +253,7 @@ struct NotesPresentationViewTests {
         self.shownPanels.append(panel)
         self.keyboard.append(takesKeyboard)
       }
-      controller.showPopover = { [unowned self] popover, anchor, _ in
+      controller.toolbarPopover.present = { [unowned self] popover, anchor, _ in
         self.shownPopovers.append(popover)
         self.popoverAnchors.append(anchor)
       }
@@ -485,7 +485,7 @@ struct NotesPresentationViewTests {
 
     screen.controller.windowWillClose(
       Notification(name: NSWindow.willCloseNotification, object: old))
-    screen.controller.popoverDidClose(
+    screen.controller.toolbarPopover.popoverDidClose(
       Notification(name: NSPopover.didCloseNotification, object: popover))
 
     #expect(model.notesPresentation.isPanelShown)
@@ -498,14 +498,49 @@ struct NotesPresentationViewTests {
     let (model, _) = await model()
     let screen = Screen(model: model)
     defer { screen.close() }
+    screen.controller.toolbarPopover.actsOnMouseUp = { true }
     model.toggleNotes()
     // AppKit's transient popover closes on the mouse down; the button acts on the mouse up.
-    model.notesPresentation.closedByButtonClick(at: ProcessInfo.processInfo.systemUptime)
+    let closed = ProcessInfo.processInfo.systemUptime
+    screen.controller.toolbarPopover.closedByClick(at: closed)
     model.notesPopoverDismissed()
+    // The monitor sees that same mouse down: it does not end the click.
+    screen.controller.toolbarPopover.clickBegan(at: closed)
 
     model.toggleNotes()
     #expect(!model.notesPresentation.isShown)
     #expect(screen.presentations == 0)
+
+    model.toggleNotes()
+    #expect(model.notesPresentation.isPopoverShown)
+  }
+
+  @Test("A click elsewhere closes the popover, and the next click on the button opens it")
+  func clickElsewhereThenButton() async {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    screen.controller.toolbarPopover.actsOnMouseUp = { true }
+    model.toggleNotes()
+    let closed = ProcessInfo.processInfo.systemUptime
+    screen.controller.toolbarPopover.closedByClick(at: closed)
+    model.notesPopoverDismissed()
+    // Another click begins, this time on the button.
+    screen.controller.toolbarPopover.clickBegan(at: closed + 0.2)
+
+    model.toggleNotes()
+    #expect(model.notesPresentation.isPopoverShown)
+  }
+
+  @Test("A click elsewhere closes the popover; the button pressed from the keyboard opens it")
+  func clickElsewhereThenKeyboard() async {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    screen.controller.toolbarPopover.actsOnMouseUp = { false }
+    model.toggleNotes()
+    screen.controller.toolbarPopover.closedByClick(at: ProcessInfo.processInfo.systemUptime)
+    model.notesPopoverDismissed()
 
     model.toggleNotes()
     #expect(model.notesPresentation.isPopoverShown)

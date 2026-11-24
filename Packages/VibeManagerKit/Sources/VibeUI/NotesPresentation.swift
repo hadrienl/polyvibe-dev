@@ -53,8 +53,9 @@ public final class NotesPresentation {
   /// Gives the keyboard back to the workspace window, for the panel's editor to let go of it. Set
   /// by the panel's controller, which knows the windows.
   @ObservationIgnored var returnFromPanel: (() -> Void)?
-  /// When a click on the toolbar's button closed the popover, by the events' clock.
-  @ObservationIgnored private var popoverClosedByClickAt: TimeInterval?
+  /// Whether the button's press ends the click that just closed the popover: it then does
+  /// nothing. Asked of the popover by `NotesPanelController`.
+  @ObservationIgnored var pressEndsClosingClick: () -> Bool = { false }
 
   private let layout: WorkspaceLayoutController
   private let notes: NotesModel
@@ -84,16 +85,8 @@ public final class NotesPresentation {
   /// else.
   func toggle(for sessionID: SessionID) {
     // The click that closed the popover, now acting on the button: the notes stay away.
-    if let closed = popoverClosedByClickAt {
-      popoverClosedByClickAt = nil
-      if ProcessInfo.processInfo.systemUptime - closed < 1.5 { return }
-    }
+    if pressEndsClosingClick() { return }
     if active?.sessionID == sessionID { dismiss() } else { show(for: sessionID) }
-  }
-
-  /// The transient popover closes on the mouse down, before the button acts on the mouse up.
-  func closedByButtonClick(at timestamp: TimeInterval) {
-    popoverClosedByClickAt = timestamp
   }
 
   /// Puts the notes away. With `requestID`, only if that opening is still the one on screen.

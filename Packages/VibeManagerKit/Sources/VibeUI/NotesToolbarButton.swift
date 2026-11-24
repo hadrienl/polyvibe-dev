@@ -23,7 +23,12 @@ struct NotesToolbarButton: View {
     .disabled(!model.canShowNotes && !presentation.isShown)
     .instantTooltip(Text("Session Notes", bundle: .module))
     .accessibilityValue(accessibilityValue(hasNotes: hasNotes, presentation: presentation))
-    .background(NotesPopoverAnchor(presentation: presentation).allowsHitTesting(false))
+    .background(
+      ToolbarPopoverAnchor { [weak presentation] view in
+        presentation?.anchor = view
+        presentation?.changed?()
+      }
+      .allowsHitTesting(false))
   }
 
   /// Whether there are notes; in the panel's placement, first whether the panel is shown, the
@@ -134,33 +139,5 @@ struct NotesReattachButton: View {
 
   static var reattach: Text {
     Text("Reattach to the Toolbar", bundle: .module)
-  }
-}
-
-/// A stable native anchor in the toolbar. The controller, rather than a SwiftUI presentation
-/// binding, owns the NSPopover and dismisses its window before opening the panel.
-private struct NotesPopoverAnchor: NSViewRepresentable {
-  let presentation: NotesPresentation
-
-  func makeNSView(context: Context) -> AnchorView {
-    let view = AnchorView()
-    view.presentation = presentation
-    return view
-  }
-
-  func updateNSView(_ view: AnchorView, context: Context) {}
-
-  final class AnchorView: NSView {
-    weak var presentation: NotesPresentation?
-
-    override func viewDidMoveToWindow() {
-      super.viewDidMoveToWindow()
-      guard window != nil else { return }
-      Task { @MainActor [weak self] in
-        guard let self, self.window != nil, let presentation = self.presentation else { return }
-        presentation.anchor = self
-        presentation.changed?()
-      }
-    }
   }
 }
