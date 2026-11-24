@@ -354,26 +354,8 @@ public struct ConversationView: View {
       .overlay(alignment: .bottom) {
         if model.returnBlockID != nil {
           ReturnToReplyButton(model: model).padding(.bottom, 10)
-        } else if model.scroll.unseenCount > 0 {
-          Button {
-            model.jumpToBottom()
-          } label: {
-            Label {
-              Text("\(model.scroll.unseenCount) new messages", bundle: .module)
-            } icon: {
-              Image(systemName: "arrow.down")
-            }
-            .font(theme.interfaceFont(size: appearance.textSize.scaled(12.5), weight: .semibold))
-            .foregroundStyle(theme.text.color)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .modifier(
-              ConversationGlass(
-                shape: Capsule(), fill: theme.raised.color, border: theme.border.color,
-                isInteractive: true, shadowRadius: 6, shadowOpacity: 0.2, shadowY: 2))
-          }
-          .buttonStyle(.plain)
-          .padding(.bottom, 10)
+        } else {
+          JumpToBottomButton(model: model).padding(.bottom, 10)
         }
       }
       // Over everything drawn on the messages — the overview, the pill read aloud, the buttons

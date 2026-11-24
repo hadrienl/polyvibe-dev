@@ -53,6 +53,21 @@ public struct ConversationScrollState: Hashable, Sendable {
   public mutating func jumpedAway() {
     isFollowing = false
   }
+
+  /// What the button back to the end shows (#619).
+  public enum JumpToBottom: Hashable, Sendable {
+    /// The end is followed: nothing to go back to.
+    case hidden
+    /// The reader went up and nothing arrived since: an arrow alone, small over the text read.
+    case arrow
+    /// Messages arrived while the reader was above: the same button, with their count.
+    case newMessages(Int)
+  }
+
+  public var jumpToBottom: JumpToBottom {
+    if isFollowing { return .hidden }
+    return unseenCount > 0 ? .newMessages(unseenCount) : .arrow
+  }
 }
 
 /// A sub-agent in the bar over the composer (#180).
