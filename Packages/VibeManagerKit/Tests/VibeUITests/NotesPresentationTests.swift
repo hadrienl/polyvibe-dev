@@ -253,7 +253,7 @@ struct NotesPresentationViewTests {
         self.shownPanels.append(panel)
         self.keyboard.append(takesKeyboard)
       }
-      controller.showPopover = { [unowned self] popover, anchor, _ in
+      controller.toolbarPopover.present = { [unowned self] popover, anchor, _ in
         self.shownPopovers.append(popover)
         self.popoverAnchors.append(anchor)
       }
@@ -485,7 +485,7 @@ struct NotesPresentationViewTests {
 
     screen.controller.windowWillClose(
       Notification(name: NSWindow.willCloseNotification, object: old))
-    screen.controller.popoverDidClose(
+    screen.controller.toolbarPopover.popoverDidClose(
       Notification(name: NSPopover.didCloseNotification, object: popover))
 
     #expect(model.notesPresentation.isPanelShown)
@@ -498,14 +498,14 @@ struct NotesPresentationViewTests {
     let (model, _) = await model()
     let screen = Screen(model: model)
     defer { screen.close() }
-    model.notesPresentation.actsOnMouseUp = { true }
+    screen.controller.toolbarPopover.actsOnMouseUp = { true }
     model.toggleNotes()
     // AppKit's transient popover closes on the mouse down; the button acts on the mouse up.
     let closed = ProcessInfo.processInfo.systemUptime
-    model.notesPresentation.closedByClick(at: closed)
+    screen.controller.toolbarPopover.closedByClick(at: closed)
     model.notesPopoverDismissed()
     // The monitor sees that same mouse down: it does not end the click.
-    model.notesPresentation.clickBegan(at: closed)
+    screen.controller.toolbarPopover.clickBegan(at: closed)
 
     model.toggleNotes()
     #expect(!model.notesPresentation.isShown)
@@ -520,13 +520,13 @@ struct NotesPresentationViewTests {
     let (model, _) = await model()
     let screen = Screen(model: model)
     defer { screen.close() }
-    model.notesPresentation.actsOnMouseUp = { true }
+    screen.controller.toolbarPopover.actsOnMouseUp = { true }
     model.toggleNotes()
     let closed = ProcessInfo.processInfo.systemUptime
-    model.notesPresentation.closedByClick(at: closed)
+    screen.controller.toolbarPopover.closedByClick(at: closed)
     model.notesPopoverDismissed()
     // Another click begins, this time on the button.
-    model.notesPresentation.clickBegan(at: closed + 0.2)
+    screen.controller.toolbarPopover.clickBegan(at: closed + 0.2)
 
     model.toggleNotes()
     #expect(model.notesPresentation.isPopoverShown)
@@ -537,9 +537,9 @@ struct NotesPresentationViewTests {
     let (model, _) = await model()
     let screen = Screen(model: model)
     defer { screen.close() }
-    model.notesPresentation.actsOnMouseUp = { false }
+    screen.controller.toolbarPopover.actsOnMouseUp = { false }
     model.toggleNotes()
-    model.notesPresentation.closedByClick(at: ProcessInfo.processInfo.systemUptime)
+    screen.controller.toolbarPopover.closedByClick(at: ProcessInfo.processInfo.systemUptime)
     model.notesPopoverDismissed()
 
     model.toggleNotes()

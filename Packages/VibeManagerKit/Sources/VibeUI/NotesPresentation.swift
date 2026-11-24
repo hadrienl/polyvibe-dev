@@ -53,12 +53,9 @@ public final class NotesPresentation {
   /// Gives the keyboard back to the workspace window, for the panel's editor to let go of it. Set
   /// by the panel's controller, which knows the windows.
   @ObservationIgnored var returnFromPanel: (() -> Void)?
-  /// When a click closed the transient popover, wherever it landed, by the events' clock; until
-  /// the next click begins.
-  @ObservationIgnored private var popoverClosedByClickAt: TimeInterval?
-  /// Whether the button acts on a mouse up: the end of a click, perhaps the one that closed the
-  /// popover. A press from the keyboard or from VoiceOver is never that click. Tests say so.
-  @ObservationIgnored var actsOnMouseUp: () -> Bool = { NSApp.currentEvent?.type == .leftMouseUp }
+  /// Whether the button's press ends the click that just closed the popover: it then does
+  /// nothing. Asked of the popover by `NotesPanelController`.
+  @ObservationIgnored var pressEndsClosingClick: () -> Bool = { false }
 
   private let layout: WorkspaceLayoutController
   private let notes: NotesModel
@@ -88,24 +85,8 @@ public final class NotesPresentation {
   /// else.
   func toggle(for sessionID: SessionID) {
     // The click that closed the popover, now acting on the button: the notes stay away.
-    if let closed = popoverClosedByClickAt {
-      popoverClosedByClickAt = nil
-      if actsOnMouseUp(), ProcessInfo.processInfo.systemUptime - closed < 1.5 { return }
-    }
+    if pressEndsClosingClick() { return }
     if active?.sessionID == sessionID { dismiss() } else { show(for: sessionID) }
-  }
-
-  /// A click closed the transient popover, on its mouse down. Should it be on the toolbar's
-  /// button, the button acts on its mouse up and must not open the notes again. Where the click
-  /// landed is not asked: the button's clickable area is wider than any view under it.
-  func closedByClick(at timestamp: TimeInterval) {
-    popoverClosedByClickAt = timestamp
-  }
-
-  /// Another click began: the one that closed the popover is over, and the button acts again.
-  func clickBegan(at timestamp: TimeInterval) {
-    guard let closed = popoverClosedByClickAt, timestamp > closed else { return }
-    popoverClosedByClickAt = nil
   }
 
   /// Puts the notes away. With `requestID`, only if that opening is still the one on screen.
