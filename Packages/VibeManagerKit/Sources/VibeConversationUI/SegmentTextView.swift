@@ -41,6 +41,7 @@ struct SegmentView: NSViewRepresentable {
   @Environment(\.conversationLinks) private var links
   @Environment(\.replyToPassage) private var replyToPassage
   @Environment(\.litPassage) private var litPassage
+  @Environment(\.conversationIsLive) private var isLive
 
   struct Input: Equatable {
     var content: Content
@@ -82,6 +83,7 @@ struct SegmentView: NSViewRepresentable {
   func updateNSView(_ view: SegmentTextView, context: Context) {
     context.coordinator.openURL = openURL
     context.coordinator.links = links
+    view.isLive = isLive
     view.links = links
     view.markdown = markdown
     view.selectionBlock = block ?? ""
@@ -198,6 +200,18 @@ final class SegmentTextView: NSTextView {
       guard oldValue !== selection else { return }
       oldValue?.unregister(self)
       selection?.register(self)
+    }
+  }
+
+  /// Whether its conversation is the one on screen. The conversations kept behind it are only
+  /// at zero opacity: AppKit still sees their text, which put its I-beam over the buttons and
+  /// the links of the one shown. Hidden, it has no say on the pointer.
+  var isLive = true {
+    didSet {
+      guard oldValue != isLive else { return }
+      if !isLive { hideReplyButton() }
+      window?.invalidateCursorRects(for: self)
+      updateTrackingAreas()
     }
   }
 
@@ -411,6 +425,16 @@ final class SegmentTextView: NSTextView {
 
   @objc private func keyWindowChanged() {
     if selectedRange().length > 0 { needsDisplay = true }
+  }
+
+  override func resetCursorRects() {
+    guard isLive else { return }
+    super.resetCursorRects()
+  }
+
+  override func cursorUpdate(with event: NSEvent) {
+    guard isLive else { return }
+    super.cursorUpdate(with: event)
   }
 
   override func viewDidMoveToWindow() {

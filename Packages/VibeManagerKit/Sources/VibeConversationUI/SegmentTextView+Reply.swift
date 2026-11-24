@@ -82,6 +82,8 @@ extension SegmentTextView {
   override func updateTrackingAreas() {
     super.updateTrackingAreas()
     if let replyTrackingArea { removeTrackingArea(replyTrackingArea) }
+    replyTrackingArea = nil
+    guard isLive else { return }
     let area = NSTrackingArea(
       rect: .zero,
       options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
@@ -91,9 +93,12 @@ extension SegmentTextView {
   }
 
   override func mouseMoved(with event: NSEvent) {
+    guard isLive else { return }
+    let point = convert(event.locationInWindow, from: nil)
+    // Over « Reply », its pointing hand: the text's own handling would put the I-beam back.
+    if let button = replyButton, !button.isHidden, button.frame.contains(point) { return }
     super.mouseMoved(with: event)
     guard offersParagraphReply, replyAction != nil, selectionReplyOffset == nil else { return }
-    let point = convert(event.locationInWindow, from: nil)
     if let button = replyButton, !button.isHidden,
       button.frame.insetBy(dx: -4, dy: -4).contains(point)
     {
