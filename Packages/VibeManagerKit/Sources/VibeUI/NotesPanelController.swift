@@ -48,7 +48,8 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   /// waiting for the toolbar's button to be back in the toolbar.
   private(set) var displayed: NotesPresentation.Request?
   /// Every click's mouse down: the click that closed the popover is over once another begins.
-  private var clickMonitor: Any?
+  /// Written once, in `init`, and read by `deinit` only.
+  private nonisolated(unsafe) var clickMonitor: Any?
   /// Puts the panel on screen, with the keyboard or without. Tests keep it off the screen and read
   /// the panel instead.
   var showPanel: (NotesPanel, Bool) -> Void = { panel, takesKeyboard in
@@ -76,7 +77,7 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     update()
   }
 
-  isolated deinit {
+  deinit {
     if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
   }
 

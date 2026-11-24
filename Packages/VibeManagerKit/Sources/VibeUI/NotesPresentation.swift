@@ -53,8 +53,12 @@ public final class NotesPresentation {
   /// Gives the keyboard back to the workspace window, for the panel's editor to let go of it. Set
   /// by the panel's controller, which knows the windows.
   @ObservationIgnored var returnFromPanel: (() -> Void)?
-  /// When a click on the toolbar's button closed the popover, by the events' clock.
+  /// When a click closed the transient popover, wherever it landed, by the events' clock; until
+  /// the next click begins.
   @ObservationIgnored private var popoverClosedByClickAt: TimeInterval?
+  /// Whether the button acts on a mouse up: the end of a click, perhaps the one that closed the
+  /// popover. A press from the keyboard or from VoiceOver is never that click. Tests say so.
+  @ObservationIgnored var actsOnMouseUp: () -> Bool = { NSApp.currentEvent?.type == .leftMouseUp }
 
   private let layout: WorkspaceLayoutController
   private let notes: NotesModel
@@ -86,7 +90,7 @@ public final class NotesPresentation {
     // The click that closed the popover, now acting on the button: the notes stay away.
     if let closed = popoverClosedByClickAt {
       popoverClosedByClickAt = nil
-      if ProcessInfo.processInfo.systemUptime - closed < 1.5 { return }
+      if actsOnMouseUp(), ProcessInfo.processInfo.systemUptime - closed < 1.5 { return }
     }
     if active?.sessionID == sessionID { dismiss() } else { show(for: sessionID) }
   }
