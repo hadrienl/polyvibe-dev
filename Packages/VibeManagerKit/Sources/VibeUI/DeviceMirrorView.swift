@@ -120,7 +120,7 @@ private final class DeviceMirrorSession: @unchecked Sendable {
 }
 
 /// Beside the web view's button, what opens a simulator in one of its tabs.
-/// Its list opens in the same popover as the session's notes, beside it.
+/// Its list opens in the same kind of popover as the session's notes, beside it.
 struct DeviceMirrorToolbarButton: View {
   let model: AppModel
   @State private var popover = ToolbarPopover()
@@ -136,7 +136,13 @@ struct DeviceMirrorToolbarButton: View {
       }
     }
     .disabled(!model.isWebViewAvailable)
-    .background(ToolbarPopoverAnchor { [popover] in popover.anchor = $0 }.allowsHitTesting(false))
+    .background(
+      // Out of the toolbar, the button takes its list with it: no list left open without a button.
+      ToolbarPopoverAnchor(
+        entered: { [popover] in popover.anchor = $0 },
+        left: { [popover] in popover.close(animated: false) }
+      )
+      .allowsHitTesting(false))
   }
 
   private func toggle() {
@@ -147,8 +153,8 @@ struct DeviceMirrorToolbarButton: View {
     // The click that closed the list, now acting on the button: the list stays away.
     guard !popover.pressEndsClosingClick() else { return }
     popover.show(
-      DeviceMirrorPicker { [popover, model] udid, name in
-        popover.close()
+      DeviceMirrorPicker { [weak popover, model] udid, name in
+        popover?.close()
         guard let url = URL(string: "vibe-device://\(udid)") else { return }
         model.openDeviceTab(url, title: name)
       })

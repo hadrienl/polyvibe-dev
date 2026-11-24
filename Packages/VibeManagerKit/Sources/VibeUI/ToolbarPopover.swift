@@ -24,9 +24,10 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
   /// The workspace window's content, for a popover whose button is in no window. Tests give
   /// their own.
   var fallbackView: () -> NSView? = { NSApp.mainWindow?.contentView }
-  /// Whether the button acts on a mouse up: the end of a click, perhaps the one that closed the
-  /// popover. A press from the keyboard or from VoiceOver is never that click. Tests say so.
-  var actsOnMouseUp: () -> Bool = { NSApp.currentEvent?.type == .leftMouseUp }
+  /// Whether the button acts on a mouse up in its own window: the end of a click, perhaps the one
+  /// that closed the popover. A press from the keyboard or VoiceOver, or an item of the toolbar's
+  /// overflow menu, is never that click. Tests say so.
+  var actsOnMouseUp: (() -> Bool)?
   /// The window's accessibility identifier, for the UI tests.
   var identifier: String?
 
@@ -50,6 +51,7 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
   @discardableResult
   func show(_ content: some View) -> Bool {
     close(animated: false)
+    finishFading()
     guard let (view, place) = place() else { return false }
     let popover = NSPopover()
     popover.behavior = .transient
@@ -71,12 +73,18 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
   /// answer focus requests.
   func close(animated: Bool = true) {
     guard let popover else { return }
+    finishFading()
     self.popover = nil
     if animated && popover.isShown {
       fading.append(popover)
       popover.close()
       return
     }
+    finish(popover)
+  }
+
+  /// Gone at once, with its content.
+  private func finish(_ popover: NSPopover) {
     popover.animates = false
     popover.delegate = nil
     popover.close()
@@ -85,12 +93,28 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
     DispatchQueue.main.async { withExtendedLifetime(popover) {} }
   }
 
+  /// The popovers still fading go at once: their editors must not answer the next one's focus
+  /// requests.
+  private func finishFading() {
+    let fading = self.fading
+    self.fading = []
+    fading.forEach(finish)
+  }
+
   /// The button's press: whether it ends the click that just closed the popover — the press then
   /// does nothing, the popover is already away.
   func pressEndsClosingClick() -> Bool {
     guard let closed = closedByClickAt else { return false }
     forgetClick()
-    return actsOnMouseUp() && ProcessInfo.processInfo.systemUptime - closed < 1.5
+    let mouseUp = actsOnMouseUp?() ?? isMouseUpInButtonWindow()
+    return mouseUp && ProcessInfo.processInfo.systemUptime - closed < 1.5
+  }
+
+  private func isMouseUpInButtonWindow() -> Bool {
+    guard let event = NSApp.currentEvent, event.type == .leftMouseUp,
+      let window = anchor?.window
+    else { return false }
+    return event.window === window
   }
 
   private func place() -> (NSView, NSRect)? {
@@ -133,12 +157,16 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
 
   // MARK: NSPopoverDelegate
 
-  /// Closed by AppKit, not by `close`, which lets go of the popover first.
+  /// Closed by AppKit, not by `close`, which lets go of the popover first. Its owner hears it at
+  /// once rather than after the fade: in between, the popover is no longer shown.
   func popoverWillClose(_ notification: Notification) {
-    guard notification.object as? NSPopover === popover,
-      let event = NSApp.currentEvent, event.type == .leftMouseDown
-    else { return }
-    closedByClick(at: event.timestamp)
+    guard let closing = notification.object as? NSPopover, closing === popover else { return }
+    if let event = NSApp.currentEvent, event.type == .leftMouseDown {
+      closedByClick(at: event.timestamp)
+    }
+    popover = nil
+    fading.append(closing)
+    didClose()
   }
 
   func popoverDidClose(_ notification: Notification) {
@@ -146,6 +174,7 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
     closed.delegate = nil
     closed.contentViewController = nil
     fading.removeAll { $0 === closed }
+    // Closed without its will-close notice: its owner still hears of it.
     guard closed === popover else { return }
     popover = nil
     didClose()
@@ -153,26 +182,34 @@ final class ToolbarPopover: NSObject, NSPopoverDelegate {
 }
 
 /// A stable native view behind a toolbar button, under which its popover opens. Handed to its
-/// owner each time it enters a window.
+/// owner each time it enters a window; `left` when it leaves it — the button gone from the
+/// toolbar, or folded into its overflow menu.
 struct ToolbarPopoverAnchor: NSViewRepresentable {
   let entered: (NSView) -> Void
+  var left: () -> Void = {}
 
   func makeNSView(context: Context) -> AnchorView {
     let view = AnchorView()
     view.entered = entered
+    view.left = left
     return view
   }
 
   func updateNSView(_ view: AnchorView, context: Context) {
     view.entered = entered
+    view.left = left
   }
 
   final class AnchorView: NSView {
     var entered: ((NSView) -> Void)?
+    var left: (() -> Void)?
 
     override func viewDidMoveToWindow() {
       super.viewDidMoveToWindow()
-      guard window != nil else { return }
+      guard window != nil else {
+        left?()
+        return
+      }
       Task { @MainActor [weak self] in
         guard let self, self.window != nil else { return }
         self.entered?(self)
