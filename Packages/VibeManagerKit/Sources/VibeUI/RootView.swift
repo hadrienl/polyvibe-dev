@@ -257,6 +257,14 @@ public struct RootView: View {
           max: WorkspaceLayout.sidebarWidthRange.upperBound
         )
         .background(WidthReporter { model.layout.sidebarWidthChanged(to: $0) })
+        // The system's button replaced by one that wears the application's tooltip; the same
+        // place, at the sidebar's edge.
+        .toolbar(removing: .sidebarToggle)
+        .toolbar {
+          ToolbarItem(placement: .automatic) {
+            SidebarToggleButton(isSidebarVisible: true)
+          }
+        }
     } detail: {
       VStack(spacing: 0) {
         if let failure = model.refreshFailure {
@@ -434,6 +442,13 @@ public struct RootView: View {
       // No shortcut here: ⌘N belongs to the New Session menu command, which owns it for the
       // whole application. Repeating it bound the same key twice, under two conditions.
       .toolbar {
+        // The sidebar folded takes its button along: the window keeps one to bring it back,
+        // beside the traffic lights, where the system's stood.
+        ToolbarItem(placement: .navigation) {
+          if !model.layout.columns.isSidebarVisible {
+            SidebarToggleButton(isSidebarVisible: false)
+          }
+        }
         // With the sidebar folded, its palette is reached from here (#40).
         ToolbarItem(placement: .navigation) {
           if !model.layout.columns.isSidebarVisible, model.pendingRequestCount > 0 {

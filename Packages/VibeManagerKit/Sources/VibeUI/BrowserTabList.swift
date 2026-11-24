@@ -370,7 +370,7 @@ private struct BrowserTabRow: View {
         move: { [browser] id, target, after in browser.move(id, nextTo: target, after: after) })
     )
     .pointerHover($isHovering)
-    .help(Text(verbatim: tab.url.absoluteString))
+    .instantTooltip(Text(verbatim: tab.url.absoluteString))
     .contextMenu {
       BrowserTabMenu(tab: tab, browser: browser, model: model, close: close)
     }
@@ -423,7 +423,7 @@ private struct BrowserTabRow: View {
     .focused($focus, equals: .pin)
     .opacity(isShown ? 1 : 0)
     .allowsHitTesting(isShown)
-    .help(Text(pinTitle))
+    .instantTooltip(Text(pinTitle))
   }
 
   /// On the tab in front, under the pointer, and with the keyboard on the row.
@@ -441,7 +441,7 @@ private struct BrowserTabRow: View {
     .focused($focus, equals: .close)
     .opacity(isShown ? 1 : 0)
     .allowsHitTesting(isShown)
-    .help(Text("Close Tab", bundle: .module))
+    .instantTooltip(Text("Close Tab", bundle: .module))
   }
 
   private var pinTitle: String {

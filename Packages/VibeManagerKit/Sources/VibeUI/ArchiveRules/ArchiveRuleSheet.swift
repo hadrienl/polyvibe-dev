@@ -1,5 +1,6 @@
 import SwiftUI
 import VibeApplication
+import VibeConversationUI
 import VibeDomain
 
 /// The sheet of a new rule, a protection, or a rule refined (#405).
@@ -82,7 +83,7 @@ struct ArchiveRuleSheet: View {
                 .fontWeight(version == model.current ? .bold : .regular)
             }
             .buttonStyle(.bordered)
-            .help(Text(verbatim: version.sentence))
+            .instantTooltip(Text(verbatim: version.sentence))
             .accessibilityLabel(
               Text(
                 "Version \(index + 1), \(version.sentence), \(version.agentName)", bundle: .module,

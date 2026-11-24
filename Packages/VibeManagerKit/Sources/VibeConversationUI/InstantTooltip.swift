@@ -25,6 +25,12 @@ extension View {
   {
     modifier(InstantTooltip(text: string.isEmpty ? nil : Text(string), side: side))
   }
+
+  /// The same tooltip, for a view that already follows the pointer: shown while `isHovered`,
+  /// without a tracking of its own — a view built for every message pays for one only (#567).
+  public func instantTooltip(_ text: Text?, isHovered: Bool) -> some View {
+    modifier(HoveredTooltip(text: text, side: nil, isHovered: isHovered))
+  }
 }
 
 /// The side of the view a tooltip opens on, in the layout's direction (#458).
@@ -53,14 +59,25 @@ private struct InstantTooltip: ViewModifier {
   let text: Text?
   var side: TooltipSide?
   @State private var isHovered = false
+
+  func body(content: Content) -> some View {
+    content
+      .onHover { isHovered = $0 }
+      .onDisappear { isHovered = false }
+      .modifier(HoveredTooltip(text: text, side: side, isHovered: isHovered))
+  }
+}
+
+private struct HoveredTooltip: ViewModifier {
+  let text: Text?
+  let side: TooltipSide?
+  let isHovered: Bool
   @Environment(\.layoutDirection) private var direction
 
   // One structure whether there is a text or not: a help that comes and goes — a status's
   // detail — never rebuilds the view it is on.
   func body(content: Content) -> some View {
     content
-      .onHover { isHovered = $0 }
-      .onDisappear { isHovered = false }
       // Only while the pointer is over the view: a list of rows pays for nothing else.
       .background {
         if isHovered, let text { TooltipAnchor(text: text, edge: side?.edge(in: direction)) }

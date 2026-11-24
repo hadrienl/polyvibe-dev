@@ -333,7 +333,7 @@ struct DiscussionButton: View {
         ? Text("End the Discussion", bundle: .module)
         : Text("Start a Discussion", bundle: .module)
     )
-    .help(
+    .instantTooltip(
       isDiscussing
         ? Text("Click to end the discussion", bundle: .module)
         : Text(

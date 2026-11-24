@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import VibeApplication
+import VibeConversationUI
 
 /// The Quotas button of the window's toolbar (#599), always there: a dial whose needle points at
 /// the window nearest its limit, every account together, and whose colour says how near — green,
@@ -28,7 +29,7 @@ struct QuotasToolbarButton: View {
           QuotaDial(gauge: gauge, display: quotas.display)
         }
       }
-      .help(Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale))
+      .instantTooltip(Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale))
       .accessibilityValue(
         Text(verbatim: Self.help(quotas: quotas, gauge: gauge, now: context.date, locale: locale)))
     }
@@ -185,7 +186,7 @@ struct QuotasPopover: View {
             .foregroundStyle(
               usage.accountCosts[account.id]?.hasPrice == true ? .primary : .secondary
             )
-            .help(Self.costHelp(locale: locale))
+            .instantTooltip(Self.costHelp(locale: locale))
         }
       }
       AccountQuotaSection(
