@@ -96,6 +96,21 @@ struct BackgroundWorkReadsTests {
     #expect(counter.count == 2)
   }
 
+  @Test("A transcript reached by a link is read again once the file it names changes")
+  func linkedTranscriptFollowsItsTarget() async throws {
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let target = try transcript(#"{"started": "shell", "at": 1000}"#)
+    let link = directory.appendingPathComponent("link.jsonl")
+    try FileManager.default.createSymbolicLink(at: link, withDestinationURL: target)
+    let reads = BackgroundWorkReads()
+    let counter = ReadCounter()
+    #expect(await reads.backgroundWork(in: link, decoder: { counter.decoder() })?.count == 1)
+
+    try append(#"{"ended": "shell"}"#, to: target)
+
+    #expect(await reads.backgroundWork(in: link, decoder: { counter.decoder() }) == [])
+  }
+
   @Test("A transcript that cannot be read tells nothing")
   func missingTranscript() async {
     let reads = BackgroundWorkReads()

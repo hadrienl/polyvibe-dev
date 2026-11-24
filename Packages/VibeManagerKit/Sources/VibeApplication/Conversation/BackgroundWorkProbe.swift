@@ -71,14 +71,16 @@ actor BackgroundWorkReads {
 }
 
 /// A file as its attributes show it: another file under the same name, or the same written to
-/// since, is another version.
+/// since, is another version. A link is followed, as reading it does.
 struct TranscriptVersion: Equatable {
   let inode: UInt64
   let size: UInt64
   let modified: Date
 
   init?(of file: URL) {
-    guard let attributes = try? FileManager.default.attributesOfItem(atPath: file.path),
+    guard
+      let attributes = try? FileManager.default.attributesOfItem(
+        atPath: file.resolvingSymlinksInPath().path),
       let inode = (attributes[.systemFileNumber] as? NSNumber)?.uint64Value,
       let size = (attributes[.size] as? NSNumber)?.uint64Value,
       let modified = attributes[.modificationDate] as? Date

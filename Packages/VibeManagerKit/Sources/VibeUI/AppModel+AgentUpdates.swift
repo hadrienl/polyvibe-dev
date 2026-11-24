@@ -84,11 +84,12 @@ extension AppModel {
 
   /// The session's process ended or was replaced: what was found of the previous one is gone.
   func forgetAgentUpdate(_ id: SessionID) {
+    // Whatever else is known: the screen followed was the terminal's that ended (#601).
+    updateRestartScreens[id] = nil
     guard agentUpdates[id] != nil || pendingUpdateRestarts.contains(id) else { return }
     agentUpdates[id] = nil
     pendingUpdateRestarts.remove(id)
     declinedUpdateRestarts[id] = nil
-    updateRestartScreens[id] = nil
     publishAgentUpdates()
   }
 
