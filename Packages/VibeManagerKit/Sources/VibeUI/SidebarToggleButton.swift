@@ -25,3 +25,17 @@ struct SidebarToggleButton: View {
     .instantTooltip(title)
   }
 }
+
+/// In the sidebar's part of the toolbar, where the system's button stood: against the sidebar's
+/// right edge from macOS 26, beside the traffic lights before it.
+struct SidebarToggleToolbarItem: ToolbarContent {
+  var body: some ToolbarContent {
+    if #available(macOS 26, *) {
+      // Without it the button follows the traffic lights.
+      ToolbarSpacer(.flexible)
+    }
+    ToolbarItem(placement: .automatic) {
+      SidebarToggleButton(isSidebarVisible: true)
+    }
+  }
+}

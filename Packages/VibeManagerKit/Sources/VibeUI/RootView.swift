@@ -257,14 +257,9 @@ public struct RootView: View {
           max: WorkspaceLayout.sidebarWidthRange.upperBound
         )
         .background(WidthReporter { model.layout.sidebarWidthChanged(to: $0) })
-        // The system's button replaced by one that wears the application's tooltip; the same
-        // place, at the sidebar's edge.
+        // The system's button replaced by one that wears the application's tooltip.
         .toolbar(removing: .sidebarToggle)
-        .toolbar {
-          ToolbarItem(placement: .automatic) {
-            SidebarToggleButton(isSidebarVisible: true)
-          }
-        }
+        .toolbar { SidebarToggleToolbarItem() }
     } detail: {
       VStack(spacing: 0) {
         if let failure = model.refreshFailure {
