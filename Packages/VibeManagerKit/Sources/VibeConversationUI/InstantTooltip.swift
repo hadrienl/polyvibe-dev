@@ -25,6 +25,21 @@ extension View {
   {
     modifier(InstantTooltip(text: string.isEmpty ? nil : Text(string), side: side))
   }
+
+  /// The same tooltip, for a view that already follows the pointer: shown while `isHovered`,
+  /// without a tracking of its own — a view built for every message pays for one only (#567).
+  public func instantTooltip(_ text: Text?, isHovered: Bool) -> some View {
+    modifier(HoveredTooltip(text: text, side: nil, isHovered: isHovered))
+  }
+
+  /// The same tooltip for a button of the sidebar's part of the toolbar, the pointer followed by
+  /// AppKit: there SwiftUI's hover ends a few milliseconds after it begins, as soon as the bubble's
+  /// anchor comes behind the button, and the bubble never shows (#617). Its anchor is there all
+  /// along: for a few buttons, not for a list's rows.
+  public func toolbarTooltip(_ text: Text) -> some View {
+    background(TooltipAnchor(text: text, edge: nil, tracksPointer: true))
+      .accessibilityHint(text)
+  }
 }
 
 /// The side of the view a tooltip opens on, in the layout's direction (#458).
@@ -53,30 +68,46 @@ private struct InstantTooltip: ViewModifier {
   let text: Text?
   var side: TooltipSide?
   @State private var isHovered = false
+
+  func body(content: Content) -> some View {
+    content
+      .onHover { isHovered = $0 }
+      .onDisappear { isHovered = false }
+      .modifier(HoveredTooltip(text: text, side: side, isHovered: isHovered))
+  }
+}
+
+private struct HoveredTooltip: ViewModifier {
+  let text: Text?
+  let side: TooltipSide?
+  let isHovered: Bool
   @Environment(\.layoutDirection) private var direction
 
   // One structure whether there is a text or not: a help that comes and goes — a status's
   // detail — never rebuilds the view it is on.
   func body(content: Content) -> some View {
     content
-      .onHover { isHovered = $0 }
-      .onDisappear { isHovered = false }
       // Only while the pointer is over the view: a list of rows pays for nothing else.
       .background {
-        if isHovered, let text { TooltipAnchor(text: text, edge: side?.edge(in: direction)) }
+        if isHovered, let text {
+          TooltipAnchor(text: text, edge: side?.edge(in: direction), tracksPointer: false)
+        }
       }
       .accessibilityHint(text ?? Text(verbatim: ""))
   }
 }
 
 /// Stands behind the hovered view, the size of it: once in its window, it shows the bubble a
-/// quarter of a second later, and takes it down when it leaves.
+/// quarter of a second later, and takes it down when it leaves. One that `tracksPointer` stands
+/// there all along, and does the same when the pointer comes over it and leaves it.
 private struct TooltipAnchor: NSViewRepresentable {
   let text: Text
   let edge: TooltipEdge?
+  let tracksPointer: Bool
 
   func makeNSView(context: Context) -> TooltipAnchorView {
     let view = TooltipAnchorView()
+    view.tracksPointer = tracksPointer
     view.edge = edge
     view.text = text
     return view
@@ -102,6 +133,7 @@ private final class TooltipAnchorView: NSView {
     }
   }
   var edge: TooltipEdge?
+  var tracksPointer = false
   private var appearing: Task<Void, Never>?
 
   override func hitTest(_ point: NSPoint) -> NSView? { nil }
@@ -112,11 +144,32 @@ private final class TooltipAnchorView: NSView {
       leave()
       return
     }
+    if !tracksPointer { appear() }
+  }
+
+  override func updateTrackingAreas() {
+    super.updateTrackingAreas()
+    guard tracksPointer, trackingAreas.isEmpty else { return }
+    addTrackingArea(
+      NSTrackingArea(
+        rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+        owner: self))
+  }
+
+  override func mouseEntered(with event: NSEvent) { appear() }
+
+  override func mouseExited(with event: NSEvent) { leave() }
+
+  private func appear() {
     appearing?.cancel()
+    let start = ProcessInfo.processInfo.systemUptime
+    let presenter = TooltipPresenter.shared
     appearing = Task { @MainActor [weak self] in
       try? await Task.sleep(for: .milliseconds(250))
-      guard !Task.isCancelled, let self, self.window != nil else { return }
-      TooltipPresenter.shared.show(self.text, from: self, edge: self.edge)
+      guard !Task.isCancelled, let self, self.window != nil,
+        !presenter.wasClicked(since: start - TooltipPresenter.clickQuiet)
+      else { return }
+      presenter.show(self.text, from: self, edge: self.edge)
     }
   }
 
@@ -139,6 +192,12 @@ final class TooltipPresenter {
   private var panel: NSPanel?
   private var hosting: NSHostingView<TooltipBubble>?
   private var monitor: Any?
+  /// When the last click was, on the clock of the events.
+  private var lastClick: TimeInterval = -.infinity
+  /// After a click no bubble comes, as the system's: neither one asked for just before it, which
+  /// would show once the click moved its button away (the sidebar's), nor one that the click
+  /// itself brings, as a bookmark taken away brings "Add a Bookmark" under the pointer.
+  static let clickQuiet: TimeInterval = 0.25
   /// The menus being tracked. While one is open — the status bar's, opened from the very button
   /// the bubble names — no bubble is shown: it would sit over the menu (#575). Each menu counts
   /// for itself: a submenu that closes leaves the menu it opened from open.
@@ -146,7 +205,18 @@ final class TooltipPresenter {
 
   var isMenuOpen: Bool { !openMenus.isEmpty }
 
+  /// Whether a click came after `time`.
+  func wasClicked(since time: TimeInterval) -> Bool { lastClick > time }
+
   private init() {
+    // For the life of the application: one closure called per click is all it costs.
+    _ = NSEvent.addLocalMonitorForEvents(
+      matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]
+    ) { [weak self] event in
+      let time = event.timestamp
+      MainActor.assumeIsolated { self?.lastClick = time }
+      return event
+    }
     let center = NotificationCenter.default
     center.addObserver(
       forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main

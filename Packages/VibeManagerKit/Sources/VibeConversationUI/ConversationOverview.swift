@@ -725,8 +725,9 @@ struct BookmarkGutter: View {
       .contentShape(Rectangle())
       .onTapGesture(perform: toggle)
       .opacity(isMarked || isHovered ? 1 : isRowHovered ? 0.6 : 0)
-      // Set, its preview tells it; a help tag would come over it.
-      .help(isMarked ? Text(verbatim: "") : label)
+      // Set, its preview tells it; a tooltip would come over it. Shown on the pointer the
+      // preview's tracking follows: no second one for every message.
+      .instantTooltip(isMarked ? nil : label, isHovered: isHovered)
       // One tracking of the pointer, for its look and its preview.
       .modifier(
         MarginPreviewSource(

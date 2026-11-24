@@ -1,5 +1,6 @@
 import SwiftUI
 import VibeApplication
+import VibeConversationUI
 import VibeDomain
 
 /// The sheet of a new rule, a protection, or a rule refined (#405).
@@ -60,9 +61,13 @@ struct ArchiveRuleSheet: View {
     case .newRules:
       Text("New Rule", bundle: .module, comment: "The title of the sheet that makes archive rules.")
     case .refine:
-      Text("Refine the Rule", bundle: .module, comment: "The title of the sheet that changes an archive rule.")
+      Text(
+        "Refine the Rule", bundle: .module,
+        comment: "The title of the sheet that changes an archive rule.")
     case .protection:
-      Text("New Protection", bundle: .module, comment: "The title of the sheet that makes a protection of the automatic archive.")
+      Text(
+        "New Protection", bundle: .module,
+        comment: "The title of the sheet that makes a protection of the automatic archive.")
     }
   }
 
@@ -72,8 +77,10 @@ struct ArchiveRuleSheet: View {
       Spacer()
       if model.versions.count > 1 {
         HStack(spacing: 6) {
-          Text("Versions", bundle: .module, comment: "The versions of archive rules made in the sheet.")
-            .foregroundStyle(.secondary)
+          Text(
+            "Versions", bundle: .module, comment: "The versions of archive rules made in the sheet."
+          )
+          .foregroundStyle(.secondary)
           ForEach(Array(model.versions.enumerated()), id: \.element.id) { index, version in
             Button {
               model.goBack(to: version)
@@ -82,11 +89,12 @@ struct ArchiveRuleSheet: View {
                 .fontWeight(version == model.current ? .bold : .regular)
             }
             .buttonStyle(.bordered)
-            .help(Text(verbatim: version.sentence))
+            .instantTooltip(Text(verbatim: version.sentence))
             .accessibilityLabel(
               Text(
                 "Version \(index + 1), \(version.sentence), \(version.agentName)", bundle: .module,
-                comment: "A version of archive rules: its number, the sentence it came from, the agent."))
+                comment:
+                  "A version of archive rules: its number, the sentence it came from, the agent."))
           }
         }
         .font(.caption)
@@ -102,9 +110,13 @@ struct ArchiveRuleSheet: View {
     VStack(alignment: .leading, spacing: 8) {
       Group {
         if model.purpose == .protection {
-          Text("Describe the sessions that must never be archived", bundle: .module, comment: "The sheet of a new protection.")
+          Text(
+            "Describe the sessions that must never be archived", bundle: .module,
+            comment: "The sheet of a new protection.")
         } else {
-          Text("Describe what should be archived, and when", bundle: .module, comment: "The sheet of a new archive rule.")
+          Text(
+            "Describe what should be archived, and when", bundle: .module,
+            comment: "The sheet of a new archive rule.")
         }
       }
       .font(.headline)
@@ -116,7 +128,9 @@ struct ArchiveRuleSheet: View {
             comment: "An example of a sentence describing an archive rule."),
           axis: .vertical
         ) {
-          Text("Sentence", bundle: .module, comment: "The field of the sentence describing archive rules.")
+          Text(
+            "Sentence", bundle: .module,
+            comment: "The field of the sentence describing archive rules.")
         }
         .lineLimit(2...5)
         .textFieldStyle(.roundedBorder)
@@ -130,7 +144,9 @@ struct ArchiveRuleSheet: View {
                 Text(verbatim: option.descriptor.displayName).tag(Optional(option.id))
               }
             } label: {
-              Text("Agent", bundle: .module, comment: "Which agent translates the sentence into archive rules.")
+              Text(
+                "Agent", bundle: .module,
+                comment: "Which agent translates the sentence into archive rules.")
             }
             .disabled(model.options.isEmpty || model.isGenerating)
           } else {
@@ -139,13 +155,17 @@ struct ArchiveRuleSheet: View {
           Button {
             model.translate()
           } label: {
-            Text("Translate", bundle: .module, comment: "Asks the agent to translate the sentence into archive rules.")
-              .frame(maxWidth: .infinity)
+            Text(
+              "Translate", bundle: .module,
+              comment: "Asks the agent to translate the sentence into archive rules."
+            )
+            .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
           .disabled(
             model.sentence.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-              || model.options.isEmpty || model.isGenerating)
+              || model.options.isEmpty || model.isGenerating
+          )
           .accessibilityIdentifier("archive-rule-translate")
         }
         .frame(width: 200)
@@ -158,13 +178,17 @@ struct ArchiveRuleSheet: View {
               "The first answer could not be used: it is asked once more.", bundle: .module,
               comment: "The sheet of a new archive rule, while the agent is asked a second time.")
           } else {
-            Text("\(agent) is translating…", bundle: .module, comment: "The sheet of a new archive rule. The argument is an agent's name.")
+            Text(
+              "\(agent) is translating…", bundle: .module,
+              comment: "The sheet of a new archive rule. The argument is an agent's name.")
           }
           Spacer()
           Button {
             model.cancel()
           } label: {
-            Text("Cancel", bundle: .module, comment: "Stops the translation of a sentence into archive rules.")
+            Text(
+              "Cancel", bundle: .module,
+              comment: "Stops the translation of a sentence into archive rules.")
           }
           .keyboardShortcut(.cancelAction)
         }
@@ -173,7 +197,8 @@ struct ArchiveRuleSheet: View {
       if model.optionsLoaded, model.options.isEmpty {
         Text(
           "No agent can translate a sentence now. Claude Code or Codex must be installed and signed in.",
-          bundle: .module, comment: "The sheet of a new archive rule, without agents.")
+          bundle: .module, comment: "The sheet of a new archive rule, without agents."
+        )
         .foregroundStyle(.orange)
       }
       if let problem = model.problem {
@@ -194,7 +219,8 @@ struct ArchiveRuleSheet: View {
         VStack(alignment: .leading, spacing: 2) {
           Text(
             "\(model.options.first { $0.id == model.selectedAgent }?.descriptor.displayName ?? "") asks",
-            bundle: .module, comment: "Above the question of the agent. The argument is its name.")
+            bundle: .module, comment: "Above the question of the agent. The argument is its name."
+          )
           .font(.caption.bold()).foregroundStyle(.secondary)
           Text(verbatim: question.text).font(.headline)
         }
@@ -216,7 +242,9 @@ struct ArchiveRuleSheet: View {
         Button {
           sentenceFocused = true
         } label: {
-          Text("Rephrase", bundle: .module, comment: "Goes back to the sentence instead of answering the agent's question.")
+          Text(
+            "Rephrase", bundle: .module,
+            comment: "Goes back to the sentence instead of answering the agent's question.")
         }
         Button {
           if let answer = model.chosenAnswer { model.answer(answer) }
@@ -236,8 +264,11 @@ struct ArchiveRuleSheet: View {
   private func explanation(_ version: ArchiveRuleSheetModel.Version) -> some View {
     let explanation = model.rules.explanation
     return VStack(alignment: .leading, spacing: 10) {
-      Text("What these rules will do", bundle: .module, comment: "A section of the sheet of a new archive rule.")
-        .font(.headline)
+      Text(
+        "What these rules will do", bundle: .module,
+        comment: "A section of the sheet of a new archive rule."
+      )
+      .font(.headline)
       ForEach(Array(version.document.rules.enumerated()), id: \.offset) { _, rule in
         VStack(alignment: .leading, spacing: 4) {
           HStack {
@@ -247,7 +278,8 @@ struct ArchiveRuleSheet: View {
               .font(.caption.bold()).padding(.horizontal, 8).padding(.vertical, 2)
               .background(.quaternary, in: Capsule())
           }
-          Text(verbatim: explanation.sentence(of: rule)).fixedSize(horizontal: false, vertical: true)
+          Text(verbatim: explanation.sentence(of: rule)).fixedSize(
+            horizontal: false, vertical: true)
         }
         .padding(12)
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
@@ -263,8 +295,11 @@ struct ArchiveRuleSheet: View {
       if !version.assumptions.isEmpty {
         let chosen = version.assumptions.map { "« \($0.said) » → \($0.chosen)" }
           .formatted(.list(type: .and))
-        Text("Chosen for you: \(chosen)", bundle: .module, comment: "What the agent decided where the sentence left it open.")
-          .font(.caption).foregroundStyle(.secondary)
+        Text(
+          "Chosen for you: \(chosen)", bundle: .module,
+          comment: "What the agent decided where the sentence left it open."
+        )
+        .font(.caption).foregroundStyle(.secondary)
       }
     }
   }
@@ -272,21 +307,31 @@ struct ArchiveRuleSheet: View {
   private var preview: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(alignment: .firstTextBaseline) {
-        Text("On your sessions", bundle: .module, comment: "A section of the sheet of a new archive rule: what the rules would do with the real sessions.")
-          .font(.headline)
+        Text(
+          "On your sessions", bundle: .module,
+          comment:
+            "A section of the sheet of a new archive rule: what the rules would do with the real sessions."
+        )
+        .font(.headline)
         Spacer()
         let times = model.nextTimes.map {
           $0.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
         }
         if !times.isEmpty {
-          Text("Next times: \(times.joined(separator: " · "))", bundle: .module, comment: "The next times archive rules run.")
-            .font(.caption).foregroundStyle(.secondary)
+          Text(
+            "Next times: \(times.joined(separator: " · "))", bundle: .module,
+            comment: "The next times archive rules run."
+          )
+          .font(.caption).foregroundStyle(.secondary)
         }
       }
       let rows = model.preview
       if rows.isEmpty {
-        Text("No done session would be archived now.", bundle: .module, comment: "The preview of archive rules.")
-          .foregroundStyle(.secondary)
+        Text(
+          "No done session would be archived now.", bundle: .module,
+          comment: "The preview of archive rules."
+        )
+        .foregroundStyle(.secondary)
       }
       ForEach(rows) { row in
         HStack(spacing: 10) {
@@ -307,14 +352,24 @@ struct ArchiveRuleSheet: View {
     let rule = row.ruleName ?? ""
     switch row.verdict {
     case .archive:
-      let date = row.when?.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute()) ?? ""
-      return String(localized: "\(date) · “\(rule)”", bundle: .module, comment: "When a session would be archived, and by which rule.")
+      let date =
+        row.when?.formatted(
+          .dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute()) ?? ""
+      return String(
+        localized: "\(date) · “\(rule)”", bundle: .module,
+        comment: "When a session would be archived, and by which rule.")
     case .protected:
-      return String(localized: "Never: protected", bundle: .module, comment: "The preview of archive rules: a protected session.")
+      return String(
+        localized: "Never: protected", bundle: .module,
+        comment: "The preview of archive rules: a protected session.")
     case .running:
-      return String(localized: "Skipped while something runs in it", bundle: .module, comment: "The preview of archive rules.")
+      return String(
+        localized: "Skipped while something runs in it", bundle: .module,
+        comment: "The preview of archive rules.")
     case .unarchived:
-      return String(localized: "Skipped: you took it out of the archive", bundle: .module, comment: "The preview of archive rules.")
+      return String(
+        localized: "Skipped: you took it out of the archive", bundle: .module,
+        comment: "The preview of archive rules.")
     default:
       return ""
     }
@@ -357,14 +412,17 @@ struct ArchiveRuleSheet: View {
         } label: {
           Text("Refine", bundle: .module, comment: "Asks the agent for a new version of the rules.")
         }
-        .disabled(model.refinement.trimmingCharacters(in: .whitespaces).isEmpty || model.isGenerating)
+        .disabled(
+          model.refinement.trimmingCharacters(in: .whitespaces).isEmpty || model.isGenerating)
         Button {
           if let current = model.current {
             bench = ArchiveRuleBenchModel(
               document: current.document, origin: .draft, rules: model.rules, palette: palette)
           }
         } label: {
-          Text("Test on the Bench", bundle: .module, comment: "Opens the test bench of the archive rules made in the sheet.")
+          Text(
+            "Test on the Bench", bundle: .module,
+            comment: "Opens the test bench of the archive rules made in the sheet.")
         }
         .disabled(model.current?.document.rules.isEmpty ?? true)
       } else {
@@ -374,13 +432,17 @@ struct ArchiveRuleSheet: View {
         model.cancel()
         close()
       } label: {
-        Text("Cancel", bundle: .module, comment: "Closes the sheet of a new archive rule without saving.")
+        Text(
+          "Cancel", bundle: .module,
+          comment: "Closes the sheet of a new archive rule without saving.")
       }
       if model.purpose != .protection {
         Button {
           Task { if await model.save(trial: true) { close() } }
         } label: {
-          Text("Try First", bundle: .module, comment: "Saves archive rules that archive nothing until turned on.")
+          Text(
+            "Try First", bundle: .module,
+            comment: "Saves archive rules that archive nothing until turned on.")
         }
         .disabled(model.current == nil || model.isGenerating)
       }
@@ -411,13 +473,17 @@ private struct ArchiveRuleRenameView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 14) {
-      Text("Rename the Rule", bundle: .module, comment: "The title of the sheet asking for another name for an archive rule.")
-        .font(.headline)
+      Text(
+        "Rename the Rule", bundle: .module,
+        comment: "The title of the sheet asking for another name for an archive rule."
+      )
+      .font(.headline)
       ForEach($model.renames) { $rename in
         VStack(alignment: .leading, spacing: 6) {
           Text(
             "A rule is already named “\(rename.original)”. Give this one another name.",
-            bundle: .module, comment: "Renaming an archive rule whose name is taken.")
+            bundle: .module, comment: "Renaming an archive rule whose name is taken."
+          )
           .fixedSize(horizontal: false, vertical: true)
           TextField(text: $rename.name, prompt: Text(verbatim: rename.original)) {
             Text("New name", bundle: .module, comment: "The field of an archive rule's new name.")
@@ -433,7 +499,9 @@ private struct ArchiveRuleRenameView: View {
         Button(role: .cancel) {
           model.cancelRenames()
         } label: {
-          Text("Cancel", bundle: .module, comment: "Goes back to the archive rule without renaming it.")
+          Text(
+            "Cancel", bundle: .module, comment: "Goes back to the archive rule without renaming it."
+          )
         }
         .keyboardShortcut(.cancelAction)
         Button {

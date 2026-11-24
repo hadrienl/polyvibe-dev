@@ -2,6 +2,7 @@ import AVFoundation
 import AppKit
 import CompanionCore
 import SwiftUI
+import VibeConversationUI
 import VibeDevices
 
 /// A simulator in a tab of the web view. `sim-bridge`, a process of its own, holds the
@@ -136,6 +137,7 @@ struct DeviceMirrorToolbarButton: View {
       }
     }
     .disabled(!model.isWebViewAvailable)
+    .instantTooltip(Text("Simulators", bundle: .module))
     .background(
       // Out of the toolbar, the button takes its list with it: no list left open without a button.
       ToolbarPopoverAnchor(

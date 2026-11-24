@@ -294,7 +294,8 @@ private struct ReadAloudButton: View {
     .accessibilityLabel(
       isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module)
     )
-    .help(isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
+    .instantTooltip(
+      isReading ? Text("Stop Reading", bundle: .module) : Text("Read Aloud", bundle: .module))
   }
 }
 

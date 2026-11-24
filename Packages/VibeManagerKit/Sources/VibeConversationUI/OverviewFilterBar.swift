@@ -80,7 +80,7 @@ struct OverviewFilterBar: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .help(Text(verbatim: "\(name) · \(state)"))
+    .instantTooltip(Text(verbatim: "\(name) · \(state)"))
     .accessibilityLabel(Text(verbatim: name))
     .accessibilityValue(Text(verbatim: state))
     .accessibilityAddTraits(isShown ? .isSelected : [])

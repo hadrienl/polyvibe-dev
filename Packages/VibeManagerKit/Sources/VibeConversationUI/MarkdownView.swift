@@ -71,7 +71,7 @@ private struct CommandLinkButton: View {
       }
       .buttonStyle(.bordered)
       .disabled(runner?.canRunShellCommand != true)
-      .help(path)
+      .instantTooltip(path)
       .confirmationDialog(Text("Run", bundle: .module), isPresented: $confirming) {
         Button {
           let quoted = path.replacingOccurrences(of: "'", with: "'\"'\"'")

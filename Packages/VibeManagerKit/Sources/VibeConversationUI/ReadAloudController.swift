@@ -80,7 +80,8 @@ public final class ReadAloudController {
   /// The files of a cancelled download, being removed.
   @ObservationIgnored private var removal: Task<Void, Never>?
   /// The answers the audio mode will read next, in their order, with their conversation.
-  @ObservationIgnored private var queue: [(id: String, text: String, conversation: ObjectIdentifier)] = []
+  @ObservationIgnored private var queue:
+    [(id: String, text: String, conversation: ObjectIdentifier)] = []
   /// The answers each conversation already had: only the ones after are new.
   @ObservationIgnored private var seen: [ObjectIdentifier: Set<String>] = [:]
   /// When each conversation came on screen: an answer written before, while it was out of sight,
@@ -367,7 +368,7 @@ struct ReadingAloudPill: View {
     }
     .buttonStyle(.plain)
     .accessibilityLabel(Text("Stop Reading", bundle: .module))
-    .help(Text("Stop Reading", bundle: .module))
+    .instantTooltip(Text("Stop Reading", bundle: .module))
     .padding(.top, 10)
   }
 }
@@ -453,7 +454,7 @@ struct AudioModeButton: View {
     .buttonStyle(.plain)
     .accessibilityLabel(Text("Audio Mode", bundle: .module))
     .accessibilityValue(isOn ? Text("On", bundle: .module) : Text("Off", bundle: .module))
-    .help(
+    .instantTooltip(
       isOn
         ? Text("Audio mode on: answers are read as they arrive", bundle: .module)
         : Text("Audio mode: read the answers as they arrive", bundle: .module))

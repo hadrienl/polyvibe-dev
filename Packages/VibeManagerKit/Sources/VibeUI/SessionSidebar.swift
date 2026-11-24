@@ -991,7 +991,7 @@ private struct ArchiveRulesButton: View {
         .font(.caption)
       }
       .buttonStyle(.borderless)
-      .help(
+      .instantTooltip(
         Text(
           "Change the automatic archive rules in the Settings", bundle: .module,
           comment: "The help of the Automatic Archive… button of the Done column.")
