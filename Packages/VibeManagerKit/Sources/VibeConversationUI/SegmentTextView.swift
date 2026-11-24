@@ -209,7 +209,14 @@ final class SegmentTextView: NSTextView {
   var isLive = true {
     didSet {
       guard oldValue != isLive else { return }
-      if !isLive { hideReplyButton() }
+      // The paragraph's « Reply » goes; the selection's comes back with its conversation, as the
+      // selection does.
+      if !isLive {
+        replyButton?.isHidden = true
+        repliedParagraph = nil
+      } else if selectionReplyOffset != nil {
+        replyButton?.isHidden = false
+      }
       window?.invalidateCursorRects(for: self)
       updateTrackingAreas()
     }

@@ -109,16 +109,61 @@ struct HiddenConversationPointerTests {
     // Launched behind the conversation shown: SwiftUI lays the gate out before the field.
     gate.isShown = false
     gate.layoutSubtreeIfNeeded()
-    let field = NSScrollView(frame: .zero)
-    field.documentView = NSTextView(frame: NSRect(origin: .zero, size: place.size))
+    let field = field(at: place)
     container.addSubview(field)
-    field.frame = place
     for _ in 0..<20 where !field.isHidden {
       try await Task.sleep(for: .milliseconds(25))
     }
     #expect(field.isHidden)
     gate.isShown = true
     #expect(!field.isHidden)
+  }
+
+  private func field(at place: NSRect) -> NSScrollView {
+    let field = NSScrollView(frame: place)
+    field.documentView = NSTextView(frame: NSRect(origin: .zero, size: place.size))
+    return field
+  }
+
+  @Test("A gate whose field is not there yet never takes the next conversation's, right there")
+  func neverAnotherConversationsField() async throws {
+    let container = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 200))
+    let window = window(container)
+    defer { window.close() }
+    let place = NSRect(x: 20, y: 20, width: 300, height: 40)
+    // The conversation kept behind, its field not placed yet, then the one shown.
+    let hidden = HiddenFieldGate.GateView(frame: place)
+    let shown = HiddenFieldGate.GateView(frame: place)
+    let shownField = field(at: place)
+    for view in [hidden, shown, shownField] { container.addSubview(view) }
+    hidden.isShown = false
+    shown.isShown = true
+    try await Task.sleep(for: .milliseconds(100))
+    #expect(!shownField.isHidden)
+
+    let hiddenField = field(at: place)
+    container.addSubview(hiddenField, positioned: .above, relativeTo: hidden)
+    for _ in 0..<20 where !hiddenField.isHidden {
+      try await Task.sleep(for: .milliseconds(25))
+    }
+    #expect(hiddenField.isHidden)
+    #expect(!shownField.isHidden)
+  }
+
+  @Test("« Reply to Selection » comes back with its conversation, as the selection does")
+  func selectionReplyComesBack() throws {
+    let view = SegmentTextView()
+    view.show(
+      NSAttributedString(
+        string: "A passage to quote.", attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+    view.frame = CGRect(x: 0, y: 0, width: 400, height: view.height(forWidth: 400))
+    view.offerSelectionReply(endingAt: 9, passage: "A passage", reply: { _ in })
+    let button = try #require(view.replyButton)
+    #expect(!button.isHidden)
+    view.isLive = false
+    #expect(button.isHidden)
+    view.isLive = true
+    #expect(!button.isHidden)
   }
 
   @Test("Hidden, its text follows no pointer: no « Reply » under it, and none left shown")
