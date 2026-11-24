@@ -170,6 +170,7 @@ struct SessionStoreCodec {
 /// Even made once, a formatter still takes 0.2 to 0.7 ms per date on macOS 27: nearly a second
 /// for a store of two hundred sessions (#253). The one shape the store writes is therefore read
 /// by arithmetic, and the formatters only read the others: older documents, or edited by hand.
+/// The usage files share these dates (#602).
 enum StoreDates {
   nonisolated(unsafe) private static let fractional: ISO8601DateFormatter = {
     let formatter = ISO8601DateFormatter()
@@ -182,6 +183,10 @@ enum StoreDates {
     return formatter
   }()
   private static let lock = NSLock()
+  /// A value, made once and safe to share.
+  private static let wholeSeconds = Date.ISO8601FormatStyle()
+  /// 0001-01-01T00:00:00Z, since 1970.
+  private static let firstYear: TimeInterval = -62_135_596_800
 
   static func parse(_ text: String) -> Date? {
     utcMilliseconds(text)
@@ -238,8 +243,22 @@ enum StoreDates {
     }
   }
 
+  /// What `fractional` writes, character for character, without it (#602), from year 1 on.
+  /// `ISO8601FormatStyle` cuts the milliseconds where the formatter rounds them, half up: the
+  /// milliseconds are rounded here, the formatter's way, and the whole seconds formatted alone.
+  /// Before year 1 the style signs its years where the formatter does not, and a date that is
+  /// not a number has no milliseconds: the formatter writes those.
   static func format(_ date: Date) -> String {
-    lock.withLock { fractional.string(from: date) }
+    let interval = date.timeIntervalSince1970
+    guard interval.isFinite, interval >= firstYear else {
+      return lock.withLock { fractional.string(from: date) }
+    }
+    let milliseconds = (interval * 1_000 + 0.5).rounded(.down)
+    let seconds = (milliseconds / 1_000).rounded(.down)
+    let digits = String(Int(milliseconds - seconds * 1_000))
+    var text = wholeSeconds.format(Date(timeIntervalSince1970: seconds))
+    text.removeLast()  // the "Z"
+    return text + "." + String(repeating: "0", count: 3 - digits.count) + digits + "Z"
   }
 }
 

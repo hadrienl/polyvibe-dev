@@ -30,6 +30,41 @@ func storeDatesMatchTheFormatterBitForBit() throws {
   }
 }
 
+@Test("Dates are written as the formatter writes them, character for character")
+func storeDatesWriteWhatTheFormatterWrites() {
+  let formatter = makeFormatter(fractional: true)
+  var generator = SystemRandomNumberGenerator()
+  var dates: [Date] = [
+    .distantPast, .distantFuture, Date(timeIntervalSince1970: 0),
+    Date(timeIntervalSince1970: -0.0005), Date(timeIntervalSince1970: 1_700_000_000.9995),
+    Date(timeIntervalSince1970: 253_402_300_799.9996),
+  ]
+  for index in 0..<10_000 {
+    var interval = Double.random(in: -3e9...3e9, using: &generator)
+    switch index % 4 {
+    // Rounded to the millisecond, as most stored dates are, or right between two.
+    case 0: interval = (interval * 1_000).rounded() / 1_000
+    case 1: interval = (interval * 1_000).rounded() / 1_000 + 0.000_5
+    case 2: interval = interval.rounded()
+    default: break
+    }
+    dates.append(Date(timeIntervalSinceReferenceDate: interval))
+  }
+
+  for date in dates {
+    #expect(
+      StoreDates.format(date) == formatter.string(from: date), "\(date.timeIntervalSince1970)")
+  }
+}
+
+@Test(
+  "Before year 1, or not a number, a date is written by the formatter",
+  arguments: [-1e11, -62_135_596_800.001, .nan, .infinity, -.infinity])
+func outOfRangeDatesAreWrittenByTheFormatter(interval: Double) {
+  let date = Date(timeIntervalSince1970: interval)
+  #expect(StoreDates.format(date) == makeFormatter(fractional: true).string(from: date))
+}
+
 @Test("Every date the store writes takes the fast path")
 func writtenDatesTakeTheFastPath() {
   let dates = [
