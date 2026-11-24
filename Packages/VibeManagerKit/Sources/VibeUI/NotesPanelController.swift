@@ -47,6 +47,8 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
   /// The request the window on screen shows; `nil` with nothing on screen, including a popover
   /// waiting for the toolbar's button to be back in the toolbar.
   private(set) var displayed: NotesPresentation.Request?
+  /// Every click's mouse down: the click that closed the popover is over once another begins.
+  private var clickMonitor: Any?
   /// Puts the panel on screen, with the keyboard or without. Tests keep it off the screen and read
   /// the panel instead.
   var showPanel: (NotesPanel, Bool) -> Void = { panel, takesKeyboard in
@@ -65,7 +67,17 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
     super.init()
     model.notesPresentation.returnFromPanel = { [weak self] in self?.returnKeyboard() }
     model.notesPresentation.changed = { [weak self] in self?.update() }
+    clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) {
+      [weak model] event in
+      let timestamp = event.timestamp
+      MainActor.assumeIsolated { model?.notesPresentation.clickBegan(at: timestamp) }
+      return event
+    }
     update()
+  }
+
+  isolated deinit {
+    if let clickMonitor { NSEvent.removeMonitor(clickMonitor) }
   }
 
   private func update() {
@@ -199,17 +211,14 @@ public final class NotesPanelController: NSObject, NSWindowDelegate, NSPopoverDe
 
   // MARK: NSPopoverDelegate
 
-  /// A click on the toolbar's button closes the transient popover before the button acts: that
-  /// click puts the notes away, it must not open them again.
+  /// A click closes the transient popover before the toolbar's button acts: if that click is on
+  /// the button, it puts the notes away and must not open them again. The click is remembered
+  /// wherever it landed — only the button acts on its mouse up — until the next one begins.
   public func popoverWillClose(_ notification: Notification) {
     guard notification.object as? NSPopover === popover,
-      let event = NSApp.currentEvent, event.type == .leftMouseDown,
-      let anchor = model.notesPresentation.anchor, event.window === anchor.window
+      let event = NSApp.currentEvent, event.type == .leftMouseDown
     else { return }
-    let point = anchor.convert(event.locationInWindow, from: nil)
-    if anchor.bounds.insetBy(dx: -4, dy: -4).contains(point) {
-      model.notesPresentation.closedByButtonClick(at: event.timestamp)
-    }
+    model.notesPresentation.closedByClick(at: event.timestamp)
   }
 
   /// A click elsewhere, or Escape outside the editor.

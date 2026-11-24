@@ -91,9 +91,17 @@ public final class NotesPresentation {
     if active?.sessionID == sessionID { dismiss() } else { show(for: sessionID) }
   }
 
-  /// The transient popover closes on the mouse down, before the button acts on the mouse up.
-  func closedByButtonClick(at timestamp: TimeInterval) {
+  /// A click closed the transient popover, on its mouse down. Should it be on the toolbar's
+  /// button, the button acts on its mouse up and must not open the notes again. Where the click
+  /// landed is not asked: the button's clickable area is wider than any view under it.
+  func closedByClick(at timestamp: TimeInterval) {
     popoverClosedByClickAt = timestamp
+  }
+
+  /// Another click began: the one that closed the popover is over, and the button acts again.
+  func clickBegan(at timestamp: TimeInterval) {
+    guard let closed = popoverClosedByClickAt, timestamp > closed else { return }
+    popoverClosedByClickAt = nil
   }
 
   /// Puts the notes away. With `requestID`, only if that opening is still the one on screen.

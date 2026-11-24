@@ -500,12 +500,28 @@ struct NotesPresentationViewTests {
     defer { screen.close() }
     model.toggleNotes()
     // AppKit's transient popover closes on the mouse down; the button acts on the mouse up.
-    model.notesPresentation.closedByButtonClick(at: ProcessInfo.processInfo.systemUptime)
+    model.notesPresentation.closedByClick(at: ProcessInfo.processInfo.systemUptime)
     model.notesPopoverDismissed()
 
     model.toggleNotes()
     #expect(!model.notesPresentation.isShown)
     #expect(screen.presentations == 0)
+
+    model.toggleNotes()
+    #expect(model.notesPresentation.isPopoverShown)
+  }
+
+  @Test("A click elsewhere closes the popover, and the next click on the button opens it")
+  func clickElsewhereThenButton() async {
+    let (model, _) = await model()
+    let screen = Screen(model: model)
+    defer { screen.close() }
+    model.toggleNotes()
+    let closed = ProcessInfo.processInfo.systemUptime
+    model.notesPresentation.closedByClick(at: closed)
+    model.notesPopoverDismissed()
+    // Another click begins, this time on the button.
+    model.notesPresentation.clickBegan(at: closed + 0.2)
 
     model.toggleNotes()
     #expect(model.notesPresentation.isPopoverShown)
