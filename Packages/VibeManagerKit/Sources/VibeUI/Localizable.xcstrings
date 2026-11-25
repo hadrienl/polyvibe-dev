@@ -201112,107 +201112,6 @@
         }
       }
     },
-    "Backup Chain" : {
-      "comment" : "A section of Settings › Backup Accounts.",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "سلسلة الحسابات الاحتياطية"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ersatzkette"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cadena de respaldo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaîne de secours"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "बैकअप क्रम"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Catena di riserva"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切り替えの順序"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "예비 순서"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reserveketen"
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Łańcuch zapasowy"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cadeia de reserva"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Цепочка резервов"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Yedek sırası"
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ланцюжок резервів"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "备用顺序"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "備用順序"
-          }
-        }
-      }
-    },
     "No account can tell its quota yet." : {
       "localizations" : {
         "ar" : {
@@ -201309,106 +201208,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "目前還沒有帳號能回報其配額。"
-          }
-        }
-      }
-    },
-    "When the account of a session reaches its limit — its quota spent, or a rate limit that lifts in more than a quarter of an hour — the session goes on with the next account of the chain, handed a copy of its conversation. A passing error changes nothing, and a session on an account left out of the chain stops at its limit. Sessions go back to the first account only when you start new ones." : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "عندما يبلغ حساب الجلسة حدّه — نفاد حصته، أو حدّ معدّل لا يُرفع قبل أكثر من ربع ساعة — تتابع الجلسة على الحساب التالي في السلسلة، مع نسخة من محادثتها. الخطأ العابر لا يغيّر شيئًا، والجلسة على حساب خارج السلسلة تتوقف عند حدّها. لا تعود الجلسات إلى الحساب الأول إلا عندما تبدأ جلسات جديدة."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erreicht das Konto einer Sitzung sein Limit – Kontingent aufgebraucht oder ein Ratenlimit, das erst in mehr als einer Viertelstunde endet –, läuft die Sitzung mit dem nächsten Konto der Kette weiter und erhält eine Kopie ihrer Unterhaltung. Ein vorübergehender Fehler ändert nichts, und eine Sitzung auf einem Konto außerhalb der Kette hält an ihrem Limit an. Zum ersten Konto kehren nur neue Sitzungen zurück, die du startest."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuando la cuenta de una sesión alcanza su límite —cuota agotada o un límite de frecuencia que se levanta en más de un cuarto de hora—, la sesión continúa con la siguiente cuenta de la cadena, con una copia de su conversación. Un error pasajero no cambia nada, y una sesión en una cuenta fuera de la cadena se detiene en su límite. Las sesiones vuelven a la primera cuenta solo cuando inicias otras nuevas."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quand le compte d’une session atteint sa limite — quota épuisé, ou limite de débit levée dans plus d’un quart d’heure —, la session continue sur le compte suivant de la chaîne, avec une copie de sa conversation. Une erreur passagère ne change rien, et une session sur un compte hors de la chaîne s’arrête à sa limite. Les sessions ne reviennent au premier compte que lorsque vous en démarrez de nouvelles."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "जब किसी सेशन का खाता अपनी सीमा तक पहुँचता है — कोटा खत्म हो जाए, या कोई रेट लिमिट जो पंद्रह मिनट से ज़्यादा बाद हटे — तो सेशन अपनी बातचीत की एक प्रति के साथ क्रम के अगले खाते पर जारी रहता है। कोई अस्थायी त्रुटि कुछ नहीं बदलती, और क्रम से बाहर के खाते वाला सेशन अपनी सीमा पर रुक जाता है। सेशन पहले खाते पर तभी लौटते हैं जब आप नए सेशन शुरू करते हैं।"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando l’account di una sessione raggiunge il suo limite — quota esaurita, o un limite di frequenza che si sblocca tra più di un quarto d’ora — la sessione prosegue con l’account successivo della catena, con una copia della sua conversazione. Un errore passeggero non cambia nulla, e una sessione su un account fuori dalla catena si ferma al suo limite. Le sessioni tornano al primo account solo quando ne avvii di nuove."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "セッションのアカウントが上限に達すると（クォータを使い切ったとき、または解除まで15分以上かかるレート制限のとき）、セッションは会話のコピーを引き継いで、順序の次のアカウントで続行します。一時的なエラーでは何も変わらず、順序に含まれないアカウントのセッションは上限で停止します。最初のアカウントに戻るのは、新しいセッションを開始したときだけです。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "세션의 계정이 한도에 도달하면(할당량 소진, 또는 15분 넘게 지나야 풀리는 사용량 제한) 세션은 대화의 사본을 넘겨받아 순서상 다음 계정으로 계속됩니다. 일시적인 오류로는 아무것도 바뀌지 않으며, 순서에 없는 계정의 세션은 한도에서 멈춥니다. 첫 번째 계정으로는 새 세션을 시작할 때만 돌아갑니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bereikt het account van een sessie zijn limiet — quotum op, of een snelheidslimiet die pas over meer dan een kwartier vervalt —, dan gaat de sessie verder met het volgende account van de keten, met een kopie van haar gesprek. Een tijdelijke fout verandert niets, en een sessie op een account buiten de keten stopt bij haar limiet. Sessies keren pas terug naar het eerste account wanneer je nieuwe start."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gdy konto sesji osiągnie limit — wyczerpany przydział albo limit szybkości, który minie za ponad kwadrans — sesja jest kontynuowana na następnym koncie łańcucha, z kopią swojej rozmowy. Przejściowy błąd niczego nie zmienia, a sesja na koncie spoza łańcucha zatrzymuje się na swoim limicie. Do pierwszego konta wracają tylko nowo uruchomione sesje."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando a conta de uma sessão atinge o limite — cota esgotada ou um limite de taxa que só é liberado em mais de quinze minutos —, a sessão continua na próxima conta da cadeia, com uma cópia da conversa. Um erro passageiro não muda nada, e uma sessão em uma conta fora da cadeia para no limite. As sessões só voltam à primeira conta quando você inicia novas."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Когда учётная запись сеанса достигает лимита — квота исчерпана или ограничение частоты снимется не раньше чем через четверть часа, — сеанс продолжается на следующей учётной записи цепочки с копией своего разговора. Временная ошибка ничего не меняет, а сеанс на учётной записи вне цепочки останавливается на своём лимите. К первой учётной записи возвращаются только новые сеансы, которые вы запускаете."
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bir oturumun hesabı sınırına ulaştığında — kota bittiğinde ya da on beş dakikadan uzun sürede kalkacak bir hız sınırında — oturum, sohbetinin bir kopyasıyla sıradaki hesapta devam eder. Geçici bir hata hiçbir şeyi değiştirmez; sıranın dışındaki bir hesaptaki oturum ise sınırında durur. Oturumlar ilk hesaba yalnızca yenilerini başlattığınızda döner."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Коли обліковий запис сеансу досягає ліміту — квоту вичерпано або обмеження частоти зніметься не раніше ніж за чверть години, — сеанс продовжується на наступному обліковому записі ланцюжка з копією своєї розмови. Тимчасова помилка нічого не змінює, а сеанс на обліковому записі поза ланцюжком зупиняється на своєму ліміті. До першого облікового запису повертаються лише нові сеанси, які ви запускаєте."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当会话的账户达到上限（配额用尽，或速率限制需要十五分钟以上才解除）时，会话会带着对话副本在顺序中的下一个账户上继续。临时错误不会改变任何事情；不在顺序中的账户上的会话会在达到上限时停止。只有你新建的会话才会回到第一个账户。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "當工作階段的帳號達到上限（配額用盡，或速率限制需要十五分鐘以上才解除）時，工作階段會帶著對話副本在順序中的下一個帳號上繼續。暫時性錯誤不會改變任何事；不在順序中的帳號上的工作階段會在達到上限時停止。只有你新建的工作階段才會回到第一個帳號。"
           }
         }
       }
@@ -201712,6 +201511,207 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "下移 %@"
+          }
+        }
+      }
+    },
+    "Order of Priority" : {
+      "comment" : "A section of Settings › Backup Accounts: the accounts, the first preferred.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ترتيب الأولوية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rangfolge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orden de prioridad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordre de priorité"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्राथमिकता क्रम"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordine di priorità"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "優先順位"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "우선순위"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volgorde van voorkeur"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolejność priorytetu"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordem de prioridade"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порядок приоритета"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öncelik sırası"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порядок пріоритету"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优先顺序"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "優先順序"
+          }
+        }
+      }
+    },
+    "The chain is an order of priority. When the account of a session reaches its limit — its quota spent, or a rate limit that lifts in more than a quarter of an hour — the session goes on with the first account of the chain that is not at its limit, handed a copy of its conversation: one higher up that has its quota back comes first. A passing error changes nothing, and a session on an account left out of the chain stops at its limit." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السلسلة ترتيب أولوية. عندما يبلغ حساب الجلسة حدّه — نفاد حصته، أو حدّ معدّل لا يُرفع قبل أكثر من ربع ساعة — تتابع الجلسة على أول حساب في السلسلة لم يبلغ حدّه، مع نسخة من محادثتها: الحساب الأعلى الذي استعاد حصته يأتي أولًا. الخطأ العابر لا يغيّر شيئًا، والجلسة على حساب خارج السلسلة تتوقف عند حدّها."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kette ist eine Rangfolge. Erreicht das Konto einer Sitzung sein Limit – Kontingent aufgebraucht oder ein Ratenlimit, das erst in mehr als einer Viertelstunde endet –, läuft die Sitzung mit dem ersten Konto der Kette weiter, das nicht am Limit ist, und erhält eine Kopie ihrer Unterhaltung: Ein weiter oben stehendes Konto, dessen Kontingent wieder da ist, kommt zuerst. Ein vorübergehender Fehler ändert nichts, und eine Sitzung auf einem Konto außerhalb der Kette hält an ihrem Limit an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cadena es un orden de prioridad. Cuando la cuenta de una sesión alcanza su límite —cuota agotada o un límite de frecuencia que se levanta en más de un cuarto de hora—, la sesión continúa con la primera cuenta de la cadena que no esté en su límite, con una copia de su conversación: una cuenta más arriba que haya recuperado su cuota va primero. Un error pasajero no cambia nada, y una sesión en una cuenta fuera de la cadena se detiene en su límite."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chaîne est un ordre de priorité. Quand le compte d’une session atteint sa limite — quota épuisé, ou limite de débit levée dans plus d’un quart d’heure —, la session continue sur le premier compte de la chaîne qui n’est pas à sa limite, avec une copie de sa conversation : un compte plus haut qui a retrouvé son quota passe en premier. Une erreur passagère ne change rien, et une session sur un compte hors de la chaîne s’arrête à sa limite."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह क्रम प्राथमिकता का है। जब किसी सेशन का खाता अपनी सीमा तक पहुँचता है — कोटा खत्म हो जाए, या कोई रेट लिमिट जो पंद्रह मिनट से ज़्यादा बाद हटे — तो सेशन अपनी बातचीत की एक प्रति के साथ क्रम के उस पहले खाते पर जारी रहता है जो अपनी सीमा पर नहीं है: ऊपर का कोई खाता जिसका कोटा लौट आया हो, पहले आता है। कोई अस्थायी त्रुटि कुछ नहीं बदलती, और क्रम से बाहर के खाते वाला सेशन अपनी सीमा पर रुक जाता है।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La catena è un ordine di priorità. Quando l’account di una sessione raggiunge il suo limite — quota esaurita, o un limite di frequenza che si sblocca tra più di un quarto d’ora — la sessione prosegue con il primo account della catena che non è al limite, con una copia della sua conversazione: un account più in alto che ha recuperato la quota viene prima. Un errore passeggero non cambia nulla, e una sessione su un account fuori dalla catena si ferma al suo limite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この順序は優先順位です。セッションのアカウントが上限に達すると（クォータを使い切ったとき、または解除まで15分以上かかるレート制限のとき）、セッションは会話のコピーを引き継いで、上限に達していない順序内の最初のアカウントで続行します。クォータが回復した上位のアカウントが優先されます。一時的なエラーでは何も変わらず、順序に含まれないアカウントのセッションは上限で停止します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 순서는 우선순위입니다. 세션의 계정이 한도에 도달하면(할당량 소진, 또는 15분 넘게 지나야 풀리는 사용량 제한) 세션은 대화의 사본을 넘겨받아 한도에 도달하지 않은 순서상 첫 번째 계정으로 계속됩니다. 할당량을 되찾은 상위 계정이 먼저입니다. 일시적인 오류로는 아무것도 바뀌지 않으며, 순서에 없는 계정의 세션은 한도에서 멈춥니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De keten is een volgorde van voorkeur. Bereikt het account van een sessie zijn limiet — quotum op, of een snelheidslimiet die pas over meer dan een kwartier vervalt —, dan gaat de sessie verder met het eerste account van de keten dat niet aan zijn limiet zit, met een kopie van haar gesprek: een hoger account dat zijn quotum terug heeft, komt eerst. Een tijdelijke fout verandert niets, en een sessie op een account buiten de keten stopt bij haar limiet."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Łańcuch to kolejność priorytetu. Gdy konto sesji osiągnie limit — wyczerpany przydział albo limit szybkości, który minie za ponad kwadrans — sesja jest kontynuowana na pierwszym koncie łańcucha, które nie jest na limicie, z kopią swojej rozmowy: wyższe konto, które odzyskało przydział, ma pierwszeństwo. Przejściowy błąd niczego nie zmienia, a sesja na koncie spoza łańcucha zatrzymuje się na swoim limicie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A cadeia é uma ordem de prioridade. Quando a conta de uma sessão atinge o limite — cota esgotada ou um limite de taxa que só é liberado em mais de quinze minutos —, a sessão continua na primeira conta da cadeia que não esteja no limite, com uma cópia da conversa: uma conta mais acima que recuperou a cota vem primeiro. Um erro passageiro não muda nada, e uma sessão em uma conta fora da cadeia para no limite."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цепочка задаёт порядок приоритета. Когда учётная запись сеанса достигает лимита — квота исчерпана или ограничение частоты снимется не раньше чем через четверть часа, — сеанс продолжается на первой учётной записи цепочки, которая не достигла лимита, с копией своего разговора: учётная запись выше, вернувшая себе квоту, идёт первой. Временная ошибка ничего не меняет, а сеанс на учётной записи вне цепочки останавливается на своём лимите."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sıra bir öncelik sırasıdır. Bir oturumun hesabı sınırına ulaştığında — kota bittiğinde ya da on beş dakikadan uzun sürede kalkacak bir hız sınırında — oturum, sohbetinin bir kopyasıyla sıradaki sınırında olmayan ilk hesapta devam eder: kotasını geri kazanmış daha üstteki bir hesap önce gelir. Geçici bir hata hiçbir şeyi değiştirmez; sıranın dışındaki bir hesaptaki oturum ise sınırında durur."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ланцюжок задає порядок пріоритету. Коли обліковий запис сеансу досягає ліміту — квоту вичерпано або обмеження частоти зніметься не раніше ніж за чверть години, — сеанс продовжується на першому обліковому записі ланцюжка, який не досяг ліміту, з копією своєї розмови: обліковий запис вище, що повернув собі квоту, іде першим. Тимчасова помилка нічого не змінює, а сеанс на обліковому записі поза ланцюжком зупиняється на своєму ліміті."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此顺序即优先顺序。当会话的账户达到上限（配额用尽，或速率限制需要十五分钟以上才解除）时，会话会带着对话副本，在顺序中第一个未达上限的账户上继续：排在更前、已恢复配额的账户优先。临时错误不会改变任何事情；不在顺序中的账户上的会话会在达到上限时停止。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此順序即優先順序。當工作階段的帳號達到上限（配額用盡，或速率限制需要十五分鐘以上才解除）時，工作階段會帶著對話副本，在順序中第一個未達上限的帳號上繼續：排在更前、已恢復配額的帳號優先。暫時性錯誤不會改變任何事；不在順序中的帳號上的工作階段會在達到上限時停止。"
           }
         }
       }

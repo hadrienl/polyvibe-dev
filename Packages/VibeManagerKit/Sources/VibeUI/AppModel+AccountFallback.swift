@@ -10,8 +10,8 @@ import VibeDomain
 /// Only the account's limit moves it. The turn ended on the provider's refusal at a limit, and the
 /// CLI, asked right after, says a window of the account's quota is spent and does not come back
 /// within a quarter of an hour. Nothing that would be lost is stopped: the session must still be
-/// running, with nothing at work behind it and nothing typed into its prompt. A session never
-/// comes back by itself: the next one starts where the user says.
+/// running, with nothing at work behind it and nothing typed into its prompt. The chain is an
+/// order of priority: a session goes back up it only at its next limit, never while it works.
 extension AppModel {
   /// How long a turn that just ended is given for its transcript to say why: the refusal is
   /// written as the turn stops, and read a moment later.
@@ -92,12 +92,15 @@ extension AppModel {
     await usage?.quotas.reading(of: providerID, since: date)
   }
 
-  /// Moves the session to the first account after `providerID` in the chain that can run, is
-  /// signed in and is not at its limit. None left, the session stays as it stopped, the refusal
-  /// in its conversation.
+  /// Moves the session to the account of the chain highest in priority, `providerID` aside, that
+  /// can run, is signed in and is not at its limit: one above it that has its quota back is taken
+  /// before those below. None left, the session stays as it stopped, the refusal in its
+  /// conversation.
   func fallBack(_ id: SessionID, from providerID: String, limit: AccountLimit) async {
     guard let agents, let planAgentSwitch else { return }
-    for candidate in AccountFallbackRules.candidates(after: providerID, in: accountFallback.chain) {
+    for candidate in AccountFallbackRules.candidates(
+      besides: providerID, in: accountFallback.chain)
+    {
       if limitedAccounts[candidate]?.holds(at: clock.now()) == true { continue }
       guard let provider = await agents.provider(id: AgentProviderID(candidate)),
         await provider.availability(forceRefresh: false).isUsable

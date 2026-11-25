@@ -28,16 +28,19 @@ struct BackupAccountsSettingsView: View {
           row(account, position: nil, isFirst: false, isLast: false)
         }
       } header: {
-        Text("Backup Chain", bundle: .module, comment: "A section of Settings › Backup Accounts.")
+        Text(
+          "Order of Priority", bundle: .module,
+          comment: "A section of Settings › Backup Accounts: the accounts, the first preferred.")
       } footer: {
         VStack(alignment: .leading, spacing: 6) {
           Text(
             """
-            When the account of a session reaches its limit — its quota spent, or a rate limit that \
-            lifts in more than a quarter of an hour — the session goes on with the next account of \
-            the chain, handed a copy of its conversation. A passing error changes nothing, and a \
-            session on an account left out of the chain stops at its limit. Sessions go back to \
-            the first account only when you start new ones.
+            The chain is an order of priority. When the account of a session reaches its limit — \
+            its quota spent, or a rate limit that lifts in more than a quarter of an hour — the \
+            session goes on with the first account of the chain that is not at its limit, handed a \
+            copy of its conversation: one higher up that has its quota back comes first. A passing \
+            error changes nothing, and a session on an account left out of the chain stops at its \
+            limit.
             """,
             bundle: .module
           )

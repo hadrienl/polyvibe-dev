@@ -80,10 +80,11 @@ public enum AccountFallbackRules {
     return false
   }
 
-  /// The accounts to go on with, in the order to try them: those after the session's in the
-  /// chain, then those before it. None for an account the chain leaves out.
-  public static func candidates(after providerID: String, in chain: [String]) -> [String] {
-    guard let index = chain.firstIndex(of: providerID) else { return [] }
-    return Array(chain[(index + 1)...] + chain[..<index])
+  /// The accounts to go on with, in the order to try them: the chain is an order of priority, so
+  /// every other account of it, from the top — one above the session's that has its quota back
+  /// comes before those below. None for an account the chain leaves out.
+  public static func candidates(besides providerID: String, in chain: [String]) -> [String] {
+    guard chain.contains(providerID) else { return [] }
+    return chain.filter { $0 != providerID }
   }
 }

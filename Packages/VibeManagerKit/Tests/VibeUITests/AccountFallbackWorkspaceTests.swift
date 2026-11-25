@@ -10,6 +10,7 @@ import VibeDomain
 struct AccountFallbackWorkspaceTests {
   private static let stub = WorkspaceProvider()
   private static let other = WorkspaceProvider(id: "other", name: "Other Agent")
+  private static let third = WorkspaceProvider(id: "third", name: "Third Agent")
 
   private let resetsAt = Date(timeIntervalSince1970: 1_900_000_000)
 
@@ -52,7 +53,7 @@ struct AccountFallbackWorkspaceTests {
       closedAt: Date(timeIntervalSince1970: 1_700_000_000),
       repositories: [RepositoryContext(path: path)])
     let repository = WorkspaceRepository(sessions: [session, elsewhere])
-    let registry = WorkspaceRegistry(providers: [Self.stub, Self.other])
+    let registry = WorkspaceRegistry(providers: [Self.stub, Self.other, Self.third])
     let launcher = SessionLauncher(
       supervisor: supervisor, repository: repository, agents: registry, viewportTimeout: .zero)
     let model = AppModel(
@@ -93,12 +94,31 @@ struct AccountFallbackWorkspaceTests {
         == true)
   }
 
+  @Test("An account higher in priority that has its quota back comes before those below")
+  func goesBackUpTheChain() async throws {
+    // `other` comes first, the session runs on `stub`, and `third` is free below it.
+    let (model, _, repository, session) = try await makeWorkspace(
+      chain: ["other", "stub", "third"])
+    // Once at its limit, its reset passed since.
+    model.limitedAccounts["other"] = AccountLimit(
+      resetsAt: Date().addingTimeInterval(-60), measuredAt: Date().addingTimeInterval(-86_400))
+
+    await model.fallBack(
+      session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
+
+    let stored = try #require(await repository.session(id: session.id))
+    #expect(stored.agent?.providerID == "other")
+    #expect(stored.agentHistory.last?.cause == .accountLimit(resetsAt: resetsAt))
+  }
+
   @Test("An account known at its limit is passed over: with none left, the session stays")
   func limitedAccountsArePassedOver() async throws {
     let (model, supervisor, repository, session) = try await makeWorkspace(chain: ["stub", "other"])
-    model.limitedAccounts["other"] = AccountLimit(resetsAt: Date().addingTimeInterval(3_600), measuredAt: Date())
+    model.limitedAccounts["other"] = AccountLimit(
+      resetsAt: Date().addingTimeInterval(3_600), measuredAt: Date())
 
-    await model.fallBack(session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
+    await model.fallBack(
+      session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
 
     let stored = try #require(await repository.session(id: session.id))
     #expect(stored.agent?.providerID == "stub")
@@ -112,7 +132,8 @@ struct AccountFallbackWorkspaceTests {
     let (model, supervisor, repository, session) = try await makeWorkspace(
       chain: ["stub", "other"], running: false)
 
-    await model.fallBack(session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
+    await model.fallBack(
+      session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
 
     let stored = try #require(await repository.session(id: session.id))
     #expect(stored.agent?.providerID == "stub")
@@ -123,7 +144,8 @@ struct AccountFallbackWorkspaceTests {
   func accountOutOfTheChainStays() async throws {
     let (model, _, repository, session) = try await makeWorkspace(chain: ["other"])
 
-    await model.fallBack(session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
+    await model.fallBack(
+      session.id, from: "stub", limit: AccountLimit(resetsAt: resetsAt, measuredAt: Date()))
 
     let stored = try #require(await repository.session(id: session.id))
     #expect(stored.agent?.providerID == "stub")

@@ -1,8 +1,8 @@
 import Foundation
 import Observation
 
-/// The backup chain of Settings › Backup Accounts (#600): the accounts a session goes on with,
-/// in order, when the one it runs on reaches its limit. One chain for every session: a session
+/// The backup chain of Settings › Backup Accounts (#600): the accounts a session goes on with
+/// when the one it runs on reaches its limit, by order of priority — the first one free. One chain for every session: a session
 /// on an account the chain leaves out never moves.
 @MainActor
 @Observable

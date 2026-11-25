@@ -126,14 +126,15 @@ struct AccountFallbackRulesTests {
 
   // MARK: - The chain
 
-  @Test("The accounts after the session's come first, then those before it; none outside the chain")
+  @Test("The other accounts of the chain, by priority from the top; none outside the chain")
   func candidates() {
     let chain = ["claude-code", "codex", "antigravity"]
     #expect(
-      AccountFallbackRules.candidates(after: "claude-code", in: chain) == ["codex", "antigravity"])
+      AccountFallbackRules.candidates(besides: "claude-code", in: chain) == ["codex", "antigravity"])
+    // An account above the session's comes first: it may have its quota back.
     #expect(
-      AccountFallbackRules.candidates(after: "codex", in: chain) == ["antigravity", "claude-code"])
-    #expect(AccountFallbackRules.candidates(after: "account-prisme", in: chain).isEmpty)
-    #expect(AccountFallbackRules.candidates(after: "codex", in: ["codex"]).isEmpty)
+      AccountFallbackRules.candidates(besides: "antigravity", in: chain) == ["claude-code", "codex"])
+    #expect(AccountFallbackRules.candidates(besides: "account-prisme", in: chain).isEmpty)
+    #expect(AccountFallbackRules.candidates(besides: "codex", in: ["codex"]).isEmpty)
   }
 }
