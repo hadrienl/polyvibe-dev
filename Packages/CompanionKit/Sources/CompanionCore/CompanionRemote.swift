@@ -9,11 +9,16 @@ public enum CompanionRemote {
   ///
   /// 3: the phone can create a folder (#469). A Mac older than that would skip the message without
   /// a word, so the phone doesn't offer it there.
-  public static let protocolVersion = 3
+  ///
+  /// 4: the phone watches the accounts' quotas (#630). A Mac older than that never answers
+  /// `watchQuotas`: the phone shows no Quotas button there.
+  public static let protocolVersion = 4
   /// Whether a Mac speaking `version` reads `answers`.
   public static func takesAnswers(_ version: Int?) -> Bool { (version ?? 1) >= 2 }
   /// Whether a Mac speaking `version` reads `createFolder`.
   public static func takesFolderCreation(_ version: Int?) -> Bool { (version ?? 1) >= 3 }
+  /// Whether a Mac speaking `version` reads `watchQuotas`.
+  public static func takesQuotas(_ version: Int?) -> Bool { (version ?? 1) >= 4 }
   /// The channel's protocol, offered at the iroh handshake beside the trials' echo. Unchanged by
   /// `protocolVersion`: both ends read the other's older messages.
   public static let alpn = "vibe-manager/remote/1"
@@ -759,6 +764,9 @@ public enum RemoteMessage: Codable, Equatable, Sendable {
   case showWeb(sessionID: String?)
   case web(sessionID: String, RemoteWebAction)
   case httpRequest(RemoteHTTPRequest)
+  /// Watches the accounts' quotas (#630), the Mac answering `quotas` at once and at each change,
+  /// until `nil` or the end of the connection.
+  case watchQuotas(RemoteQuotaWatch?)
 
   // The Mac to the phone.
   case welcome(protocolVersion: Int, macName: String)
@@ -775,6 +783,7 @@ public enum RemoteMessage: Codable, Equatable, Sendable {
   case folderIconData(path: String, png: Data?)
   case webState(RemoteWebState)
   case httpResponse(RemoteHTTPResponse)
+  case quotas(RemoteQuotas)
   /// The session asked for exists: the phone shows it.
   case created(sessionID: String)
   /// What the Mac could not do of what was asked, in words for the user.
