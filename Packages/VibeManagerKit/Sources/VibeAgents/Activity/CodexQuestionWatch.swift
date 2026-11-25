@@ -18,7 +18,7 @@ import VibeApplication
 ///
 /// `request_user_input_async` (#273) asks without waiting: its output, `accepted`, comes at once,
 /// and the agent goes on. Codex keeps the question until the user answers it or the turn ends,
-/// when it takes it away — so does the watch, at the turn's end the rollout writes.
+/// when it takes it away — so does the watch, at the answer or the turn's end the rollout writes.
 public struct CodexQuestionWatch: Sendable {
   static let tool = "request_user_input"
   static let asyncTool = "request_user_input_async"
@@ -131,9 +131,15 @@ public struct CodexQuestionWatch: Sendable {
       }
       return finished + (endsOnError(payload) ? [.turnEnded] : [])
     }
-    guard object["type"] as? String == "response_item",
-      let callID = payload["call_id"] as? String
-    else { return [] }
+    guard object["type"] as? String == "response_item" else { return [] }
+    if payload["type"] as? String == "message" {
+      // The user answered asynchronous questions: the turn goes on, the questions are gone (#625).
+      let answered = answeredCalls(in: payload).filter {
+        pending.remove(asyncMark + $0) != nil
+      }
+      return answered.map { .toolFinished(asyncTool, subject: $0) }
+    }
+    guard let callID = payload["call_id"] as? String else { return [] }
     switch payload["type"] as? String {
     case "function_call" where [tool, asyncTool].contains(payload["name"] as? String):
       let name = payload["name"] as? String ?? tool
@@ -162,6 +168,33 @@ public struct CodexQuestionWatch: Sendable {
     default:
       return []
     }
+  }
+
+  /// The calls of the asynchronous questions a user message answers, in the order it answers them.
+  /// Codex 0.171 writes the answers as the user's own message, apart from the call's output:
+  /// `<send_user_message_question_reply>` around a list whose `questionItemId` is itself JSON,
+  /// `["request_user_input_async","call_…",0]` — the tool, its call, the question's index.
+  static func answeredCalls(in message: [String: Any]) -> [String] {
+    guard message["role"] as? String == "user" else { return [] }
+    let opening = "<send_user_message_question_reply>"
+    let closing = "</send_user_message_question_reply>"
+    var calls: [String] = []
+    for item in message["content"] as? [[String: Any]] ?? [] {
+      guard let text = item["text"] as? String, let start = text.range(of: opening),
+        let end = text.range(of: closing, range: start.upperBound..<text.endIndex),
+        let replies = (try? JSONSerialization.jsonObject(
+          with: Data(text[start.upperBound..<end.lowerBound].utf8))) as? [[String: Any]]
+      else { continue }
+      for reply in replies {
+        guard let itemID = reply["questionItemId"] as? String,
+          let parts = (try? JSONSerialization.jsonObject(with: Data(itemID.utf8))) as? [Any],
+          parts.count >= 2, parts[0] as? String == asyncTool, let call = parts[1] as? String,
+          !calls.contains(call)
+        else { continue }
+        calls.append(call)
+      }
+    }
+    return calls
   }
 
   /// Whether the session's own turn ended on an error — `usage_limit_exceeded` once the account's
