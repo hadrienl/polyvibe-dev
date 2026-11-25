@@ -64,11 +64,32 @@ struct AntigravityTests {
     #expect(!args.contains("--continue"))
   }
 
+  @Test("A folder to read joins the workspace, and the settings found after it stay one object")
+  func readableDirectories() async throws {
+    let plan = try await base().launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp/project", initialPrompt: "Continue",
+        readableDirectoryPaths: ["/handover/x"]))
+    let index = try #require(plan.arguments.firstIndex(of: "--add-dir"))
+    #expect(plan.arguments[index + 1] == "/handover/x")
+    #expect(plan.arguments.suffix(2) == ["--prompt-interactive", "Continue"])
+
+    // A folder named like an option is a value, never mistaken for one when settings are merged.
+    let named = AgentLaunchPlan(
+      providerID: AntigravityAgentProvider.id, executablePath: "/bin/agy",
+      arguments: ["--add-dir", "--settings"], environment: [:],
+      workingDirectoryPath: "/tmp", promptDelivery: .none)
+    let merged = AntigravitySettings.merging(#"{"agentMode":"auto"}"#, into: named)
+    #expect(
+      merged.arguments == ["--add-dir", "--settings", "--settings", #"{"agentMode":"auto"}"#])
+  }
+
   @Test("Invalid options, NUL and oversized TUI prompts fail before launching")
   func validation() async throws {
     for request in [
       AgentLaunchRequest(workingDirectoryPath: "/tmp", resume: .identifier("--continue")),
       AgentLaunchRequest(workingDirectoryPath: "/tmp", modelID: "--print"),
+      AgentLaunchRequest(workingDirectoryPath: "/tmp", readableDirectoryPaths: ["--sandbox"]),
       AgentLaunchRequest(workingDirectoryPath: "/tmp", initialPrompt: "a\u{0}b"),
       AgentLaunchRequest(
         workingDirectoryPath: "/tmp", initialPrompt: String(repeating: "é", count: 9000)),

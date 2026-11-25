@@ -50,6 +50,28 @@ struct ClaudeCodeArgumentBuilderTests {
     )
   }
 
+  @Test("A folder to read is opened one option at a time, before the prompt's separator")
+  func readableDirectories() throws {
+    let arguments = try arguments(
+      AgentLaunchRequest(
+        workingDirectoryPath: "/Users/a/dev/app",
+        initialPrompt: "Continue",
+        readableDirectoryPaths: ["/Users/a/Library/Application Support/App/Handovers/x", "/b"]
+      ),
+      delivery: .argument
+    )
+
+    // `--add-dir` takes every value up to the next option or `--`: the prompt stays behind it.
+    #expect(
+      arguments == [
+        "--session-id", Self.assigned.uuidString.lowercased(),
+        "--add-dir", "/Users/a/Library/Application Support/App/Handovers/x",
+        "--add-dir", "/b",
+        "--", "Continue",
+      ]
+    )
+  }
+
   @Test("A difficult prompt stays one argument and never loses a character")
   func difficultPrompt() throws {
     let prompt = "--force $(rm -rf /) \"quoted\"\nsecond line\t😀"

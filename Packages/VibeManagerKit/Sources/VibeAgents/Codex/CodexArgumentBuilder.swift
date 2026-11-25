@@ -46,6 +46,8 @@ public struct CodexArgumentBuilder: CommandLineAgentArgumentBuilder {
     // Passed explicitly even though the terminal already starts the process there: `codex`
     // derives its workspace root and filters resumable sessions from this directory.
     arguments.append(contentsOf: ["-C", request.workingDirectoryPath])
+    // `readableDirectoryPaths` is left out on purpose: Codex reads the whole disk in its sandbox
+    // already, and its `--add-dir` would make the folder writable (verified on 0.171, #583).
 
     switch promptDelivery {
     case .none, .typedOnceReady:

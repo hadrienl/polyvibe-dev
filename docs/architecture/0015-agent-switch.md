@@ -146,6 +146,13 @@ without escaped slashes: they work outside a repository, survive spaces and quot
 by an agent that hands them to a tool as written. No process state or in-flight operation is
 restored. No native log is modified and no CLI-specific conversation database is fabricated.
 
+The snapshot lies outside the working directory, so the launch also lets the new agent read it
+(#583), through `AgentLaunchRequest.readableDirectoryPaths` set to the snapshot's own folder.
+Claude Code and Antigravity get `--add-dir`: without it, Claude Code in its default mode and
+Antigravity in Manual mode ask for every file read there (verified on Claude Code 2.1.332 and
+Antigravity 1.5.17). Codex gets nothing: its sandbox already reads the whole disk, and its
+`--add-dir` would make the folder writable (verified on 0.171).
+
 The copied logs are deliberately durable: each switch has its own directory, and subsequent
 switches and deletion of the original CLI logs leave earlier copies usable. They are local,
 owner-only files (0600, directories 0700), may contain sensitive information, and are not part of

@@ -196,6 +196,9 @@ struct RestorationProvider: AgentProvider {
     if let effort = request.effort {
       arguments.append(contentsOf: ["--effort", effort])
     }
+    for path in request.readableDirectoryPaths {
+      arguments.append(contentsOf: ["--add-dir", path])
+    }
     if let prompt = request.initialPrompt {
       arguments.append(contentsOf: ["--", prompt])
     }

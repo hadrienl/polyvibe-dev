@@ -58,6 +58,16 @@ struct CodexArgumentBuilderTests {
     #expect(try arguments() == ["-C", "/Users/test/Projects/app"])
   }
 
+  @Test("A folder to read opens nothing: Codex reads anywhere, and --add-dir would let it write")
+  func readableDirectoriesLeftOut() throws {
+    let request = AgentLaunchRequest(
+      workingDirectoryPath: "/Users/test/Projects/app", initialPrompt: "Continue",
+      readableDirectoryPaths: ["/handover/x"])
+    let args = try builder.arguments(
+      for: request, promptDelivery: .argument, descriptor: descriptor)
+    #expect(args == ["-C", "/Users/test/Projects/app", "--", "Continue"])
+  }
+
   @Test("No model means no -m, so the CLI keeps the user's configured model")
   func withoutModel() throws {
     let arguments = try arguments(initialPrompt: "Fix the failing test")

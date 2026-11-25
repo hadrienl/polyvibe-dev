@@ -42,6 +42,12 @@ public struct ClaudeCodeArgumentBuilder: CommandLineAgentArgumentBuilder {
       arguments.append(contentsOf: ["--effort", effort])
     }
 
+    // Without it, every file read there asks for permission in the default mode (#583). One
+    // option per folder: `--add-dir` takes several values, up to the next option or `--`.
+    for path in request.readableDirectoryPaths {
+      arguments.append(contentsOf: ["--add-dir", path])
+    }
+
     switch promptDelivery {
     case .none, .typedOnceReady:
       break

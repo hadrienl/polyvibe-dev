@@ -146,6 +146,8 @@ struct AgentSwitchTests {
     #expect(await history.exported == 0)
     #expect(plan.plan.arguments.last == reserved.prompt)
     #expect(reserved.prompt.contains(#""/copies/a b/history.md""#))
+    // The copy is outside the working directory: the agent is let in to read it (#583).
+    #expect(plan.plan.arguments.contains(["--add-dir", "/copies/a b"]))
     #expect(plan.nextConfiguration.resumeIdentifier == nil)
 
     let written = try await planner.writeHistory(plan)
@@ -454,6 +456,8 @@ struct AgentSwitchTests {
     #expect(planned.mode.kind == .handover)
     #expect(planned.nextConfiguration.resumeIdentifier == nil)
     #expect(!planned.plan.arguments.contains("--resume"))
+    // A summary is in the prompt itself: no folder outside the working directory is opened.
+    #expect(!planned.plan.arguments.contains("--add-dir"))
   }
 
   @Test("A plan that would not do what the sheet showed is refused, never run")

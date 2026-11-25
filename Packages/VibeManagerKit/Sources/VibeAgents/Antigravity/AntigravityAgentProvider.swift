@@ -109,6 +109,11 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
         "toolPermission": mode == .autoReview ? "proceed-in-sandbox" : "request-review",
       ]),
     ]
+    // In Manual mode a file read outside the workspace waits for review; in its sandbox it does
+    // not, but the folder is the agent's to read either way (verified on 1.5.17, #583).
+    for path in request.readableDirectoryPaths {
+      arguments += ["--add-dir", path]
+    }
     if case .identifier(let identifier) = request.resume {
       guard let uuid = UUID(uuidString: identifier.trimmingCharacters(in: .whitespacesAndNewlines))
       else { throw AgentLaunchError.missingResumeIdentifier }
@@ -154,7 +159,9 @@ enum AntigravitySettings {
         break
       }
       index +=
-        ["--model", "--mode", "--conversation", "--prompt-interactive", "--effort"].contains(option)
+        [
+          "--model", "--mode", "--conversation", "--prompt-interactive", "--effort", "--add-dir",
+        ].contains(option)
         ? 2 : 1
     }
     var merged: [String: Any] = [:]

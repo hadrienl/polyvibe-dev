@@ -424,7 +424,9 @@ public struct PlanAgentSwitch: Sendable {
 
     let effort = await AgentSwitchPlan.carriedEffort(
       from: current, to: target, provider: provider)
-    func plan(prompt: String?, resume: AgentResumeRequest) async throws -> AgentLaunchPlan {
+    func plan(
+      prompt: String?, resume: AgentResumeRequest, readableDirectoryPaths: [String] = []
+    ) async throws -> AgentLaunchPlan {
       do {
         return try await provider.launchPlan(
           for: AgentLaunchRequest(
@@ -432,7 +434,8 @@ public struct PlanAgentSwitch: Sendable {
             modelID: target.modelID,
             effort: effort,
             initialPrompt: prompt,
-            resume: resume
+            resume: resume,
+            readableDirectoryPaths: readableDirectoryPaths
           )
         )
       } catch let error as AgentLaunchError {
@@ -493,8 +496,12 @@ public struct PlanAgentSwitch: Sendable {
         throw AgentSwitchRefusal.historyUnavailable
       }
       let reserved = await history.reserve(for: session)
-      return planned(
-        try await plan(prompt: reserved.prompt, resume: .none), .conversationHistory(reserved))
+      // The copy lies outside the working directory: the agent is let in, or it asks for every
+      // file it reads there (#583). The folder exists by the launch, written after the stop.
+      let launch = try await plan(
+        prompt: reserved.prompt, resume: .none,
+        readableDirectoryPaths: [reserved.directory.path])
+      return planned(launch, .conversationHistory(reserved))
     }
 
     let generated = self.summary(for: context ?? SessionBriefInput(session: session), to: target)
