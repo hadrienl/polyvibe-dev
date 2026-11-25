@@ -35,6 +35,7 @@
 		A00000000000000000480002 /* DeviceMirrorScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000480002 /* DeviceMirrorScreen.swift */; };
 		A0000000000000000000C008 /* WebMirrorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C008 /* WebMirrorView.swift */; };
 		A0000000000000000000C009 /* QuotasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C009 /* QuotasSheet.swift */; };
+		A0000000000000000000C00A /* SessionUsageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C00A /* SessionUsageSheet.swift */; };
 		A0000000000000000000C007 /* NewSessionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C007 /* NewSessionSheet.swift */; };
 		A0000000000000000000C006 /* StatusSwipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C006 /* StatusSwipe.swift */; };
 		A0000000000000000000C005 /* SettingsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0000000000000000000C005 /* SettingsSheet.swift */; };
@@ -89,6 +90,7 @@
 		B00000000000000000480002 /* DeviceMirrorScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMirrorScreen.swift; sourceTree = "<group>"; };
 		B0000000000000000000C008 /* WebMirrorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebMirrorView.swift; sourceTree = "<group>"; };
 		B0000000000000000000C009 /* QuotasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuotasSheet.swift; sourceTree = "<group>"; };
+		B0000000000000000000C00A /* SessionUsageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionUsageSheet.swift; sourceTree = "<group>"; };
 		B0000000000000000000C007 /* NewSessionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewSessionSheet.swift; sourceTree = "<group>"; };
 		B0000000000000000000C006 /* StatusSwipe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusSwipe.swift; sourceTree = "<group>"; };
 		B0000000000000000000C005 /* SettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSheet.swift; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 				B00000000000000000480002 /* DeviceMirrorScreen.swift */,
 				B0000000000000000000C008 /* WebMirrorView.swift */,
 				B0000000000000000000C009 /* QuotasSheet.swift */,
+				B0000000000000000000C00A /* SessionUsageSheet.swift */,
 				B0000000000000000000C007 /* NewSessionSheet.swift */,
 				B0000000000000000000C006 /* StatusSwipe.swift */,
 				B0000000000000000000C005 /* SettingsSheet.swift */,
@@ -676,6 +679,7 @@
 				A00000000000000000480002 /* DeviceMirrorScreen.swift in Sources */,
 				A0000000000000000000C008 /* WebMirrorView.swift in Sources */,
 				A0000000000000000000C009 /* QuotasSheet.swift in Sources */,
+				A0000000000000000000C00A /* SessionUsageSheet.swift in Sources */,
 				A0000000000000000000C007 /* NewSessionSheet.swift in Sources */,
 				A0000000000000000000C006 /* StatusSwipe.swift in Sources */,
 				A0000000000000000000C005 /* SettingsSheet.swift in Sources */,

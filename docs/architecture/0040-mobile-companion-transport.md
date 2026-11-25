@@ -156,3 +156,24 @@ neither deleted nor renamed; the trial one stays, unused, at no cost.
 - **A neutral `Envelope` record type** with one encrypted payload, so that the schema never has to
   change again: kept as an option for the implementation, which will settle the record types before
   the real container is deployed.
+
+## Amendment — the shown session’s usage (#631)
+
+Protocol 5 adds `sessionUsage(RemoteSessionUsage)` on the direct channel only. A phone’s existing
+`show(sessionID:)` starts a counted watch of that session in `UsageModel`, including its descendants
+when it is a coordinator. Changing the shown session, saying hello again or disconnecting releases
+the watch without releasing another phone’s or the Mac’s. Phones older than protocol 5 do not
+start a usage watch.
+
+The Mac sends the context share it computes against the CLI’s compaction threshold, running time,
+reported tokens, costs by model and the coordinator’s total and children. Amounts are converted
+into the Mac’s selected currency before transmission; the phone formats numbers in its own locale.
+Unknown prices remain unknown and are excluded from totals. An unchanged snapshot is not sent
+again. Disabling tracking sends a clearing snapshot; the phone also clears usage when changing
+session or losing the channel. None of these figures are written to CloudKit.
+
+On the phone the context ring, share and costs follow the agent’s state under the conversation’s
+title. Narrow headers drop the family total, then the cost, keeping the ring and share (running
+time when the context window is unknown). The title stays a label. “Usage” in the “More” menu
+opens the detail sheet, with a row per child and no navigation into the children. Runs, responses
+and price-source details remain on the Mac, as agreed in the validated design of #631.

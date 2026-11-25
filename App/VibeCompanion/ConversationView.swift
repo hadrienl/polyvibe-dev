@@ -19,6 +19,14 @@ struct ConversationView: View {
   @State private var showsCamera = false
   @State private var showsFiles = false
   @State private var showsCloseConfirmation = false
+  @State private var showsUsage = false
+  @Environment(\.locale) private var locale
+
+  private var usage: RemoteSessionUsage? {
+    guard let usage = channel.sessionUsage, usage.sessionID == sessionID, usage.hasFigures
+    else { return nil }
+    return usage
+  }
 
   private var session: RemoteSession? { channel.sessions.first { $0.id == sessionID } }
   private var conversation: RemoteConversation? {
@@ -86,9 +94,14 @@ struct ConversationView: View {
       .padding(.bottom, 6)
     }
     .navigationTitle(session?.name ?? "")
-    .navigationSubtitle(subtitle)
+    .navigationSubtitle(usage == nil ? subtitle : "")
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
+      if let usage, let session {
+        ToolbarItem(placement: .principal) {
+          SessionUsageHeader(title: session.name, state: activitySubtitle(session), usage: usage)
+        }
+      }
       ToolbarItem(placement: .topBarTrailing) {
         Button("Web View", systemImage: "globe") { showsWeb = true }
       }
@@ -106,6 +119,19 @@ struct ConversationView: View {
       }
       ToolbarItem(placement: .topBarTrailing) {
         Menu("More", systemImage: "ellipsis") {
+          if let usage {
+            Button {
+              showsUsage = true
+            } label: {
+              Label {
+                Text("Usage")
+                Text(verbatim: SessionUsageWords.summary(usage, locale: locale, family: false))
+              } icon: {
+                SessionUsageRing.image(percent: usage.context?.percentUsed)
+              }
+            }
+            Divider()
+          }
           Button("Close Session", systemImage: "power", role: .destructive) {
             showsCloseConfirmation = true
           }
@@ -120,6 +146,7 @@ struct ConversationView: View {
     } message: {
       Text("The agent stops. The session keeps its conversation and can be restarted.")
     }
+    .sheet(isPresented: $showsUsage) { SessionUsageSheet(sessionID: sessionID) }
     .navigationDestination(isPresented: $showsWeb) { WebMirrorView(sessionID: sessionID) }
     .navigationDestination(isPresented: $showsDevices) { DeviceListScreen() }
     .onAppear { if channel.conversation?.sessionID != sessionID { channel.show(sessionID) } }
@@ -142,7 +169,10 @@ struct ConversationView: View {
   }
 
   private var subtitle: String {
-    guard let session else { return "" }
+    session.map(activitySubtitle) ?? ""
+  }
+
+  private func activitySubtitle(_ session: RemoteSession) -> String {
     switch session.activity {
     case .working: return String(localized: "\(session.agentName) is working")
     case .needsAttention: return String(localized: "\(session.agentName) is waiting for you")

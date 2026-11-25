@@ -40,6 +40,7 @@ final class RemoteChannel {
   /// Every account's quota (#630), while the list or the Quotas sheet watches them and the
   /// channel is up: `nil` otherwise, and the dial is grey.
   private(set) var quotas: RemoteQuotas?
+  private(set) var sessionUsage: RemoteSessionUsage?
   /// Whether the Mac last connected tells its quotas: kept across a reconnection, for the button
   /// not to come and go with the channel.
   private(set) var macTellsQuotas = false
@@ -134,6 +135,7 @@ final class RemoteChannel {
     path = .unknown
     // No longer said by the Mac: told again once connected.
     quotas = nil
+    sessionUsage = nil
     // The next Mac says its own in its welcome.
     macProtocolVersion = nil
   }
@@ -244,6 +246,9 @@ final class RemoteChannel {
     case .webState(let state):
       guard state.sessionID == webSessionID else { return }
       webState = state
+    case .sessionUsage(let usage):
+      guard usage.sessionID == shownSessionID else { return }
+      sessionUsage = usage
     case .quotas(let quotas):
       guard quotaWatch != nil else { return }
       self.quotas = quotas
@@ -304,6 +309,7 @@ final class RemoteChannel {
   // MARK: - What the user does
 
   func show(_ sessionID: String?) {
+    if shownSessionID != sessionID { sessionUsage = nil }
     shownSessionID = sessionID
     if conversation?.sessionID != sessionID { conversation = nil }
     write(.show(sessionID: sessionID))
