@@ -146,6 +146,23 @@ without escaped slashes: they work outside a repository, survive spaces and quot
 by an agent that hands them to a tool as written. No process state or in-flight operation is
 restored. No native log is modified and no CLI-specific conversation database is fabricated.
 
+The snapshot lies outside the working directory, so the launch also lets the new agent read it
+(#583), through `AgentLaunchRequest.readableDirectoryPaths` set to the snapshot's own folder,
+for reading only: without it, Claude Code in its default mode and Antigravity in Manual mode ask
+for every file read there. Claude Code gets a `Read(//<folder>/**)` rule through `--allowedTools`,
+not `--add-dir`, which makes the folder a working directory that Accept Edits writes in unasked.
+Antigravity in Manual mode gets `--add-dir`: a folder of its workspace is read freely and written
+only once reviewed. Its sandbox and Codex's get nothing: both already read there, and their
+`--add-dir` would let the agent write in the copy unasked. Verified on Claude Code 2.1.332,
+Antigravity 1.5.17 and Codex 0.171.
+
+The conversation that began by reading a copy may read it again once resumed — on a restart, a
+relaunch of the app or a change of model — and that launch names no copy. It is given the folder
+of all its session's copies, `Handovers/<session UUID>`, found from the session's identifier so
+that the store still keeps no path, and only while it exists.
+`WorkSession.currentConversationReadsHistory` decides: the last switch that began a conversation,
+model changes and failed switches aside, handed over the history.
+
 The copied logs are deliberately durable: each switch has its own directory, and subsequent
 switches and deletion of the original CLI logs leave earlier copies usable. They are local,
 owner-only files (0600, directories 0700), may contain sensitive information, and are not part of

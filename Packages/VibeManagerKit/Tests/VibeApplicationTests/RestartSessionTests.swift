@@ -53,13 +53,15 @@ struct RestartSessionTests {
   private func makeSubject(
     session: WorkSession,
     provider: RestorationProvider = RestorationProvider(),
-    folder: WorkingDirectoryStatus = .usable
+    folder: WorkingDirectoryStatus = .usable,
+    history: (any ConversationHandoverExporting)? = nil
   ) -> (RestartSession, SpyRepository) {
     let repository = SpyRepository(sessions: [session])
     let restart = RestartSession(
       repository: repository,
       agents: RestorationRegistry(providers: [provider]),
-      folders: RestorationFolders(status: folder)
+      folders: RestorationFolders(status: folder),
+      history: history
     )
     return (restart, repository)
   }
@@ -95,6 +97,34 @@ struct RestartSessionTests {
     #expect(outcome.plan.promptDelivery == .none)
     #expect(!outcome.needsConfirmation)
     #expect(await repository.writes == 0)
+  }
+
+  @Test("A resumed conversation that began by reading copies may read them again (#583)")
+  func resumeReadsHandedOverCopies() async throws {
+    let copies = URL(fileURLWithPath: "/copies/session")
+    let history = AgentChange.Handover.conversationHistory(byteCount: 10)
+    let summary = AgentChange.Handover.summary(byteCount: 10, isTruncated: false, wasEdited: false)
+    for (handover, folder, reads) in [
+      (history, copies, true),
+      // A summary named no copy; copies the user removed cannot be read.
+      (summary, copies, false),
+      (history, nil, false),
+    ] {
+      var stored = session()
+      try stored.switchAgent(
+        to: SessionAgentConfiguration(
+          providerID: "stub", modelID: "slow",
+          resumeIdentifier: "0f7e6d5c-4b3a-2190-8765-43210fedcba9"),
+        handover: handover, at: Date(timeIntervalSince1970: 1_700_000_200))
+      let (restart, repository) = makeSubject(
+        session: stored, history: HandoverCopies(folder: folder))
+
+      let outcome = try await restart(id: repository.stored[0].id)
+
+      #expect(outcome.mode == .native(identifier: "0f7e6d5c-4b3a-2190-8765-43210fedcba9"))
+      #expect(outcome.plan.arguments.contains(["--add-dir", "/copies/session"]) == reads)
+      #expect(outcome.plan.arguments.contains("--add-dir") == reads)
+    }
   }
 
   @Test("A resumed conversation is given back the effort it was given (#411)")

@@ -115,6 +115,8 @@ struct AgentSwitchTests {
     func discard(_ handover: ConversationHandover) {
       discarded.append(handover)
     }
+
+    func copiesFolder(of _: WorkSession) -> URL? { nil }
   }
 
   private func historyPlanner(_ history: HistoryExporter, sessions: [WorkSession])
@@ -146,6 +148,8 @@ struct AgentSwitchTests {
     #expect(await history.exported == 0)
     #expect(plan.plan.arguments.last == reserved.prompt)
     #expect(reserved.prompt.contains(#""/copies/a b/history.md""#))
+    // The copy is outside the working directory: the agent is let in to read it (#583).
+    #expect(plan.plan.arguments.contains(["--add-dir", "/copies/a b"]))
     #expect(plan.nextConfiguration.resumeIdentifier == nil)
 
     let written = try await planner.writeHistory(plan)
@@ -213,6 +217,27 @@ struct AgentSwitchTests {
   }
 
   // MARK: - Modes
+
+  @Test("Another model of a conversation that began by reading copies may read them again")
+  func modelChangeReadsHandedOverCopies() async throws {
+    var stored = session()
+    try stored.switchAgent(
+      to: SessionAgentConfiguration(
+        providerID: "claude-code", modelID: "sonnet",
+        resumeIdentifier: "8c1d0b7e-1111-4222-8333-444455556666"),
+      handover: .conversationHistory(byteCount: 10), at: Date(timeIntervalSince1970: 1_700_000_200))
+    let planner = PlanAgentSwitch(
+      repository: RestorationRepository(sessions: [stored]),
+      agents: RestorationRegistry(providers: [Self.claude, Self.codex]),
+      folders: RestorationFolders(status: .usable),
+      history: HandoverCopies(folder: URL(fileURLWithPath: "/copies/session")))
+
+    let planned = try await planner(
+      id: stored.id, to: AgentTarget(providerID: "claude-code", modelID: "opus"))
+
+    #expect(planned.mode == .resumeWithModel(identifier: "8c1d0b7e-1111-4222-8333-444455556666"))
+    #expect(planned.plan.arguments.contains(["--add-dir", "/copies/session"]))
+  }
 
   @Test("Another model of the same agent resumes its conversation, and sends no text")
   func sameAgentResumesWithTheNewModel() async throws {
@@ -454,6 +479,8 @@ struct AgentSwitchTests {
     #expect(planned.mode.kind == .handover)
     #expect(planned.nextConfiguration.resumeIdentifier == nil)
     #expect(!planned.plan.arguments.contains("--resume"))
+    // A summary is in the prompt itself: no folder outside the working directory is opened.
+    #expect(!planned.plan.arguments.contains("--add-dir"))
   }
 
   @Test("A plan that would not do what the sheet showed is refused, never run")

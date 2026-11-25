@@ -196,6 +196,9 @@ struct RestorationProvider: AgentProvider {
     if let effort = request.effort {
       arguments.append(contentsOf: ["--effort", effort])
     }
+    for path in request.readableDirectoryPaths {
+      arguments.append(contentsOf: ["--add-dir", path])
+    }
     if let prompt = request.initialPrompt {
       arguments.append(contentsOf: ["--", prompt])
     }
@@ -235,4 +238,19 @@ extension RestorationProvider: AgentEffortControlling {
     AgentEffortReport()
   }
   func effortChange(to level: String?) -> AgentEffortChange? { nil }
+}
+
+/// The copies of a session's handed-over conversations, found in one folder or gone (#583).
+struct HandoverCopies: ConversationHandoverExporting {
+  let folder: URL?
+
+  func availability(of _: WorkSession) -> ConversationHistoryAvailability { .unavailable }
+  func reserve(for _: WorkSession) -> ConversationHandover {
+    ConversationHandover(index: URL(fileURLWithPath: "/copies/history.md"), byteCount: 0)
+  }
+  func export(_: WorkSession, into reserved: ConversationHandover) -> ConversationHandover {
+    reserved
+  }
+  func discard(_: ConversationHandover) {}
+  func copiesFolder(of _: WorkSession) -> URL? { folder }
 }

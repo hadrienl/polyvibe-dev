@@ -21,6 +21,10 @@ public struct AgentLaunchRequest: Hashable, Sendable {
   /// Antigravity). `nil`: the provider reads the user's preference for it at every launch,
   /// native resumes included. An endpoint sets its own.
   public var approvalMode: AgentApprovalMode?
+  /// Absolute paths of folders outside the working directory the agent is to read without asking
+  /// for each file: the copy of a conversation handed over to it (#583). Read access only: a CLI
+  /// that already reads there is given nothing, and none may write there without asking.
+  public var readableDirectoryPaths: [String]
 
   public init(
     workingDirectoryPath: String,
@@ -30,8 +34,10 @@ public struct AgentLaunchRequest: Hashable, Sendable {
     resume: AgentResumeRequest = .none,
     additionalEnvironment: [String: String] = [:],
     harnessID: String? = nil,
-    approvalMode: AgentApprovalMode? = nil
+    approvalMode: AgentApprovalMode? = nil,
+    readableDirectoryPaths: [String] = []
   ) {
+    self.readableDirectoryPaths = readableDirectoryPaths
     self.approvalMode = approvalMode
     self.harnessID = harnessID
     self.effort = effort

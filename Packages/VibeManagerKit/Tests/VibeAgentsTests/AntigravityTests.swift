@@ -100,11 +100,40 @@ struct AntigravityTests {
     #expect(!args.contains("--continue"))
   }
 
+  @Test("A folder to read joins the workspace in Manual mode only, never the sandbox's")
+  func readableDirectories() async throws {
+    let manual = try await base().launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp/project", initialPrompt: "Continue", approvalMode: .manual,
+        readableDirectoryPaths: ["/handover/x"]))
+    let index = try #require(manual.arguments.firstIndex(of: "--add-dir"))
+    #expect(manual.arguments[index + 1] == "/handover/x")
+    #expect(manual.arguments.suffix(2) == ["--prompt-interactive", "Continue"])
+
+    // The sandbox reads it already, and would write in a folder of the workspace unasked.
+    let automatic = try await base().launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp/project", initialPrompt: "Continue",
+        approvalMode: .autoReview, readableDirectoryPaths: ["/handover/x"]))
+    #expect(automatic.arguments.contains("--sandbox"))
+    #expect(!automatic.arguments.contains("--add-dir"))
+
+    // A folder named like an option is a value, never mistaken for one when settings are merged.
+    let named = AgentLaunchPlan(
+      providerID: AntigravityAgentProvider.id, executablePath: "/bin/agy",
+      arguments: ["--add-dir", "--settings"], environment: [:],
+      workingDirectoryPath: "/tmp", promptDelivery: .none)
+    let merged = AntigravitySettings.merging(#"{"agentMode":"auto"}"#, into: named)
+    #expect(
+      merged.arguments == ["--add-dir", "--settings", "--settings", #"{"agentMode":"auto"}"#])
+  }
+
   @Test("Invalid options, NUL and oversized TUI prompts fail before launching")
   func validation() async throws {
     for request in [
       AgentLaunchRequest(workingDirectoryPath: "/tmp", resume: .identifier("--continue")),
       AgentLaunchRequest(workingDirectoryPath: "/tmp", modelID: "--print"),
+      AgentLaunchRequest(workingDirectoryPath: "/tmp", readableDirectoryPaths: ["--sandbox"]),
       AgentLaunchRequest(workingDirectoryPath: "/tmp", initialPrompt: "a\u{0}b"),
       AgentLaunchRequest(
         workingDirectoryPath: "/tmp", initialPrompt: String(repeating: "é", count: 9000)),

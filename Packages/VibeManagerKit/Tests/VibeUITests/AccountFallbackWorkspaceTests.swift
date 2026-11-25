@@ -26,6 +26,7 @@ struct AccountFallbackWorkspaceTests {
       ConversationHandover(index: reserved.index, byteCount: 2_048)
     }
     func discard(_: ConversationHandover) {}
+    func copiesFolder(of _: WorkSession) -> URL? { nil }
   }
 
   /// A session running on `stub`, whose turn stopped on the limit.

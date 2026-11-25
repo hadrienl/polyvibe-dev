@@ -189,6 +189,8 @@ public struct CommandLineAgentProvider: AgentProvider {
     shellEnvironment: [String: String] = [:]
   ) throws -> AgentLaunchPlan {
     try AgentLaunchValidation.validateWorkingDirectory(request.workingDirectoryPath)
+    // Absolute, so that none can be read as an option of the CLI.
+    try request.readableDirectoryPaths.forEach(AgentLaunchValidation.validateWorkingDirectory)
     try AgentLaunchValidation.validateModel(request.modelID, in: catalog, descriptor: descriptor)
     try AgentLaunchValidation.validateResume(request.resume, descriptor: descriptor)
     let delivery = try AgentLaunchValidation.promptDelivery(

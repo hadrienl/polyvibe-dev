@@ -68,6 +68,20 @@ public protocol ConversationHandoverExporting: Sendable {
     -> ConversationHandover
   /// Removes a copy no agent will read: the switch it was made for did not happen.
   func discard(_ handover: ConversationHandover) async
+  /// The folder of every copy made for this session, when one is still on disk. Found from the
+  /// session alone: the store keeps no path to a copy.
+  func copiesFolder(of session: WorkSession) async -> URL?
+}
+
+extension ConversationHandoverExporting {
+  /// What a resumed conversation may read outside its working directory: its session's copies,
+  /// when it began by reading one (#583). Its first launch named the copy itself; a resume has
+  /// no path to it, so it is given the folder of them all, for reading only like the first.
+  func readableDirectoryPaths(resuming session: WorkSession) async -> [String] {
+    guard session.currentConversationReadsHistory, let folder = await copiesFolder(of: session)
+    else { return [] }
+    return [folder.path]
+  }
 }
 
 /// Why logs could not be copied. The switch says it as an `AgentSwitchRefusal`.
