@@ -52,6 +52,9 @@ public final class QuotaModel {
   @ObservationIgnored var recentlyUsed: () -> Set<String> = { [] }
   /// What each popover open watches: its accounts, or every one for `nil`.
   @ObservationIgnored private var watches: [UUID: [String]?] = [:]
+  /// The phones that show the dial (#630): while one does, the background reading goes on with
+  /// the application behind others.
+  @ObservationIgnored private(set) var followers: Set<UUID> = []
   /// Moved on when tracking is turned off: a reading asked before is not kept.
   @ObservationIgnored private var generation = 0
   @ObservationIgnored private var watchTask: Task<Void, Never>?
@@ -161,8 +164,23 @@ public final class QuotaModel {
     return accounts.map(\.id).filter(ids.contains)
   }
 
+  /// A phone shows the dial (#630): the accounts used in the last day are asked now, then every
+  /// ten minutes with the background reading, even while another application is in front. The
+  /// follow returned is the one to stop.
+  @discardableResult
+  public func startFollowing() -> UUID {
+    let follow = UUID()
+    followers.insert(follow)
+    Task { await refreshRecent() }
+    return follow
+  }
+
+  public func stopFollowing(_ follow: UUID) {
+    followers.remove(follow)
+  }
+
   /// The gauge of the header follows the accounts used in the last day, every ten minutes while
-  /// the application is in front.
+  /// the application is in front, or a phone shows the dial.
   public func startBackground() {
     guard backgroundTask == nil else { return }
     let interval = backgroundInterval
@@ -171,14 +189,19 @@ public final class QuotaModel {
       try? await Task.sleep(for: .seconds(5))
       while !Task.isCancelled {
         guard let self else { return }
-        if NSApplication.shared.isActive {
-          let recent = self.recentlyUsed()
-          let ids = self.accounts.map(\.id).filter { recent.contains($0) }
-          if !ids.isEmpty { await self.refresh(ids) }
+        if NSApplication.shared.isActive || !self.followers.isEmpty {
+          await self.refreshRecent()
         }
         try? await Task.sleep(for: interval)
       }
     }
+  }
+
+  /// The accounts used in the last day, asked unless they were in the last thirty seconds.
+  func refreshRecent() async {
+    let recent = recentlyUsed()
+    let ids = accounts.map(\.id).filter { recent.contains($0) }
+    if !ids.isEmpty { await refresh(ids) }
   }
 
   public func stopBackground() {
