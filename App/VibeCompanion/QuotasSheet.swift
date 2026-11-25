@@ -188,8 +188,8 @@ struct QuotasButton: View {
           showsRemaining: quotas?.showsRemaining ?? false)
       }
     }
-    .accessibilityLabel(Text("Quotas", comment: "The button of every account's quota."))
-    .accessibilityValue(Text(verbatim: QuotaWords.help(quotas, now: .now)))
+    // “Quotas, nearest limit: 82 % used”: the button's name and state at once, said once.
+    .accessibilityLabel(Text(verbatim: QuotaWords.help(quotas, now: .now)))
   }
 }
 

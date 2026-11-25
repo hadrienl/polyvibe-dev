@@ -379,8 +379,9 @@ final class RemoteChannel {
   /// What shows the quotas now (#630): the list's dial, the Quotas sheet, or nothing.
   func watchQuotas(_ watch: RemoteQuotaWatch?) {
     guard watch != quotaWatch else { return }
+    // The last figures stay while nothing watches: back on the list, the dial keeps them until
+    // the Mac's answer, rather than going grey.
     quotaWatch = watch
-    if watch == nil { quotas = nil }
     write(.watchQuotas(watch))
   }
 

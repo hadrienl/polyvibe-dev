@@ -46,6 +46,18 @@ struct RemoteQuotasTests {
     #expect(decoded == messages)
   }
 
+  @Test("A window kind or a reason a later Mac adds doesn't lose the message")
+  func laterMac() throws {
+    let json = #"""
+      {"id":"codex","name":"Codex","isAsking":false,"unavailable":"rateLimited",
+       "windows":[{"id":"a","kind":{"daily":{}},"usedFraction":0.5},
+                  {"id":"b","kind":{"weekly":{}},"usedFraction":0.2}]}
+      """#
+    let account = try JSONDecoder().decode(RemoteQuotaAccount.self, from: Data(json.utf8))
+    #expect(account.unavailable == .failed)
+    #expect(account.windows.map(\.id) == ["b"])
+  }
+
   @Test("Only a Mac of protocol 4 is asked for quotas")
   func protocolVersion() {
     #expect(!CompanionRemote.takesQuotas(nil))

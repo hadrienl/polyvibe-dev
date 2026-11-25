@@ -64,6 +64,11 @@ public final class CompanionQuotaFeed {
   }
 
   private func read() {
+    // No phone left: nothing to compute until one watches again.
+    guard !watches.isEmpty else {
+      observing = false
+      return
+    }
     let quotas = withObservationTracking {
       Self.quotas(of: usage)
     } onChange: { [weak self] in

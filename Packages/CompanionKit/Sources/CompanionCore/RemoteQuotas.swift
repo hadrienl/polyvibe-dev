@@ -13,6 +13,12 @@ public enum RemoteQuotaWatch: String, Codable, Hashable, Sendable {
 /// Why an account shows no quota, as the Mac says it.
 public enum RemoteQuotaUnavailability: String, Codable, Hashable, Sendable {
   case notReportedByAgent, notInstalled, signedOut, unrecognized, failed, trackingOff
+
+  /// A reason a later Mac adds reads as a failure, rather than losing the whole message.
+  public init(from decoder: any Decoder) throws {
+    let raw = try decoder.singleValueContainer().decode(String.self)
+    self = Self(rawValue: raw) ?? .failed
+  }
 }
 
 /// A window of an account's quota: Codex's five hours, Claude Code's session or week.
@@ -100,6 +106,26 @@ public struct RemoteQuotaAccount: Codable, Hashable, Sendable, Identifiable {
     self.unavailable = unavailable
     self.windows = windows
     self.cost = cost
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id, name, plan, usageURL, measuredAt, isAsking, unavailable, windows, cost
+  }
+
+  /// A window of a kind a later Mac adds is left out, rather than losing the whole message.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    name = try container.decode(String.self, forKey: .name)
+    plan = try container.decodeIfPresent(String.self, forKey: .plan)
+    usageURL = try container.decodeIfPresent(URL.self, forKey: .usageURL)
+    measuredAt = try container.decodeIfPresent(Date.self, forKey: .measuredAt)
+    isAsking = try container.decode(Bool.self, forKey: .isAsking)
+    unavailable = try container.decodeIfPresent(
+      RemoteQuotaUnavailability.self, forKey: .unavailable)
+    windows = try container.decode([Lenient<RemoteQuotaWindow>].self, forKey: .windows)
+      .compactMap(\.value)
+    cost = try container.decodeIfPresent(RemoteQuotaCost.self, forKey: .cost)
   }
 
   /// The window nearest its limit, among those that have not reset since.
@@ -243,5 +269,14 @@ public enum RemoteQuotaFormat {
       return "< " + (Decimal(1) / 100).formatted(style)
     }
     return "≈ " + amount.formatted(style)
+  }
+}
+
+/// A value that may not decode: `nil` then, without failing what holds it.
+private struct Lenient<Value: Decodable>: Decodable {
+  let value: Value?
+
+  init(from decoder: any Decoder) throws {
+    value = try? Value(from: decoder)
   }
 }
