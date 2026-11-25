@@ -80,13 +80,12 @@ struct SessionsView: View {
         ToolbarItem(placement: .topBarLeading) {
           Button("Settings", systemImage: "gearshape") { showsSettings = true }
         }
-        // Never shown by a Mac that doesn't tell its quotas (#630).
-        if channel.macTellsQuotas {
-          ToolbarItem(placement: .topBarTrailing) {
+        // One group, as the mockup of #630: the Quotas dial, never shown by a Mac that doesn't
+        // tell its quotas, then New Session.
+        ToolbarItemGroup(placement: .topBarTrailing) {
+          if channel.macTellsQuotas {
             QuotasButton(quotas: channel.quotas) { showsQuotas = true }
           }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
           Button("New Session", systemImage: "plus") {
             newSessionForm = NewSessionForm(returned: channel.takeKeptCreation())
           }

@@ -179,18 +179,17 @@ struct QuotasButton: View {
   let action: () -> Void
 
   var body: some View {
-    TimelineView(.periodic(from: .now, by: 60)) { context in
-      Button(action: action) {
-        Label {
-          Text("Quotas", comment: "The button of every account's quota.")
-        } icon: {
-          QuotaDial(
-            gauge: quotas?.gauge(at: context.date) ?? .unknown,
-            showsRemaining: quotas?.showsRemaining ?? false)
-        }
+    // The button itself in the toolbar, its clock inside: a toolbar shows a label's title in place
+    // of a drawn icon, and gives a view that isn't a button a capsule of its own.
+    Button(action: action) {
+      TimelineView(.periodic(from: .now, by: 60)) { context in
+        QuotaDial(
+          gauge: quotas?.gauge(at: context.date) ?? .unknown,
+          showsRemaining: quotas?.showsRemaining ?? false)
       }
-      .accessibilityValue(Text(verbatim: QuotaWords.help(quotas, now: context.date)))
     }
+    .accessibilityLabel(Text("Quotas", comment: "The button of every account's quota."))
+    .accessibilityValue(Text(verbatim: QuotaWords.help(quotas, now: .now)))
   }
 }
 
