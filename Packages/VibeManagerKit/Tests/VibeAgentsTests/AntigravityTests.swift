@@ -13,6 +13,42 @@ private actor AntigravityRepository: SessionRepository {
   func save(_ session: WorkSession) { stored[session.id] = session }
 }
 
+/// What the actual status command made of a payload: what the user's own command printed, and the
+/// line it logged — whole, then its time and its fields.
+struct AntigravityStatusRun {
+  let output: String
+  let line: String
+  let time: Double?
+  let fields: [String: Any]
+
+  static func run(_ payload: [String: Any], own: String = "") async throws -> AntigravityStatusRun {
+    try await run(JSONSerialization.data(withJSONObject: payload), own: own)
+  }
+
+  static func run(_ data: Data, own: String) async throws -> AntigravityStatusRun {
+    let folder = FileManager.default.temporaryDirectory
+      .appendingPathComponent("agy-status-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let log = folder.appendingPathComponent("activity.log")
+    let result = try await BoundedProcess.run(
+      BoundedProcessRequest(
+        executablePath: "/bin/sh",
+        arguments: ["-c", AntigravityStatusCommand.script, "test", own],
+        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
+        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
+    #expect(result.exitCode == 0)
+    let line = try String(contentsOf: log, encoding: .utf8)
+    let parts = line.split(separator: "\t")
+    let json = try #require(parts.last)
+    return AntigravityStatusRun(
+      output: String(decoding: result.standardOutput, as: UTF8.self), line: line,
+      time: parts.count == 3 ? Double(parts[1]) : nil,
+      fields: try #require(
+        JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]))
+  }
+}
+
 @Suite("Antigravity integration contracts")
 struct AntigravityTests {
   private let identifier = "8a33e630-aece-4796-b0c7-eb5ef638cf2f"
@@ -260,64 +296,68 @@ struct AntigravityTests {
 
   @Test("The actual status command retains only allowed fields and preserves user output")
   func statusCommand() async throws {
-    let folder = try scratch()
-    defer { try? FileManager.default.removeItem(at: folder) }
-    let log = folder.appendingPathComponent("activity.log")
-    let data = try JSONSerialization.data(withJSONObject: [
-      "conversation_id": identifier, "agent_state": "idle", "task_count": 1,
-      "tool_confirmation_pending": true,
-      "subagents": [["name": "private-name", "status": "running"]],
-      "email": "private-email", "lastUserInput": "private-prompt",
-    ])
-    let result = try await BoundedProcess.run(
-      BoundedProcessRequest(
-        executablePath: "/bin/sh",
-        arguments: ["-c", AntigravityStatusCommand.script, "test", "printf own-status"],
-        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
-        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
-    #expect(result.exitCode == 0)
-    #expect(String(decoding: result.standardOutput, as: UTF8.self) == "own-status")
-    let written = try String(contentsOf: log, encoding: .utf8)
-    #expect(!written.contains("private"))
-    let payload = try #require(written.split(separator: "\t").last)
-    let object = try #require(
-      JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any])
-    #expect(object["conversation_id"] as? String == identifier)
-    #expect(object["pending"] as? Bool == true)
-    #expect(object["background"] as? Bool == true)
+    let run = try await AntigravityStatusRun.run(
+      [
+        "conversation_id": identifier, "agent_state": "idle", "task_count": 1,
+        "tool_confirmation_pending": true,
+        "subagents": [["name": "private-name", "status": "running"]],
+        "email": "private-email", "lastUserInput": "private-prompt",
+      ], own: "printf own-status")
+    #expect(run.output == "own-status")
+    #expect(!run.line.contains("private"))
+    #expect(run.fields["conversation_id"] as? String == identifier)
+    #expect(run.fields["pending"] as? Bool == true)
+    #expect(run.fields["background"] as? Bool == true)
     // No quota in the payload: an empty field (#599).
-    #expect(object["quota"] as? String == "")
-    #expect(object.count == 5)
+    #expect(run.fields["quota"] as? String == "")
+    #expect(run.fields.count == 5)
+  }
+
+  @Test("A null anywhere in the status leaves the rest of it read (#585)")
+  func statusCommandNull() async throws {
+    // Eight null buckets sort first: none of them may take one of the eight places.
+    var quota: [String: Any] = Dictionary(
+      uniqueKeysWithValues: (0..<8).map { ("a\($0)", NSNull() as Any) })
+    quota["gemini-weekly"] = [
+      "remaining_fraction": NSNull(), "reset_time": "2026-11-28T12:39:21Z",
+    ]
+    quota["null-tier"] = ["remaining_fraction": 0.75, "reset_time": NSNull()]
+    let data = try JSONSerialization.data(
+      withJSONObject: [
+        "conversation_id": identifier, "agent_state": "working", "task_count": NSNull(),
+        "tool_confirmation_pending": NSNull(), "model": NSNull(), "title": "null or nullable",
+        "subagents": [NSNull(), ["name": NSNull(), "status": "running"]], "quota": quota,
+      ], options: [.sortedKeys])
+    let run = try await AntigravityStatusRun.run(data, own: "/usr/bin/wc -c")
+    // The user's own command still gets the payload as agy wrote it, nulls included.
+    #expect(Int(run.output.trimmingCharacters(in: .whitespacesAndNewlines)) == data.count)
+    #expect(run.fields["conversation_id"] as? String == identifier)
+    #expect(run.fields["agent_state"] as? String == "working")
+    #expect(run.fields["pending"] as? Bool == false)
+    #expect(run.fields["background"] as? Bool == true)
+    // A bucket without its fraction is left out, not read as spent; a key keeps its name.
+    let field = try #require(run.fields["quota"] as? String)
+    #expect(field == "null-tier=0.75@")
+    let buckets = AntigravityQuotaBucket.parse(field)
+    #expect(buckets.map(\.id) == ["null-tier"])
+    #expect(buckets.first?.remainingFraction == 0.75)
+    #expect(buckets.first?.resetsAt == nil)
   }
 
   @Test("The user's own command gets a payload over 64 KiB whole; the time is the log's")
   func statusCommandLargePayload() async throws {
-    let folder = try scratch()
-    defer { try? FileManager.default.removeItem(at: folder) }
-    let log = folder.appendingPathComponent("activity.log")
     let data = try JSONSerialization.data(withJSONObject: [
       "conversation_id": identifier, "agent_state": "working", "task_count": 0,
       "subagents": [["status": "done"], ["status": "idle"]],
       "large": String(repeating: "x", count: 200_000),
     ])
-    let result = try await BoundedProcess.run(
-      BoundedProcessRequest(
-        executablePath: "/bin/sh",
-        arguments: ["-c", AntigravityStatusCommand.script, "test", "/usr/bin/wc -c"],
-        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
-        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
-    #expect(result.exitCode == 0)
-    let counted = String(decoding: result.standardOutput, as: UTF8.self)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    #expect(Int(counted) == data.count)
-    let fields = try String(contentsOf: log, encoding: .utf8).split(separator: "\t")
-    let time = try #require(Double(fields[1]))
+    let run = try await AntigravityStatusRun.run(data, own: "/usr/bin/wc -c")
+    #expect(Int(run.output.trimmingCharacters(in: .whitespacesAndNewlines)) == data.count)
+    let time = try #require(run.time)
     #expect(abs(time - Date().timeIntervalSince1970) < 60)
-    let object = try #require(
-      JSONSerialization.jsonObject(with: Data(fields[2].utf8)) as? [String: Any])
-    #expect(object["agent_state"] as? String == "working")
-    #expect(object["background"] as? Bool == false)
-    #expect(object["pending"] as? Bool == false)
+    #expect(run.fields["agent_state"] as? String == "working")
+    #expect(run.fields["background"] as? Bool == false)
+    #expect(run.fields["pending"] as? Bool == false)
   }
 
   @Test("A status line the user turned off stays invisible while the reporter runs")
