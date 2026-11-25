@@ -10,7 +10,9 @@ struct RemoteSessionUsageTests {
       amount: Decimal(string: "4.82")!, hasPrice: true, leavesOutUnpriced: true)
     let usage = RemoteSessionUsage(
       sessionID: "parent", currency: "EUR",
-      context: RemoteUsageContext(usedTokens: 144_000, windowSize: 200_000, percentUsed: 72),
+      context: RemoteUsageContext(
+        usedTokens: 144_000, windowSize: 200_000, percentUsed: 86,
+        compactionThreshold: 167_000),
       runningTime: 3_660, tokens: 980_000, cost: cost,
       models: [
         RemoteModelCost(providerName: "Claude Code", model: "opus", amount: 4.82),

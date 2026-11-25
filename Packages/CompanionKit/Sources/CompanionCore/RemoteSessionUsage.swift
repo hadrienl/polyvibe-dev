@@ -42,13 +42,18 @@ public struct RemoteSessionUsage: Codable, Hashable, Sendable {
 public struct RemoteUsageContext: Codable, Hashable, Sendable {
   public var usedTokens: Int
   public var windowSize: Int?
+  public var compactionThreshold: Int?
   /// The share sent by the Mac follows the CLI's compaction threshold, as on its status bar.
   public var percentUsed: Int?
   public var isEstimate: Bool
 
-  public init(usedTokens: Int, windowSize: Int?, percentUsed: Int?, isEstimate: Bool = false) {
+  public init(
+    usedTokens: Int, windowSize: Int?, percentUsed: Int?, isEstimate: Bool = false,
+    compactionThreshold: Int? = nil
+  ) {
     self.usedTokens = usedTokens
     self.windowSize = windowSize
+    self.compactionThreshold = compactionThreshold
     self.percentUsed = percentUsed
     self.isEstimate = isEstimate
   }

@@ -183,6 +183,12 @@ struct SessionUsageSheet: View {
             Text(verbatim: RemoteUsageFormat.contextOrTime(usage, locale: locale))
           }
           .accessibilityElement(children: .combine)
+          if let threshold = context.compactionThreshold {
+            Text(
+              "Compacted automatically at \(RemoteUsageFormat.tokens(threshold, locale: locale))"
+            )
+            .font(.caption).foregroundStyle(.secondary)
+          }
         } else {
           Text("Window size unknown for this model").font(.caption).foregroundStyle(.secondary)
         }

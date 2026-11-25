@@ -77,7 +77,8 @@ public final class CompanionUsageFeed {
     if let context = usage.contextWindows[id] {
       result.context = RemoteUsageContext(
         usedTokens: context.usedTokens, windowSize: context.windowSize,
-        percentUsed: context.percentUsed, isEstimate: context.isEstimate)
+        percentUsed: context.percentUsed, isEstimate: context.isEstimate,
+        compactionThreshold: context.compactionThreshold)
     }
     if let reason = usage.contextUnavailability(for: session) {
       result.contextUnavailable =
