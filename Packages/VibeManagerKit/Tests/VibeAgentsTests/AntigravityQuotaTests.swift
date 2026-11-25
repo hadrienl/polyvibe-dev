@@ -125,12 +125,7 @@ struct AntigravityQuotaTests {
 
   @Test("The status command keeps the quota, stripped of anything that could end its string")
   func statusCommandQuota() async throws {
-    let folder = FileManager.default.temporaryDirectory
-      .appendingPathComponent("agy-quota-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: folder) }
-    let log = folder.appendingPathComponent("activity.log")
-    let data = try JSONSerialization.data(withJSONObject: [
+    let run = try await AntigravityStatusRun.run([
       "conversation_id": identifier, "agent_state": "error", "email": "private-email",
       "quota": [
         "gemini-weekly": [
@@ -142,18 +137,8 @@ struct AntigravityQuotaTests {
       ],
       "context_window": ["used_percentage": 12, "remaining_fraction": 0.5],
     ])
-    let result = try await BoundedProcess.run(
-      BoundedProcessRequest(
-        executablePath: "/bin/sh",
-        arguments: ["-c", AntigravityStatusCommand.script, "test", ""],
-        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
-        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
-    #expect(result.exitCode == 0)
-    let written = try String(contentsOf: log, encoding: .utf8)
-    #expect(!written.contains("private"))
-    let payload = try #require(written.split(separator: "\t").last)
-    let object = try #require(
-      JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any])
+    #expect(!run.line.contains("private"))
+    let object = run.fields
     #expect(object["agent_state"] as? String == "error")
     let quota = try #require(object["quota"] as? String)
     let buckets = AntigravityQuotaBucket.parse(quota)

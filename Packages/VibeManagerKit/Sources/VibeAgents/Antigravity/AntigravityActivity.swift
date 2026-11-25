@@ -6,14 +6,16 @@ import VibeDomain
 /// is installed. The original status command receives the same input and keeps its output.
 enum AntigravityStatusCommand {
   static let event = "AntigravityStatus"
-  /// Three processes per refresh: `sed` makes every `null` a `false`, `plutil` turns the payload
-  /// into an XML property list, one `awk` pass reads the allowed fields from it and the time. The
-  /// user's own command gets the payload whole, up to 4 MiB.
+  /// Three processes per refresh: `sed` makes every `null` value a `false`, `plutil` turns the
+  /// payload into an XML property list, one `awk` pass reads the allowed fields from it and the
+  /// time. The user's own command gets the payload whole, up to 4 MiB.
   ///
   /// A property list has no null: one `null` anywhere made `plutil` refuse the whole payload, and
-  /// the session's activity with it (#585). `false` is a JSON value wherever a `null` is, and keeps
-  /// a string valid wherever the word sits in one; none of the fields read takes it for a value:
-  /// a state, an identifier or a count that is `false` is unknown, a fraction left out.
+  /// the session's activity with it (#585). Only a `null` where a value starts is rewritten — after
+  /// `:`, `,`, `[` or at the start of a line — so that a key such as `null-tier` keeps its name; a
+  /// string where the same shape appears stays valid all the same. None of the fields read takes
+  /// `false` for a value: a state, an identifier or a count that is `false` is unknown, and a
+  /// bucket without a fraction is left out, without taking one of the eight places.
   ///
   /// The quota of the account (#599), as agy 1.5.14 gives it — `quota.<bucket>` with a
   /// `remaining_fraction` and a `reset_time` — is kept as `bucket=fraction@reset;…`: at most eight
@@ -22,13 +24,13 @@ enum AntigravityStatusCommand {
   static let script = #"""
     u=$1;
     i=$({ head -c 4194304; cat >/dev/null; });
-    r=$(printf '%s' "$i" | LC_ALL=C /usr/bin/sed 's/[[:<:]]null[[:>:]]/false/g' | /usr/bin/plutil -convert xml1 -o - - 2>/dev/null | /usr/bin/awk '
+    r=$(printf '%s' "$i" | LC_ALL=C /usr/bin/sed -E 's/(^|[:,[])([[:space:]]*)null[[:>:]]/\1\2false/g' | /usr/bin/plutil -convert xml1 -o - - 2>/dev/null | /usr/bin/awk '
     { sub(/^[ \t]+/, "") }
     /^<(dict|array)>$/ { if (d == 1) o = k; k = ""; d++; next }
     /^<\/(dict|array)>$/ { d--; next }
-    /^<key>.*<\/key>$/ { v = $0; gsub(/<\/?key>/, "", v); if (d == 1) k = v; else n = v; if (d == 2 && o == "quota") { q = v; if (!(q in qf)) qn[++qc] = q }; next }
+    /^<key>.*<\/key>$/ { v = $0; gsub(/<\/?key>/, "", v); if (d == 1) k = v; else n = v; if (d == 2 && o == "quota") q = v; next }
     d == 1 && k != "" { v = $0; if (v == "<true/>") v = "true"; else if (v == "<false/>") v = "false"; else gsub(/<[^>]*>/, "", v); f[k] = v; k = ""; next }
-    d == 3 && o == "quota" { v = $0; gsub(/<[^>]*>/, "", v); if (n == "remaining_fraction") qf[q] = v; else if (n == "reset_time") qr[q] = v; n = ""; next }
+    d == 3 && o == "quota" { v = $0; if (v != "<false/>") { gsub(/<[^>]*>/, "", v); if (n == "remaining_fraction") { if (!(q in qf)) qn[++qc] = q; qf[q] = v } else if (n == "reset_time") qr[q] = v }; n = ""; next }
     d > 1 { if (o == "subagents" && n == "status" && $0 == "<string>running</string>") b = "true"; n = "" }
     END { srand(); for (i = 1; i <= qc && i <= 8; i++) { u = qn[i]; if (u in qf) a = a (a == "" ? "" : ";") u "=" qf[u] "@" qr[u] }; printf "%s|%s|%s|%s|%s|%s|%d", f["conversation_id"], f["agent_state"], f["tool_confirmation_pending"], f["task_count"], (b == "" ? "false" : b), a, srand() }');
     set -f; IFS='|'; set -- $r; unset IFS; set +f;
