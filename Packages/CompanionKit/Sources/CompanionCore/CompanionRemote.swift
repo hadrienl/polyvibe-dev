@@ -12,7 +12,8 @@ public enum CompanionRemote {
   ///
   /// 4: the phone watches the accounts' quotas (#630). A Mac older than that never answers
   /// `watchQuotas`: the phone shows no Quotas button there.
-  public static let protocolVersion = 4
+  /// 5: the Mac sends the shown conversation’s usage (#631).
+  public static let protocolVersion = 5
   /// Whether a Mac speaking `version` reads `answers`.
   public static func takesAnswers(_ version: Int?) -> Bool { (version ?? 1) >= 2 }
   /// Whether a Mac speaking `version` reads `createFolder`.
@@ -670,7 +671,8 @@ public enum RemoteWebAddress {
   public static let proxiedPrefix = "vibemac-"
 
   public static func proxied(_ url: URL) -> URL {
-    guard isMacLocal(url) || url.isFileURL, let scheme = url.scheme, !scheme.hasPrefix(proxiedPrefix),
+    guard isMacLocal(url) || url.isFileURL, let scheme = url.scheme,
+      !scheme.hasPrefix(proxiedPrefix),
       var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
     else { return url }
     components.scheme = proxiedPrefix + scheme
@@ -784,6 +786,8 @@ public enum RemoteMessage: Codable, Equatable, Sendable {
   case webState(RemoteWebState)
   case httpResponse(RemoteHTTPResponse)
   case quotas(RemoteQuotas)
+  /// The shown conversation’s usage, including a message clearing figures when tracking is off.
+  case sessionUsage(RemoteSessionUsage)
   /// The session asked for exists: the phone shows it.
   case created(sessionID: String)
   /// What the Mac could not do of what was asked, in words for the user.
