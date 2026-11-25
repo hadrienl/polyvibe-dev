@@ -44,6 +44,12 @@ final class CompanionRemoteServer {
   private var servedAttachments: Set<String> = []
   /// The last of the phones' folder requests, which the next one waits for.
   private var folderWork: Task<Void, Never>?
+  /// The quotas the phones watch (#630); `nil` without usage tracking at all.
+  private lazy var quotaFeed: CompanionQuotaFeed? = appModel?.usage.map { usage in
+    CompanionQuotaFeed(usage: usage) { [weak self] peer, quotas in
+      self?.send(peer, .quotas(quotas))
+    }
+  }
 
   init(
     appModel: AppModel, macName: String, attachmentsFolder: URL,
@@ -60,6 +66,8 @@ final class CompanionRemoteServer {
     case .hello(_, let deviceName):
       Self.logger.notice(
         "\(peer, privacy: .public): hello from \(deviceName, privacy: .public)")
+      // A phone saying hello again starts over: what it watched before goes.
+      quotaFeed?.stop(peer)
       peers[peer] = Peer()
       send(peer, .welcome(protocolVersion: CompanionRemote.protocolVersion, macName: macName))
       observeSessions()
@@ -160,9 +168,12 @@ final class CompanionRemoteServer {
         return [.folderListing(Self.listing(of: parent))]
           + (failure.map { [.folderNotCreated($0)] } ?? [])
       }
+    case .watchQuotas(let watch):
+      guard peers[peer] != nil else { return }
+      quotaFeed?.watch(watch, for: peer)
     case .welcome, .sessions, .conversation, .searchResults, .failure, .newSessionOffer, .created,
       .folderListing, .folderNotCreated, .iconData, .webState, .attachmentData, .httpResponse,
-      .folderIconData:
+      .folderIconData, .quotas:
       break
     }
   }
@@ -170,6 +181,7 @@ final class CompanionRemoteServer {
   func closed(_ peer: String) {
     release(peer)
     peers[peer]?.web?.stop()
+    quotaFeed?.stop(peer)
     peers[peer] = nil
     Self.logger.notice("\(peer, privacy: .public): gone")
   }
