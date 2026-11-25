@@ -290,6 +290,47 @@ struct AntigravityTests {
     #expect(object.count == 5)
   }
 
+  @Test("A null anywhere in the status leaves the rest of it read (#585)")
+  func statusCommandNull() async throws {
+    let folder = try scratch()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let log = folder.appendingPathComponent("activity.log")
+    let data = try JSONSerialization.data(withJSONObject: [
+      "conversation_id": identifier, "agent_state": "working", "task_count": NSNull(),
+      "tool_confirmation_pending": NSNull(), "model": NSNull(), "title": "null or nullable",
+      "subagents": [NSNull(), ["name": NSNull(), "status": "running"]],
+      "quota": [
+        "gemini-weekly": ["remaining_fraction": NSNull(), "reset_time": "2026-11-28T12:39:21Z"],
+        "3p-weekly": ["remaining_fraction": 0.75, "reset_time": NSNull()],
+        "flash": NSNull(),
+      ],
+    ])
+    let result = try await BoundedProcess.run(
+      BoundedProcessRequest(
+        executablePath: "/bin/sh",
+        arguments: ["-c", AntigravityStatusCommand.script, "test", "/usr/bin/wc -c"],
+        environment: ["PATH": "/usr/bin:/bin", "VIBE_AGENT_ACTIVITY_LOG": log.path],
+        timeout: .seconds(5), standardInput: BoundedProcessInput(data: data)))
+    #expect(result.exitCode == 0)
+    // The user's own command still gets the payload as agy wrote it, nulls included.
+    let counted = String(decoding: result.standardOutput, as: UTF8.self)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    #expect(Int(counted) == data.count)
+    let payload = try #require(
+      try String(contentsOf: log, encoding: .utf8).split(separator: "\t").last)
+    let object = try #require(
+      JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any])
+    #expect(object["conversation_id"] as? String == identifier)
+    #expect(object["agent_state"] as? String == "working")
+    #expect(object["pending"] as? Bool == false)
+    #expect(object["background"] as? Bool == true)
+    // A bucket without its fraction is left out, not read as spent.
+    let buckets = AntigravityQuotaBucket.parse(try #require(object["quota"] as? String))
+    #expect(buckets.map(\.id) == ["3p-weekly"])
+    #expect(buckets.first?.remainingFraction == 0.75)
+    #expect(buckets.first?.resetsAt == nil)
+  }
+
   @Test("The user's own command gets a payload over 64 KiB whole; the time is the log's")
   func statusCommandLargePayload() async throws {
     let folder = try scratch()

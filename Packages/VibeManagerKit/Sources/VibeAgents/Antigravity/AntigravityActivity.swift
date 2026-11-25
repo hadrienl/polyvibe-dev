@@ -6,9 +6,14 @@ import VibeDomain
 /// is installed. The original status command receives the same input and keeps its output.
 enum AntigravityStatusCommand {
   static let event = "AntigravityStatus"
-  /// Two processes per refresh: `plutil` turns the payload into an XML property list, one
-  /// `awk` pass reads the allowed fields from it and the time. The user's own command gets the
-  /// payload whole, up to 4 MiB.
+  /// Three processes per refresh: `sed` makes every `null` a `false`, `plutil` turns the payload
+  /// into an XML property list, one `awk` pass reads the allowed fields from it and the time. The
+  /// user's own command gets the payload whole, up to 4 MiB.
+  ///
+  /// A property list has no null: one `null` anywhere made `plutil` refuse the whole payload, and
+  /// the session's activity with it (#585). `false` is a JSON value wherever a `null` is, and keeps
+  /// a string valid wherever the word sits in one; none of the fields read takes it for a value:
+  /// a state, an identifier or a count that is `false` is unknown, a fraction left out.
   ///
   /// The quota of the account (#599), as agy 1.5.14 gives it — `quota.<bucket>` with a
   /// `remaining_fraction` and a `reset_time` — is kept as `bucket=fraction@reset;…`: at most eight
@@ -17,7 +22,7 @@ enum AntigravityStatusCommand {
   static let script = #"""
     u=$1;
     i=$({ head -c 4194304; cat >/dev/null; });
-    r=$(printf '%s' "$i" | /usr/bin/plutil -convert xml1 -o - - 2>/dev/null | /usr/bin/awk '
+    r=$(printf '%s' "$i" | LC_ALL=C /usr/bin/sed 's/[[:<:]]null[[:>:]]/false/g' | /usr/bin/plutil -convert xml1 -o - - 2>/dev/null | /usr/bin/awk '
     { sub(/^[ \t]+/, "") }
     /^<(dict|array)>$/ { if (d == 1) o = k; k = ""; d++; next }
     /^<\/(dict|array)>$/ { d--; next }
