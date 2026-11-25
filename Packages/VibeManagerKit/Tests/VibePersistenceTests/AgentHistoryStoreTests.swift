@@ -89,6 +89,17 @@ struct AgentHistoryStoreTests {
       to: SessionAgentConfiguration(providerID: "claude-code"),
       handover: .conversationHistory(byteCount: 1_000_000),
       at: createdAt.addingTimeInterval(40))
+    // Moved on by themselves, the account at its limit (#600): with when it lifts, and without.
+    try session.switchAgent(
+      to: SessionAgentConfiguration(providerID: "codex"),
+      handover: .conversationHistory(byteCount: 2_048),
+      at: createdAt.addingTimeInterval(50),
+      cause: .accountLimit(resetsAt: createdAt.addingTimeInterval(86_400.123_456)))
+    try session.switchAgent(
+      to: SessionAgentConfiguration(providerID: "antigravity"),
+      handover: .summary(byteCount: 900, isTruncated: false, wasEdited: false),
+      at: createdAt.addingTimeInterval(60),
+      cause: .accountLimit(resetsAt: nil))
     let codec = SessionStoreCodec()
     let decoded = try codec.decode(try codec.encode(sessions: [session]))
 

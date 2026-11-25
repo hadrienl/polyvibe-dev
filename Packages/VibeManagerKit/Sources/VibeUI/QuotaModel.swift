@@ -106,6 +106,21 @@ public final class QuotaModel {
     }
   }
 
+  /// The account's quota read after `date` (#600): asked now unless it already was since. `nil`
+  /// while tracking is off, and for an account that cannot tell its quota.
+  public func reading(of providerID: String, since date: Date) async -> AccountQuotaService.Entry? {
+    guard isTrackingEnabled(), let reporter = reporters[providerID] else { return nil }
+    let generation = generation
+    var entry = await service.refresh(providerID, with: reporter, freshSince: date)
+    // A reading already under way when asked was started before: the next one is not.
+    if entry.readAt < date {
+      entry = await service.refresh(providerID, with: reporter, freshSince: date)
+    }
+    guard generation == self.generation, isTrackingEnabled() else { return nil }
+    entries[providerID] = entry
+    return entry
+  }
+
   // MARK: - When
 
   /// A popover that shows quotas opened: its accounts — every one for `nil` — asked now, then

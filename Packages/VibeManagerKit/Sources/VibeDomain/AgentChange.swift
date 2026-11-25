@@ -32,12 +32,21 @@ public struct AgentChange: Identifiable, Hashable, Codable, Sendable {
     }
   }
 
+  /// Why the session was moved, when the user did not ask for it.
+  public enum Cause: Hashable, Codable, Sendable {
+    /// The account the session ran on reached its limit, and the session went on with the next
+    /// account of the backup chain (#600). `resetsAt` is when the limit lifts, when it is known.
+    case accountLimit(resetsAt: Date?)
+  }
+
   public let id: UUID
   public let date: Date
   public let previous: SessionAgentConfiguration
   public let next: SessionAgentConfiguration
   public let handover: Handover
   public internal(set) var outcome: Outcome
+  /// `nil` for a switch the user made.
+  public let cause: Cause?
 
   public init(
     id: UUID = UUID(),
@@ -45,7 +54,8 @@ public struct AgentChange: Identifiable, Hashable, Codable, Sendable {
     previous: SessionAgentConfiguration,
     next: SessionAgentConfiguration,
     handover: Handover,
-    outcome: Outcome = .completed
+    outcome: Outcome = .completed,
+    cause: Cause? = nil
   ) {
     self.id = id
     self.date = date.storageRounded
@@ -53,6 +63,10 @@ public struct AgentChange: Identifiable, Hashable, Codable, Sendable {
     self.next = next
     self.handover = handover
     self.outcome = outcome
+    switch cause {
+    case .accountLimit(let resetsAt?): self.cause = .accountLimit(resetsAt: resetsAt.storageRounded)
+    default: self.cause = cause
+    }
   }
 
   /// Whether the agent it left had actually worked: a switch made before the session ever ran

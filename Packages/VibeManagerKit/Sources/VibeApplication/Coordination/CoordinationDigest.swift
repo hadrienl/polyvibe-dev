@@ -75,6 +75,8 @@ public enum CoordinationDigest {
       case .error(let text): return "Error: \(text)"
       case .information(let text): return "Information: \(text)"
       case .chapter(let provider, _): return "— A new conversation with \(provider) starts here."
+      case .accountLimit(let previous, let provider, _, _):
+        return "— \(previous) reached its account limit: the session goes on with \(provider)."
       case .olderFormat: return nil
       }
     }

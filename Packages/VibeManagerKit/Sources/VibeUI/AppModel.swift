@@ -194,6 +194,9 @@ public final class AppModel {
   /// Dictation in the composers (#340). Set by the composition: a workspace assembled without it
   /// shows no microphone and no Dictation tab.
   public var dictation: DictationController?
+  /// Settings › Backup Accounts (#600): the accounts a session goes on with when its own reaches
+  /// its limit. In memory unless the composition sets one kept in the defaults.
+  public var accountFallback = AccountFallbackModel()
   /// The agent's answers read aloud (#357). Set by the composition from macOS 15, which the voice
   /// model needs; `nil` before, and no answer offers to be read.
   public var readAloud: ReadAloudController? {
@@ -503,6 +506,10 @@ public final class AppModel {
   public private(set) var switchBackOffers: [SessionID: SwitchBack] = [:]
   /// When each switch started its agent, kept only long enough to tell a quick failure.
   private var switchAttempts: [SessionID: (date: Date, previous: SwitchBack)] = [:]
+  /// The sessions whose account limit is being looked into, or moved on from (#600).
+  var fallingBackSessionIDs: Set<SessionID> = []
+  /// The accounts found at their limit, until it lifts (#600): none is moved to meanwhile.
+  var limitedAccounts: [String: AccountLimit] = [:]
 
   public struct SwitchBack: Equatable {
     public let target: AgentTarget
@@ -740,13 +747,13 @@ public final class AppModel {
   let changeTaskStatus: ChangeTaskStatus
   private let reorderSessions: ReorderSessions
   private let restartSession: RestartSession?
-  private let planAgentSwitch: PlanAgentSwitch?
+  let planAgentSwitch: PlanAgentSwitch?
   private let recordAgentSwitch: RecordAgentSwitch
   private let revertAgentSwitch: RevertAgentSwitch
   private let detectPreviousShutdown: DetectPreviousShutdown?
   private let runtimeRecorder: SessionRuntimeRecorder?
   private let restoreSessions: RestoreSessions?
-  private let clock: any SessionClock
+  let clock: any SessionClock
   let readGit: ReadSessionGit?
   private let importLegacyNotes: ImportLegacyNotes
 
@@ -2348,7 +2355,8 @@ public final class AppModel {
   /// Plan, stop, copy, re-read, record, launch — in that order, so that everything that can refuse
   /// refuses while the current agent still runs, its logs are copied once it no longer writes
   /// them, and a launch that fails can put the session back exactly as it was.
-  private func performAgentSwitch(
+  /// - Parameter cause: why the session is moved, when the user did not ask for it (#600).
+  func performAgentSwitch(
     id: SessionID,
     to target: AgentTarget,
     previous: String,
@@ -2357,14 +2365,16 @@ public final class AppModel {
     includesConversationHistory: Bool,
     skippingResume: Bool,
     expecting: AgentSwitchMode.Kind?,
-    names: [String: String]
+    names: [String: String],
+    cause: AgentChange.Cause? = nil
   ) async {
     guard let launcher, let planAgentSwitch, restoration == nil else { return }
     // The restart lock: a switch and a restart of one session must never cross.
     guard restartingSessionIDs.insert(id).inserted else { return }
     defer { restartingSessionIDs.remove(id) }
     forgetAgentUpdate(id)
-    switchFailure = nil
+    // A switch the user did not make leaves the failure they may be reading where it is.
+    if cause == nil { switchFailure = nil }
     switchBackOffers[id] = nil
     let name = sessions.first { $0.id == id }?.name ?? Self.unnamedSession
     // A copy of the logs written for this switch, until an agent is started to read it.
@@ -2401,7 +2411,7 @@ public final class AppModel {
 
       // 3 and 4. Recorded on a fresh read of the store; an archive that landed during the stop
       // is refused there.
-      let change = try await recordAgentSwitch(plan, wasEdited: wasEdited)
+      let change = try await recordAgentSwitch(plan, wasEdited: wasEdited, cause: cause)
       guard let switched = try await repository.session(id: id) else {
         throw AgentSwitchRefusal.sessionMissing
       }
@@ -2474,7 +2484,8 @@ public final class AppModel {
     // No agent was started to read it, and it holds every tool result of the session.
     if let unreadHistory { await planAgentSwitch.discardHistory(of: unreadHistory) }
     await reload()
-    follow(id)
+    // Moved by itself, the session is not brought before the user: they may be typing elsewhere.
+    if cause == nil { follow(id) }
   }
 
   /// Puts the session back on the agent the switch left, and says what actually happened: back

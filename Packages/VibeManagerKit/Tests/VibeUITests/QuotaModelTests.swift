@@ -60,6 +60,22 @@ struct QuotaModelTests {
     #expect(codex.calls == 1)
   }
 
+  @Test("A reading wanted since a moment asks the CLI again, even within thirty seconds (#600)")
+  func readingSince() async {
+    let model = QuotaModel()
+    let codex = Fixed(quota(0.5))
+    model.connect(accounts: [
+      (QuotaModel.Account(id: "codex", name: "Codex", symbolName: "c"), codex)
+    ])
+    await model.refresh()
+    _ = await model.reading(of: "codex", since: .distantPast)
+    #expect(codex.calls == 1)
+    let entry = await model.reading(of: "codex", since: Date())
+    #expect(codex.calls == 2)
+    #expect(entry?.reading == quota(0.5))
+    #expect(await model.reading(of: "claude-code", since: .distantPast) == nil)
+  }
+
   @Test("A spent window is blocked until it comes back; tracking off shows and asks nothing")
   func blockedAndTrackingOff() async {
     let model = QuotaModel()

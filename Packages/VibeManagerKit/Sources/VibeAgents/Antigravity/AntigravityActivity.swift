@@ -144,7 +144,7 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
   }
 
   /// The name given to a turn agy stopped on a spent quota.
-  static let quotaError = "quota_exhausted"
+  static let quotaError = AgentTerminalPrompt.quotaExhaustedError
 
   /// What a change of state means. Only snapshots are seen, never who started a turn: a turn
   /// that starts from rest is the user's — work the agent resumes by itself (background tasks,

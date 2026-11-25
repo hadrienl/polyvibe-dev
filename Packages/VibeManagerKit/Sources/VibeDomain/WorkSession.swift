@@ -548,7 +548,8 @@ public struct WorkSession: Identifiable, Hashable, Codable, Sendable {
     to next: SessionAgentConfiguration,
     handover: AgentChange.Handover,
     at date: Date,
-    id: UUID = UUID()
+    id: UUID = UUID(),
+    cause: AgentChange.Cause? = nil
   ) throws -> AgentChange {
     guard status == .closed else { throw AgentSwitchError.notClosed(status) }
     guard let previous = agent else { throw AgentSwitchError.noAgent }
@@ -560,7 +561,8 @@ public struct WorkSession: Identifiable, Hashable, Codable, Sendable {
       date: date,
       previous: previous,
       next: next,
-      handover: handover
+      handover: handover,
+      cause: cause
     )
     agentHistory.append(change)
     agent = next

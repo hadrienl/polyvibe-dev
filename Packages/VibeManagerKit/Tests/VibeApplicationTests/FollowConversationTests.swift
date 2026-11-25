@@ -309,6 +309,36 @@ struct FollowConversationTests {
     #expect(name == "Beta")
   }
 
+  @Test("A switch made at the account's limit opens the next conversation with why (#600)")
+  func accountLimitChapter() async throws {
+    let one = URL(fileURLWithPath: "/t/spent.jsonl")
+    let two = URL(fileURLWithPath: "/t/backup.jsonl")
+    let tail = ScriptedTail([one: ["user:first"], two: ["user:second"]])
+    let follow = FollowConversation(
+      agents: Registry(providers: [
+        LineProvider(descriptor: alpha, files: [one]), LineProvider(descriptor: beta, files: [two]),
+      ]), tail: tail, refreshInterval: .milliseconds(100), publishInterval: .milliseconds(10))
+    let resetsAt = Date(timeIntervalSince1970: 1_795_000_000)
+    var session = WorkSession(
+      name: "S", agent: SessionAgentConfiguration(providerID: "alpha", resumeIdentifier: "spent"))
+    _ = try session.switchAgent(
+      to: SessionAgentConfiguration(providerID: "beta", resumeIdentifier: "backup"),
+      handover: .conversationHistory(byteCount: 10), at: Date(),
+      cause: .accountLimit(resetsAt: resetsAt))
+    var iterator = await follow.follow(session, live: false).makeAsyncIterator()
+    let snapshot = await next(&iterator) { $0.availability == .available }
+    guard
+      case .notice(.accountLimit(let previous, let next, let resets, _)) = snapshot?.entries[1]
+        .content
+    else {
+      Issue.record("no line saying the limit")
+      return
+    }
+    #expect(previous == "Alpha")
+    #expect(next == "Beta")
+    #expect(resets == resetsAt)
+  }
+
   @Test("Each publication says how many entries, from the first, are the same as before (#250)")
   func unchangedPrefix() async throws {
     let file = URL(fileURLWithPath: "/t/prefix.jsonl")

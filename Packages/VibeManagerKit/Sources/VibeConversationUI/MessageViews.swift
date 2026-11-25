@@ -371,6 +371,21 @@ struct NoticeRow: View {
           .fixedSize()
           line
         }
+      case .accountLimit(let previous, let next, let resetsAt, _):
+        // The session moved on by itself (#600): said where it did, and why, in one line that
+        // may wrap — the names and the date do not fit beside two rules.
+        HStack(spacing: 10) {
+          line
+          Label {
+            Self.accountLimitText(previous: previous, next: next, resetsAt: resetsAt)
+              .multilineTextAlignment(.center)
+          } icon: {
+            Image(systemName: "arrow.triangle.swap")
+          }
+          .fixedSize(horizontal: false, vertical: true)
+          .layoutPriority(1)
+          line
+        }
       case .interrupted:
         centered(Text("Interrupted", bundle: .module), symbol: "stop.circle")
       case .compacted:
@@ -397,6 +412,20 @@ struct NoticeRow: View {
 
   private var line: some View {
     Rectangle().fill(theme.border.color).frame(height: 1)
+  }
+
+  /// “Claude Code reached its limit (resets Fri 28 Nov, 13:39), continuing with Codex”.
+  static func accountLimitText(previous: String, next: String, resetsAt: Date?) -> Text {
+    guard let resetsAt else {
+      return Text(
+        "\(previous) reached its limit, continuing with \(next)", bundle: .module,
+        comment: "A line of the conversation: the agent whose account reached its limit, then the agent the session goes on with.")
+    }
+    let reset = resetsAt.formatted(
+      .dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
+    return Text(
+      "\(previous) reached its limit (resets \(reset)), continuing with \(next)", bundle: .module,
+      comment: "A line of the conversation: the agent whose account reached its limit, when the limit lifts (“Fri 28 Nov, 13:39”), then the agent the session goes on with.")
   }
 
   private func centered(_ text: Text, symbol: String) -> some View {

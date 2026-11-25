@@ -501,6 +501,10 @@ private struct StoredAgentChangeV4: Codable {
   let summaryWasEdited: Bool?
   let outcome: String
   let failureReason: String?
+  /// Why the session was moved without the user asking (#600): `accountLimit`. Absent for a
+  /// switch the user made, and in every store written before.
+  let cause: String?
+  let limitResetsAt: Date?
 
   init(_ change: AgentChange) {
     id = change.id
@@ -542,6 +546,14 @@ private struct StoredAgentChangeV4: Codable {
       outcome = "failed"
       failureReason = reason
     }
+    switch change.cause {
+    case .accountLimit(let resetsAt):
+      cause = "accountLimit"
+      limitResetsAt = resetsAt
+    case nil:
+      cause = nil
+      limitResetsAt = nil
+    }
   }
 
   var domainValue: AgentChange {
@@ -569,7 +581,9 @@ private struct StoredAgentChangeV4: Codable {
       previous: previous.domainValue,
       next: next.domainValue,
       handover: handover,
-      outcome: outcome
+      outcome: outcome,
+      // A cause a later build wrote is read as none: the switch still happened.
+      cause: cause == "accountLimit" ? .accountLimit(resetsAt: limitResetsAt) : nil
     )
   }
 }

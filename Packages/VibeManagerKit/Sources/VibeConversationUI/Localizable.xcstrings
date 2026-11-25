@@ -49427,6 +49427,208 @@
           }
         }
       }
+    },
+    "%@ reached its limit, continuing with %@" : {
+      "comment" : "A line of the conversation: the agent whose account reached its limit, then the agent the session goes on with.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بلغ %1$@ حدّه، والمتابعة على %2$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat sein Limit erreicht, weiter mit %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ alcanzó su límite; se continúa con %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite de %1$@ atteinte, suite sur %2$@"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ अपनी सीमा तक पहुँचा, %2$@ पर जारी"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ha raggiunto il limite, si prosegue con %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ が上限に達しました。%2$@ で続行します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 한도 도달, %2$@(으)로 계속"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ heeft zijn limiet bereikt, verder met %2$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ osiągnął limit, kontynuacja na %2$@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ atingiu o limite, continuando com %2$@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ достиг лимита, продолжение на %2$@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sınırına ulaştı, %2$@ ile devam ediliyor"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ досяг ліміту, продовження на %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 已达上限，改由 %2$@ 继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 已達上限，改由 %2$@ 繼續"
+          }
+        }
+      }
+    },
+    "%@ reached its limit (resets %@), continuing with %@" : {
+      "comment" : "A line of the conversation: the agent whose account reached its limit, when the limit lifts (“Fri 28 Nov, 13:39”), then the agent the session goes on with.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "بلغ %1$@ حدّه (يُعاد الضبط %2$@)، والمتابعة على %3$@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ hat sein Limit erreicht (Zurücksetzung %2$@), weiter mit %3$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ alcanzó su límite (se restablece %2$@); se continúa con %3$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite de %1$@ atteinte (réinitialisation %2$@), suite sur %3$@"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ अपनी सीमा तक पहुँचा (रीसेट %2$@), %3$@ पर जारी"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ha raggiunto il limite (si azzera %2$@), si prosegue con %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ が上限に達しました（リセット: %2$@）。%3$@ で続行します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 한도 도달(초기화: %2$@), %3$@(으)로 계속"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ heeft zijn limiet bereikt (reset %2$@), verder met %3$@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ osiągnął limit (reset: %2$@), kontynuacja na %3$@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ atingiu o limite (redefine %2$@), continuando com %3$@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ достиг лимита (сброс %2$@), продолжение на %3$@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sınırına ulaştı (sıfırlanma: %2$@), %3$@ ile devam ediliyor"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ досяг ліміту (скидання %2$@), продовження на %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 已达上限（%2$@ 重置），改由 %3$@ 继续"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 已達上限（%2$@ 重設），改由 %3$@ 繼續"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

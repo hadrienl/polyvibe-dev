@@ -30,6 +30,8 @@ public enum SettingsPage: Hashable, Sendable {
   case webView
   /// Coordinator sessions and their children (#352): how many children may run at once.
   case coordination
+  /// The accounts a session goes on with when its own reaches its limit (#600).
+  case backupAccounts
   /// Where the agents create their worktrees (#432).
   case worktrees
   /// The iPhone companion (#397): turned on, its iPhones.
@@ -131,6 +133,12 @@ public enum SettingsPage: Hashable, Sendable {
       LocalizedStringResource(
         "Coordination", bundle: .module,
         comment: "A page of the Settings window: coordinator sessions and their children.")
+    case .backupAccounts:
+      LocalizedStringResource(
+        "Backup Accounts", bundle: .module,
+        comment:
+          "A page of the Settings window: the accounts a session goes on with when its own reaches its limit."
+      )
     case .worktrees:
       LocalizedStringResource(
         "Worktrees", bundle: .module,
@@ -175,6 +183,7 @@ public enum SettingsPage: Hashable, Sendable {
     case .newEndpoint, .newAccount: "plus"
     case .webView: "globe"
     case .coordination: "person.2.fill"
+    case .backupAccounts: "arrow.triangle.swap"
     case .worktrees: "arrow.triangle.branch"
     case .companion: "iphone"
     case .templates: "text.badge.plus"
@@ -198,6 +207,7 @@ public enum SettingsPage: Hashable, Sendable {
     case .newEndpoint, .newAccount: .secondary
     case .webView: .cyan
     case .coordination: .teal
+    case .backupAccounts: .mint
     case .worktrees: .brown
     case .companion: .indigo
     case .templates: .purple

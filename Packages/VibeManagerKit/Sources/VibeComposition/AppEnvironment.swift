@@ -546,6 +546,9 @@ public final class AppEnvironment {
             admitted.contains(id) ? agentProcesses.process(id, pid) : nil
           }
         }))
+    // The backup chain of #600, beside the other preferences.
+    appModel.accountFallback = AccountFallbackModel(
+      defaults: UserDefaults(suiteName: data.defaultsSuite))
     // The composer's dictation (#340): Whisper on this Mac, its models beside this copy's data —
     // never in the bundle — and the choice of model and language in the user defaults.
     appModel.dictation = DictationController(

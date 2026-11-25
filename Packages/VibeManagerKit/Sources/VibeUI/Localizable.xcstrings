@@ -201010,6 +201010,711 @@
           }
         }
       }
+    },
+    "Backup Accounts" : {
+      "comment" : "A page of the Settings window: the accounts a session goes on with when its own reaches its limit.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحسابات الاحتياطية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ersatzkonten"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuentas de respaldo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Comptes de secours"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बैकअप खाते"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account di riserva"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予備アカウント"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예비 계정"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reserveaccounts"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konta zapasowe"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contas reserva"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резервные учётные записи"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yedek hesaplar"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Резервні облікові записи"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "备用账户"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "備用帳號"
+          }
+        }
+      }
+    },
+    "No account can tell its quota yet." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "لا يوجد حساب يمكنه الإبلاغ عن حصته بعد."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch kann kein Konto sein Kontingent angeben."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ninguna cuenta puede indicar aún su cuota."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun compte ne peut encore indiquer son quota."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अभी कोई भी खाता अपना कोटा नहीं बता सकता।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nessun account può ancora indicare la sua quota."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クォータを報告できるアカウントはまだありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 할당량을 알려 줄 수 있는 계정이 없습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nog geen account kan zijn quotum doorgeven."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Żadne konto nie może jeszcze podać swojego limitu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nenhuma conta consegue informar sua cota ainda."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пока ни одна учётная запись не может сообщить свою квоту."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henüz kotasını bildirebilen bir hesap yok."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поки що жоден обліковий запис не може повідомити свою квоту."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前还没有账户能报告其配额。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目前還沒有帳號能回報其配額。"
+          }
+        }
+      }
+    },
+    "Usage tracking is off: turn on Track agent usage in Privacy for limits to be read and sessions to move on." : {
+      "comment" : "Under the backup chain while usage tracking is off (#600).",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتبّع الاستخدام متوقف: فعّل «تتبّع استخدام الوكلاء» في «الخصوصية» لكي تُقرأ الحدود وتنتقل الجلسات."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Nutzungserfassung ist aus: Schalte „Nutzung der Agents erfassen“ unter „Datenschutz“ ein, damit Limits gelesen werden und Sitzungen weiterlaufen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El registro del uso está desactivado: activa «Registrar el uso de los agentes» en Privacidad para que se lean los límites y las sesiones continúen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le suivi de l’utilisation est désactivé : activez « Suivre l’utilisation des agents » dans Confidentialité pour que les limites soient lues et que les sessions basculent."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "उपयोग ट्रैकिंग बंद है: सीमाएँ पढ़ी जाएँ और सेशन आगे बढ़ें, इसके लिए गोपनीयता में \"एजेंट का उपयोग ट्रैक करें\" चालू करें।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il monitoraggio dell’utilizzo è disattivato: attiva «Monitora l’utilizzo degli agenti» in Privacy perché i limiti vengano letti e le sessioni proseguano."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用状況の記録はオフです。上限を読み取ってセッションを切り替えるには、「プライバシー」で「エージェントの使用状況を記録」をオンにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용량 추적이 꺼져 있습니다. 한도를 읽고 세션을 넘기려면 개인정보 보호에서 \"에이전트 사용량 추적\"을 켜세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gebruik volgen staat uit: zet ‘Volg gebruik van agents’ aan bij Privacy zodat limieten worden gelezen en sessies verdergaan."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Śledzenie użycia jest wyłączone: włącz „Śledź użycie agentów” w sekcji Prywatność, aby limity były odczytywane, a sesje przechodziły dalej."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O acompanhamento do uso está desativado: ative “Acompanhar o uso dos agentes” em Privacidade para que os limites sejam lidos e as sessões continuem."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отслеживание использования выключено: включите «Отслеживать использование агентов» в разделе «Конфиденциальность», чтобы лимиты считывались, а сеансы продолжались."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kullanım izleme kapalı: sınırların okunması ve oturumların devam etmesi için Gizlilik bölümünde “Ajan kullanımını izle”yi açın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відстеження використання вимкнено: увімкніть «Відстежувати використання агентів» у розділі «Приватність», щоб ліміти зчитувалися, а сеанси продовжувалися."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量跟踪已关闭：请在“隐私”中打开“跟踪智能体用量”，以便读取上限并切换会话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用量追蹤已關閉：請在「隱私權」中開啟「追蹤代理程式用量」，以便讀取上限並切換工作階段。"
+          }
+        }
+      }
+    },
+    "Move %@ up" : {
+      "comment" : "VoiceOver: an account.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نقل %@ إلى الأعلى"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nach oben verschieben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subir %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monter %@"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ को ऊपर ले जाएँ"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sposta in alto %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を上へ移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 위로 이동"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ omhoog verplaatsen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przenieś %@ w górę"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover %@ para cima"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переместить %@ вверх"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ öğesini yukarı taşı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемістити %@ вгору"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上移 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上移 %@"
+          }
+        }
+      }
+    },
+    "Move %@ down" : {
+      "comment" : "VoiceOver: an account.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نقل %@ إلى الأسفل"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ nach unten verschieben"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bajar %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Descendre %@"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ को नीचे ले जाएँ"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sposta in basso %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を下へ移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 아래로 이동"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ omlaag verplaatsen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przenieś %@ w dół"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover %@ para baixo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переместить %@ вниз"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ öğesini aşağı taşı"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемістити %@ вниз"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下移 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下移 %@"
+          }
+        }
+      }
+    },
+    "Order of Priority" : {
+      "comment" : "A section of Settings › Backup Accounts: the accounts, the first preferred.",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ترتيب الأولوية"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rangfolge"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orden de prioridad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordre de priorité"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "प्राथमिकता क्रम"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordine di priorità"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "優先順位"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "우선순위"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volgorde van voorkeur"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kolejność priorytetu"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordem de prioridade"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порядок приоритета"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öncelik sırası"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Порядок пріоритету"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "优先顺序"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "優先順序"
+          }
+        }
+      }
+    },
+    "The chain is an order of priority. When the account of a session reaches its limit — its quota spent, or a rate limit that lifts in more than a quarter of an hour — the session goes on with the first account of the chain that is not at its limit, handed a copy of its conversation: one higher up that has its quota back comes first. A passing error changes nothing, and a session on an account left out of the chain stops at its limit." : {
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "السلسلة ترتيب أولوية. عندما يبلغ حساب الجلسة حدّه — نفاد حصته، أو حدّ معدّل لا يُرفع قبل أكثر من ربع ساعة — تتابع الجلسة على أول حساب في السلسلة لم يبلغ حدّه، مع نسخة من محادثتها: الحساب الأعلى الذي استعاد حصته يأتي أولًا. الخطأ العابر لا يغيّر شيئًا، والجلسة على حساب خارج السلسلة تتوقف عند حدّها."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Kette ist eine Rangfolge. Erreicht das Konto einer Sitzung sein Limit – Kontingent aufgebraucht oder ein Ratenlimit, das erst in mehr als einer Viertelstunde endet –, läuft die Sitzung mit dem ersten Konto der Kette weiter, das nicht am Limit ist, und erhält eine Kopie ihrer Unterhaltung: Ein weiter oben stehendes Konto, dessen Kontingent wieder da ist, kommt zuerst. Ein vorübergehender Fehler ändert nichts, und eine Sitzung auf einem Konto außerhalb der Kette hält an ihrem Limit an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La cadena es un orden de prioridad. Cuando la cuenta de una sesión alcanza su límite —cuota agotada o un límite de frecuencia que se levanta en más de un cuarto de hora—, la sesión continúa con la primera cuenta de la cadena que no esté en su límite, con una copia de su conversación: una cuenta más arriba que haya recuperado su cuota va primero. Un error pasajero no cambia nada, y una sesión en una cuenta fuera de la cadena se detiene en su límite."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La chaîne est un ordre de priorité. Quand le compte d’une session atteint sa limite — quota épuisé, ou limite de débit levée dans plus d’un quart d’heure —, la session continue sur le premier compte de la chaîne qui n’est pas à sa limite, avec une copie de sa conversation : un compte plus haut qui a retrouvé son quota passe en premier. Une erreur passagère ne change rien, et une session sur un compte hors de la chaîne s’arrête à sa limite."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह क्रम प्राथमिकता का है। जब किसी सेशन का खाता अपनी सीमा तक पहुँचता है — कोटा खत्म हो जाए, या कोई रेट लिमिट जो पंद्रह मिनट से ज़्यादा बाद हटे — तो सेशन अपनी बातचीत की एक प्रति के साथ क्रम के उस पहले खाते पर जारी रहता है जो अपनी सीमा पर नहीं है: ऊपर का कोई खाता जिसका कोटा लौट आया हो, पहले आता है। कोई अस्थायी त्रुटि कुछ नहीं बदलती, और क्रम से बाहर के खाते वाला सेशन अपनी सीमा पर रुक जाता है।"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La catena è un ordine di priorità. Quando l’account di una sessione raggiunge il suo limite — quota esaurita, o un limite di frequenza che si sblocca tra più di un quarto d’ora — la sessione prosegue con il primo account della catena che non è al limite, con una copia della sua conversazione: un account più in alto che ha recuperato la quota viene prima. Un errore passeggero non cambia nulla, e una sessione su un account fuori dalla catena si ferma al suo limite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この順序は優先順位です。セッションのアカウントが上限に達すると（クォータを使い切ったとき、または解除まで15分以上かかるレート制限のとき）、セッションは会話のコピーを引き継いで、上限に達していない順序内の最初のアカウントで続行します。クォータが回復した上位のアカウントが優先されます。一時的なエラーでは何も変わらず、順序に含まれないアカウントのセッションは上限で停止します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 순서는 우선순위입니다. 세션의 계정이 한도에 도달하면(할당량 소진, 또는 15분 넘게 지나야 풀리는 사용량 제한) 세션은 대화의 사본을 넘겨받아 한도에 도달하지 않은 순서상 첫 번째 계정으로 계속됩니다. 할당량을 되찾은 상위 계정이 먼저입니다. 일시적인 오류로는 아무것도 바뀌지 않으며, 순서에 없는 계정의 세션은 한도에서 멈춥니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De keten is een volgorde van voorkeur. Bereikt het account van een sessie zijn limiet — quotum op, of een snelheidslimiet die pas over meer dan een kwartier vervalt —, dan gaat de sessie verder met het eerste account van de keten dat niet aan zijn limiet zit, met een kopie van haar gesprek: een hoger account dat zijn quotum terug heeft, komt eerst. Een tijdelijke fout verandert niets, en een sessie op een account buiten de keten stopt bij haar limiet."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Łańcuch to kolejność priorytetu. Gdy konto sesji osiągnie limit — wyczerpany przydział albo limit szybkości, który minie za ponad kwadrans — sesja jest kontynuowana na pierwszym koncie łańcucha, które nie jest na limicie, z kopią swojej rozmowy: wyższe konto, które odzyskało przydział, ma pierwszeństwo. Przejściowy błąd niczego nie zmienia, a sesja na koncie spoza łańcucha zatrzymuje się na swoim limicie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A cadeia é uma ordem de prioridade. Quando a conta de uma sessão atinge o limite — cota esgotada ou um limite de taxa que só é liberado em mais de quinze minutos —, a sessão continua na primeira conta da cadeia que não esteja no limite, com uma cópia da conversa: uma conta mais acima que recuperou a cota vem primeiro. Um erro passageiro não muda nada, e uma sessão em uma conta fora da cadeia para no limite."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Цепочка задаёт порядок приоритета. Когда учётная запись сеанса достигает лимита — квота исчерпана или ограничение частоты снимется не раньше чем через четверть часа, — сеанс продолжается на первой учётной записи цепочки, которая не достигла лимита, с копией своего разговора: учётная запись выше, вернувшая себе квоту, идёт первой. Временная ошибка ничего не меняет, а сеанс на учётной записи вне цепочки останавливается на своём лимите."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu sıra bir öncelik sırasıdır. Bir oturumun hesabı sınırına ulaştığında — kota bittiğinde ya da on beş dakikadan uzun sürede kalkacak bir hız sınırında — oturum, sohbetinin bir kopyasıyla sıradaki sınırında olmayan ilk hesapta devam eder: kotasını geri kazanmış daha üstteki bir hesap önce gelir. Geçici bir hata hiçbir şeyi değiştirmez; sıranın dışındaki bir hesaptaki oturum ise sınırında durur."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ланцюжок задає порядок пріоритету. Коли обліковий запис сеансу досягає ліміту — квоту вичерпано або обмеження частоти зніметься не раніше ніж за чверть години, — сеанс продовжується на першому обліковому записі ланцюжка, який не досяг ліміту, з копією своєї розмови: обліковий запис вище, що повернув собі квоту, іде першим. Тимчасова помилка нічого не змінює, а сеанс на обліковому записі поза ланцюжком зупиняється на своєму ліміті."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此顺序即优先顺序。当会话的账户达到上限（配额用尽，或速率限制需要十五分钟以上才解除）时，会话会带着对话副本，在顺序中第一个未达上限的账户上继续：排在更前、已恢复配额的账户优先。临时错误不会改变任何事情；不在顺序中的账户上的会话会在达到上限时停止。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此順序即優先順序。當工作階段的帳號達到上限（配額用盡，或速率限制需要十五分鐘以上才解除）時，工作階段會帶著對話副本，在順序中第一個未達上限的帳號上繼續：排在更前、已恢復配額的帳號優先。暫時性錯誤不會改變任何事；不在順序中的帳號上的工作階段會在達到上限時停止。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -812,11 +812,19 @@ public actor FollowConversation {
           following: following)
       }
       if showsChapters, index > 0, !chapterEntries.isEmpty {
+        let date = chapterEntries.first?.date
+        let notice: ConversationNotice
+        if case .accountLimit(let resetsAt)? = Self.cause(
+          of: index, in: following.session)
+        {
+          notice = .accountLimit(
+            previousName: following.chapters[index - 1].providerName,
+            providerName: chapter.providerName, resetsAt: resetsAt, date: date)
+        } else {
+          notice = .chapter(providerName: chapter.providerName, date: date)
+        }
         entries.append(
-          ConversationEntry(
-            id: "chapter:\(index)", date: chapterEntries.first?.date,
-            content: .notice(
-              .chapter(providerName: chapter.providerName, date: chapterEntries.first?.date))))
+          ConversationEntry(id: "chapter:\(index)", date: date, content: .notice(notice)))
       }
       entries.append(contentsOf: chapterEntries)
     }
@@ -830,6 +838,20 @@ public actor FollowConversation {
       availability = .available
     }
     return ConversationSnapshot(entries: entries, availability: availability)
+  }
+
+  /// Why the conversation at `index` of the session's started, when it was not the user's doing:
+  /// the switch that left the one before it for this one's agent (#600).
+  static func cause(of index: Int, in session: WorkSession) -> AgentChange.Cause? {
+    let agents = session.conversationAgents
+    guard index > 0, index < agents.count else { return nil }
+    let left = agents[index - 1]
+    let change = session.agentHistory.last {
+      $0.outcome == .completed && $0.previous.providerID == left.providerID
+        && $0.previous.resumeIdentifier == left.resumeIdentifier
+    }
+    guard let change, change.next.providerID == agents[index].providerID else { return nil }
+    return change.cause
   }
 
   /// A transcript's entries, each sub-agent carrying its depth and, when its transcript was read,
