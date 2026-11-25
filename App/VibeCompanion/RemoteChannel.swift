@@ -37,6 +37,13 @@ final class RemoteChannel {
   private(set) var homePath: String?
   /// The web view shown, and the latest picture of its page.
   private(set) var webState: RemoteWebState?
+  /// Every account's quota (#630), while the list or the Quotas sheet watches them and the
+  /// channel is up: `nil` otherwise, and the dial is grey.
+  private(set) var quotas: RemoteQuotas?
+  /// Whether the Mac last connected tells its quotas: kept across a reconnection, for the button
+  /// not to come and go with the channel.
+  private(set) var macTellsQuotas = false
+  @ObservationIgnored private var quotaWatch: RemoteQuotaWatch?
   /// Bumped to reload the phone's web view along with the Mac's.
   var reloadWeb = 0
   /// The requests of the phone's web view the Mac is making, by identifier.
@@ -125,6 +132,8 @@ final class RemoteChannel {
     }
     if phase == .connecting || phase == .connected { phase = .idle }
     path = .unknown
+    // No longer said by the Mac: told again once connected.
+    quotas = nil
     // The next Mac says its own in its welcome.
     macProtocolVersion = nil
   }
@@ -136,6 +145,7 @@ final class RemoteChannel {
     sessions = []
     conversation = nil
     shownSessionID = nil
+    macTellsQuotas = false
   }
 
   private func connect(endpointID: String, relay: String?, attempt: Int) async {
@@ -172,6 +182,8 @@ final class RemoteChannel {
       write(.hello(protocolVersion: CompanionRemote.protocolVersion, deviceName: deviceName))
       if let shownSessionID { write(.show(sessionID: shownSessionID)) }
       if let webSessionID { write(.showWeb(sessionID: webSessionID)) }
+      // A Mac older than protocol 4 skips it without a word.
+      if let quotaWatch { write(.watchQuotas(quotaWatch)) }
       // Icons asked while the channel was down are asked again.
       for id in askedIcons where icons[id] == nil { write(.icon(id: id)) }
       for path in askedAttachments where attachmentImages[path] == nil {
@@ -217,6 +229,7 @@ final class RemoteChannel {
     case .welcome(let version, let macName):
       self.macName = macName
       macProtocolVersion = version
+      macTellsQuotas = CompanionRemote.takesQuotas(version)
     case .sessions(let sessions):
       self.sessions = sessions
       if let answer = creation.listed(sessions, noAnswer: Self.noAnswer) { settle(answer) }
@@ -231,6 +244,9 @@ final class RemoteChannel {
     case .webState(let state):
       guard state.sessionID == webSessionID else { return }
       webState = state
+    case .quotas(let quotas):
+      guard quotaWatch != nil else { return }
+      self.quotas = quotas
     case .httpResponse(let response):
       fetches.removeValue(forKey: response.id)?.resume(returning: response)
     case .folderIconData(let path, let png):
@@ -258,9 +274,9 @@ final class RemoteChannel {
       if let answer = creation.created(id) { settle(answer) }
     case .failure(let reason):
       if let answer = creation.failed(reason) { settle(answer) } else { failure = reason }
-    case .hello, .show, .send, .sendFiles, .answer, .answers, .setStatus, .search, .newSessionOptions,
-      .createSession, .listFolder, .createFolder, .icon, .interrupt, .showWeb, .web, .attachmentImage, .restart,
-      .httpRequest, .folderIcon, .close:
+    case .hello, .show, .send, .sendFiles, .answer, .answers, .setStatus, .search,
+      .newSessionOptions, .createSession, .listFolder, .createFolder, .icon, .interrupt, .showWeb,
+      .web, .attachmentImage, .restart, .httpRequest, .folderIcon, .close, .watchQuotas:
       break
     }
   }
@@ -358,6 +374,14 @@ final class RemoteChannel {
     webSessionID = sessionID
     if webState?.sessionID != sessionID { webState = nil }
     write(.showWeb(sessionID: sessionID))
+  }
+
+  /// What shows the quotas now (#630): the list's dial, the Quotas sheet, or nothing.
+  func watchQuotas(_ watch: RemoteQuotaWatch?) {
+    guard watch != quotaWatch else { return }
+    quotaWatch = watch
+    if watch == nil { quotas = nil }
+    write(.watchQuotas(watch))
   }
 
   func web(_ action: RemoteWebAction, in sessionID: String) {

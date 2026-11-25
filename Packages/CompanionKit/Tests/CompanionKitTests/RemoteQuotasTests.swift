@@ -29,8 +29,10 @@ struct RemoteQuotasTests {
             RemoteQuotaWindow(id: "s", kind: .session, usedFraction: 0.34, resetsAt: now),
             RemoteQuotaWindow(id: "m", kind: .minutes(300), usedFraction: 0.44, resetsAt: nil),
             RemoteQuotaWindow(id: "w", kind: .weekly, usedFraction: 0.6, resetsAt: nil),
-            RemoteQuotaWindow(id: "o", kind: .weeklyModel("Opus"), usedFraction: 0.82, resetsAt: nil),
-            RemoteQuotaWindow(id: "g", kind: .group("Gemini Models"), usedFraction: 1, resetsAt: nil),
+            RemoteQuotaWindow(
+              id: "o", kind: .weeklyModel("Opus"), usedFraction: 0.82, resetsAt: nil),
+            RemoteQuotaWindow(
+              id: "g", kind: .group("Gemini Models"), usedFraction: 1, resetsAt: nil),
           ],
           cost: RemoteQuotaCost(
             amount: Decimal(string: "127.43")!, hasPrice: true, leavesOutUnpriced: true)),
@@ -106,5 +108,52 @@ struct RemoteQuotasTests {
       isTrackingOn: true, showsRemaining: false, currency: "EUR",
       accounts: [account("c", cost: unpriced), account("d")])
     #expect(none.totalCost == nil)
+  }
+}
+
+@Suite("The figures of the quotas, as the phone writes them (#630)")
+struct RemoteQuotaFormatTests {
+  private let now = Date(timeIntervalSince1970: 1_800_000_000)
+  private let french = Locale(identifier: "fr_FR")
+
+  @Test("Five hours, a week, a model's week; never “0 minutes”")
+  func names() {
+    #expect(RemoteQuotaFormat.name(of: .minutes(300)) == .hours(5))
+    #expect(RemoteQuotaFormat.name(of: .minutes(90)) == .minutes(90))
+    #expect(RemoteQuotaFormat.name(of: .minutes(0)) == .unknownLength)
+    #expect(RemoteQuotaFormat.name(of: .session) == .session)
+    #expect(RemoteQuotaFormat.name(of: .weeklyModel("Opus")) == .weeklyModel("Opus"))
+    #expect(RemoteQuotaFormat.name(of: .group("Gemini Models")) == .group("Gemini Models"))
+  }
+
+  @Test("The share used or left, and when the window comes back")
+  func shareAndReset() {
+    let soon = RemoteQuotaWindow(
+      id: "w", kind: .weekly, usedFraction: 0.82, resetsAt: now.addingTimeInterval(2 * 3_600))
+    // The space before the sign is the locale's own: only the figures and the sign are checked.
+    let used = RemoteQuotaFormat.percent(of: soon, showsRemaining: false, locale: french)
+    #expect(used.filter(\.isNumber) == "82" && used.hasSuffix("%"))
+    let left = RemoteQuotaFormat.percent(of: soon, showsRemaining: true, locale: french)
+    #expect(left.filter(\.isNumber) == "18" && left.hasSuffix("%"))
+    let english = Locale(identifier: "en_US")
+    let time = RemoteQuotaFormat.resetMoment(of: soon, now: now, locale: english)
+    #expect(time?.contains(":") == true)
+    #expect(time?.contains("Fri") == false)
+    let later = RemoteQuotaWindow(
+      id: "w", kind: .weekly, usedFraction: 0.5, resetsAt: now.addingTimeInterval(3 * 86_400))
+    #expect(RemoteQuotaFormat.resetMoment(of: later, now: now, locale: english)?.count ?? 0 > 5)
+    #expect(
+      RemoteQuotaFormat.resetMoment(
+        of: soon, now: now.addingTimeInterval(3 * 3_600), locale: english) == nil)
+    let undated = RemoteQuotaWindow(id: "w", kind: .weekly, usedFraction: 0.5, resetsAt: nil)
+    #expect(RemoteQuotaFormat.resetMoment(of: undated, now: now, locale: english) == nil)
+  }
+
+  @Test("A cost in its currency, approximate, and never a zero below a cent")
+  func cost() {
+    #expect(RemoteQuotaFormat.cost(127, currency: "EUR", locale: french) == "≈ 127,00\u{a0}€")
+    #expect(
+      RemoteQuotaFormat.cost(Decimal(string: "0.004")!, currency: "EUR", locale: french)
+        .hasPrefix("< 0,01"))
   }
 }

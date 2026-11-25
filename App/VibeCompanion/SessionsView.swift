@@ -11,6 +11,7 @@ struct SessionsView: View {
   @State private var path: [String] = []
   @State private var showsSearch = false
   @State private var showsSettings = false
+  @State private var showsQuotas = false
   /// The form shown, which comes back with the creation that failed.
   @State private var newSessionForm: NewSessionForm?
   /// The folders folded away, by path.
@@ -25,6 +26,12 @@ struct SessionsView: View {
   /// How long a coordinator is held down to fold: shorter than the system's half second, since
   /// the row answers from the first touch.
   private static let foldPress: Double = 0.35
+
+  /// What the Mac is asked of its quotas: nothing once a conversation is pushed over the list.
+  private var quotaWatch: RemoteQuotaWatch? {
+    if showsQuotas { return .sheet }
+    return path.isEmpty && channel.macTellsQuotas ? .gauge : nil
+  }
 
   var body: some View {
     let families = RemoteSessionFamilies(channel.sessions)
@@ -73,6 +80,12 @@ struct SessionsView: View {
         ToolbarItem(placement: .topBarLeading) {
           Button("Settings", systemImage: "gearshape") { showsSettings = true }
         }
+        // Never shown by a Mac that doesn't tell its quotas (#630).
+        if channel.macTellsQuotas {
+          ToolbarItem(placement: .topBarTrailing) {
+            QuotasButton(quotas: channel.quotas) { showsQuotas = true }
+          }
+        }
         ToolbarItem(placement: .topBarTrailing) {
           Button("New Session", systemImage: "plus") {
             newSessionForm = NewSessionForm(returned: channel.takeKeptCreation())
@@ -109,6 +122,14 @@ struct SessionsView: View {
       }
       .sheet(isPresented: $showsSettings) {
         SettingsSheet()
+      }
+      .sheet(isPresented: $showsQuotas) {
+        QuotasSheet()
+          .presentationDetents([.medium, .large])
+      }
+      // The dial while the list is on screen, every account while the sheet is open (#630).
+      .onChange(of: quotaWatch, initial: true) { _, watch in
+        channel.watchQuotas(watch)
       }
       .sheet(item: $newSessionForm) { form in
         NewSessionSheet(returned: form.returned)

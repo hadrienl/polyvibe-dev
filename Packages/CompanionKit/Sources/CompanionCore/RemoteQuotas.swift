@@ -186,3 +186,62 @@ public struct RemoteQuotaGauge: Hashable, Sendable {
     return showsRemaining ? 1 - usedFraction : usedFraction
   }
 }
+
+/// The figures of the quotas as the phone writes them, apart from its own words (#630): what a
+/// test reads, in a locale given. The same rules as the Mac's popover.
+public enum RemoteQuotaFormat {
+  /// What a window is called: the phone puts it in its words.
+  public enum Name: Equatable, Sendable {
+    case session
+    case hours(Int)
+    case minutes(Int)
+    /// A window whose CLI did not give its length: no “0 minutes”.
+    case unknownLength
+    case weekly
+    case weeklyModel(String)
+    /// As its CLI names it, never translated.
+    case group(String)
+  }
+
+  public static func name(of kind: RemoteQuotaWindow.Kind) -> Name {
+    switch kind {
+    case .session: .session
+    case .minutes(let minutes) where minutes <= 0: .unknownLength
+    case .minutes(let minutes) where minutes % 60 == 0: .hours(minutes / 60)
+    case .minutes(let minutes): .minutes(minutes)
+    case .weekly: .weekly
+    case .weeklyModel(let model): .weeklyModel(model)
+    case .group(let name): .group(name)
+    }
+  }
+
+  /// “82 %”: the share used, or left.
+  public static func percent(of window: RemoteQuotaWindow, showsRemaining: Bool, locale: Locale)
+    -> String
+  {
+    let value = showsRemaining ? 1 - window.usedFraction : window.usedFraction
+    return value.formatted(.percent.precision(.fractionLength(0)).locale(locale))
+  }
+
+  /// When a window comes back: “14:26” within the day, “Fri 09:00” further; `nil` without a date,
+  /// or once past — the phone then says it came back.
+  public static func resetMoment(of window: RemoteQuotaWindow, now: Date, locale: Locale)
+    -> String?
+  {
+    guard let resetsAt = window.resetsAt, resetsAt > now else { return nil }
+    let style: Date.FormatStyle =
+      resetsAt.timeIntervalSince(now) < 20 * 3_600
+      ? Date.FormatStyle(date: .omitted, time: .shortened).locale(locale)
+      : Date.FormatStyle().weekday(.abbreviated).hour().minute().locale(locale)
+    return resetsAt.formatted(style)
+  }
+
+  /// “≈ 127,43 €”, converted already; below a cent “< 0,01 €”, never a rounding to zero.
+  public static func cost(_ amount: Decimal, currency: String, locale: Locale) -> String {
+    let style = Decimal.FormatStyle.Currency(code: currency, locale: locale).presentation(.narrow)
+    if amount > 0, amount < Decimal(1) / 100 {
+      return "< " + (Decimal(1) / 100).formatted(style)
+    }
+    return "≈ " + amount.formatted(style)
+  }
+}
