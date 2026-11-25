@@ -219,6 +219,23 @@ struct ConversationHandoverExporterTests {
     #expect(await exporter.availability(of: first).isPartial == false)
   }
 
+  @Test("The folder of a session's copies is found from the session alone, while it exists")
+  func copiesFolder() async throws {
+    let (root, project, exporter) = try fixture()
+    defer { try? FileManager.default.removeItem(at: root) }
+    try Data("log\n".utf8).write(to: project.appendingPathComponent("thread.jsonl"))
+    let session = WorkSession(
+      name: "Test",
+      agent: SessionAgentConfiguration(providerID: "claude-code", resumeIdentifier: "thread"))
+    #expect(await exporter.copiesFolder(of: session) == nil)
+    let copy = try await export(session, with: exporter)
+    let folder = try #require(await exporter.copiesFolder(of: session))
+    #expect(
+      folder.standardizedFileURL == copy.directory.deletingLastPathComponent().standardizedFileURL)
+    await exporter.discard(copy)
+    #expect(await exporter.copiesFolder(of: session) == nil)
+  }
+
   @Test("A copy no agent will read is removed with its session folder, and nothing else is")
   func discard() async throws {
     let (root, project, exporter) = try fixture()
@@ -238,7 +255,8 @@ struct ConversationHandoverExporterTests {
     // A handover naming a folder outside the exporter's is never removed.
     await exporter.discard(
       ConversationHandover(index: project.appendingPathComponent("history.md"), byteCount: 0))
-    #expect(FileManager.default.fileExists(atPath: project.appendingPathComponent("thread.jsonl").path))
+    #expect(
+      FileManager.default.fileExists(atPath: project.appendingPathComponent("thread.jsonl").path))
   }
 
   @Test("A symbolic link is refused, and an incomplete export is removed")

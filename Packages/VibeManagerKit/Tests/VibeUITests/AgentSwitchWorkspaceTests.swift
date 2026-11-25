@@ -136,6 +136,8 @@ struct AgentSwitchWorkspaceTests {
     func discard(_: ConversationHandover) {
       events.append("discard")
     }
+
+    func copiesFolder(of _: WorkSession) -> URL? { nil }
   }
 
   @Test("History is offered, and chosen by default, only when the logs being left were found")

@@ -222,14 +222,18 @@ public struct RestartSession: Sendable {
   private let folders: any WorkingDirectoryProbe
   private let brief: SessionContextBriefBuilder
   private let notes: any SessionNotesStore
+  /// Where the copies of a conversation handed over live, for its resume to read them (#583).
+  private let history: (any ConversationHandoverExporting)?
 
   public init(
     repository: any SessionRepository,
     agents: any AgentProviderResolving,
     folders: any WorkingDirectoryProbe = FileManagerWorkingDirectoryProbe(),
     brief: SessionContextBriefBuilder = SessionContextBriefBuilder(),
-    notes: any SessionNotesStore = NoSessionNotes()
+    notes: any SessionNotesStore = NoSessionNotes(),
+    history: (any ConversationHandoverExporting)? = nil
   ) {
+    self.history = history
     self.repository = repository
     self.notes = notes
     self.agents = agents
@@ -296,6 +300,7 @@ public struct RestartSession: Sendable {
         .trimmingCharacters(in: .whitespacesAndNewlines),
       !identifier.isEmpty
     {
+      let readable = await history?.readableDirectoryPaths(resuming: session) ?? []
       do {
         // No prompt: the conversation being resumed already contains the instruction that
         // started it, and handing it back would set the agent off on it a second time.
@@ -306,7 +311,8 @@ public struct RestartSession: Sendable {
             effort: configuration.effort,
             initialPrompt: nil,
             resume: .identifier(identifier),
-            harnessID: configuration.harnessID
+            harnessID: configuration.harnessID,
+            readableDirectoryPaths: readable
           )
         )
         return SessionRestart(

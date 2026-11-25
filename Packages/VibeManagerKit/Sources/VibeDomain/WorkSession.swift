@@ -539,6 +539,18 @@ public struct WorkSession: Identifiable, Hashable, Codable, Sendable {
     return result
   }
 
+  /// Whether the current conversation began by reading copies of the earlier ones' logs, which it
+  /// may read again once resumed (#583). A model change goes on with the same conversation, and a
+  /// failed switch left it as it was: neither began one.
+  public var currentConversationReadsHistory: Bool {
+    for change in agentHistory.reversed() {
+      if change.outcome.isFailure || change.handover == .resumedConversation { continue }
+      if case .conversationHistory = change.handover { return true }
+      return false
+    }
+    return false
+  }
+
   /// Hands the session to another agent or model, keeping the one it leaves in the history.
   ///
   /// Neither the lifecycle nor anything else the user wrote is touched: the lifecycle records when

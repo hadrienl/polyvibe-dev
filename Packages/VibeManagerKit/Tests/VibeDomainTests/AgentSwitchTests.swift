@@ -141,3 +141,33 @@ func conversationsFollowTheHistory() throws {
   #expect(session.conversations.map(\.resumeIdentifier) == ["claude-1", "codex-1"])
   #expect(session.conversations.map(\.providerID) == ["claude-code", "codex"])
 }
+
+@Test("Only a conversation begun by reading copies reads them, a model change and a failure aside")
+func currentConversationReadsHistory() throws {
+  var session = workedSession()
+  #expect(!session.currentConversationReadsHistory)
+  try session.switchAgent(
+    to: SessionAgentConfiguration(providerID: "codex", modelID: "gpt-5.5"),
+    handover: .conversationHistory(byteCount: 10), at: createdAt.addingTimeInterval(120))
+  #expect(session.currentConversationReadsHistory)
+
+  // Another model: the same conversation goes on.
+  try session.switchAgent(
+    to: SessionAgentConfiguration(providerID: "codex", modelID: "gpt-5.5-mini"),
+    handover: .resumedConversation, at: createdAt.addingTimeInterval(180))
+  #expect(session.currentConversationReadsHistory)
+
+  // A summary that never ran leaves the session on the conversation it had.
+  let failed = try session.switchAgent(
+    to: SessionAgentConfiguration(providerID: "claude-code"),
+    handover: .summary(byteCount: 10, isTruncated: false, wasEdited: false),
+    at: createdAt.addingTimeInterval(240))
+  try session.revertAgentSwitch(failed.id, reason: "did not start")
+  #expect(session.currentConversationReadsHistory)
+
+  try session.switchAgent(
+    to: SessionAgentConfiguration(providerID: "claude-code"),
+    handover: .summary(byteCount: 10, isTruncated: false, wasEdited: false),
+    at: createdAt.addingTimeInterval(300))
+  #expect(!session.currentConversationReadsHistory)
+}

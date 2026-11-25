@@ -946,7 +946,8 @@ public final class AppModel {
     // A workspace without agents cannot build a launch plan, so it cannot restart anything —
     // and saying that with an optional is clearer than a use case that would refuse every call.
     let restart = agents.map {
-      RestartSession(repository: repository, agents: $0, notes: notesStore)
+      RestartSession(
+        repository: repository, agents: $0, notes: notesStore, history: conversationHandover)
     }
     restartSession = restart
     planAgentSwitch = agents.map {

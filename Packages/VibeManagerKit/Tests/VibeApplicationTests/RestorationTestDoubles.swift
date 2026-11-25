@@ -239,3 +239,18 @@ extension RestorationProvider: AgentEffortControlling {
   }
   func effortChange(to level: String?) -> AgentEffortChange? { nil }
 }
+
+/// The copies of a session's handed-over conversations, found in one folder or gone (#583).
+struct HandoverCopies: ConversationHandoverExporting {
+  let folder: URL?
+
+  func availability(of _: WorkSession) -> ConversationHistoryAvailability { .unavailable }
+  func reserve(for _: WorkSession) -> ConversationHandover {
+    ConversationHandover(index: URL(fileURLWithPath: "/copies/history.md"), byteCount: 0)
+  }
+  func export(_: WorkSession, into reserved: ConversationHandover) -> ConversationHandover {
+    reserved
+  }
+  func discard(_: ConversationHandover) {}
+  func copiesFolder(of _: WorkSession) -> URL? { folder }
+}

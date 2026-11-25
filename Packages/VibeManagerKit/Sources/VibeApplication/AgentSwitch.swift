@@ -467,6 +467,8 @@ public struct PlanAgentSwitch: Sendable {
       let identifier = current.resumeIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines),
       !identifier.isEmpty
     {
+      // The same conversation goes on: one that began by reading a copy may read it again.
+      let readable = await history?.readableDirectoryPaths(resuming: session) ?? []
       do {
         let launch = try await provider.launchPlan(
           for: AgentLaunchRequest(
@@ -475,7 +477,8 @@ public struct PlanAgentSwitch: Sendable {
             effort: effort,
             initialPrompt: nil,
             resume: .identifier(identifier),
-            harnessID: current.harnessID
+            harnessID: current.harnessID,
+            readableDirectoryPaths: readable
           )
         )
         return planned(launch, .resumeWithModel(identifier: identifier))

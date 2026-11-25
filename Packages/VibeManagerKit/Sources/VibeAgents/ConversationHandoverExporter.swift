@@ -47,6 +47,15 @@ public actor ConversationHandoverExporter: ConversationHandoverExporting {
     return ConversationHandover(index: folder.appendingPathComponent("history.md"), byteCount: 0)
   }
 
+  public func copiesFolder(of session: WorkSession) -> URL? {
+    let folder = directory.appendingPathComponent(session.id.rawValue.uuidString)
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDirectory),
+      isDirectory.boolValue
+    else { return nil }
+    return folder
+  }
+
   public func export(_ session: WorkSession, into reserved: ConversationHandover) throws
     -> ConversationHandover
   {
