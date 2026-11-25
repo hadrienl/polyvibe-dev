@@ -109,10 +109,13 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
         "toolPermission": mode == .autoReview ? "proceed-in-sandbox" : "request-review",
       ]),
     ]
-    // In Manual mode a file read outside the workspace waits for review; in its sandbox it does
-    // not, but the folder is the agent's to read either way (verified on 1.5.17, #583).
-    for path in request.readableDirectoryPaths {
-      arguments += ["--add-dir", path]
+    // In Manual mode a file read outside the workspace waits for review (#583); a folder of the
+    // workspace is read freely, and written only once reviewed. The sandbox reads it already, and
+    // would let a folder of the workspace be written unasked (both verified on 1.5.17).
+    if mode == .manual {
+      for path in request.readableDirectoryPaths {
+        arguments += ["--add-dir", path]
+      }
     }
     if case .identifier(let identifier) = request.resume {
       guard let uuid = UUID(uuidString: identifier.trimmingCharacters(in: .whitespacesAndNewlines))

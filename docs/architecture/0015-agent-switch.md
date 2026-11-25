@@ -147,11 +147,14 @@ by an agent that hands them to a tool as written. No process state or in-flight 
 restored. No native log is modified and no CLI-specific conversation database is fabricated.
 
 The snapshot lies outside the working directory, so the launch also lets the new agent read it
-(#583), through `AgentLaunchRequest.readableDirectoryPaths` set to the snapshot's own folder.
-Claude Code and Antigravity get `--add-dir`: without it, Claude Code in its default mode and
-Antigravity in Manual mode ask for every file read there (verified on Claude Code 2.1.332 and
-Antigravity 1.5.17). Codex gets nothing: its sandbox already reads the whole disk, and its
-`--add-dir` would make the folder writable (verified on 0.171).
+(#583), through `AgentLaunchRequest.readableDirectoryPaths` set to the snapshot's own folder,
+for reading only: without it, Claude Code in its default mode and Antigravity in Manual mode ask
+for every file read there. Claude Code gets a `Read(//<folder>/**)` rule through `--allowedTools`,
+not `--add-dir`, which makes the folder a working directory that Accept Edits writes in unasked.
+Antigravity in Manual mode gets `--add-dir`: a folder of its workspace is read freely and written
+only once reviewed. Its sandbox and Codex's get nothing: both already read there, and their
+`--add-dir` would let the agent write in the copy unasked. Verified on Claude Code 2.1.332,
+Antigravity 1.5.17 and Codex 0.171.
 
 The copied logs are deliberately durable: each switch has its own directory, and subsequent
 switches and deletion of the original CLI logs leave earlier copies usable. They are local,

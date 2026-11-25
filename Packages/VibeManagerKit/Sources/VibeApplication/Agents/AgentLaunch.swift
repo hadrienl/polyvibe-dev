@@ -22,8 +22,8 @@ public struct AgentLaunchRequest: Hashable, Sendable {
   /// native resumes included. An endpoint sets its own.
   public var approvalMode: AgentApprovalMode?
   /// Absolute paths of folders outside the working directory the agent is to read without asking
-  /// for each file: the copy of a conversation handed over to it (#583). Read access only; a CLI
-  /// that already reads anywhere is given nothing, so that none is made writable.
+  /// for each file: the copy of a conversation handed over to it (#583). Read access only: a CLI
+  /// that already reads there is given nothing, and none may write there without asking.
   public var readableDirectoryPaths: [String]
 
   public init(

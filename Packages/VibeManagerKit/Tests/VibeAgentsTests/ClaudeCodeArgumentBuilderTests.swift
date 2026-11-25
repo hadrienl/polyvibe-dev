@@ -50,7 +50,7 @@ struct ClaudeCodeArgumentBuilderTests {
     )
   }
 
-  @Test("A folder to read is opened one option at a time, before the prompt's separator")
+  @Test("A folder to read is allowed for reading only, one rule at a time, before the separator")
   func readableDirectories() throws {
     let arguments = try arguments(
       AgentLaunchRequest(
@@ -61,15 +61,18 @@ struct ClaudeCodeArgumentBuilderTests {
       delivery: .argument
     )
 
-    // `--add-dir` takes every value up to the next option or `--`: the prompt stays behind it.
+    // `--allowedTools` takes every value up to the next option or `--`: the prompt stays behind
+    // it. Never `--add-dir`, which would let Accept Edits write there.
     #expect(
       arguments == [
         "--session-id", Self.assigned.uuidString.lowercased(),
-        "--add-dir", "/Users/a/Library/Application Support/App/Handovers/x",
-        "--add-dir", "/b",
+        "--allowedTools", "Read(//Users/a/Library/Application Support/App/Handovers/x/**)",
+        "--allowedTools", "Read(//b/**)",
         "--", "Continue",
       ]
     )
+    #expect(!arguments.contains("--add-dir"))
+    #expect(ClaudeCodeArgumentBuilder.readRule(for: "/b/") == "Read(//b/**)")
   }
 
   @Test("A difficult prompt stays one argument and never loses a character")

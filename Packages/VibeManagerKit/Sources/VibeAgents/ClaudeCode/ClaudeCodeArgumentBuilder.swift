@@ -42,10 +42,12 @@ public struct ClaudeCodeArgumentBuilder: CommandLineAgentArgumentBuilder {
       arguments.append(contentsOf: ["--effort", effort])
     }
 
-    // Without it, every file read there asks for permission in the default mode (#583). One
-    // option per folder: `--add-dir` takes several values, up to the next option or `--`.
+    // Without it, every file read there asks for permission in the default mode (#583). A rule
+    // that allows reading, not `--add-dir`: that one makes the folder a working directory, which
+    // Accept Edits then writes in unasked (verified on 2.1.332). `//` starts an absolute path.
+    // One option per folder: `--allowedTools` takes values up to the next option or `--`.
     for path in request.readableDirectoryPaths {
-      arguments.append(contentsOf: ["--add-dir", path])
+      arguments.append(contentsOf: ["--allowedTools", Self.readRule(for: path)])
     }
 
     switch promptDelivery {
@@ -65,6 +67,12 @@ public struct ClaudeCodeArgumentBuilder: CommandLineAgentArgumentBuilder {
     }
 
     return arguments
+  }
+
+  /// The permission rule that lets the agent read everything under an absolute folder.
+  static func readRule(for path: String) -> String {
+    let folder = path.hasSuffix("/") ? String(path.dropLast()) : path
+    return "Read(/\(folder)/**)"
   }
 
   /// The CLI refuses anything but a UUID, so the refusal happens before a process is started.

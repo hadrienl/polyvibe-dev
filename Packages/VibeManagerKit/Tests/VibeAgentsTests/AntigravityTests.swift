@@ -64,15 +64,23 @@ struct AntigravityTests {
     #expect(!args.contains("--continue"))
   }
 
-  @Test("A folder to read joins the workspace, and the settings found after it stay one object")
+  @Test("A folder to read joins the workspace in Manual mode only, never the sandbox's")
   func readableDirectories() async throws {
-    let plan = try await base().launchPlan(
+    let manual = try await base().launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp/project", initialPrompt: "Continue", approvalMode: .manual,
+        readableDirectoryPaths: ["/handover/x"]))
+    let index = try #require(manual.arguments.firstIndex(of: "--add-dir"))
+    #expect(manual.arguments[index + 1] == "/handover/x")
+    #expect(manual.arguments.suffix(2) == ["--prompt-interactive", "Continue"])
+
+    // The sandbox reads it already, and would write in a folder of the workspace unasked.
+    let automatic = try await base().launchPlan(
       for: AgentLaunchRequest(
         workingDirectoryPath: "/tmp/project", initialPrompt: "Continue",
-        readableDirectoryPaths: ["/handover/x"]))
-    let index = try #require(plan.arguments.firstIndex(of: "--add-dir"))
-    #expect(plan.arguments[index + 1] == "/handover/x")
-    #expect(plan.arguments.suffix(2) == ["--prompt-interactive", "Continue"])
+        approvalMode: .autoReview, readableDirectoryPaths: ["/handover/x"]))
+    #expect(automatic.arguments.contains("--sandbox"))
+    #expect(!automatic.arguments.contains("--add-dir"))
 
     // A folder named like an option is a value, never mistaken for one when settings are merged.
     let named = AgentLaunchPlan(
