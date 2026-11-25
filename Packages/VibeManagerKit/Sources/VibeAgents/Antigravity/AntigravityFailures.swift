@@ -17,6 +17,9 @@ struct AntigravityErrorStep: Hashable, Sendable {
   /// The error itself: `RESOURCE_EXHAUSTED (code 429): …`, `agent executor error: …`.
   let detail: String?
   let code: Int?
+  /// agy writes some steps before they end and finishes them later: 3 is a step done. Every error
+  /// step measured was written done, but one that is not may still get its words.
+  var isFinished = true
 
   /// The error ended the turn: agy gave up and told the user.
   var endsTurn: Bool { message != nil }
@@ -66,7 +69,7 @@ struct AntigravityErrorStep: Hashable, Sendable {
 
   /// The error steps after `index`, oldest first; `nil` when the database cannot be read. Opened
   /// read-only, and closed at once: agy writes it in WAL mode, which a reader never holds back.
-  /// Nothing is ever written beside it.
+  /// Nothing is written beside it, but the index SQLite recreates beside a log agy left by crashing.
   static func read(database: URL, after index: Int) -> [AntigravityErrorStep]? {
     switch query(database.path, flags: 0, after: index) {
     case .read(let steps): return steps
@@ -105,7 +108,7 @@ struct AntigravityErrorStep: Hashable, Sendable {
     sqlite3_busy_timeout(handle, 100)
     var statement: OpaquePointer?
     let query =
-      "SELECT idx, step_payload FROM steps WHERE step_type = ?1 AND idx > ?2 ORDER BY idx LIMIT 512"
+      "SELECT idx, step_payload, status FROM steps WHERE step_type = ?1 AND idx > ?2 ORDER BY idx LIMIT 512"
     let prepared = sqlite3_prepare_v2(handle, query, -1, &statement, nil)
     guard prepared == SQLITE_OK, let statement else {
       return prepared == SQLITE_CANTOPEN && flags == 0 ? .noJournal : .failed
@@ -121,16 +124,21 @@ struct AntigravityErrorStep: Hashable, Sendable {
         return status == SQLITE_CANTOPEN && flags == 0 && steps.isEmpty ? .noJournal : .failed
       }
       let row = Int(sqlite3_column_int64(statement, 0))
+      let isFinished = sqlite3_column_int64(statement, 2) == 3
       let count = Int(sqlite3_column_bytes(statement, 1))
       // An error step weighs a few kilobytes; one much larger is not one of these.
       guard count <= 256 * 1024, let bytes = sqlite3_column_blob(statement, 1) else {
-        steps.append(AntigravityErrorStep(index: row, date: nil, message: nil, detail: nil, code: nil))
+        var step = AntigravityErrorStep(index: row, date: nil, message: nil, detail: nil, code: nil)
+        step.isFinished = isFinished
+        steps.append(step)
         continue
       }
       let payload = Data(bytes: bytes, count: count)
-      steps.append(
+      var step =
         AntigravityErrorStep(index: row, payload: payload)
-          ?? AntigravityErrorStep(index: row, date: nil, message: nil, detail: nil, code: nil))
+        ?? AntigravityErrorStep(index: row, date: nil, message: nil, detail: nil, code: nil)
+      step.isFinished = isFinished
+      steps.append(step)
     }
   }
 

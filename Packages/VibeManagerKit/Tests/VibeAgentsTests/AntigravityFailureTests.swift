@@ -110,6 +110,39 @@ struct AntigravityFailureTests {
     #expect(decoder.failure(in: file, conversation: identifier) == nil)
     try Self.insert(file, index: 3, type: 17, payload: Self.failure(at: Date().addingTimeInterval(1)))
     #expect(decoder.failure(in: file, conversation: identifier) != nil)
+    // Written later, but dated before the process: still the past.
+    try Self.insert(
+      file, index: 4, type: 17, payload: Self.failure(at: Date().addingTimeInterval(-3600)))
+    #expect(decoder.failure(in: file, conversation: identifier) == nil)
+  }
+
+  @Test("An error step agy has not finished writing is read again once it is")
+  func unfinishedStep() throws {
+    let file = try Self.database()
+    let decoder = Self.decoder(file)
+    let date = Date().addingTimeInterval(1)
+    try Self.insert(
+      file, index: 1, type: 17,
+      payload: Self.payload(date: date, message: nil, detail: "starting", code: nil), status: 2)
+    try Self.insert(file, index: 2, type: 17, payload: Self.retry())
+    #expect(decoder.failure(in: file, conversation: identifier) == nil)
+    try Self.insert(file, index: 1, type: 17, payload: Self.failure(at: date))
+    #expect(
+      decoder.failure(in: file, conversation: identifier)
+        == .turnFailed(AgentTerminalPrompt(kind: .other, message: Self.networkText)))
+    #expect(decoder.failure(in: file, conversation: identifier) == nil)
+  }
+
+  @Test("The end of a turn whose failure its step told leaves the failure told")
+  func idleAfterFailure() throws {
+    let file = try Self.database()
+    let decoder = Self.decoder(file)
+    _ = decoder.signal(for: event("working"))
+    try Self.insert(file, index: 1, type: 17, payload: Self.failure(at: Date().addingTimeInterval(1)))
+    #expect(decoder.failure(in: file, conversation: identifier) != nil)
+    #expect(decoder.signal(for: event("idle")) == nil)
+    #expect(decoder.signal(for: event("working")) == .promptSubmitted(byUser: true))
+    #expect(decoder.signal(for: event("idle")) == .turnEnded)
   }
 
   @Test("A spent quota is named in the user's words; every bucket spent, it is the account's")
@@ -303,20 +336,23 @@ struct AntigravityFailureTests {
     return file
   }
 
-  static func insert(_ file: URL, index: Int, type: Int, payload: Data) throws {
+  static func insert(
+    _ file: URL, index: Int, type: Int, payload: Data, status: Int = 3
+  ) throws {
     try execute(file, "") { handle in
       var statement: OpaquePointer?
       guard
         sqlite3_prepare_v2(
-          handle, "INSERT INTO steps (idx, step_type, status, step_payload) VALUES (?, ?, 3, ?)",
+          handle, "INSERT OR REPLACE INTO steps (idx, step_type, status, step_payload) VALUES (?, ?, ?, ?)",
           -1, &statement, nil) == SQLITE_OK
       else { throw SQLiteFailure() }
       defer { sqlite3_finalize(statement) }
       sqlite3_bind_int64(statement, 1, Int64(index))
       sqlite3_bind_int64(statement, 2, Int64(type))
+      sqlite3_bind_int64(statement, 3, Int64(status))
       _ = payload.withUnsafeBytes { bytes in
         sqlite3_bind_blob(
-          statement, 3, bytes.baseAddress, Int32(bytes.count),
+          statement, 4, bytes.baseAddress, Int32(bytes.count),
           unsafeBitCast(-1, to: sqlite3_destructor_type.self))
       }
       guard sqlite3_step(statement) == SQLITE_DONE else { throw SQLiteFailure() }

@@ -106,8 +106,10 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
   private let startedAt: Date
   /// The conversation whose database is watched.
   private var watched: String?
-  /// The last error step read, by conversation: each is told once.
+  /// By conversation, the error step up to which every one is read for good — one agy has not
+  /// finished writing is read again — and the last failure told: each is told once.
   private var lastErrorStep: [String: Int] = [:]
+  private var lastToldStep: [String: Int] = [:]
   /// When a failure was told from an `error` snapshot alone, before its step was read: that step,
   /// when it comes soon after, is the same failure.
   private var toldWithoutStep: Date?
@@ -149,13 +151,17 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
     return lock.withLock {
       let known = lastErrorStep[conversation]
       let fresh = steps.filter { $0.index > known ?? -1 }
-      guard let last = fresh.last else { return nil }
-      lastErrorStep[conversation] = last.index
-      // The first look at a conversation finds its past too: only what this process wrote counts.
+      let unfinished = fresh.first { !$0.isFinished && !$0.endsTurn }
+      let settled = unfinished.map { first in fresh.last { $0.index < first.index } } ?? fresh.last
+      if let settled { lastErrorStep[conversation] = settled.index }
+      // A conversation resumed holds its past: only what this process wrote counts — and, without
+      // a date, what came after the first look.
+      let told = lastToldStep[conversation] ?? -1
       let failed = fresh.last {
-        $0.endsTurn && (known != nil || ($0.date.map { $0 >= startedAt } ?? false))
+        $0.endsTurn && $0.index > told && ($0.date.map { $0 >= startedAt } ?? (known != nil))
       }
       guard let failed else { return nil }
+      lastToldStep[conversation] = failed.index
       let at = now()
       if let told = toldWithoutStep {
         toldWithoutStep = nil
@@ -224,6 +230,12 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
       let old = previous
       previous = effective
       let at = now()
+      // The end of the turn whose failure its step told: the failure stays.
+      if effective == "idle", let told = toldFromStep,
+        at.timeIntervalSince(told) < Self.sameFailureWindow
+      {
+        return nil
+      }
       if effective == "error" {
         // Its step was read and told already.
         if let told = toldFromStep, at.timeIntervalSince(told) < Self.sameFailureWindow {
