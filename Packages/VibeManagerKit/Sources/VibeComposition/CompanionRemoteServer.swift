@@ -24,6 +24,7 @@ final class CompanionRemoteServer {
   private static let entryLimit = 300
 
   private struct Peer {
+    var protocolVersion = 1
     var shown: SessionID?
     /// The conversation it counts as a viewer of.
     var viewed: ConversationModel?
@@ -51,6 +52,19 @@ final class CompanionRemoteServer {
     }
   }
 
+  private lazy var usageFeed: CompanionUsageFeed? = appModel?.usage.map { usage in
+    CompanionUsageFeed(
+      usage: usage, sessions: { [weak self] in self?.appModel?.sessions ?? [] },
+      agentNames: { [weak self] in
+        Dictionary(
+          (self?.appModel?.agentDescriptors ?? []).map { ($0.id.rawValue, $0.displayName) },
+          uniquingKeysWith: { first, _ in first })
+      }
+    ) { [weak self] peer, figures in
+      self?.send(peer, .sessionUsage(figures))
+    }
+  }
+
   init(
     appModel: AppModel, macName: String, attachmentsFolder: URL,
     send: @escaping @MainActor (String, RemoteMessage) -> Void
@@ -63,12 +77,14 @@ final class CompanionRemoteServer {
 
   func receive(_ message: RemoteMessage, from peer: String) {
     switch message {
-    case .hello(_, let deviceName):
+    case .hello(let version, let deviceName):
       Self.logger.notice(
         "\(peer, privacy: .public): hello from \(deviceName, privacy: .public)")
       // A phone saying hello again starts over: what it watched before goes.
+      release(peer)
+      peers[peer]?.web?.stop()
       quotaFeed?.stop(peer)
-      peers[peer] = Peer()
+      peers[peer] = Peer(protocolVersion: version)
       send(peer, .welcome(protocolVersion: CompanionRemote.protocolVersion, macName: macName))
       observeSessions()
       send(peer, .sessions(lastSessions))
@@ -173,7 +189,7 @@ final class CompanionRemoteServer {
       quotaFeed?.watch(watch, for: peer)
     case .welcome, .sessions, .conversation, .searchResults, .failure, .newSessionOffer, .created,
       .folderListing, .folderNotCreated, .iconData, .webState, .attachmentData, .httpResponse,
-      .folderIconData, .quotas:
+      .folderIconData, .quotas, .sessionUsage:
       break
     }
   }
@@ -188,6 +204,7 @@ final class CompanionRemoteServer {
 
   /// The phone no longer shows its conversation: one viewer less.
   private func release(_ peer: String) {
+    usageFeed?.stop(peer)
     guard let model = peers[peer]?.viewed else { return }
     model.remoteViewers = max(0, model.remoteViewers - 1)
     peers[peer]?.viewed = nil
@@ -277,6 +294,7 @@ final class CompanionRemoteServer {
       send(peer, .failure(.sessionGone))
       return
     }
+    if (peers[peer]?.protocolVersion ?? 1) >= 5 { usageFeed?.follow(id, for: peer) }
     let model = appModel.conversations.show(session)
     model.remoteViewers += 1
     peers[peer]?.viewed = model
