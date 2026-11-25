@@ -170,6 +170,58 @@ struct AsyncQuestionWatchTests {
     #expect(pending.isEmpty)
   }
 
+  /// As Codex 0.171.0 writes an answer typed in its terminal while the turn goes on (#625).
+  static func reply(_ call: String, index: Int = 0) -> String {
+    #"{"type":"response_item","payload":{"type":"message","id":"msg_1","role":"user","content":[{"type":"input_text","text":"<send_user_message_question_reply>\n[{\"answer\":\"8080\",\"question\":\"Which port?\",\"questionItemId\":\"[\\\"request_user_input_async\\\",\\\"\#(call)\\\",\#(index)]\"}]\n</send_user_message_question_reply>"}]}}"#
+  }
+
+  @Test("An answer takes its question away at once, while the turn goes on (#625)")
+  func answerEndsQuestion() {
+    var pending: Set<String> = []
+    _ = CodexQuestionWatch.signals(in: Data(Self.call.utf8), pending: &pending)
+    let other = Self.call.replacingOccurrences(of: "call_a", with: "call_b")
+    _ = CodexQuestionWatch.signals(in: Data(other.utf8), pending: &pending)
+    _ = CodexQuestionWatch.signals(in: Data(Self.accepted.utf8), pending: &pending)
+    #expect(
+      CodexQuestionWatch.signals(in: Data(Self.reply("call_a").utf8), pending: &pending)
+        == [.toolFinished("request_user_input_async", subject: "call_a")])
+    // Said once: the second question's answer, or the event Codex writes after it, add nothing.
+    #expect(
+      CodexQuestionWatch.signals(in: Data(Self.reply("call_a", index: 1).utf8), pending: &pending)
+        .isEmpty)
+    #expect(pending == ["async:call_b"])
+    #expect(
+      CodexQuestionWatch.signals(in: Data(Self.turnComplete.utf8), pending: &pending)
+        == [.toolFinished("request_user_input_async", subject: "call_b")])
+  }
+
+  @Test("A message that only quotes the words answers nothing")
+  func plainMessageAnswersNothing() {
+    var pending: Set<String> = []
+    _ = CodexQuestionWatch.signals(in: Data(Self.call.utf8), pending: &pending)
+    let quoted = Self.reply("call_a").replacingOccurrences(
+      of: "</send_user_message_question_reply>", with: "")
+    let assistant = Self.reply("call_a").replacingOccurrences(
+      of: #""role":"user""#, with: #""role":"assistant""#)
+    for line in [quoted, assistant] {
+      #expect(CodexQuestionWatch.signals(in: Data(line.utf8), pending: &pending).isEmpty)
+    }
+    #expect(pending == ["async:call_a"])
+  }
+
+  @Test("A question answered before the watch starts is not said again")
+  func answeredInThePast() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let rollout = folder.appendingPathComponent("rollout.jsonl")
+    try ([Self.call, Self.accepted, Self.reply("call_a")].joined(separator: "\n") + "\n")
+      .write(to: rollout, atomically: true, encoding: .utf8)
+    let (pending, waiting, _) = CodexQuestionWatch.unanswered(in: rollout)
+    #expect(pending.isEmpty)
+    #expect(waiting.isEmpty)
+  }
+
   /// As Codex 0.166.0 writes it once the account's quota is spent: no `Stop` hook follows.
   static let failedTurn =
     #"{"type":"event_msg","payload":{"type":"task_complete","root_turn_id":"t","turn_id":"t","last_agent_message":null,"error":{"message":"You’ve hit your usage limit.","codex_error_info":"usage_limit_exceeded"}}}"#
