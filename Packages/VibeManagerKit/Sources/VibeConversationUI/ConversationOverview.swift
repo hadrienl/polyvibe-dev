@@ -92,6 +92,14 @@ public final class ConversationOverviewTracker {
     return frame.maxY > readableTop && frame.minY < readableTop + readableHeight
   }
 
+  /// A unit's first line, rather than any part of its possibly very long message.
+  func isRead(_ id: String, offset: Double) -> Bool {
+    guard let frame = frames[id] else { return false }
+    let y = Double(frame.minY) + offset
+    return y >= readableTop - ConversationBookmarks.startTolerance
+      && y < readableTop + readableHeight
+  }
+
   /// Forgets the heights measured at another width or text size: estimated again until their
   /// rows are built anew. Those built now are measured as they are.
   func forgetMeasures() {

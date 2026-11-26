@@ -1160,6 +1160,7 @@ public final class ConversationModel {
     [:]
   @ObservationIgnored private var bookmarkUnitCache: [String: (String, [MarkdownUnit])] = [:]
   @ObservationIgnored private var lastRevealedUnit = 0
+  @ObservationIgnored private var lastRevealedWasBookmark = false
   @ObservationIgnored var selectedBlockID: () -> String? = { nil }
   /// Where the rows are as they are built: what the overview and the commands start from.
   @ObservationIgnored public let overview = ConversationOverviewTracker()
@@ -1370,7 +1371,15 @@ public final class ConversationModel {
   /// The last moment brought up, while it is still in what is read.
   private var lastRevealedOnScreen: Int? {
     guard let id = lastRevealedMoment, overview.isRead(id) else { return nil }
-    return blocks.firstIndex { $0.id == id }
+    guard let index = blocks.firstIndex(where: { $0.id == id }) else { return nil }
+    if lastRevealedWasBookmark,
+      let moment = shownMoments.first(where: {
+        $0.blockIndex == index && $0.moment.kind == .bookmark && $0.moment.unit == lastRevealedUnit
+      }), !overview.isRead(id, offset: momentOffset(moment))
+    {
+      return nil
+    }
+    return index
   }
 
   /// The block at the top of what is read.
@@ -1384,6 +1393,7 @@ public final class ConversationModel {
   public func revealMoment(_ blockID: String, unit: Int = 0, bookmark: Bool = false) {
     lastRevealedMoment = blockID
     lastRevealedUnit = unit
+    lastRevealedWasBookmark = bookmark
     if bookmark, let block = blocks.first(where: { $0.id == blockID }),
       let target = units(in: block).first(where: { $0.index == unit })
     {

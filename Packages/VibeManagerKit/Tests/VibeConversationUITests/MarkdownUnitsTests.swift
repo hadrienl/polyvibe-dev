@@ -153,4 +153,15 @@ struct MarkdownUnitsTests {
     #expect(MarkdownUnits.units(in: plan.bookmarkContents).count == 3)
   }
 
+  @Test func manualScrollForgetsAUnitThatLeftTheViewport() {
+    let model = model()
+    model.loadBookmarks(["a", "a#u1", "a#u2"])
+    #expect(model.revealNextMoment())
+    #expect(model.litPassage?.range == NSRange(location: 4, length: 3))
+    // The message remains visible, but the last revealed paragraph is now above the viewport.
+    model.overview.scrolled(readableTop: 220, readableHeight: 200)
+    #expect(model.revealPreviousMoment())
+    #expect(model.litPassage?.range == NSRange(location: 8, length: 5))
+  }
+
 }
