@@ -365,6 +365,8 @@ public final class ConversationModel {
   public let sessionID: SessionID
   public private(set) var snapshot = ConversationSnapshot(availability: .loading)
   public private(set) var blocks: [ConversationBlock] = []
+  /// Stable menu dependency: content updates only notify readers when emptiness changes (#588).
+  public private(set) var hasMessages = false
   /// The blocks of the accessibility rotors.
   public private(set) var rotor = ConversationRotor()
   public var promptBlocks: [ConversationBlock] { rotor.prompts.map { blocks[$0] } }
@@ -871,6 +873,8 @@ public final class ConversationModel {
     let appended = rebuilt[restart...].filter { !previousIDs.contains($0.id) }.count
     let wasEmpty = blocks.isEmpty
     blocks = rebuilt
+    let hasMessages = !rebuilt.isEmpty
+    if hasMessages != self.hasMessages { self.hasMessages = hasMessages }
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
     updateMoments(from: restart)
