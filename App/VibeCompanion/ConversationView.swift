@@ -340,6 +340,7 @@ struct ConversationView: View {
       preparingReply = false
       if let prepared {
         replyTarget = prepared
+        saveDraft()
         fieldFocused = true
       } else {
         channel.failure = .other(
@@ -393,6 +394,7 @@ struct ConversationView: View {
           Button("Remove quote", systemImage: "xmark") {
             self.replyTarget = nil
             replyRequest = UUID()
+            preparingReply = false
             fieldFocused = true
           }.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
         }
@@ -463,6 +465,7 @@ struct ConversationView: View {
                   String(
                     localized: "Reply not confirmed. Check the conversation before sending again."))
               }
+              saveDraft()
             }
           } else {
             channel.send(text, files: files, to: sessionID)
