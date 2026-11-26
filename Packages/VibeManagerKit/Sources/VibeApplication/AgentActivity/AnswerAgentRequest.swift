@@ -98,12 +98,20 @@ public struct AnswerAgentRequest: Sendable {
   @discardableResult
   public func callAsFunction(_ answer: AgentAnswer, to id: AgentRequestID) async -> Outcome {
     let request = await tracker.state(for: id.sessionID)?.requests.first { $0.id == id }
-    let before = await screen(id.sessionID)
-    let keys =
+    var before = await screen(id.sessionID)
+    var keys =
       await tracker.keystrokes(
         for: answer, to: id, screen: before.flatMap(AgentDialogScreen.init(screen:))) ?? []
     var written: [[UInt8]] = []
-    let outcome = await give(answer, to: id, written: &written)
+    var redrawn: String?
+    let outcome = await give(answer, to: id, written: &written, redrawn: &redrawn)
+    // Drawn again before anything was typed: the report shows what the keys were read off.
+    if let redrawn {
+      before = redrawn
+      keys =
+        await tracker.keystrokes(
+          for: answer, to: id, screen: AgentDialogScreen(screen: redrawn)) ?? []
+    }
     if [.notOnScreen, .otherDialog, .interrupted].contains(outcome), let request {
       await failed(
         Failure(
@@ -121,13 +129,16 @@ public struct AnswerAgentRequest: Sendable {
     return outcome
   }
 
-  private func give(_ answer: AgentAnswer, to id: AgentRequestID, written: inout [[UInt8]]) async
-    -> Outcome
-  {
+  private func give(
+    _ answer: AgentAnswer, to id: AgentRequestID, written: inout [[UInt8]],
+    redrawn: inout String?
+  ) async -> Outcome {
     guard await tracker.offers(answer, to: id) else {
       return await tracker.isFirstRequest(id) ? .notAnswerable : .requestGone
     }
-    var text = await readScreen(id.sessionID)
+    let read = await readScreen(id.sessionID)
+    if read.isRedrawn { redrawn = read.text }
+    var text = read.text
     // Whose dialog is drawn is read off the screen, against every request the agent reported
     // before drawing it (#283). The screen is read first: every dialog on it was reported by then,
     // and once the log is read up to its end, every report is known. Read again after, it must
@@ -259,22 +270,22 @@ public struct AnswerAgentRequest: Sendable {
   /// shorter for a quarter of a second, then given its size back, and the agent draws for both.
   public static let redrawWait: Duration = .milliseconds(400)
 
-  /// What the session's terminal shows, drawn again first when no dialog is read off it and the
-  /// history it is replayed from was trimmed (#563). A dialog is drawn once; an agent that draws
+  /// What the session's terminal shows, and whether it was drawn again first: when no dialog is
+  /// read off it and the history it is replayed from was trimmed (#563). A dialog is drawn once; an agent that draws
   /// by differences then sends only what changes — ten hours of a spinner later, the history
   /// kept holds the spinner, not the dialog still drawn under it.
-  private func readScreen(_ id: SessionID) async -> String? {
+  private func readScreen(_ id: SessionID) async -> (text: String?, isRedrawn: Bool) {
     let text = await screen(id)
     guard text.flatMap(AgentDialogScreen.init(screen:)) == nil, await redraw(id) else {
-      return text
+      return (text, false)
     }
     do {
       try await sleep(Self.redrawWait)
     } catch {
-      return text
+      return (text, false)
     }
     await settle(id)
-    return await screen(id)
+    return (await screen(id), true)
   }
 
   /// Whether the dialog, read again, asks for `keys` and nothing else — waited for up to

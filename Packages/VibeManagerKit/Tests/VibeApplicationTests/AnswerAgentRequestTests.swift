@@ -394,6 +394,27 @@ struct AnswerAgentRequestTests {
     #expect(await redraws.value == 1)
   }
 
+  @Test("Drawn again and still without its dialog: nothing typed, the redrawn screen reported")
+  func redrawnWithoutDialog() async {
+    let live = LiveScreen(Self.screenWithoutItsDialog)
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text },
+      redraw: { _ in
+        await live.show("  Working…")
+        return true
+      },
+      sleep: { _ in await Task.yield() },
+      failed: { await failures.append($0) })
+    #expect(await answer(.allowOnce, to: request) == .notOnScreen)
+    #expect(await fixture.terminals.written[id] == nil)
+    #expect(await failures.values.first?.before == "  Working…")
+  }
+
   @Test("A dialog on screen, or a history kept whole, is not drawn again (#563)")
   func noRedraw() async {
     for screen in [" ❯ 1. Yes\n   2. No", Self.screenWithoutItsDialog] {
