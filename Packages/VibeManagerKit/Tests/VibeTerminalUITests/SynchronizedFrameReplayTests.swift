@@ -155,11 +155,54 @@ struct SynchronizedFrameReplayTests {
     #expect(drawn("ab" + Self.begin + "half") == 2)
     #expect(drawn("ab" + Self.begin + "x" + Self.begin + "y") == 2)
     #expect(drawn(Self.begin + "a" + Self.end + "b" + Self.begin + "c") == 18)
-    // Cut short before its `h`, the update has not begun.
-    #expect(drawn("ab\u{1B}[?2026") == 9)
+    // Cut short by the read, it may begin one: held back until the next read tells.
+    #expect(drawn("ab\u{1B}[?2026") == 2)
+    #expect(drawn("ab\u{1B}[?20") == 2)
+    #expect(drawn("ab\u{1B}") == 2)
+    for whole in ["ab\u{1B}[31m", "ab\u{1B}[?2004h", "ab\u{1B}[?2026$p"] {
+      #expect(drawn(whole) == whole.utf8.count)
+    }
     // Of a slice, an index of the whole.
     let whole = Self.bytes("frame " + Self.begin + "half")
     #expect(TerminalText.drawnThrough(whole[3...]) == 6)
+  }
+
+  @Test("A begin cut short between two reads is waited on, the history trimmed in between")
+  func followedSplitBegin() async {
+    let drawn = Self.bytes(Self.begun(Self.reportedDialog) + Self.end)
+    let cut = Self.bytes("\u{1B}[?2026")
+    let rest = Self.bytes("h\u{1B}[2J\u{1B}[H" + Self.halfDrawn)
+    let follower = TerminalScreenFollower()
+    // Bytes before these were dropped from the history: where they stand in the stream counts.
+    let first = await follower.screen(
+      of: TerminalHistorySnapshot(bytes: drawn + cut, droppedByteCount: 500, startOffset: 500),
+      size: Self.size)
+    #expect(first == TerminalText.screen(replaying: drawn, size: Self.size))
+    let second = await follower.screen(
+      of: TerminalHistorySnapshot(
+        bytes: drawn + cut + rest, droppedByteCount: 500, startOffset: 500),
+      size: Self.size)
+    #expect(second == first)
+    #expect(AgentDialogScreen(screen: second) != nil)
+  }
+
+  @Test("A frame no longer waited on reads as it stands, as a view shows it after a while")
+  func frameNoLongerWaitedOn() async {
+    let history = Self.bytes(
+      Self.begun(Self.reportedDialog) + Self.end + Self.begun(Self.halfDrawn))
+    let screen = TerminalText.screen(replaying: history, size: Self.size, waitingOnFrame: false)
+    #expect(screen.contains("userSays('Quel mail ?');"))
+    #expect(AgentDialogScreen(screen: screen) == nil)
+    #expect(
+      TerminalText.screens(replaying: history, size: Self.size, waitingOnFrame: false).shown
+        == screen)
+
+    let follower = TerminalScreenFollower()
+    let snapshot = TerminalHistorySnapshot(bytes: history, droppedByteCount: 0)
+    let waited = await follower.screen(of: snapshot, size: Self.size)
+    #expect(AgentDialogScreen(screen: waited) != nil)
+    let given = await follower.screen(of: snapshot, size: Self.size, waitingOnFrame: false)
+    #expect(given == screen)
   }
 
   @Test("An update that never ends is read as drawn, past the longest frame")

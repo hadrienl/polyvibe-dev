@@ -905,9 +905,10 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
       return nil
     }
     let history = await terminal.history()
+    let waiting = await Self.waitsOnFrame(of: terminal)
     let size = pane.viewportSize ?? TerminalSize(columns: 300, rows: 120)
     return await Task.detached(priority: .userInitiated) {
-      TerminalText.screen(replaying: history.bytes, size: size)
+      TerminalText.screen(replaying: history.bytes, size: size, waitingOnFrame: waiting)
     }.value
   }
 
@@ -932,10 +933,18 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
       return nil
     }
     let history = await terminal.history()
+    let waiting = await Self.waitsOnFrame(of: terminal)
     let size = pane.viewportSize ?? TerminalSize(columns: 300, rows: 120)
     return await Task.detached(priority: .userInitiated) {
-      TerminalText.screens(replaying: history.bytes, size: size)
+      TerminalText.screens(replaying: history.bytes, size: size, waitingOnFrame: waiting)
     }.value
+  }
+
+  /// Whether a frame the terminal has begun is still waited on, as a view waits on it (#580): the
+  /// program wrote within `TerminalText.frameWait`. One that stopped mid-frame shows what it drew.
+  private static func waitsOnFrame(of terminal: any TerminalSession) async -> Bool {
+    guard let last = await terminal.lastOutputAt() else { return false }
+    return ContinuousClock.now - last < TerminalText.frameWait
   }
 
   /// The screen, as `screen(of:)` reads it, by a follower that replays only what is new: for a
@@ -946,8 +955,9 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
       return nil
     }
     let history = await terminal.history()
+    let waiting = await Self.waitsOnFrame(of: terminal)
     let size = pane.viewportSize ?? TerminalSize(columns: 300, rows: 120)
-    return await follower.screen(of: history, size: size)
+    return await follower.screen(of: history, size: size, waitingOnFrame: waiting)
   }
 
   public func failure(for id: SessionID) -> TerminalPaneModel.Failure? {
