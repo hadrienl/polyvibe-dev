@@ -525,7 +525,9 @@ public actor TrackAgentActivity {
   /// A dialog no hook reports is drawn, read whole off the screen (#603) — Codex's Computer Use
   /// asking to use an app: it is queued, shown, in place of the form the CLI only announced. The
   /// permissions reported before it and never drawn were settled with no dialog, as when a dialog
-  /// drawn names a later request: the CLI draws its dialogs in turn.
+  /// drawn names a later request: the CLI draws its dialogs in turn. So was one of the same tool
+  /// drawn before, which asked otherwise — another app: answered in the terminal by a key that
+  /// settles nothing, its card must not answer this dialog.
   /// `before` is read before `text`: a dialog on both, never one merely flashing by.
   @discardableResult
   public func dialogUnreportedOnScreen(
@@ -539,9 +541,14 @@ public actor TrackAgentActivity {
       !tracked.state.requests.contains(where: dialog.matches)
     else { return false }
     let previous = tracked.state
+    var state = tracked.state
+    state.requests.removeAll {
+      $0.isShown && $0.reference.match(notice.reference) == .same && !dialog.matches($0)
+    }
+    if state.requests.isEmpty { state.clearRequests() }
     let asked = AgentSignal.questionAsked(.approval, tool: notice.reference.tool, notice: notice)
     let id = AgentRequestID(sessionID: session, key: "screen:\(UUID().uuidString)")
-    var state = reduce(tracked.state, .signal(asked), for: session, requestID: id)
+    state = reduce(state, .signal(asked), for: session, requestID: id)
     guard let index = state.requests.firstIndex(where: dialog.matches) else { return false }
     state.arm(at: index)
     sessions[session]?.state = state

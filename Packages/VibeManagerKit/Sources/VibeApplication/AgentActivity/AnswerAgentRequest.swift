@@ -134,7 +134,10 @@ public struct AnswerAgentRequest: Sendable {
       }
       text = await screen(id.sessionID)
       guard let text, await tracker.dialogOnScreen(text, readBefore: before, isFor: id) else {
-        return await tracker.isFirstRequest(id) ? .otherDialog : .requestGone
+        let isFirst = await tracker.isFirstRequest(id)
+        // A dialog no hook reports may be the one drawn: its card takes this one's place (#603).
+        if let text { await tracker.dialogUnreportedOnScreen(text, readBefore: before, in: id.sessionID) }
+        return isFirst ? .otherDialog : .requestGone
       }
     }
     // Which key takes the answer is read off the dialog as drawn now (#273).

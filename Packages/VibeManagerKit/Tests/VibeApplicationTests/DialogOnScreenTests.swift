@@ -99,8 +99,8 @@ private struct ScreenKeymap: AgentAnswerKeymap {
 
   func drawnDialog(onScreen text: String) -> AgentDrawnDialog? {
     let lines = text.split(separator: "\n")
-    if Self.computerUseApp(onScreen: text) != nil {
-      return AgentDrawnDialog(.mcpTool(server: "cua", tool: "js"))
+    if let app = Self.computerUseApp(onScreen: text) {
+      return AgentDrawnDialog(.computerUse(server: "cua", tool: "js", app: app))
     }
     if let line = lines.last(where: { $0.hasPrefix("tool: ") }) {
       let names = line.dropFirst(6).split(separator: " ")
@@ -616,6 +616,30 @@ struct DialogOnScreenTests {
     await fixture.tracker.dialogUnreportedOnScreen(
       "computer: J-Method", readBefore: "computer: J-Method", in: fixture.id)
     #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [request.id])
+  }
+
+  @Test("Its card left behind, another app asked: nothing is typed, and the new card takes over")
+  func unreportedOtherApp() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let shown = "computer: J-Method"
+    #expect(await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let old = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    // Answered in the terminal by its digit, which settles nothing: the same call asks again.
+    await fixture.screen.show("computer: Notes")
+    #expect(await fixture.answer(.allowOnce, to: old.id) == .otherDialog)
+    #expect(await fixture.written.bytes.isEmpty)
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.count == 1)
+    let notes = try #require(state.requests.first)
+    #expect(notes.id != old.id)
+    guard case .permission(let permission) = notes.content else {
+      Issue.record("Not a permission: \(notes.content)")
+      return
+    }
+    #expect(permission.subject == "Notes")
+    #expect(await fixture.answer(.allowOnce, to: notes.id) == .sent)
+    #expect(await fixture.written.bytes == [[0x79]])
   }
 
   @Test("A dialog no hook reports is made a request of only once drawn on both readings")

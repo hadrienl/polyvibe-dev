@@ -56,6 +56,9 @@ enum CodexDrawnDialogReading {
     let other = lines[..<options].lastIndex(where: isTitle)
     if let first = toolTitles.first, other == nil {
       guard toolTitles.count == 1, let tool = toolTitle(lines[first]) else { return nil }
+      if let app = computerUseApp(inTitle: lines[first]) {
+        return AgentDrawnDialog(.computerUse(server: tool.server, tool: tool.tool, app: app))
+      }
       return AgentDrawnDialog(.mcpTool(server: tool.server, tool: tool.tool))
     }
     guard let start = other else { return nil }
@@ -144,13 +147,10 @@ enum CodexDrawnDialogReading {
   /// The permission Computer Use asks on screen, which no hook reports (#603): to use the app its
   /// title names, through its tool. `nil` when the screen does not end on its form, read whole.
   static func computerUse(onScreen text: String) -> AgentRequestNotice? {
-    guard
-      dialog(onScreen: text)
-        == AgentDrawnDialog(.mcpTool(server: computerUseServer, tool: computerUseTool)),
-      let title = text.split(separator: "\n").map({ $0.trimmingCharacters(in: .whitespaces) })
-        .last(where: { computerUseApp(inTitle: $0) != nil }),
-      let app = computerUseApp(inTitle: title)
+    guard case .computerUse(computerUseServer, computerUseTool, let app)? = dialog(onScreen: text)?
+      .subject
     else { return nil }
+    let title = #"Allow Computer Use to use "\#(app)"?"#
     let toolName = "mcp__\(computerUseServer)__\(computerUseTool)"
     return AgentRequestNotice(
       content: .permission(

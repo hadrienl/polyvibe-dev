@@ -116,12 +116,19 @@ struct CodexComputerUseTests {
   }
 
   @Test(
-    "Its form is read as the tool Computer Use runs, never as the command reported before",
+    "Its form is read as the app Computer Use asks for, never as the command reported before",
     arguments: [CodexComputerUseScreens.report, CodexComputerUseScreens.withServer])
   func reading(_ screen: String) throws {
     let shown = try #require(CodexDrawnDialogReading.dialog(onScreen: screen))
-    #expect(shown == AgentDrawnDialog(.mcpTool(server: "cua_repl", tool: "js")))
-    #expect(shown.matches(request(.mcp(server: "cua_repl", tool: "js"), "J-Method")))
+    guard case .computerUse("cua_repl", "js", let app) = shown.subject else {
+      Issue.record("Not Computer Use's form: \(shown)")
+      return
+    }
+    #expect(shown.quotesWhole)
+    #expect(shown.matches(request(.mcp(server: "cua_repl", tool: "js"), app)))
+    // Another app asked of the same tool is another request.
+    #expect(!shown.matches(request(.mcp(server: "cua_repl", tool: "js"), "Notes")))
+    #expect(!shown.matches(request(.mcp(server: "cua_repl", tool: "js"), nil)))
     #expect(!shown.matches(request(.shell, CodexComputerUseScreens.reportedCommand)))
   }
 
