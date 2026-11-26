@@ -81,3 +81,18 @@ both margin/overview previews; all four assertions fail before the fix.
 
 The focused bookmark/geometry/navigation suite passes **46 tests** after this correction;
 localization and formatting checks also pass.
+
+## Final-review corrections
+
+Folded reasoning now places paragraph bookmarks on its header, discards queued measurements
+from the hidden text view, and restores precise positions after reopening. Next-bookmark
+navigation can reopen a hidden paragraph even when its folded marker shares the header offset.
+A native layout test covers folding/reopening, navigation, and stale measurements.
+
+Entering a paragraph tag directly from the margin now retains that unit and its measured
+geometry after removing the last bookmark. The candidate stays under the pointer for re-adding;
+a delayed exit from an earlier tag cannot clear the current hover. Native button-hosting and
+hover-state tests cover these transitions.
+
+The focused suite passes **49 tests in 4 suites** with these corrections. Swift formatting,
+localization coverage (16 languages / 13 catalogs), and `git diff --check` pass as well.

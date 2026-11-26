@@ -1265,8 +1265,12 @@ public final class ConversationModel {
         {
           let units = units(in: blocks[index])
           let unit = bookmark.moment.unit
-          if let position = bookmarkPositions[blocks[index].id]?.first(where: { $0.unit == unit }) {
-            bookmark.unitOffset = position.top
+          if bookmarkTextIsCollapsed(in: blocks[index]) {
+            bookmark.unitOffset = bookmarkHeaderOffset(for: blocks[index].id)
+          } else if let positions = bookmarkPositions[blocks[index].id] {
+            bookmark.unitOffset =
+              positions.first(where: { $0.unit == unit })?.top
+              ?? bookmarkHeaderOffset(for: blocks[index].id)
           } else if units.indices.contains(unit) {
             let before = units.prefix(unit).reduce(0) { $0 + max(1, $1.range.length) }
             let total = units.reduce(0) { $0 + max(1, $1.range.length) }
@@ -1340,7 +1344,9 @@ public final class ConversationModel {
         if let last, ($0.blockIndex, $0.moment.unit) <= (last, lastRevealedUnit) { return false }
         return $0.blockIndex > index
           || ($0.blockIndex == index
-            && momentOffset($0) > offset + ConversationBookmarks.startTolerance)
+            && (momentOffset($0) > offset + ConversationBookmarks.startTolerance
+              || ($0.moment.kind == .bookmark && $0.moment.unit > 0
+                && bookmarkTextIsCollapsed(in: blocks[index]))))
       })
     else { return false }
     revealMoment(
@@ -1435,16 +1441,39 @@ public final class ConversationModel {
   }
 
   func recordBookmarkPositions(_ positions: [ParagraphBookmarkLayout.Position], for id: String) {
+    // A queued measurement from a disappearing text view must not restore an expanded
+    // paragraph's offset after its disclosure was closed.
+    let positions = toggles[id] == false ? [] : positions
     guard bookmarkPositions[id] != positions else { return }
     bookmarkPositions[id] = positions
     for index in moments.indices
     where blocks[moments[index].blockIndex].id == id && moments[index].moment.kind == .bookmark {
-      if let position = positions.first(where: { $0.unit == moments[index].moment.unit }) {
-        moments[index].unitOffset = position.top
-        moments[index].unitFraction = 0
-      }
+      moments[index].unitOffset =
+        positions.first(where: {
+          $0.unit == moments[index].moment.unit
+        })?.top ?? bookmarkHeaderOffset(for: id)
+      moments[index].unitFraction = 0
     }
     updateShownMoments()
+  }
+
+  private func bookmarkHeaderOffset(for id: String) -> Double {
+    let top = overview.top(of: id) ?? 0
+    return max(0, (bookmarkContentTops[id] ?? top) - top)
+  }
+
+  private func bookmarkTextIsCollapsed(in block: ConversationBlock) -> Bool {
+    guard case .entry(let entry) = block else { return false }
+    switch entry.content {
+    case .reasoning:
+      return !isExpanded(id: entry.id, default: false)
+    case .userPrompt where Self.relayedMessage(of: block) != nil:
+      return !isExpanded(id: entry.id, default: false)
+    case .tool(let call) where call.kind == .plan:
+      return !isExpanded(block)
+    default:
+      return false
+    }
   }
 
   private func momentOffset(_ placed: ConversationMoments.Placed) -> Double {
@@ -1665,6 +1694,11 @@ public final class ConversationModel {
   public func setExpanded(_ isExpanded: Bool, for id: String) {
     toggles[id] = isExpanded
     toggleRevision += 1
+    if !isExpanded,
+      bookmarkPositions[id] != nil || bookmarkedUnitsByEntry[id]?.isEmpty == false
+    {
+      recordBookmarkPositions([], for: id)
+    }
   }
 
   public func isExpanded(id: String, default fallback: Bool) -> Bool {

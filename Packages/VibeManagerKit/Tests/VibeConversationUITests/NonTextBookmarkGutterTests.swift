@@ -12,7 +12,12 @@ struct NonTextBookmarkGutterTests {
   /// A native button stands in for each tag so its lifetime and action can be inspected in an
   /// offscreen host, without relying on SwiftUI's accessibility tree for invisible windows.
   private struct Tag: NSViewRepresentable {
+    let unit: Int
     let toggle: () -> Void
+    init(unit: Int = 0, toggle: @escaping () -> Void) {
+      self.unit = unit
+      self.toggle = toggle
+    }
     final class Coordinator: NSObject {
       var toggle: () -> Void = {}
       @objc func press() { toggle() }
@@ -21,7 +26,10 @@ struct NonTextBookmarkGutterTests {
     func makeNSView(context: Context) -> NSButton {
       NSButton(title: "Bookmark", target: context.coordinator, action: #selector(Coordinator.press))
     }
-    func updateNSView(_ view: NSButton, context: Context) { context.coordinator.toggle = toggle }
+    func updateNSView(_ view: NSButton, context: Context) {
+      context.coordinator.toggle = toggle
+      view.identifier = NSUserInterfaceItemIdentifier("unit-\(unit)")
+    }
   }
 
   private func buttons(in view: NSView) -> [NSButton] {
@@ -109,6 +117,82 @@ struct NonTextBookmarkGutterTests {
     #expect(margin.items.first?.label == expected)
     let overview = MomentPreviewContent(placed: model.shownMoments, model: model)
     #expect(overview.items.first?.label == expected)
+  }
+
+  @Test func removingTheLastParagraphBookmarkKeepsTheHoveredTagAndGeometry() throws {
+    let model = ConversationModel(sessionID: SessionID())
+    model.apply(
+      ConversationSnapshot(
+        entries: [
+          ConversationEntry(id: "a", content: .agentText("First\n\nSecond\n\nThird"))
+        ], availability: .available))
+    let block = try #require(model.blocks.first)
+    model.toggleBookmark(block, unit: 2)
+    var hover = BookmarkGutterHover()
+    let layout = ParagraphBookmarkLayout()
+    layout.positions = [.init(unit: 0, top: 0, height: 18), .init(unit: 2, top: 140, height: 18)]
+    var keptLayout: ParagraphBookmarkLayout? = layout
+    func gutter() -> some View {
+      ZStack(alignment: .topLeading) {
+        BookmarkGutterUnits(
+          marked: model.bookmarkUnits(in: block), hoveredUnit: hover.unit,
+          showsHoveredUnit: keptLayout != nil || hover.isHovered, keepsWholeBlockTag: false
+        ) { unit in
+          Tag(unit: unit) {
+            model.toggleBookmark(block, unit: unit)
+            if hover.canReleaseLayout(bodyHovered: false, isMarked: model.isBookmarked(block)) {
+              keptLayout = nil
+            }
+          }.offset(y: keptLayout?.positions.first { $0.unit == unit }?.top ?? 0)
+        }
+      }.frame(width: 100, height: 220, alignment: .topLeading)
+    }
+    let hosting = NSHostingView(rootView: gutter())
+    let window = NSWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 100, height: 220),
+      styleMask: [.borderless], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    window.contentView = hosting
+    defer { window.close() }
+    hosting.layoutSubtreeIfNeeded()
+    let original = try #require(buttons(in: hosting).first { $0.identifier?.rawValue == "unit-2" })
+    let originalFrame = original.convert(original.bounds, to: hosting)
+    // Enter directly from the margin, without the body ever selecting unit 2.
+    hover.moved(true, on: 2)
+    hosting.rootView = gutter()
+    hosting.layoutSubtreeIfNeeded()
+    original.performClick(nil)
+    hosting.rootView = gutter()
+    hosting.layoutSubtreeIfNeeded()
+    let remaining = try #require(buttons(in: hosting).first { $0.identifier?.rawValue == "unit-2" })
+    #expect(model.bookmarks.isEmpty)
+    #expect(remaining === original)
+    #expect(remaining.convert(remaining.bounds, to: hosting) == originalFrame)
+    #expect(keptLayout === layout)
+    remaining.performClick(nil)
+    #expect(model.bookmarks == ["a#u2"])
+    remaining.performClick(nil)
+    hover.moved(false, on: 2)
+    if hover.canReleaseLayout(bodyHovered: false, isMarked: model.isBookmarked(block)) {
+      keptLayout = nil
+    }
+    hosting.rootView = gutter()
+    hosting.layoutSubtreeIfNeeded()
+    #expect(keptLayout == nil)
+    #expect(buttons(in: hosting).isEmpty)
+  }
+
+  @Test func aLateExitFromThePreviousTagDoesNotClearTheCurrentHover() {
+    var hover = BookmarkGutterHover()
+    hover.moved(true, on: 1)
+    hover.moved(true, on: 2)
+    hover.moved(false, on: 1)
+    #expect(hover.unit == 2)
+    #expect(!hover.canReleaseLayout(bodyHovered: false, isMarked: false))
+    hover.moved(false, on: 2)
+    #expect(hover.canReleaseLayout(bodyHovered: false, isMarked: false))
+    #expect(!hover.canReleaseLayout(bodyHovered: true, isMarked: false))
+    #expect(!hover.canReleaseLayout(bodyHovered: false, isMarked: true))
   }
 
 }

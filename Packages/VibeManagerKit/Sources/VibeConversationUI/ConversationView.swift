@@ -639,8 +639,7 @@ struct BlockRow: View {
   @Environment(\.conversationAppearance) private var appearance
   @State private var isHovered = false
   @State private var bookmarkLayout: ParagraphBookmarkLayout?
-  @State private var hoveredUnit = 0
-  @State private var gutterHovered = false
+  @State private var bookmarkHover = BookmarkGutterHover()
   @State private var hoverY = 0.0
 
   var body: some View {
@@ -701,16 +700,20 @@ struct BlockRow: View {
           isHovered = true
           prepareBookmarkLayout()
           hoverY = point.y
-          hoveredUnit = bookmarkLayout?.unit(at: point.y) ?? 0
+          bookmarkHover.unit = bookmarkLayout?.unit(at: point.y) ?? 0
         case .ended:
           isHovered = false
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            if !isHovered && !gutterHovered && !model.isBookmarked(block) { bookmarkLayout = nil }
+            if bookmarkHover.canReleaseLayout(
+              bodyHovered: isHovered, isMarked: model.isBookmarked(block))
+            {
+              bookmarkLayout = nil
+            }
           }
         }
       }
       .onChange(of: bookmarkLayout?.positions) {
-        if isHovered { hoveredUnit = bookmarkLayout?.unit(at: hoverY) ?? 0 }
+        if isHovered { bookmarkHover.unit = bookmarkLayout?.unit(at: hoverY) ?? 0 }
       }
       .onAppear { if model.isBookmarked(block) { prepareBookmarkLayout() } }
       .onChange(of: appearance.showsOverview) {
@@ -723,7 +726,7 @@ struct BlockRow: View {
       .onChange(of: model.isBookmarked(block)) {
         if model.isBookmarked(block) {
           prepareBookmarkLayout()
-        } else if !isHovered {
+        } else if bookmarkHover.canReleaseLayout(bodyHovered: isHovered, isMarked: false) {
           bookmarkLayout = nil
         }
       }
@@ -746,19 +749,23 @@ struct BlockRow: View {
       ZStack(alignment: .topLeading) {
         let marked = model.bookmarkUnits(in: block)
         BookmarkGutterUnits(
-          marked: marked, hoveredUnit: hoveredUnit,
-          showsHoveredUnit: isHovered || bookmarkLayout != nil || gutterHovered,
+          marked: marked, hoveredUnit: bookmarkHover.unit,
+          showsHoveredUnit: isHovered || bookmarkLayout != nil || bookmarkHover.isHovered,
           keepsWholeBlockTag: block.bookmarkMarkdown == nil
         ) { unit in
           BookmarkGutter(
             blockID: block.id, preview: model.marginPreview, isMarked: marked.contains(unit),
-            isRowHovered: isHovered && hoveredUnit == unit,
+            isRowHovered: isHovered && bookmarkHover.unit == unit,
             lineHeight: bookmarkLayout?.positions.first { $0.unit == unit }?.height ?? linePitch,
             toggle: { model.toggleBookmark(block, unit: unit) }, unit: unit,
             excerpt: model.units(in: block).first { $0.index == unit }?.text ?? "",
             hovered: { hovered in
-              gutterHovered = hovered
-              if !hovered && !isHovered && !model.isBookmarked(block) { bookmarkLayout = nil }
+              bookmarkHover.moved(hovered, on: unit)
+              if bookmarkHover.canReleaseLayout(
+                bodyHovered: isHovered, isMarked: model.isBookmarked(block))
+              {
+                bookmarkLayout = nil
+              }
             }
           )
           .offset(

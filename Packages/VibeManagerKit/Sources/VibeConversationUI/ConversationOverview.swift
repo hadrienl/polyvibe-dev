@@ -713,6 +713,27 @@ struct BookmarkShape: Shape {
   }
 }
 
+/// Which paragraph the pointer entered from the margin, even after its bookmark is removed.
+struct BookmarkGutterHover: Equatable {
+  var unit = 0
+  private var hoveredTag: Int?
+
+  var isHovered: Bool { hoveredTag != nil }
+
+  mutating func moved(_ hovered: Bool, on unit: Int) {
+    if hovered {
+      self.unit = unit
+      hoveredTag = unit
+    } else if hoveredTag == unit {
+      hoveredTag = nil
+    }
+  }
+
+  func canReleaseLayout(bodyHovered: Bool, isMarked: Bool) -> Bool {
+    !bodyHovered && !isHovered && !isMarked
+  }
+}
+
 /// The tag views kept in the margin. A whole-block tag must survive the gap between the
 /// body's hover ending and the tag's own hover beginning; it has no paragraph tracker.
 struct BookmarkGutterUnits<Content: View>: View {
