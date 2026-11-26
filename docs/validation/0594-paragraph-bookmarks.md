@@ -50,3 +50,23 @@ walkthrough has not been performed.
 
 **COMPLETE** for the functional requirements above. The live performance measurement and spoken
 VoiceOver walkthrough remain manual validation, as distinguished from the automated checks.
+
+## Follow-up — non-text margin tags
+
+The manual recording exposed a lifetime bug: leaving a tool group or an unshared-reasoning
+row's body removed its unmarked tag before the pointer could enter the margin. Those rows have
+no paragraph tracker to keep the tag mounted across that transition.
+
+`BookmarkGutterUnits` now keeps the single whole-block tag mounted independently of transient
+hover state. Text rows still keep only marked units when neither hovered nor tracked.
+`NonTextBookmarkGutterTests` renders the actual tag collection in an offscreen host with native
+buttons: the same button must remain present after body hover ends, and its clicks must set and
+remove the whole-block bookmark. Both tool-group and unshared-reasoning cases fail with the old
+selection rule, and pass with the fix. A third case checks that text-row candidates disappear
+while their marked tags remain.
+
+A focused SwiftPM harness, depending on the repository's actual UI/domain/application products,
+ran the new tests together with `BookmarkTests`, `MarkdownUnitsTests` and
+`ParagraphBookmarkLayoutTests`: **45 tests passed**. Formatting, localization checks and
+`git diff --check` also pass. The earlier full-suite numbers above belong to the initial feature;
+the follow-up was checked with this focused suite.

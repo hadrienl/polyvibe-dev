@@ -713,6 +713,21 @@ struct BookmarkShape: Shape {
   }
 }
 
+/// The tag views kept in the margin. A whole-block tag must survive the gap between the
+/// body's hover ending and the tag's own hover beginning; it has no paragraph tracker.
+struct BookmarkGutterUnits<Content: View>: View {
+  let marked: [Int]
+  let hoveredUnit: Int
+  let showsHoveredUnit: Bool
+  let keepsWholeBlockTag: Bool
+  @ViewBuilder var content: (Int) -> Content
+
+  var body: some View {
+    let units = Set(marked + ((keepsWholeBlockTag || showsHoveredUnit) ? [hoveredUnit] : []))
+    ForEach(units.sorted(), id: \.self, content: content)
+  }
+}
+
 /// The bookmark of a message, in the margin left of it: pale while the pointer is on the message,
 /// plain once set. A click sets it, another takes it away. The pointer on one set shows the
 /// overview's preview of it (#608); on one not set, what a click does.

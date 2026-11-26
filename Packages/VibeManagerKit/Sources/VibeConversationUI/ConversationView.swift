@@ -745,9 +745,11 @@ struct BlockRow: View {
       }
       ZStack(alignment: .topLeading) {
         let marked = model.bookmarkUnits(in: block)
-        let units = Set(
-          marked + ((isHovered || bookmarkLayout != nil || gutterHovered) ? [hoveredUnit] : []))
-        ForEach(units.sorted(), id: \.self) { unit in
+        BookmarkGutterUnits(
+          marked: marked, hoveredUnit: hoveredUnit,
+          showsHoveredUnit: isHovered || bookmarkLayout != nil || gutterHovered,
+          keepsWholeBlockTag: block.bookmarkMarkdown == nil
+        ) { unit in
           BookmarkGutter(
             blockID: block.id, preview: model.marginPreview, isMarked: marked.contains(unit),
             isRowHovered: isHovered && hoveredUnit == unit,
