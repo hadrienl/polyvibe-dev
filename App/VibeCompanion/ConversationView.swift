@@ -1,3 +1,4 @@
+import Combine
 import CompanionCore
 import PhotosUI
 import SwiftUI
@@ -9,6 +10,10 @@ struct ConversationView: View {
   let sessionID: String
   @Environment(RemoteChannel.self) private var channel
   @State private var draft = ""
+  @Environment(\.scenePhase) private var scenePhase
+  @State private var calendar = Calendar.current
+  @State private var calendarNow = Date.now
+  @State private var days = RemoteConversationDays()
   /// The screen's height: what a request's card may take of it.
   @State private var height: CGFloat = 800
   @FocusState private var fieldFocused: Bool
@@ -53,7 +58,10 @@ struct ConversationView: View {
           ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
         }
         ForEach(conversation?.entries ?? []) { entry in
-          EntryView(entry: entry, runsIn: canRun ? sessionID : nil)
+          if let day = days.day(opening: entry.id) {
+            ConversationDaySeparator(day: day, now: calendarNow, calendar: calendar)
+          }
+          EntryView(entry: entry, runsIn: canRun ? sessionID : nil, calendar: calendar)
         }
 
       }
@@ -66,6 +74,20 @@ struct ConversationView: View {
     .fontDesign(palette.fontDesign)
     .tint(palette.accent)
     .environment(\.conversationPalette, palette)
+    .onChange(of: conversation?.entries, initial: true) { _, entries in
+      days = RemoteConversationDays(entries: entries ?? [], calendar: calendar)
+    }
+    .onChange(of: scenePhase) { _, phase in if phase == .active { refreshCalendar() } }
+    .onReceive(
+      NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
+        .merge(
+          with: NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange),
+          NotificationCenter.default.publisher(
+            for: UIApplication.significantTimeChangeNotification),
+          NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)
+        )
+        .receive(on: RunLoop.main)
+    ) { _ in refreshCalendar() }
     .onChange(of: conversation?.theme) { _, theme in if let theme { lastTheme = theme } }
     .scrollDismissesKeyboard(.interactively)
     // The whole screen's, keyboard and request card aside: what the card may take of it does
@@ -149,11 +171,21 @@ struct ConversationView: View {
     .sheet(isPresented: $showsUsage) { SessionUsageSheet(sessionID: sessionID) }
     .navigationDestination(isPresented: $showsWeb) { WebMirrorView(sessionID: sessionID) }
     .navigationDestination(isPresented: $showsDevices) { DeviceListScreen() }
-    .onAppear { if channel.conversation?.sessionID != sessionID { channel.show(sessionID) } }
+    .onAppear {
+      refreshCalendar()
+      if channel.conversation?.sessionID != sessionID { channel.show(sessionID) }
+    }
     // Still followed under a view pushed on top: coming back shows it at once, nothing reloads.
     .onDisappear {
       if !showsWeb, !showsDevices { channel.hide(sessionID) }
     }
+  }
+
+  /// One clock per conversation, refreshed on return and calendar changes, never per row.
+  private func refreshCalendar() {
+    calendar = .current
+    calendarNow = .now
+    days = RemoteConversationDays(entries: conversation?.entries ?? [], calendar: calendar)
   }
 
   /// Whether a command the agent wrote for the user can be run from its block (#548): not for an
@@ -408,14 +440,21 @@ private struct EntryView: View {
   /// The session a command written in one of the agent's code blocks is run in (#548); nil when
   /// none can be. A value, not a closure, so that an entry left unchanged is not drawn again.
   var runsIn: String?
+  let calendar: Calendar
   @Environment(\.conversationPalette) private var palette
 
   var body: some View {
-    if let relayed = entry.relayed {
-      RelayedRow(relayed: relayed)
-    } else {
-      message
+    Group {
+      if let relayed = entry.relayed {
+        VStack(alignment: .leading, spacing: 6) {
+          RelayedRow(relayed: relayed)
+          ConversationMessageTime(date: entry.messageDate, calendar: calendar)
+        }
+      } else {
+        message
+      }
     }
+    .accessibilityElement(children: .contain)
   }
 
   @ViewBuilder
@@ -434,6 +473,7 @@ private struct EntryView: View {
             .background(palette.bubble, in: .rect(cornerRadius: 18))
             .textSelection(.enabled)
         }
+        ConversationMessageTime(date: entry.messageDate, calendar: calendar)
       }
       .frame(maxWidth: .infinity, alignment: .trailing)
       .padding(.leading, 48)
@@ -449,6 +489,7 @@ private struct EntryView: View {
             CodeBlock(language: language, code: code, runsIn: runsIn)
           }
         }
+        ConversationMessageTime(date: entry.messageDate, calendar: calendar)
       }
     case .tool(let symbol, let title, let detail, let running, let failed):
       HStack(spacing: 8) {
