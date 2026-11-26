@@ -41,6 +41,18 @@ than its field keeps the three keys, to scroll itself, as any text does.
 An agent running in the terminal loses ⌥⌘1, ⌥⌘2 and ⌥⌘3, which full-screen programs rarely use; the
 menus already took the others before #19.
 
+## Paragraph bookmarks in the conversation
+
+⌘B marks the paragraph where the text selection starts; without a selection, it marks the first
+unit whose first line is visible. Headings, list paragraphs and quotes are units; code has one
+per logical line and a table has one for its whole contents. Tools and sub-agent groups keep one
+bookmark. ⌥⌘J / ⌥⌘K visit moments in reading order, including several marked units of one message,
+and highlight only the marked passage.
+
+Each marked unit has an accessible Remove the Bookmark control in the margin, whose value reads
+its text. The message's Add a Bookmark action uses the focused accessible text range when one
+is available, otherwise its first unit. These actions reuse the translated add/remove labels.
+
 ## The side terminals
 
 | Action | Shortcut | Menu |
