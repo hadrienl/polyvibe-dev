@@ -17,7 +17,7 @@ extension AppModel {
   /// Whether the bookmark commands apply: a conversation with messages is on screen, with its
   /// overview, which bookmarks and moments go with (#572).
   public var canUseBookmarks: Bool {
-    conversationOnScreen.map { $0.usesMoments && !$0.blocks.isEmpty } ?? false
+    conversationOnScreen.map { $0.usesMoments && $0.hasMessages } ?? false
   }
 
   /// Toggle Bookmark, ⌘B: on the message the selection is in, the one at the top otherwise.
