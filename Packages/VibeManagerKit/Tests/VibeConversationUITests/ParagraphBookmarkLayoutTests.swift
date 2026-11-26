@@ -68,7 +68,7 @@ struct ParagraphBookmarkLayoutTests {
     }
     #expect(layout.unit(at: layout.positions[2].top + 1) == 2)
     #expect(model.bookmarkUnits(in: model.blocks[0]) == [2])
-    // Revealing the second of two identical paragraphs must light that occurrence alone.
+    // An exact range is used even when the quote does not occur in the message.
     let view = try #require(selection.shown.first?.view)
     let range = try #require(model.units(in: model.blocks[0]).first { $0.index == 2 }?.range)
     let light = LitPassage(

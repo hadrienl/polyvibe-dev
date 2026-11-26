@@ -14,7 +14,7 @@ on the ticket on 2026-11-23 are implemented on top of `main`, including #591 and
 | Ordinary rows do not measure paragraph geometry | IMPLEMENTED | Optional row tracker; `ordinaryRowsDoNotMeasureUnits` (zero trackers, then exactly one for a marked row) |
 | Overview lines use estimated, then measured unit offsets | IMPLEMENTED | `ConversationMoments.Placed`, `ConversationOverview.momentTop`; `overviewLinesNameTheirUnit`, `measuredPositionsReplaceEstimates` |
 | An overview click reveals and lights only the touched unit | IMPLEMENTED | `revealMoment`, exact `LitPassage.segment/range`, TextKit lighting; `overviewLinesNameTheirUnit` |
-| Next/Previous visit several units inside the same message | IMPLEMENTED | `revealNextMoment`, `revealPreviousMoment`; `keyboardAndNavigation` |
+| Next/Previous visit several units inside the same message | IMPLEMENTED | `revealNextMoment`, `revealPreviousMoment`; `keyboardAndNavigation`, `manualScrollForgetsAUnitThatLeftTheViewport` |
 | ⌘B uses the beginning of the selection, otherwise the first fully visible first line | IMPLEMENTED | `selectedBookmarkPlace`, `firstVisibleBookmarkPlace`; `keyboardAndNavigation` |
 | Prompts, answers, reasoning and standalone plans; tool/sub-agent groups stay whole | IMPLEMENTED | `bookmarkContents`, selection source and block environments; `plainPromptsAndPlans`, existing grouped-tool tests |
 | Accessible marked units and a message action; translated labels | IMPLEMENTED | Each gutter tag exposes its passage as its value; focused accessible text range for the message action; existing translated add/remove labels |
@@ -23,7 +23,7 @@ on the ticket on 2026-11-23 are implemented on top of `main`, including #591 and
 ## Test coverage and visual review
 
 `swift test --package-path Packages/VibeManagerKit --filter 'Bookmark|MarkdownUnits|MarginPreview'`
-passes: **88 tests**. The new offscreen-host tests verify first-line geometry, marking the unit
+passes: **89 tests**. The new offscreen-host tests verify first-line geometry, marking the unit
 under the pointer, reflow at 600 and 300 points, exact range highlighting, and that unmarked
 rows allocate no paragraph trackers. No test opens a window on screen.
 
@@ -35,6 +35,7 @@ The screenshot test can reproduce them with `BOOKMARK_SNAPSHOT_DIR=/tmp/bookmark
 
 ![Dark appearance](594/bookmarks-dark.png)
 
+The full package passes **4,413 tests**, after a build with warnings treated as errors.
 The localization checks (all 17 languages), external-open checks and site build pass. Full
 `Scripts/ci.sh` results are recorded in the pull request.
 
