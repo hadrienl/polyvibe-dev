@@ -303,15 +303,16 @@ final class SmokeTests: XCTestCase {
     expectSessionRows(1, in: app)
     let window = app.windows.firstMatch
     let title = app.descendants(matching: .any).matching(identifier: "window-title").firstMatch
-    // The last button of the toolbar: the session's notes (#578).
     let notes = app.toolbars.buttons["Session Notes"].firstMatch
+    // The right edge of the toolbar's last button, whichever it is: New Session's + since #617.
+    let buttonsEdge = { app.toolbars.buttons.allElementsBoundByIndex.map(\.frame.maxX).max() ?? 0 }
 
     // A session shown as a conversation: its picker is centred in the toolbar.
     XCTAssertTrue(app.radioButtons["Terminal"].waitForExistence(timeout: 10))
     XCTAssertTrue(title.waitForExistence(timeout: 5))
     XCTAssertEqual(title.label, "Polyvibe, Toolbar layout check")
     XCTAssertTrue(notes.waitForExistence(timeout: 5))
-    let withPicker = notes.frame.maxX
+    let withPicker = buttonsEdge()
     XCTAssertLessThan(window.frame.maxX - withPicker, 24, "The buttons are away from the edge")
     XCTAssertGreaterThan(title.frame.width, 100, "The title is held to a placeholder width")
 
@@ -319,7 +320,7 @@ final class SmokeTests: XCTestCase {
     app.typeKey("n", modifierFlags: .command)
     XCTAssertTrue(app.textFields["new-session-name"].waitForExistence(timeout: 10))
     XCTAssertTrue(app.radioButtons["Terminal"].waitForNonExistence(timeout: 5))
-    let settled = NSPredicate { _, _ in abs(notes.frame.maxX - withPicker) < 1 }
+    let settled = NSPredicate { _, _ in abs(buttonsEdge() - withPicker) < 1 }
     let stays = expectation(for: settled, evaluatedWith: nil)
     wait(for: [stays], timeout: 5)
     XCTAssertGreaterThan(title.frame.width, 80, "The title is held to a placeholder width")

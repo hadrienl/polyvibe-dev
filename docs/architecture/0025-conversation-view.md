@@ -285,3 +285,18 @@ a selection of its own.
 - A second executable or a web view for rendering: nothing the SwiftUI views cannot do.
 - One text view per message, code blocks and tables included: a code block could no longer scroll
   sideways on its own, all lines of a text view sharing its width.
+
+## Amendment — message times on the iPhone (#632)
+
+The companion displays the dates already carried by `RemoteEntry`; the Mac and the wire protocol
+are unchanged. Only user and agent messages show a time and open a day. The first dated message
+of the displayed slice opens its day too; undated entries, tools and notices neither open nor
+interrupt a day, and the conversation is never reordered by date. `RemoteConversationDays` holds
+these rules as plain, calendar-dependent values in CompanionCore.
+
+The user's time sits below the bubble and attachments, the agent's after its whole answer, and a
+relayed message's under its folded row. Times follow the phone's regional settings. A separator
+says Today, Yesterday or the full date. One set of notification subscriptions per conversation
+refreshes the calendar at midnight, on significant time, locale or zone changes and on foreground
+return; it is cancelled with the view. There is no timer per message. VoiceOver gets the full date
+alongside the message, with links, attachments and Run controls kept individually accessible.
