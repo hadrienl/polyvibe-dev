@@ -55,6 +55,15 @@ struct MomentPreviewContent: Equatable {
         ($0.moment, blocks.indices.contains($0.blockIndex) ? blocks[$0.blockIndex] : nil)
       },
       agentName: model.agentName)
+    for (index, item) in placed.enumerated() where item.moment.kind == .bookmark {
+      if model.blocks.indices.contains(item.blockIndex),
+        let unit = model.units(in: model.blocks[item.blockIndex]).first(where: {
+          $0.index == item.moment.unit
+        })
+      {
+        items[index].label = unit.text
+      }
+    }
   }
 
   /// An icon of the margin (#608): the block's moments, as its icon draws them, or its bookmark.
@@ -67,13 +76,22 @@ struct MomentPreviewContent: Equatable {
     switch target {
     case .moments:
       moments = MomentGutterMark.moments(of: block, model: model, appearance: appearance)
-    case .bookmark:
+    case .bookmark, .paragraphBookmark:
+      let unit: Int
+      if case .paragraphBookmark(let index) = target { unit = index } else { unit = 0 }
       moments =
-        ConversationMoments.bookmark(of: block, at: 0, in: model.bookmarks).map { [$0.moment] }
+        ConversationMoments.bookmarks(of: block, at: 0, in: model.bookmarks).first {
+          $0.moment.unit == unit
+        }.map { [$0.moment] }
         ?? []
     }
     guard !moments.isEmpty else { return nil }
     self.init(moments: moments.map { ($0, block) }, agentName: model.agentName)
+    for (index, moment) in moments.enumerated() where moment.kind == .bookmark {
+      if let unit = model.units(in: block).first(where: { $0.index == moment.unit }) {
+        items[index].label = unit.text
+      }
+    }
   }
 
   private static func item(
@@ -174,6 +192,7 @@ final class ConversationMarginPreview {
     case moments
     /// Its bookmark, once set.
     case bookmark
+    case paragraphBookmark(Int)
   }
 
   struct Hover: Equatable {

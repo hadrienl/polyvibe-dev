@@ -114,7 +114,8 @@ struct BookmarkTests {
     Self.laidOut(model, top: 0)
     #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m1")
-    #expect(model.highlightedBlockID == "m1")
+    #expect(model.litPassage?.blockID == "m1")
+    #expect(model.litPassage?.range != nil)
     // The view now at m1's start.
     model.overview.scrolled(readableTop: 120, readableHeight: 300)
     #expect(model.revealNextMoment())
@@ -320,7 +321,8 @@ struct BookmarkTests {
         scale: 0.1) == nil)
   }
 
-  @Test("Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
+  @Test(
+    "Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
   func previewFollowsTheLayout() {
     let model = Self.model()
     model.loadBookmarks(["m2"])

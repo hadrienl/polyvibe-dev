@@ -42,9 +42,9 @@ public struct ConversationView: View {
   private static let bottomID = "conversation.bottom"
   static let pageTargetID = "conversation.page"
   /// The messages' own coordinates: where each row says it is (#567).
-  static let contentSpace = "conversation.content"
+  nonisolated static let contentSpace = "conversation.content"
   /// The messages' frame, as it shows: where the margin's preview is placed (#608).
-  static let viewportSpace = "conversation.viewport"
+  nonisolated static let viewportSpace = "conversation.viewport"
 
   public init(
     model: ConversationModel, theme: ConversationTheme, appearance: ConversationAppearance,
@@ -326,6 +326,17 @@ public struct ConversationView: View {
       }
       .onAppear {
         let selection = selection
+        model.accessibilityBookmarkPlace = { selection.accessibilityBookmarkPlace(in: $0) }
+        model.visibleBookmarkPlace = { selection.firstVisibleBookmarkPlace() }
+        model.selectedBookmarkPlace = { [weak model] in
+          guard selection.isActive, selection.hasSelection,
+            let anchor = selection.anchor, let focus = selection.focus
+          else { return nil }
+          let order = model?.blocks.map(\.id) ?? []
+          let a = (order.firstIndex(of: anchor.block) ?? 0, anchor.segment, anchor.offset)
+          let b = (order.firstIndex(of: focus.block) ?? 0, focus.segment, focus.offset)
+          return a <= b ? anchor : focus
+        }
         model.selectedBlockID = {
           guard selection.isActive, selection.anchor != selection.focus else { return nil }
           return selection.focus?.block
@@ -626,6 +637,10 @@ struct BlockRow: View {
   @Environment(\.conversationTheme) private var theme
   @Environment(\.conversationAppearance) private var appearance
   @State private var isHovered = false
+  @State private var bookmarkLayout: ParagraphBookmarkLayout?
+  @State private var hoveredUnit = 0
+  @State private var gutterHovered = false
+  @State private var hoverY = 0.0
 
   var body: some View {
     Group {
@@ -644,17 +659,73 @@ struct BlockRow: View {
     } action: { frame in
       model.overview.rowLaidOut(block.id, frame: frame)
     }
-    .onDisappear { model.overview.rowGone(block.id) }
+    .onDisappear {
+      model.overview.rowGone(block.id)
+      bookmarkLayout = nil
+    }
   }
 
   /// The block, its bookmark in the margin left of it, and the light a bookmark brings it up
   /// with (#567). Left of the bookmark, the icon of its moments (#572), in a box of the same
   /// height at the same top: both are centred on its first line.
   private var bookmarkable: some View {
-    BlockView(block: block, model: model)
+    let measuresUnits = bookmarkLayout != nil
+    return BlockView(block: block, model: model)
       // A message's own view lights it already (#565): the others, here.
       .modifier(ReplyHighlight(isLit: !isLitByItsView && model.highlightedBlockID == block.id))
-      .onHover { isHovered = $0 }
+      .accessibilityAction(named: Text("Add a Bookmark", bundle: .module)) {
+        model.toggleBookmark(
+          block,
+          unit: (model.accessibilityBookmarkPlace(block.id) ?? model.selectedBookmarkPlace())
+            .flatMap { place in
+              guard place.block == block.id else { return nil }
+              return model.units(in: block).last {
+                $0.segment < place.segment
+                  || ($0.segment == place.segment && $0.range.location <= place.offset)
+              }?.index
+            } ?? 0)
+      }
+      .environment(\.paragraphBookmarkLayout, bookmarkLayout)
+      .onGeometryChange(for: Double.self) {
+        measuresUnits ? $0.frame(in: .named(ConversationView.contentSpace)).minY : 0
+      } action: {
+        model.bookmarkContentTops[block.id] = $0
+      }
+      .background {
+        if let bookmarkLayout { BookmarkRowOrigin(layout: bookmarkLayout) }
+      }
+      .onContinuousHover { phase in
+        switch phase {
+        case .active(let point):
+          isHovered = true
+          prepareBookmarkLayout()
+          hoverY = point.y
+          hoveredUnit = bookmarkLayout?.unit(at: point.y) ?? 0
+        case .ended:
+          isHovered = false
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if !isHovered && !gutterHovered && !model.isBookmarked(block) { bookmarkLayout = nil }
+          }
+        }
+      }
+      .onChange(of: bookmarkLayout?.positions) {
+        if isHovered { hoveredUnit = bookmarkLayout?.unit(at: hoverY) ?? 0 }
+      }
+      .onAppear { if model.isBookmarked(block) { prepareBookmarkLayout() } }
+      .onChange(of: appearance.showsOverview) {
+        if appearance.showsOverview && model.isBookmarked(block) {
+          prepareBookmarkLayout()
+        } else if !appearance.showsOverview {
+          bookmarkLayout = nil
+        }
+      }
+      .onChange(of: model.isBookmarked(block)) {
+        if model.isBookmarked(block) {
+          prepareBookmarkLayout()
+        } else if !isHovered {
+          bookmarkLayout = nil
+        }
+      }
       .overlay(alignment: .topLeading) {
         // Without the overview, neither bookmarks nor moments (#572).
         if appearance.showsOverview { gutter }
@@ -671,15 +742,45 @@ struct BlockRow: View {
         MomentGutterMark(
           moments: moments, block: block, preview: model.marginPreview, lineHeight: linePitch)
       }
-      BookmarkGutter(
-        blockID: block.id, preview: model.marginPreview, isMarked: model.isBookmarked(block),
-        isRowHovered: isHovered, lineHeight: linePitch
-      ) {
-        model.toggleBookmark(block)
+      ZStack(alignment: .topLeading) {
+        let marked = model.bookmarkUnits(in: block)
+        let units = Set(
+          marked + ((isHovered || bookmarkLayout != nil || gutterHovered) ? [hoveredUnit] : []))
+        ForEach(units.sorted(), id: \.self) { unit in
+          BookmarkGutter(
+            blockID: block.id, preview: model.marginPreview, isMarked: marked.contains(unit),
+            isRowHovered: isHovered && hoveredUnit == unit,
+            lineHeight: bookmarkLayout?.positions.first { $0.unit == unit }?.height ?? linePitch,
+            toggle: { model.toggleBookmark(block, unit: unit) }, unit: unit,
+            excerpt: model.units(in: block).first { $0.index == unit }?.text ?? "",
+            hovered: { hovered in
+              gutterHovered = hovered
+              if !hovered && !isHovered && !model.isBookmarked(block) { bookmarkLayout = nil }
+            }
+          )
+          .offset(
+            y: (bookmarkLayout?.positions.first { $0.unit == unit }?.top ?? firstLineTop)
+              - firstLineTop)
+        }
       }
+      .frame(width: BookmarkGutter.reach - 4, height: linePitch, alignment: .topLeading)
     }
     .padding(.top, firstLineTop)
     .offset(x: -(BookmarkGutter.reach + MomentGutterMark.width))
+  }
+
+  private func prepareBookmarkLayout() {
+    guard appearance.showsOverview, block.bookmarkMarkdown != nil, bookmarkLayout == nil else {
+      return
+    }
+    let layout = ParagraphBookmarkLayout()
+    layout.changed = { [model, id = block.id] positions in
+      let contentTop = model.bookmarkContentTops[id] ?? 0
+      let inset = max(0, contentTop - (model.overview.top(of: id) ?? contentTop))
+      model.recordBookmarkPositions(
+        positions.map { .init(unit: $0.unit, top: $0.top + inset, height: $0.height) }, for: id)
+    }
+    bookmarkLayout = layout
   }
 
   /// Whether its view lights it itself when it is brought up: what the user and the agent wrote.
@@ -736,6 +837,7 @@ struct BlockView: View {
             id: entry.id, message: relayed, text: text, date: entry.date, model: model
           )
           .environment(\.selectionBlock, selectionBlock)
+          .environment(\.litPassage, litPassage(entry))
         } else {
           UserPromptView(
             text: text, attachments: attachments, date: entry.date, agentName: model.agentName,
@@ -764,10 +866,13 @@ struct BlockView: View {
       case .reasoning(let text):
         ReasoningRow(id: entry.id, text: text, model: model)
           .environment(\.selectionBlock, selectionBlock)
+          .environment(\.litPassage, litPassage(entry))
       case .tool(let call) where call.kind == .subagent:
         SubagentBlockView(call: call, model: model, isNested: isNested)
-      case .tool:
+      case .tool(let call):
         ToolBlockView(block: block, model: model)
+          .environment(\.selectionBlock, call.kind == .plan ? selectionBlock : nil)
+          .environment(\.litPassage, litPassage(entry))
       case .notice(.shell(let run)):
         ShellRunView(id: entry.id, run: run, model: model)
       case .notice(let notice):
@@ -905,6 +1010,10 @@ extension ConversationSelection.Source {
           return pieces([.plain(shown, color: color)])
         case .agentText(let text):
           return pieces(MarkdownBlocksView.contents(MarkdownCache.shared.blocks(for: text)))
+        case .tool(let call) where call.kind == .plan && model.isExpanded(.entry(entry)):
+          return pieces(
+            MarkdownBlocksView.contents(
+              MarkdownCache.shared.blocks(for: call.parameter(.plan) ?? "")))
         case .reasoning(let text?) where model.isExpanded(id: entry.id, default: false):
           return pieces(MarkdownBlocksView.contents(MarkdownCache.shared.blocks(for: text)))
         default:
