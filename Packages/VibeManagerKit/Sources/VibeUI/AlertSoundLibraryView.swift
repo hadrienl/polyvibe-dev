@@ -171,7 +171,7 @@ struct AlertSoundLibraryView: View {
             soundRow(.bundled(sound.rawValue))
           }
         } header: {
-          Text(verbatim: "Vibe Manager")
+          Text(verbatim: "Polyvibe")
         }
         if !sounds.systemSounds.isEmpty {
           Section {
@@ -641,7 +641,7 @@ struct NewAlertSoundCard: View {
           .accessibilityLabel(Text("Description", bundle: .module))
           .accessibilityIdentifier("alert-sound-description")
         Text(
-          "A soft little chime, two rising notes… The agent writes the notes; Vibe Manager plays them.",
+          "A soft little chime, two rising notes… The agent writes the notes; Polyvibe plays them.",
           bundle: .module
         )
         .font(.caption)
@@ -753,7 +753,7 @@ struct AlertSoundInUseRow: View {
               AlertSoundChoice.bundled(sound.rawValue))
           }
         } header: {
-          Text(verbatim: "Vibe Manager")
+          Text(verbatim: "Polyvibe")
         }
         if !sounds.systemSounds.isEmpty {
           Section {

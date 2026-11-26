@@ -21,7 +21,7 @@ public struct AgentToolServer: Hashable, Sendable {
 /// Implemented by the providers whose CLI can be handed tool servers at launch.
 ///
 /// Like the activity hooks (#45), they are passed on the command line for this launch alone: the
-/// user's own configuration is never written, and a CLI started outside Vibe Manager is unchanged.
+/// user's own configuration is never written, and a CLI started outside Polyvibe is unchanged.
 public protocol AgentToolServing: Sendable {
   /// The same plan, with `servers` added to what the CLI already loads.
   func providingTools(_ servers: [AgentToolServer], to plan: AgentLaunchPlan) -> AgentLaunchPlan

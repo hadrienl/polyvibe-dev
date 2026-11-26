@@ -52,7 +52,7 @@ public enum BrowserToolCatalog {
     Tool(
       name: "tabs_list", actionClass: .read,
       description: """
-        Lists the tabs of this session's web view in Vibe Manager: id, title, address, whether \
+        Lists the tabs of this session's web view in Polyvibe: id, title, address, whether \
         each is in front, loaded or loading, and who opened it. Only this session's tabs exist.
         """,
       inputSchema: schema([:], namesTab: false)),
@@ -119,7 +119,7 @@ public enum BrowserToolCatalog {
         Reads a page. mode "snapshot" (default) lists its visible elements with references \
         ([e12] button "Save") for page_click and page_fill; mode "text" gives its text. \
         Bounded by maxChars. Free on this Mac; the first read of a site anywhere else in this \
-        session waits for the user's answer in Vibe Manager.
+        session waits for the user's answer in Polyvibe.
         """ + untrusted,
       inputSchema: schema([
         "mode": ["type": "string", "enum": ["snapshot", "text"]],
@@ -156,7 +156,7 @@ public enum BrowserToolCatalog {
       name: "page_fill", actionClass: .act,
       description: """
         Types a value into a field, replacing what it holds, and optionally submits its form. \
-        Free on this Mac; anywhere else Vibe Manager asks the user first.
+        Free on this Mac; anywhere else Polyvibe asks the user first.
         """,
       inputSchema: schema(
         targetProperties.merging(
@@ -170,7 +170,7 @@ public enum BrowserToolCatalog {
       description: """
         Runs JavaScript in the page and returns its JSON result, at most 20000 characters. An \
         expression is evaluated as it is; a body using `return` runs as an async function, and \
-        may `await`. Free on this Mac; anywhere else Vibe Manager asks the user first.
+        may `await`. Free on this Mac; anywhere else Polyvibe asks the user first.
         """,
       inputSchema: schema(["script": ["type": "string"]], required: ["script"])),
   ]

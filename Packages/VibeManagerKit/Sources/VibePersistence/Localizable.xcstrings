@@ -501,202 +501,202 @@
         }
       }
     },
-    "The session store was created by a newer version of Vibe Manager and must not be replaced by an older backup. Update Vibe Manager to open it." : {
+    "The session store was created by a newer version of Polyvibe and must not be replaced by an older backup. Update Polyvibe to open it." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أُنشئ ملف الجلسات بإصدار أحدث من Vibe Manager ويجب ألا يُستبدل بنسخة احتياطية أقدم. حدّث Vibe Manager لفتحه."
+            "value" : "أُنشئ ملف الجلسات بإصدار أحدث من Polyvibe ويجب ألا يُستبدل بنسخة احتياطية أقدم. حدّث Polyvibe لفتحه."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Sitzungsdatei wurde mit einer neueren Version von Vibe Manager erstellt und darf nicht durch ein älteres Backup ersetzt werden. Aktualisiere Vibe Manager, um sie zu öffnen."
+            "value" : "Die Sitzungsdatei wurde mit einer neueren Version von Polyvibe erstellt und darf nicht durch ein älteres Backup ersetzt werden. Aktualisiere Polyvibe, um sie zu öffnen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El archivo de sesiones lo creó una versión más reciente de Vibe Manager y no debe sustituirse por una copia de seguridad más antigua. Actualiza Vibe Manager para abrirlo."
+            "value" : "El archivo de sesiones lo creó una versión más reciente de Polyvibe y no debe sustituirse por una copia de seguridad más antigua. Actualiza Polyvibe para abrirlo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le fichier des sessions a été créé par une version plus récente de Vibe Manager et ne doit pas être remplacé par une sauvegarde plus ancienne. Mettez à jour Vibe Manager pour l’ouvrir."
+            "value" : "Le fichier des sessions a été créé par une version plus récente de Polyvibe et ne doit pas être remplacé par une sauvegarde plus ancienne. Mettez à jour Polyvibe pour l’ouvrir."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "सेशन फ़ाइल Vibe Manager के नए संस्करण द्वारा बनाई गई थी और इसे पुराने बैकअप से नहीं बदला जाना चाहिए। इसे खोलने के लिए Vibe Manager अपडेट करें।"
+            "value" : "सेशन फ़ाइल Polyvibe के नए संस्करण द्वारा बनाई गई थी और इसे पुराने बैकअप से नहीं बदला जाना चाहिए। इसे खोलने के लिए Polyvibe अपडेट करें।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il file delle sessioni è stato creato da una versione più recente di Vibe Manager e non deve essere sostituito da un backup meno recente. Aggiorna Vibe Manager per aprirlo."
+            "value" : "Il file delle sessioni è stato creato da una versione più recente di Polyvibe e non deve essere sostituito da un backup meno recente. Aggiorna Polyvibe per aprirlo."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "セッションファイルは新しいバージョンのVibe Managerで作成されたため、古いバックアップで置き換えることはできません。開くにはVibe Managerをアップデートしてください。"
+            "value" : "セッションファイルは新しいバージョンのPolyvibeで作成されたため、古いバックアップで置き換えることはできません。開くにはPolyvibeをアップデートしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "세션 파일이 최신 버전의 Vibe Manager에서 생성되었으므로 이전 백업으로 대체하면 안 됩니다. 파일을 열려면 Vibe Manager를 업데이트하십시오."
+            "value" : "세션 파일이 최신 버전의 Polyvibe에서 생성되었으므로 이전 백업으로 대체하면 안 됩니다. 파일을 열려면 Polyvibe를 업데이트하십시오."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het sessiebestand is gemaakt met een nieuwere versie van Vibe Manager en mag niet worden vervangen door een oudere reservekopie. Werk Vibe Manager bij om het te openen."
+            "value" : "Het sessiebestand is gemaakt met een nieuwere versie van Polyvibe en mag niet worden vervangen door een oudere reservekopie. Werk Polyvibe bij om het te openen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plik sesji został utworzony przez nowszą wersję Vibe Manager i nie może zostać zastąpiony starszą kopią zapasową. Uaktualnij Vibe Manager, aby go otworzyć."
+            "value" : "Plik sesji został utworzony przez nowszą wersję Polyvibe i nie może zostać zastąpiony starszą kopią zapasową. Uaktualnij Polyvibe, aby go otworzyć."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O arquivo de sessões foi criado por uma versão mais recente do Vibe Manager e não deve ser substituído por um backup mais antigo. Atualize o Vibe Manager para abri-lo."
+            "value" : "O arquivo de sessões foi criado por uma versão mais recente do Polyvibe e não deve ser substituído por um backup mais antigo. Atualize o Polyvibe para abri-lo."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Файл сессий создан более новой версией Vibe Manager, и его нельзя заменять более старой резервной копией. Обновите Vibe Manager, чтобы открыть его."
+            "value" : "Файл сессий создан более новой версией Polyvibe, и его нельзя заменять более старой резервной копией. Обновите Polyvibe, чтобы открыть его."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oturum dosyası Vibe Manager’ın daha yeni bir sürümüyle oluşturuldu ve daha eski bir yedekle değiştirilmemelidir. Açmak için Vibe Manager’ı güncelleyin."
+            "value" : "Oturum dosyası Polyvibe’ın daha yeni bir sürümüyle oluşturuldu ve daha eski bir yedekle değiştirilmemelidir. Açmak için Polyvibe’ı güncelleyin."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Файл сеансів створено новішою версією Vibe Manager, і його не можна замінювати старішою резервною копією. Оновіть Vibe Manager, щоб відкрити його."
+            "value" : "Файл сеансів створено новішою версією Polyvibe, і його не можна замінювати старішою резервною копією. Оновіть Polyvibe, щоб відкрити його."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会话存储文件由更新版本的 Vibe Manager 创建，不得用较旧的备份替换。请更新 Vibe Manager 以打开它。"
+            "value" : "会话存储文件由更新版本的 Polyvibe 创建，不得用较旧的备份替换。请更新 Polyvibe 以打开它。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "工作階段檔案是由較新版本的 Vibe Manager 建立，不可用較舊的備份取代。請更新 Vibe Manager 以打開它。"
+            "value" : "工作階段檔案是由較新版本的 Polyvibe 建立，不可用較舊的備份取代。請更新 Polyvibe 以打開它。"
           }
         }
       }
     },
-    "The session store was created by a newer version of Vibe Manager." : {
+    "The session store was created by a newer version of Polyvibe." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أُنشئ ملف الجلسات بإصدار أحدث من Vibe Manager."
+            "value" : "أُنشئ ملف الجلسات بإصدار أحدث من Polyvibe."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Sitzungsdatei wurde mit einer neueren Version von Vibe Manager erstellt."
+            "value" : "Die Sitzungsdatei wurde mit einer neueren Version von Polyvibe erstellt."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El archivo de sesiones lo creó una versión más reciente de Vibe Manager."
+            "value" : "El archivo de sesiones lo creó una versión más reciente de Polyvibe."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le fichier des sessions a été créé par une version plus récente de Vibe Manager."
+            "value" : "Le fichier des sessions a été créé par une version plus récente de Polyvibe."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "सेशन फ़ाइल Vibe Manager के नए संस्करण द्वारा बनाई गई थी।"
+            "value" : "सेशन फ़ाइल Polyvibe के नए संस्करण द्वारा बनाई गई थी।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Il file delle sessioni è stato creato da una versione più recente di Vibe Manager."
+            "value" : "Il file delle sessioni è stato creato da una versione più recente di Polyvibe."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "セッションファイルは新しいバージョンのVibe Managerで作成されています。"
+            "value" : "セッションファイルは新しいバージョンのPolyvibeで作成されています。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "세션 파일이 최신 버전의 Vibe Manager에서 생성되었습니다."
+            "value" : "세션 파일이 최신 버전의 Polyvibe에서 생성되었습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Het sessiebestand is gemaakt met een nieuwere versie van Vibe Manager."
+            "value" : "Het sessiebestand is gemaakt met een nieuwere versie van Polyvibe."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plik sesji został utworzony przez nowszą wersję Vibe Manager."
+            "value" : "Plik sesji został utworzony przez nowszą wersję Polyvibe."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O arquivo de sessões foi criado por uma versão mais recente do Vibe Manager."
+            "value" : "O arquivo de sessões foi criado por uma versão mais recente do Polyvibe."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Файл сессий создан более новой версией Vibe Manager."
+            "value" : "Файл сессий создан более новой версией Polyvibe."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oturum dosyası Vibe Manager’ın daha yeni bir sürümüyle oluşturuldu."
+            "value" : "Oturum dosyası Polyvibe’ın daha yeni bir sürümüyle oluşturuldu."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Файл сеансів створено новішою версією Vibe Manager."
+            "value" : "Файл сеансів створено новішою версією Polyvibe."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会话存储文件由更新版本的 Vibe Manager 创建。"
+            "value" : "会话存储文件由更新版本的 Polyvibe 创建。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "工作階段檔案是由較新版本的 Vibe Manager 建立。"
+            "value" : "工作階段檔案是由較新版本的 Polyvibe 建立。"
           }
         }
       }
@@ -801,203 +801,203 @@
         }
       }
     },
-    "These templates were exported by a newer version of Vibe Manager (format %@). Update Vibe Manager to import them." : {
+    "These templates were exported by a newer version of Polyvibe (format %@). Update Polyvibe to import them." : {
       "comment" : "The version number of the file's format.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تم تصدير هذه القوالب بإصدار أحدث من Vibe Manager (التنسيق %@). حدّث Vibe Manager لاستيرادها."
+            "value" : "تم تصدير هذه القوالب بإصدار أحدث من Polyvibe (التنسيق %@). حدّث Polyvibe لاستيرادها."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Vorlagen wurden mit einer neueren Version von Vibe Manager exportiert (Format %@). Aktualisiere Vibe Manager, um sie zu importieren."
+            "value" : "Diese Vorlagen wurden mit einer neueren Version von Polyvibe exportiert (Format %@). Aktualisiere Polyvibe, um sie zu importieren."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estas plantillas las exportó una versión más reciente de Vibe Manager (formato %@). Actualiza Vibe Manager para importarlas."
+            "value" : "Estas plantillas las exportó una versión más reciente de Polyvibe (formato %@). Actualiza Polyvibe para importarlas."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ces gabarits ont été exportés par une version plus récente de Vibe Manager (format %@). Mettez à jour Vibe Manager pour les importer."
+            "value" : "Ces gabarits ont été exportés par une version plus récente de Polyvibe (format %@). Mettez à jour Polyvibe pour les importer."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ये टेम्पलेट Vibe Manager के नए संस्करण (फ़ॉर्मेट %@) द्वारा एक्सपोर्ट किए गए थे। इन्हें इंपोर्ट करने के लिए Vibe Manager अपडेट करें।"
+            "value" : "ये टेम्पलेट Polyvibe के नए संस्करण (फ़ॉर्मेट %@) द्वारा एक्सपोर्ट किए गए थे। इन्हें इंपोर्ट करने के लिए Polyvibe अपडेट करें।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questi template sono stati esportati da una versione più recente di Vibe Manager (formato %@). Aggiorna Vibe Manager per importarli."
+            "value" : "Questi template sono stati esportati da una versione più recente di Polyvibe (formato %@). Aggiorna Polyvibe per importarli."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "これらのテンプレートは新しいバージョンのVibe Managerで書き出されています（フォーマット%@）。読み込むにはVibe Managerをアップデートしてください。"
+            "value" : "これらのテンプレートは新しいバージョンのPolyvibeで書き出されています（フォーマット%@）。読み込むにはPolyvibeをアップデートしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 템플릿은 최신 버전의 Vibe Manager에서 내보낸 것입니다(포맷 %@). 가져오려면 Vibe Manager를 업데이트하십시오."
+            "value" : "이 템플릿은 최신 버전의 Polyvibe에서 내보낸 것입니다(포맷 %@). 가져오려면 Polyvibe를 업데이트하십시오."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze sjablonen zijn geëxporteerd met een nieuwere versie van Vibe Manager (indeling %@). Werk Vibe Manager bij om ze te importeren."
+            "value" : "Deze sjablonen zijn geëxporteerd met een nieuwere versie van Polyvibe (indeling %@). Werk Polyvibe bij om ze te importeren."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te szablony zostały wyeksportowane przez nowszą wersję Vibe Manager (format %@). Uaktualnij Vibe Manager, aby je zaimportować."
+            "value" : "Te szablony zostały wyeksportowane przez nowszą wersję Polyvibe (format %@). Uaktualnij Polyvibe, aby je zaimportować."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estas predefinições foram exportadas por uma versão mais recente do Vibe Manager (formato %@). Atualize o Vibe Manager para importá-las."
+            "value" : "Estas predefinições foram exportadas por uma versão mais recente do Polyvibe (formato %@). Atualize o Polyvibe para importá-las."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Эти шаблоны экспортированы более новой версией Vibe Manager (формат %@). Обновите Vibe Manager, чтобы импортировать их."
+            "value" : "Эти шаблоны экспортированы более новой версией Polyvibe (формат %@). Обновите Polyvibe, чтобы импортировать их."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu şablonlar Vibe Manager’ın daha yeni bir sürümüyle dışa aktarıldı (biçim %@). İçe aktarmak için Vibe Manager’ı güncelleyin."
+            "value" : "Bu şablonlar Polyvibe’ın daha yeni bir sürümüyle dışa aktarıldı (biçim %@). İçe aktarmak için Polyvibe’ı güncelleyin."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ці шаблони експортовано новішою версією Vibe Manager (формат %@). Оновіть Vibe Manager, щоб імпортувати їх."
+            "value" : "Ці шаблони експортовано новішою версією Polyvibe (формат %@). Оновіть Polyvibe, щоб імпортувати їх."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这些模板由更新版本的 Vibe Manager 导出（格式 %@）。请更新 Vibe Manager 以导入它们。"
+            "value" : "这些模板由更新版本的 Polyvibe 导出（格式 %@）。请更新 Polyvibe 以导入它们。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "這些範本是由較新版本的 Vibe Manager 輸出（格式 %@）。請更新 Vibe Manager 以輸入它們。"
+            "value" : "這些範本是由較新版本的 Polyvibe 輸出（格式 %@）。請更新 Polyvibe 以輸入它們。"
           }
         }
       }
     },
-    "This file does not hold Vibe Manager prompt templates." : {
+    "This file does not hold Polyvibe prompt templates." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لا يحتوي هذا الملف على قوالب جلسات Vibe Manager."
+            "value" : "لا يحتوي هذا الملف على قوالب جلسات Polyvibe."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Datei enthält keine Prompt-Vorlagen von Vibe Manager."
+            "value" : "Diese Datei enthält keine Prompt-Vorlagen von Polyvibe."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este archivo no contiene plantillas de sesión de Vibe Manager."
+            "value" : "Este archivo no contiene plantillas de sesión de Polyvibe."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce fichier ne contient pas de gabarits de session Vibe Manager."
+            "value" : "Ce fichier ne contient pas de gabarits de session Polyvibe."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "इस फ़ाइल में Vibe Manager के सेशन टेम्पलेट नहीं हैं।"
+            "value" : "इस फ़ाइल में Polyvibe के सेशन टेम्पलेट नहीं हैं।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questo file non contiene template di sessione di Vibe Manager."
+            "value" : "Questo file non contiene template di sessione di Polyvibe."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このファイルにはVibe Managerのプロンプトテンプレートが含まれていません。"
+            "value" : "このファイルにはPolyvibeのプロンプトテンプレートが含まれていません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 파일에는 Vibe Manager 세션 템플릿이 없습니다."
+            "value" : "이 파일에는 Polyvibe 세션 템플릿이 없습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dit bestand bevat geen sessiesjablonen van Vibe Manager."
+            "value" : "Dit bestand bevat geen sessiesjablonen van Polyvibe."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ten plik nie zawiera szablonów sesji Vibe Manager."
+            "value" : "Ten plik nie zawiera szablonów sesji Polyvibe."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este arquivo não contém predefinições de prompt do Vibe Manager."
+            "value" : "Este arquivo não contém predefinições de prompt do Polyvibe."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Этот файл не содержит шаблонов промптов Vibe Manager."
+            "value" : "Этот файл не содержит шаблонов промптов Polyvibe."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu dosya Vibe Manager istem şablonları içermiyor."
+            "value" : "Bu dosya Polyvibe istem şablonları içermiyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Цей файл не містить шаблонів промптів Vibe Manager."
+            "value" : "Цей файл не містить шаблонів промптів Polyvibe."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此文件不包含 Vibe Manager 会话模板。"
+            "value" : "此文件不包含 Polyvibe 会话模板。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此檔案不包含 Vibe Manager 提示詞範本。"
+            "value" : "此檔案不包含 Polyvibe 提示詞範本。"
           }
         }
       }
@@ -1509,102 +1509,102 @@
         }
       }
     },
-    "the file was written by a newer version of Vibe Manager." : {
+    "the file was written by a newer version of Polyvibe." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "كُتب الملف بإصدار أحدث من Vibe Manager."
+            "value" : "كُتب الملف بإصدار أحدث من Polyvibe."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Datei wurde mit einer neueren Version von Vibe Manager geschrieben."
+            "value" : "Die Datei wurde mit einer neueren Version von Polyvibe geschrieben."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "el archivo lo escribió una versión más reciente de Vibe Manager."
+            "value" : "el archivo lo escribió una versión más reciente de Polyvibe."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "le fichier a été écrit par une version plus récente de Vibe Manager."
+            "value" : "le fichier a été écrit par une version plus récente de Polyvibe."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "फ़ाइल Vibe Manager के नए संस्करण द्वारा लिखी गई थी।"
+            "value" : "फ़ाइल Polyvibe के नए संस्करण द्वारा लिखी गई थी।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "il file è stato scritto da una versione più recente di Vibe Manager."
+            "value" : "il file è stato scritto da una versione più recente di Polyvibe."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ファイルは新しいバージョンのVibe Managerで書き込まれています。"
+            "value" : "ファイルは新しいバージョンのPolyvibeで書き込まれています。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "파일이 최신 버전의 Vibe Manager에서 작성되었습니다."
+            "value" : "파일이 최신 버전의 Polyvibe에서 작성되었습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "het bestand is geschreven met een nieuwere versie van Vibe Manager."
+            "value" : "het bestand is geschreven met een nieuwere versie van Polyvibe."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "plik został zapisany przez nowszą wersję Vibe Manager."
+            "value" : "plik został zapisany przez nowszą wersję Polyvibe."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "o arquivo foi escrito por uma versão mais recente do Vibe Manager."
+            "value" : "o arquivo foi escrito por uma versão mais recente do Polyvibe."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "файл записан более новой версией Vibe Manager."
+            "value" : "файл записан более новой версией Polyvibe."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "dosya Vibe Manager’ın daha yeni bir sürümüyle yazıldı."
+            "value" : "dosya Polyvibe’ın daha yeni bir sürümüyle yazıldı."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "файл записано новішою версією Vibe Manager."
+            "value" : "файл записано новішою версією Polyvibe."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "文件由更新版本的 Vibe Manager 写入。"
+            "value" : "文件由更新版本的 Polyvibe 写入。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "檔案是由較新版本的 Vibe Manager 寫入。"
+            "value" : "檔案是由較新版本的 Polyvibe 寫入。"
           }
         }
       }

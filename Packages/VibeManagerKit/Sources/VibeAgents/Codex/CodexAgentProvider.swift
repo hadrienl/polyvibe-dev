@@ -181,7 +181,7 @@ public struct CodexAgentProvider: AgentProvider {
   /// The catalog is advisory: it fills the model picker, it does not gate a launch.
   ///
   /// Codex resolves model names server side, and new ones appear between two releases of this
-  /// application. Rejecting an unknown slug would make Vibe Manager expire faster than the CLI
+  /// application. Rejecting an unknown slug would make Polyvibe expire faster than the CLI
   /// it drives, so only the shape of a slug is validated, never its membership.
   public func models() async -> [AgentModel] {
     await catalog.models()

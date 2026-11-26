@@ -15,7 +15,7 @@ import UIKit
 final class RemoteChannel {
   enum Phase: Equatable {
     case idle
-    /// The Mac has not published an endpoint: Vibe Manager closed, or the Mac asleep.
+    /// The Mac has not published an endpoint: Polyvibe closed, or the Mac asleep.
     case noMac
     case connecting
     case connected

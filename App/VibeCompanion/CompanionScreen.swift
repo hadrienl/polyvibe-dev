@@ -182,13 +182,13 @@ private struct StatusSection: View {
       }
       .accessibilityElement(children: .combine)
     } header: {
-      Text("Vibe Companion · Diagnostic")
+      Text("Polyvibe Companion · Diagnostic")
     }
   }
 
   static func subtitle(of mac: CompanionMac) -> String {
     let build = mac.buildLabel.isEmpty ? mac.version : "\(mac.version) (\(mac.buildLabel))"
-    return "\(mac.name) · Vibe Manager \(build)"
+    return "\(mac.name) · Polyvibe \(build)"
   }
 }
 

@@ -2,7 +2,7 @@ import Darwin
 import Foundation
 import VibeDomain
 
-/// The gateway as a program: what `Vibe Manager --endpoint-gateway <directory>` runs (#107).
+/// The gateway as a program: what `Polyvibe --endpoint-gateway <directory>` runs (#107).
 ///
 /// One per data folder, held by a lock taken before listening: a second one finds it held and
 /// leaves. It listens on the port it had last time when it can, so that an agent started before a
@@ -89,7 +89,7 @@ public actor EndpointGatewayController {
   private let now: @Sendable () -> Date
   private let startupLimit: Duration
 
-  /// - Parameter launch: starts `Vibe Manager --endpoint-gateway <directory>`, detached.
+  /// - Parameter launch: starts `Polyvibe --endpoint-gateway <directory>`, detached.
   public init(
     location: GatewayLocation,
     launch: @escaping @Sendable () throws -> Void,

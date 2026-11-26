@@ -130,7 +130,7 @@ final class CompanionAgent {
       CodeSigningCompanionPeerVerifier(peerIdentifier: Self.applicationIdentifier)
         .accepts(peerOf: descriptor)
     else {
-      Self.logger.error("the peer is not Vibe Manager: refused")
+      Self.logger.error("the peer is not Polyvibe: refused")
       close(descriptor)
       return false
     }
@@ -422,7 +422,7 @@ final class CompanionAgent {
       try? await Task.sleep(for: .seconds(delay))
       guard let installation, !isDeparting else { return }
       let request = CompanionRequest(
-        id: UUID().uuidString, macID: installation.id, sessionTitle: "Vibe Manager",
+        id: UUID().uuidString, macID: installation.id, sessionTitle: "Polyvibe",
         agent: Self.macName(), text: CompanionRequests.testText, createdAt: Date())
       Self.notifyLogger.notice("test request: \(request.id, privacy: .public) written")
       await sync.save([.request(request)])

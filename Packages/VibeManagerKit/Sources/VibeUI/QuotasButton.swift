@@ -208,7 +208,7 @@ struct QuotasPopover: View {
     }
   }
 
-  /// “≈ 127 € · 30 d”; without a session in Vibe Manager over thirty days, or only models without
+  /// “≈ 127 € · 30 d”; without a session in Polyvibe over thirty days, or only models without
   /// a price, says so rather than a zero.
   private func cost(of providerID: String) -> String? {
     guard let estimate = usage.accountCosts[providerID] else {
@@ -216,7 +216,7 @@ struct QuotasPopover: View {
         localized: LocalizedStringResource(
           "No session in 30 days", locale: locale, bundle: .module,
           comment:
-            "An account without any session run in Vibe Manager over the last thirty days: no cost to say."
+            "An account without any session run in Polyvibe over the last thirty days: no cost to say."
         ))
     }
     guard estimate.hasPrice else { return UsagePresentation.unknownPrice(locale: locale) }
@@ -264,7 +264,7 @@ struct QuotasPopover: View {
   static func costHelp(locale: Locale) -> String {
     String(
       localized: LocalizedStringResource(
-        "What the tokens of the sessions run in Vibe Manager over the last thirty days would cost at public API prices.",
+        "What the tokens of the sessions run in Polyvibe over the last thirty days would cost at public API prices.",
         locale: locale, bundle: .module,
         comment: "Explains the thirty-day cost of the Quotas popover (#599)."))
   }

@@ -131,7 +131,7 @@ struct EndpointAgentProviderTests {
         antigravity: Self.antigravity(), gateway: gateway, secrets: InMemoryEndpointSecretStore())
         as? AntigravityEndpointAgentProvider)
     #expect(provider.base.harnessKind == .antigravity)
-    // agy is given neither the Vibe Manager tools nor their instructions yet (#541): coordination,
+    // agy is given neither the Polyvibe tools nor their instructions yet (#541): coordination,
     // offered to the agents that take both, is not offered to it.
     #expect(!CoordinationPolicy.canCoordinate(with: provider))
     #expect(

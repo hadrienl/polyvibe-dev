@@ -10517,7 +10517,7 @@
       }
     },
     "Allow it in System Settings › Privacy & Security › Microphone, then dictate again." : {
-      "comment" : "Under “Vibe Manager may not use the microphone.”",
+      "comment" : "Under “Polyvibe may not use the microphone.”",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -44303,103 +44303,103 @@
         }
       }
     },
-    "Vibe Manager may not use the microphone." : {
+    "Polyvibe may not use the microphone." : {
       "comment" : "The microphone access was refused.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لا يُسمح لـ Vibe Manager باستخدام الميكروفون."
+            "value" : "لا يُسمح لـ Polyvibe باستخدام الميكروفون."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager darf das Mikrofon nicht verwenden."
+            "value" : "Polyvibe darf das Mikrofon nicht verwenden."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager no puede usar el micrófono."
+            "value" : "Polyvibe no puede usar el micrófono."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager n’a pas accès au micro."
+            "value" : "Polyvibe n’a pas accès au micro."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager को माइक्रोफ़ोन उपयोग करने की अनुमति नहीं है।"
+            "value" : "Polyvibe को माइक्रोफ़ोन उपयोग करने की अनुमति नहीं है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager non può usare il microfono."
+            "value" : "Polyvibe non può usare il microfono."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Managerはマイクを使用できません。"
+            "value" : "Polyvibeはマイクを使用できません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager가 마이크를 사용할 수 없습니다."
+            "value" : "Polyvibe가 마이크를 사용할 수 없습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager mag de microfoon niet gebruiken."
+            "value" : "Polyvibe mag de microfoon niet gebruiken."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager nie może używać mikrofonu."
+            "value" : "Polyvibe nie może używać mikrofonu."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager não pode usar o microfone."
+            "value" : "O Polyvibe não pode usar o microfone."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager не может использовать микрофон."
+            "value" : "Polyvibe не может использовать микрофон."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager mikrofonu kullanamıyor."
+            "value" : "Polyvibe mikrofonu kullanamıyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager не може використовувати мікрофон."
+            "value" : "Polyvibe не може використовувати мікрофон."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 无法使用麦克风。"
+            "value" : "Polyvibe 无法使用麦克风。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 無法使用麥克風。"
+            "value" : "Polyvibe 無法使用麥克風。"
           }
         }
       }
@@ -46614,102 +46614,102 @@
         }
       }
     },
-    "made by a later version of Vibe Manager" : {
+    "made by a later version of Polyvibe" : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أُنشئت بإصدار أحدث من Vibe Manager"
+            "value" : "أُنشئت بإصدار أحدث من Polyvibe"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "mit einer neueren Version von Vibe Manager erstellt"
+            "value" : "mit einer neueren Version von Polyvibe erstellt"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "creado por una versión más reciente de Vibe Manager"
+            "value" : "creado por una versión más reciente de Polyvibe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "créé par une version plus récente de Vibe Manager"
+            "value" : "créé par une version plus récente de Polyvibe"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager के नए संस्करण द्वारा बनाई गई"
+            "value" : "Polyvibe के नए संस्करण द्वारा बनाई गई"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "creato da una versione più recente di Vibe Manager"
+            "value" : "creato da una versione più recente di Polyvibe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しいバージョンのVibe Managerで作成されています"
+            "value" : "新しいバージョンのPolyvibeで作成されています"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "최신 버전의 Vibe Manager에서 만들어짐"
+            "value" : "최신 버전의 Polyvibe에서 만들어짐"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "gemaakt met een nieuwere versie van Vibe Manager"
+            "value" : "gemaakt met een nieuwere versie van Polyvibe"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "utworzony przez nowszą wersję Vibe Manager"
+            "value" : "utworzony przez nowszą wersję Polyvibe"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "criado por uma versão mais recente do Vibe Manager"
+            "value" : "criado por uma versão mais recente do Polyvibe"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "создано более новой версией Vibe Manager"
+            "value" : "создано более новой версией Polyvibe"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager’ın daha yeni bir sürümüyle oluşturulmuş"
+            "value" : "Polyvibe’ın daha yeni bir sürümüyle oluşturulmuş"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "створено новішою версією Vibe Manager"
+            "value" : "створено новішою версією Polyvibe"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "由更新版本的 Vibe Manager 制作"
+            "value" : "由更新版本的 Polyvibe 制作"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "由較新版本的 Vibe Manager 製作"
+            "value" : "由較新版本的 Polyvibe 製作"
           }
         }
       }

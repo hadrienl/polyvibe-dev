@@ -1,6 +1,6 @@
-# Vibe Manager
+# Polyvibe
 
-Vibe Manager is a native macOS application for running several coding-agent sessions while keeping
+Polyvibe is a native macOS application for running several coding-agent sessions while keeping
 their terminals, repositories and tasks organized in one place.
 
 The application launches a SwiftUI state backed by an atomic, versioned local session store.
@@ -8,14 +8,14 @@ Claude, Codex, terminal and live Git integrations are tracked as separate V1 iss
 
 ## iPhone companion (alpha)
 
-Vibe Companion, the iPhone app that follows this Mac's sessions, is in alpha test and not on the
+Polyvibe Companion, the iPhone app that follows this Mac's sessions, is in alpha test and not on the
 App Store yet. Testers install it through TestFlight:
 
 1. On the iPhone, install [TestFlight](https://apps.apple.com/app/testflight/id899247664), then
    open the public invitation: <https://testflight.apple.com/join/DsJgybUh>.
 2. Sign the iPhone in to the same iCloud account as the Mac.
-3. On the Mac, turn on Settings › iPhone Companion (Vibe Manager 1.1.0 or later, Apple silicon),
-   then open Vibe Companion: the iPhone appears in the list and connects.
+3. On the Mac, turn on Settings › iPhone Companion (Polyvibe 1.1.0 or later, Apple silicon),
+   then open Polyvibe Companion: the iPhone appears in the list and connects.
 
 Every release tag uploads a build of the same version to TestFlight
 (`Scripts/testflight.sh`, run by `.github/workflows/release.yml`).
@@ -105,9 +105,9 @@ available. Settings › Agents › Antigravity offers **Manual / Automatic** app
 of Codex, applied to new and restarted sessions. Manual is the default; Automatic uses the CLI's
 native `auto` mode with its terminal sandbox and requires a personal Antigravity account.
 Answer its remaining permissions and questions in the terminal; usage totals, grouped tool
-results and Vibe Manager MCP injection are not available in this first integration. An endpoint
+results and Polyvibe MCP injection are not available in this first integration. An endpoint
 can also be driven by Antigravity (Settings › Endpoints › Driven by): `agy` then talks to the
-endpoint's model through Vibe Manager's gateway, without a Google sign-in. See
+endpoint's model through Polyvibe's gateway, without a Google sign-in. See
 [`docs/architecture/0045-antigravity-provider.md`](docs/architecture/0045-antigravity-provider.md).
 
 Coding agents are reached through providers that only describe how to launch a CLI. Detection,

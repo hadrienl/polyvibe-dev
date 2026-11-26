@@ -1,6 +1,6 @@
 import Foundation
 
-/// The JavaScript Vibe Manager puts in a page (#69).
+/// The JavaScript Polyvibe puts in a page (#69).
 ///
 /// Two worlds. The console is caught in the page's own world, where its `console` is — the only
 /// choice there is, and the reason a page can write false lines into its own console, which costs

@@ -226,7 +226,7 @@ public final class BrowserChannelListener {
         else {
           let refusal =
             AgentToolServerDefinition.named(name)?.refusal
-            ?? "Vibe Manager has no tool server of that name."
+            ?? "Polyvibe has no tool server of that name."
           connection?.refuse(refusal)
           return nil
         }

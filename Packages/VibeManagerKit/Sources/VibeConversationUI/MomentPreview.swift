@@ -86,7 +86,7 @@ struct MomentPreviewContent: Equatable {
       answer: MomentPresentation.answer(of: moment))
   }
 
-  /// A bookmark's: who wrote its message — Vibe Manager or a coordinator for one relayed to the
+  /// A bookmark's: who wrote its message — Polyvibe or a coordinator for one relayed to the
   /// session (#568) —, and when. Another moment's: its kind, and when.
   private static func heading(
     of moment: ConversationMoment, block: ConversationBlock?, agentName: String
@@ -109,7 +109,7 @@ struct MomentPreviewContent: Equatable {
     switch entry.content {
     case .userPrompt:
       switch ConversationModel.relayedMessage(of: block)?.sender {
-      case .application: return "Vibe Manager"
+      case .application: return "Polyvibe"
       case .coordinator(let name):
         return String(localized: "Coordinator “\(name)”", bundle: .module)
       case nil: return String(localized: "You", bundle: .module)

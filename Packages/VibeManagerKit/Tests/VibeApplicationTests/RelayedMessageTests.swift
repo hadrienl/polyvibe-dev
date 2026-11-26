@@ -42,6 +42,23 @@ struct RelayedMessageTests {
     #expect(message.children.isEmpty)
   }
 
+  @Test("A message sent under the application's former name is still the application's")
+  func formerName() throws {
+    let news = CoordinationInbox.message(for: [.wake("is #12 merged?", at: .now)])
+    let former = news.replacingOccurrences(of: "[Polyvibe]", with: "[Vibe Manager]")
+    #expect(former.hasPrefix("[Vibe Manager] 1 event:"))
+    let message = try #require(RelayedMessage(former))
+    #expect(message.sender == .application)
+    #expect(message.body == "- Wake\\-up you asked for\\: is \\#12 merged\\?")
+    let preface = CoordinatorInstructions.turnedOn
+      .replacingOccurrences(of: "[Polyvibe]", with: "[Vibe Manager]")
+    #expect(RelayedMessage(preface) == nil)
+    #expect(RelayedMessage(preface + "\n\nPlan milestone V2") == nil)
+    #expect(
+      CoordinatorInstructions.userText(of: preface + "\n\nPlan milestone V2") == "Plan milestone V2")
+    #expect(CoordinatorInstructions.userText(of: former) == nil)
+  }
+
   @Test func coordinatorMessage() throws {
     let text = CoordinationPolicy.fromCoordinator(
       "Rebase on main.\n\nThen push.", coordinatorName: "V2")
@@ -83,7 +100,7 @@ struct RelayedMessageTests {
     #expect(RelayedMessage("Fix the tests") == nil)
     #expect(RelayedMessage("[Coordinator] not a mark") == nil)
     // The mark pasted by the user, without the news it titles.
-    #expect(RelayedMessage("[Vibe Manager] why did you say that?") == nil)
+    #expect(RelayedMessage("[Polyvibe] why did you say that?") == nil)
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\nPlan milestone V2") == nil)
     // Files alone, sent once coordination was turned on.
     #expect(RelayedMessage(CoordinatorInstructions.turnedOn + "\n\n") == nil)

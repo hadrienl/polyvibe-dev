@@ -2,37 +2,47 @@
 <p class="lede">Changez d’agent ou de modèle sans perdre le travail, remettez au travail une session fermée, et quittez sans interrompre un agent au milieu de son tour.</p>
 
 <h2 id="supported">Agents pris en charge</h2>
-<p>Vibe Manager fait tourner <strong>Claude Code</strong> et <strong>Codex CLI</strong>, chacun dans sa propre interface de terminal, avec votre compte et votre configuration. Il ne passe aucune option qui réduise les permissions réglées pour votre CLI, et ne lit aucun identifiant de leur compte. La seule clé qu’il connaisse est celle d’un <a href="#endpoints">endpoint</a> que vous avez déclaré vous-même. Ce qu’un agent a le droit de faire dans une session relève de sa propre configuration : Vibe Manager ne l’élargit ni ne la restreint.</p>
+<p>Polyvibe fait tourner <strong>Claude Code</strong>, <strong>Codex CLI</strong> et <strong>Antigravity</strong> (<code>agy</code>), chacun dans sa propre interface de terminal, avec votre compte et votre configuration. Il ne passe aucune option qui élargisse ce que vous avez permis à votre CLI, hormis le <a href="#approval">mode d’autorisation automatique</a> si vous le choisissez, et ne lit aucun identifiant de leur compte. La seule clé qu’il connaisse est celle d’un <a href="#endpoints">endpoint</a> que vous avez déclaré vous-même. Hormis le mode d’autorisation de Codex et d’Antigravity, ce qu’un agent a le droit de faire dans une session relève de sa propre configuration : Polyvibe ne l’élargit ni ne la restreint.</p>
 <p>Deux ajouts sont faits au lancement, pour ce lancement seulement : les <strong>hooks</strong> de l’agent signalent son activité — il travaille, attend, a terminé — une fois que vous les avez approuvés (<a href="settings.html#agents">Réglages › Agents</a>), et son <strong>serveur d’outils</strong> <code>vibe-browser</code> lui donne la <a href="terminals.html#agent-browser">vue web</a>.</p>
+<p>Les outils d’Antigravity s’affichent dans la conversation comme ceux des deux autres : une commande avec sa sortie et son code de sortie, une lecture de fichier, une modification avec son diff, une recherche web, un outil MCP, une question avec ses réponses, un sous-agent avec son propre transcript.</p>
+
+<h3 id="approval">Mode d’autorisation</h3>
+<p>Codex et Antigravity ont chacun un <strong>Mode d’autorisation</strong> dans <a href="settings.html#agents">Réglages › Agents</a> : <strong>Manuel</strong>, par défaut, fait demander l’agent : Codex tourne avec sa politique <code>on-request</code> et vous comme relecteur, Antigravity en request-review. Il remplace le réglage d’autorisation de la configuration propre à la CLI. <strong>Automatique</strong> laisse l’agent approuver lui-même ses actions, dans son bac à sable, au lieu de s’arrêter pour demander : pour Codex, c’est <em>Approve for me</em> ; pour Antigravity, son mode automatique dans le bac à sable du terminal, qui nécessite un compte Antigravity personnel. Codex garde un choix par compte et par endpoint qu’il pilote ; un endpoint piloté par Antigravity tourne toujours en Manuel. Le choix est relu à chaque lancement et à chaque relance : une session en cours garde le mode avec lequel elle a démarré.</p>
 
 <h2 id="accounts">Plusieurs comptes</h2>
-<p>Un même agent peut tourner sur plusieurs comptes : votre abonnement personnel et celui de votre entreprise, par exemple. Un compte, c’est Claude Code ou Codex avec son propre dossier de configuration.</p>
+<p>Un même agent peut tourner sur plusieurs comptes : votre abonnement personnel et celui de votre entreprise, par exemple. Un compte, c’est Claude Code ou Codex avec son propre dossier de configuration. Antigravity n’a pas de compte supplémentaire : il garde une seule connexion dans le trousseau, quel que soit son dossier.</p>
 <ol>
   <li><strong>Réglages › Ajouter un compte…</strong>, sous la liste des agents.</li>
   <li>Choisissez l’agent, donnez un nom au compte et indiquez son <strong>dossier de configuration</strong>. Le dossier est créé s’il n’existe pas.</li>
   <li>Connectez-vous depuis la page du compte. Il apparaît ensuite parmi les agents, à la création d’une session comme dans <a href="#switch">Changer d’agent</a>.</li>
 </ol>
 <div class="callout"><p>Un nouveau compte part de zéro : il n’a ni les serveurs MCP, ni les plugins, ni les skills du compte principal de l’agent. Ajoutez-les dans son dossier.</p></div>
-<p>La page de chaque compte indique à quel compte il est connecté, organisation comprise. Vibe Manager vous prévient quand deux agents sont connectés au même compte, ou quand un agent s’est reconnecté à un autre compte que le sien : <strong>Se reconnecter</strong> ou <strong>Garder ce compte</strong>. Supprimer un compte le retire de la liste ; son dossier et ses conversations restent sur le disque.</p>
+<p>La page de chaque compte indique à quel compte il est connecté, organisation comprise. Polyvibe vous prévient quand deux agents sont connectés au même compte, ou quand un agent s’est reconnecté à un autre compte que le sien : <strong>Se reconnecter</strong> ou <strong>Garder ce compte</strong>. Supprimer un compte le retire de la liste ; son dossier et ses conversations restent sur le disque.</p>
 
 <h2 id="endpoints">Agents sur un endpoint</h2>
-<p>Un <strong>endpoint</strong> est un serveur de modèles joignable en HTTP : sur ce Mac (Ollama, LM Studio) ou dans le cloud (OpenRouter, la passerelle de votre entreprise). Ses modèles apparaissent à côté de Claude Code et de Codex quand vous créez une session, et la session fait tourner Claude Code ou Codex sur eux : même terminal, même vue conversation, mêmes demandes, même reprise après une relance.</p>
+<p>Un <strong>endpoint</strong> est un serveur de modèles joignable en HTTP : sur ce Mac (Ollama, LM Studio) ou dans le cloud (OpenRouter, la passerelle de votre entreprise). Ses modèles apparaissent à côté des agents quand vous créez une session, et la session fait tourner Claude Code, Codex ou Antigravity sur eux : même terminal, même vue conversation, mêmes demandes, même reprise après une relance.</p>
 <ol>
   <li><strong>Réglages › Endpoints › Ajouter un endpoint…</strong>, puis un point de départ : Ollama, LM Studio, OpenRouter, ou un <strong>Autre serveur</strong>. Un serveur connu remplit l’adresse, le protocole et la clé attendue.</li>
   <li><strong>Clé</strong> : saisie une fois, écrite dans le trousseau de session (un élément par endpoint, jamais synchronisé) et plus jamais affichée. Supprimer l’endpoint la supprime.</li>
   <li><strong>Modèles</strong> : <strong>Lire depuis l’endpoint</strong> liste ce que le serveur propose. Un modèle qui ne sait pas appeler d’outils est gardé mais pas proposé : sans outils, un agent ne lit aucun fichier. Donnez à chaque modèle sa vraie fenêtre de contexte.</li>
-  <li><strong>Piloté par</strong> : <strong>Automatique</strong> choisit Claude Code ou Codex selon le protocole du serveur ; vous pouvez imposer l’un ou l’autre.</li>
+  <li><strong>Piloté par</strong> : <strong>Automatique</strong> choisit Claude Code ou Codex selon le protocole du serveur ; vous pouvez imposer Claude Code, Codex ou <strong>Antigravity</strong>. Antigravity rejoint l’endpoint par la passerelle de Polyvibe, sans connexion Google, et toujours en mode Manuel.</li>
   <li><strong>Tester</strong> envoie une courte requête qui demande au modèle d’appeler un outil, et dit ce qui a marché : joignable, authentification, réponse en flux et vitesse, appel d’outil, réponse après l’outil, jetons comptés. Un endpoint dont le dernier test a échoué n’est plus proposé pour une nouvelle session.</li>
 </ol>
-<p>Un serveur qui ne suit aucun standard se décrit avec le protocole <strong>Personnalisé</strong>, dans un document JSON : <strong>Insérer l’exemple</strong> en donne un pour commencer. Le format est détaillé dans <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>Un serveur qui ne suit aucun standard se décrit avec le protocole <strong>Personnalisé</strong>, dans un document JSON : <strong>Insérer l’exemple</strong> en donne un pour commencer. Le format est détaillé dans <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="switch">Changer d’agent ou de modèle</h2>
 <p>Le bouton de l’agent, dans la barre d’état sous la session, nomme l’agent et le modèle, comme « Claude Code · Opus 5.5 ». Son menu montre l’agent sous son logo, avec son état, l’historique de ses changements en sous-menu, et <strong>Changer pour</strong>, avec les modèles de chaque agent sous son logo : choisissez-en un pour ouvrir le changement sur lui, ou <strong>Autre réglage…</strong>. <strong>Session › Changer d’agent…</strong> (<kbd>⌃⌘M</kbd>) ouvre aussi le changement.</p>
-<vm-shot name="switch-agent" class="center" alt="La feuille Changer d’agent : l’agent actuel, la liste des agents disponibles avec un choix de modèle, et le résumé modifiable transmis au nouvel agent.">Le nouvel agent reçoit un résumé que vous pouvez lire et modifier d’abord.</vm-shot>
-<ul>
-  <li><strong>Un autre modèle du même agent</strong> reprend la même conversation et n’envoie rien.</li>
-  <li><strong>Un autre agent</strong> démarre une nouvelle conversation, avec un résumé de la session : qui y a travaillé, où en est le travail sur chaque branche et chaque worktree, ses notes et le prompt avec lequel elle a été créée. Le résumé est affiché et modifiable avant l’envoi, et n’est jamais présenté comme la conversation elle-même.</li>
-</ul>
+<p>Dans la feuille, choisissez l’agent et son modèle, puis, dans le menu <strong>Conversation</strong>, ce que reçoit le nouveau.</p>
+<vm-shot name="switch-agent" class="center" alt="La feuille Changer d’agent : l’agent actuel, Claude Code, Codex et Antigravity, le modèle, et le menu Conversation.">Changez d’agent ou de modèle, et choisissez ce que reçoit le nouveau.</vm-shot>
+<dl>
+  <dt>Continuer la conversation</dt>
+  <dd>L’agent reprend la même conversation par sa propre reprise, et rien ne lui est envoyé. Proposé quand l’agent reste le même, et choisi par défaut pour un changement de modèle.</dd>
+  <dt>Nouvelle conversation avec l’historique</dt>
+  <dd>Une nouvelle conversation, avec des copies des transcripts de tous les agents qu’a eus la session — comptes et endpoints précédents, sous-agents compris —, qu’il lit selon ses besoins. Les copies sont faites une fois l’agent arrêté, pour contenir son dernier tour, et restent sur ce Mac, lisibles par vous seul, jusqu’à ce que vous les supprimiez : elles peuvent contenir des informations sensibles.</dd>
+  <dt>Nouvelle conversation avec le résumé</dt>
+  <dd>Une nouvelle conversation, avec un résumé de la session : qui y a travaillé, où en est le travail sur chaque branche et chaque worktree, ses notes et le prompt avec lequel elle a été créée. Le résumé est affiché et modifiable avant l’envoi, et n’est jamais présenté comme la conversation elle-même.</dd>
+</dl>
+<p>L’historique et le résumé repartent de zéro, même avec le même agent. Votre choix et vos modifications du résumé sont gardés pendant que vous essayez d’autres modèles.</p>
 <p>Rien n’est arrêté avant que vous confirmiez avec <strong>Arrêter et changer</strong> (<kbd>⌘Return</kbd>). Si le nouvel agent ne démarre pas, la session revient à son agent précédent, qu’on peut reprendre comme avant. Chaque changement est conservé dans l’historique de la session, et la vue conversation continue de lire les transcripts de tous les agents qu’a eus la session.</p>
 
 <h2 id="restart">Relancer une session fermée</h2>
@@ -45,7 +55,7 @@
 <p>Une session créée avec <strong>Ajouter à À faire</strong> n’a jamais tourné : la même commande s’intitule alors <strong>Démarrer la session</strong>.</p>
 
 <h2 id="quit">Quitter sans arrêter les agents</h2>
-<p>Chaque terminal tourne dans un <strong>hôte des terminaux</strong>, un processus d’arrière-plan sans fenêtre ni icône dans le Dock. Aussi, quand des agents travaillent et que vous quittez, Vibe Manager demande :</p>
+<p>Chaque terminal tourne dans un <strong>hôte des terminaux</strong>, un processus d’arrière-plan sans fenêtre ni icône dans le Dock. Aussi, quand des agents travaillent et que vous quittez, Polyvibe demande :</p>
 <dl>
   <dt>Laisser tourner</dt>
   <dd>Les agents poursuivent leur tour. Au lancement suivant, chacun réapparaît à l’écran tel qu’il était, rien n’est relancé ni envoyé ; celui qui a terminé entre-temps montre sa dernière sortie. Les terminaux annexes continuent eux aussi de tourner.</dd>

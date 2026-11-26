@@ -1,19 +1,19 @@
 import Foundation
 
-/// A message a session was sent by Vibe Manager or by its coordinator rather than typed by the
+/// A message a session was sent by Polyvibe or by its coordinator rather than typed by the
 /// user, read back from its transcript so that the conversation shows who wrote it.
 ///
 /// Read from the text alone: the mark it opens with is all a transcript keeps of its author.
 public struct RelayedMessage: Equatable, Sendable {
   public enum Sender: Equatable, Sendable {
-    /// Vibe Manager, telling a coordinator what its children did.
+    /// Polyvibe, telling a coordinator what its children did.
     case application
     /// A coordinator, writing to one of its children; its name.
     case coordinator(String)
   }
 
   public let sender: Sender
-  /// What it says, in Markdown, without its mark. Vibe Manager's words are shown as they were
+  /// What it says, in Markdown, without its mark. Polyvibe's words are shown as they were
   /// written — a command, a question —, and a child is named in bold, without the identifier the
   /// coordinator was given; a coordinator's are its own Markdown.
   public let body: String
@@ -27,7 +27,7 @@ public struct RelayedMessage: Equatable, Sendable {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard CoordinatorInstructions.userText(of: trimmed) == nil,
       // A preface alone: the user's message was only files.
-      trimmed != CoordinatorInstructions.turnedOn, trimmed != CoordinatorInstructions.turnedOff
+      !CoordinatorInstructions.prefaces.contains(trimmed)
     else { return nil }
     if trimmed.hasPrefix(CoordinationPolicy.coordinatorMark) {
       let rest = trimmed.dropFirst(CoordinationPolicy.coordinatorMark.count)
@@ -38,11 +38,11 @@ public struct RelayedMessage: Equatable, Sendable {
       body = rest[close.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
       return
     }
-    guard trimmed.hasPrefix(CoordinatorInstructions.applicationMark) else { return nil }
-    let rest = trimmed.dropFirst(CoordinatorInstructions.applicationMark.count)
+    guard let mark = CoordinatorInstructions.applicationMark(of: trimmed) else { return nil }
+    let rest = trimmed.dropFirst(mark.count)
       .trimmingCharacters(in: .whitespaces)
     var lines = rest.split(separator: "\n", omittingEmptySubsequences: false)
-    // « 2 events: », the title of Vibe Manager's only message of its own: the list says as much.
+    // « 2 events: », the title of Polyvibe's only message of its own: the list says as much.
     // Without it, words the user pasted after the mark.
     guard let first = lines.first, first.wholeMatch(of: /\d+ events?:/) != nil else { return nil }
     lines.removeFirst()
@@ -61,12 +61,12 @@ public struct RelayedMessage: Equatable, Sendable {
     self.init(text)
   }
 
-  /// « “name” (identifier) », as Vibe Manager names a child to its coordinator.
+  /// « “name” (identifier) », as Polyvibe names a child to its coordinator.
   private static func child() -> Regex<(Substring, Substring)> {
     /“([^“”\n]+?)” \([0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}\)/
   }
 
-  /// A line of Vibe Manager's in Markdown that shows it as written: an event's list mark kept,
+  /// A line of Polyvibe's in Markdown that shows it as written: an event's list mark kept,
   /// each child's name in bold. A line that goes on a child's question loses its indent, which
   /// Markdown would take for code.
   static func shown(_ line: String) -> String {

@@ -187,7 +187,7 @@ public enum AvatarPresentation {
         "The archive is encrypted.", bundle: .module, comment: "An avatar problem.")
     case .archiveFromNewerVersion:
       return LocalizedStringResource(
-        "This avatar comes from a later version of Vibe Manager.", bundle: .module,
+        "This avatar comes from a later version of Polyvibe.", bundle: .module,
         comment: "An avatar problem.")
     case .archiveHasNoImage:
       return LocalizedStringResource(

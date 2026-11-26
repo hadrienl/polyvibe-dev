@@ -6,6 +6,9 @@
 <h3 id="diagnostics">Export Diagnostics</h3>
 <p><strong>Help › Export Diagnostics…</strong> gathers the app's local log and shows the whole file before you save it. The log is made of event types with no room for free text: it holds no prompt, note, session name, folder name or terminal content. It is kept in <code>~/Library/Logs/Vibe Manager</code> for two weeks at most, and nothing is ever sent.</p>
 
+<h3 id="interaction-reports">Answers that did not get through</h3>
+<p>When an answer to a request cannot be delivered or confirmed (see <a href="requests.html#palette">Answer your agents</a>), Polyvibe opens the session in Terminal view and files a <code>bug</code> issue in <a href="https://github.com/hadrienl/polyvibe-dev/issues">hadrienl/polyvibe-dev</a>, through the GitHub command-line tool <code>gh</code> and the account it is signed in to; without <code>gh</code>, nothing is sent. The issue is public. It holds the request, the answer chosen, the keys typed (free text left out), the terminal's text before and after, the time and the versions of the app and macOS. Common credentials — keys, tokens, authorization headers — are masked. A report that fails is tried again every minute and at the next launch, and the same request is never reported twice.</p>
+
 <h2 id="common">Common problems</h2>
 <dl>
   <dt>An agent is not found</dt>
@@ -13,7 +16,7 @@
   <dt>“Sessions unavailable”, or the store is said to be damaged</dt>
   <dd><strong>Restore Backup</strong> puts back the previous version; the damaged file is kept beside it, never deleted. Without a backup, quit, move <code>sessions.json</code> aside and relaunch.</dd>
   <dt>Agents kept running cannot be reattached</dt>
-  <dd>Another copy of the app holds them, or the terminal host did not answer in time: click <strong>Try Again</strong> in the banner. As a last resort, <code>pkill -f -- 'Vibe Manager --terminal-host'</code> stops the host and the agents it kept; their conversations are resumed at the next launch.</dd>
+  <dd>Another copy of the app holds them, or the terminal host did not answer in time: click <strong>Try Again</strong> in the banner. As a last resort, <code>pkill -f -- 'Polyvibe --terminal-host'</code> stops the host and the agents it kept; their conversations are resumed at the next launch.</dd>
   <dt>Full Disk Access is granted, and agents are still asked</dt>
   <dd>Agents inherit the access of the process that started them. In <a href="settings.html#privacy">Settings › Privacy</a>, choose <strong>Restart When Idle</strong> or <strong>Restart Now…</strong>.</dd>
   <dt>The conversation stays empty</dt>
@@ -21,16 +24,16 @@
   <dt>The session's activity does not show (working, waiting…)</dt>
   <dd>Turn on the agent's activity in <a href="settings.html#agents">Settings › Agents</a> and approve its hooks.</dd>
   <dt>An update is not offered</dt>
-  <dd><strong>Vibe Manager › Check for Updates…</strong> says why when this copy cannot update itself. Release candidates are only offered on the <strong>Unstable</strong> channel. You can always download the latest disk image from GitHub Releases and drag it over the app.</dd>
+  <dd><strong>Polyvibe › Check for Updates…</strong> says why when this copy cannot update itself. Release candidates are only offered on the <strong>Unstable</strong> channel. You can always download the latest disk image from GitHub Releases and drag it over the app.</dd>
   <dt>Signing in to a site fails in the companion's web view</dt>
   <dd>Passkeys don't work in the web view: use a password, or touch <strong>Open in Safari</strong>. See <a href="companion.html#web">The web view</a>.</dd>
 </dl>
-<p>More cases are covered in <strong>Help › Troubleshooting</strong>, which opens <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/operations.md">docs/operations.md</a>.</p>
+<p>More cases are covered in <strong>Help › Troubleshooting</strong>, which opens <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/operations.md">docs/operations.md</a>.</p>
 
 <h2 id="privacy">What stays on your Mac</h2>
 <ul>
-  <li><strong>No account, no telemetry, nothing sent.</strong> The only network requests the app makes itself are the update check and the pages you, or your agents, open in the web view.</li>
-  <li><strong>No credential is read.</strong> The agents use their own sign-in; Vibe Manager never sees an API key.</li>
+  <li><strong>No account, no telemetry.</strong> The only network requests the app makes itself are the update check, the pages you, or your agents, open in the web view, and the <a href="#interaction-reports">report of an answer that did not get through</a>, with your <code>gh</code>.</li>
+  <li><strong>No credential is read.</strong> The agents use their own sign-in; Polyvibe never sees an API key.</li>
   <li><strong>Conversations are read, not copied.</strong> The conversation view reads the agents' transcripts in memory; usage tracking only reads their counters.</li>
   <li>Summaries, themes and avatars are generated by your agents, with your account, only when you turn them on or ask.</li>
   <li>Every file of the app is readable by you alone.</li>
@@ -42,6 +45,8 @@
   <tbody>
     <tr><td>Sessions and their backup</td><td><code>~/Library/Application Support/com.hadrienl.VibeManager/sessions.json</code></td></tr>
     <tr><td>Notes</td><td><code>…/com.hadrienl.VibeManager/Notes/</code></td></tr>
+    <tr><td>Bookmarks</td><td><code>…/com.hadrienl.VibeManager/Bookmarks/</code></td></tr>
+    <tr><td>Transcripts copied for a switch of agent</td><td><code>…/com.hadrienl.VibeManager/Handovers/</code></td></tr>
     <tr><td>Side terminals' history</td><td><code>…/com.hadrienl.VibeManager/Terminals/</code></td></tr>
     <tr><td>Prompt templates</td><td><code>…/com.hadrienl.VibeManager/templates.json</code></td></tr>
     <tr><td>Themes and avatars</td><td><code>…/com.hadrienl.VibeManager/Themes/</code>, <code>Avatars/</code></td></tr>
@@ -50,7 +55,7 @@
     <tr><td>Preferences</td><td><code>~/Library/Preferences/eu.hadrien.VibeManager.plist</code></td></tr>
   </tbody>
 </table>
-<p>The agents' own files — <code>~/.claude</code>, <code>~/.codex</code> — belong to them and are never modified.</p>
+<p>The agents' own files — <code>~/.claude</code>, <code>~/.codex</code>, <code>~/.gemini</code> — belong to them and are never modified.</p>
 
 <h2 id="limits">Known limits</h2>
 <ul>
@@ -63,7 +68,7 @@
 
 <h2 id="uninstall">Uninstall</h2>
 <p>Quit the app — choose <strong>Stop All</strong> if it asks — then, in a terminal:</p>
-<pre><code>rm -rf "/Applications/Vibe Manager.app" \
+<pre><code>rm -rf "/Applications/Polyvibe.app" \
   ~/Library/Application\ Support/com.hadrienl.VibeManager \
   ~/Library/Logs/Vibe\ Manager \
   "$TMPDIR/vibe-manager"

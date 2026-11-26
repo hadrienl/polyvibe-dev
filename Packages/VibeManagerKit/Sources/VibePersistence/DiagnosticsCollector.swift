@@ -65,6 +65,10 @@ public enum DiagnosticsCollector {
     }
   }
 
+  /// The names a crash report of the application starts with: its executable's, and the one it
+  /// had before it was renamed, for a crash of the last days before the update.
+  static let processNames = ["Polyvibe", "Vibe Manager"]
+
   /// The system's crash reports of the application, from the last `crashReportAge`, with every
   /// path redacted. They carry stacks and paths, never the environment.
   public static func crashReports(
@@ -76,7 +80,9 @@ public enum DiagnosticsCollector {
     let cutoff = now.addingTimeInterval(-crashReportAge)
     let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
     return names.sorted().compactMap { name in
-      guard name.hasPrefix("Vibe Manager"), name.hasSuffix(".ips") else { return nil }
+      guard processNames.contains(where: name.hasPrefix), name.hasSuffix(".ips") else {
+        return nil
+      }
       let url = directory.appendingPathComponent(name)
       guard let date = modified(url), date >= cutoff,
         let text = try? String(contentsOf: url, encoding: .utf8)

@@ -5,7 +5,7 @@ import VibeApplication
 ///
 /// `--settings` adds to the user's own settings rather than replacing them — their hooks keep
 /// running beside these (checked against 2.1.282) — and nothing is written into
-/// `~/.claude/settings.json`: a Claude Code started outside Vibe Manager is left exactly as it was.
+/// `~/.claude/settings.json`: a Claude Code started outside Polyvibe is left exactly as it was.
 public enum ClaudeCodeActivityHooks {
   /// What a background task finishing sends the agent in place of a user's message.
   static let synthesizedPromptMarker = #""prompt":"<task-notification>"#

@@ -3,7 +3,7 @@ import Foundation
 import VibeApplication
 import VibeDomain
 
-/// The consent asked before Vibe Manager approves a CLI's hooks on the user's behalf (#45).
+/// The consent asked before Polyvibe approves a CLI's hooks on the user's behalf (#45).
 public struct HookConsentRequest: Identifiable, Equatable, Sendable {
   public let id = UUID()
   public let agentName: String

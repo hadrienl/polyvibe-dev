@@ -730,7 +730,7 @@ struct BlockView: View {
     case .entry(let entry):
       switch entry.content {
       case .userPrompt(let text, let attachments):
-        // Vibe Manager's or the coordinator's, not the user's: who wrote it says so.
+        // Polyvibe's or the coordinator's, not the user's: who wrote it says so.
         if let relayed = RelayedMessage(text, attachments: attachments) {
           RelayedMessageView(
             id: entry.id, message: relayed, text: text, date: entry.date, model: model
@@ -917,7 +917,7 @@ extension ConversationSelection.Source {
         }
         let author: ReplyQuote.Author
         switch entry.content {
-        // Vibe Manager's and a coordinator's words are not the user's to quote as theirs.
+        // Polyvibe's and a coordinator's words are not the user's to quote as theirs.
         case .userPrompt(let text, let attachments):
           guard RelayedMessage(text, attachments: attachments) == nil else { return nil }
           author = .user

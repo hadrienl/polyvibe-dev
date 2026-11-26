@@ -151,7 +151,7 @@ struct CoordinationInboxTests {
     inbox.remove(events, for: coordinator)
     #expect(inbox.isEmpty)
     let message = CoordinationInbox.message(for: events)
-    #expect(message.hasPrefix("[Vibe Manager] 2 events:"))
+    #expect(message.hasPrefix("[Polyvibe] 2 events:"))
     #expect(message.contains("finished its turn"))
     #expect(message.contains("is waiting for the user: permission to use Bash: rm -rf build"))
     #expect(message.contains(child.rawValue.uuidString))

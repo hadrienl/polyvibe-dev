@@ -138,11 +138,11 @@ public enum PromptTemplateExchangeError: Error, Equatable, Sendable, LocalizedEr
         bundle: .module, comment: "Two sizes, formatted: “1.2 MB”, “1 MB”.")
     case .notATemplateFile:
       return String(
-        localized: "This file does not hold Vibe Manager prompt templates.", bundle: .module)
+        localized: "This file does not hold Polyvibe prompt templates.", bundle: .module)
     case .unsupportedVersion(let version):
       return String(
         localized:
-          "These templates were exported by a newer version of Vibe Manager (format \(String(version))). Update Vibe Manager to import them.",
+          "These templates were exported by a newer version of Polyvibe (format \(String(version))). Update Polyvibe to import them.",
         bundle: .module, comment: "The version number of the file's format.")
     }
   }

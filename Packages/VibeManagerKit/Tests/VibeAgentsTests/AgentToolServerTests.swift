@@ -9,7 +9,7 @@ import VibeDomain
 struct AgentToolServerTests {
   private let server = AgentToolServer(
     name: "vibe-browser",
-    executablePath: "/Applications/Vibe Manager.app/Contents/MacOS/Vibe Manager",
+    executablePath: "/Applications/Polyvibe.app/Contents/MacOS/Polyvibe",
     arguments: ["--browser-bridge", "/var/folders/x/vibe-manager/ab/browser-v1.sock"])
 
   private func plan(_ arguments: [String]) -> AgentLaunchPlan {
@@ -68,7 +68,7 @@ struct AgentToolServerTests {
 @MainActor
 struct CoordinatorLaunchTests {
   private let coordinationServer = AgentToolServer(
-    name: "vibe-sessions", executablePath: "/Applications/Vibe Manager.app/Contents/MacOS/Vibe",
+    name: "vibe-sessions", executablePath: "/Applications/Polyvibe.app/Contents/MacOS/Vibe",
     arguments: ["--browser-bridge", "/tmp/s.sock", "--server", "vibe-sessions"])
 
   private func plan(_ provider: AgentProviderID) -> AgentLaunchPlan {

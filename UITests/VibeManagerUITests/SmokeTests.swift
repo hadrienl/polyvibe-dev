@@ -309,7 +309,7 @@ final class SmokeTests: XCTestCase {
     // A session shown as a conversation: its picker is centred in the toolbar.
     XCTAssertTrue(app.radioButtons["Terminal"].waitForExistence(timeout: 10))
     XCTAssertTrue(title.waitForExistence(timeout: 5))
-    XCTAssertEqual(title.label, "Vibe Manager, Toolbar layout check")
+    XCTAssertEqual(title.label, "Polyvibe, Toolbar layout check")
     XCTAssertTrue(notes.waitForExistence(timeout: 5))
     let withPicker = notes.frame.maxX
     XCTAssertLessThan(window.frame.maxX - withPicker, 24, "The buttons are away from the edge")

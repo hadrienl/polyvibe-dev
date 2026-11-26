@@ -13,10 +13,11 @@
   <li><strong>Reasoning</strong>, when the agent shares it, is a folded row.</li>
   <li><strong>Sub-agents</strong> started by the agent appear as blocks with their mission, their activity and their result; a tray lists those still running.</li>
   <li>Images the agent generates are shown in place.</li>
+  <li><strong>Messages between sessions</strong> — what Polyvibe tells a coordinator, what a coordinator writes to a child — are folded under a line that says who wrote them: see <a href="coordination.html#messages">Messages between sessions</a>.</li>
   <li>The <strong>time</strong> shows under each of your messages and the agent's, not under tool calls. Hover over it to see the full date. Each time the day changes, a separator says <strong>Today</strong>, <strong>Yesterday</strong> or the date.</li>
 </ul>
 <p>When you scroll up, a <strong>new messages</strong> pill takes you back to the end. <strong>Edit › Copy as Markdown</strong> (<kbd>⌥⇧⌘C</kbd>) copies the selection with its formatting. How much is folded or unfolded is set in <a href="settings.html#conversation">Settings › Conversation › Technical details</a>.</p>
-<div class="callout"><p>The conversation is read from the transcript files Claude Code and Codex write, and kept in memory only. Vibe Manager never writes it anywhere, never logs it, never sends it. Links are only <code>http</code>, <code>https</code> and <code>mailto</code>, and no remote image is loaded.</p></div>
+<div class="callout"><p>The conversation is read from the transcript files Claude Code and Codex write, and kept in memory only. Polyvibe never writes it anywhere, never logs it, never sends it. Links are only <code>http</code>, <code>https</code> and <code>mailto</code>, and no remote image is loaded.</p></div>
 
 <h2 id="moments">Key moments</h2>
 <p>Beside the messages, in place of the scroll bar, the <strong>overview</strong> draws the whole conversation small: click or drag it to go anywhere. It can be turned off in <a href="settings.html#conversation">Settings › Conversation</a>.</p>
@@ -48,10 +49,34 @@
   <li><code>/</code> at the start opens the list of the agent's <strong>skills and commands</strong>, as its CLI gives them. Typing filters it; <kbd>↑</kbd> <kbd>↓</kbd> choose, <kbd>⇥</kbd> or a click inserts, <kbd>Esc</kbd> closes. <kbd>Return</kbd> completes a name you started, and sends a name typed in full as it is. A command that answers with a panel, such as <code>/mcp</code> or <code>/model</code>, shows the real terminal above the composer while you use it.</li>
   <li>A message starting with <code>!</code> is a <strong>shell command</strong>, run by the agent's own shell mode; the composer turns to the warning colour. Type <code>\!</code> to send a message that starts with an exclamation mark.</li>
 </ul>
+<p>In the agent's replies, a one-line code block that starts with <code>!</code> — a command it leaves you to run, such as <code>! gcloud auth login</code> — has a <strong>Run</strong> button beside <strong>Copy</strong>: it sends the command as if you had typed it, and puts back the draft you had in the composer. A link to a local <code>.command</code> script becomes a <strong>Run</strong> button too: its path shows on hover, and you are asked before it is opened in the session. Run is offered with Claude Code and Codex, which have a shell mode. During a turn, Claude Code keeps the command until the turn ends; with Codex, Run is dimmed until then.</p>
 <p>The microphone beside the <strong>+</strong> dictates a message, and ▶ under a reply reads it aloud: see <a href="voice.html">Dictation and reading aloud</a>.</p>
 <p>In the status bar, the <strong>Effort</strong> menu sets the agent's reasoning effort for this session: from low to maximum for Claude Code, the model's levels for Codex. It is greyed out during a turn or a question, and absent for an agent on an endpoint.</p>
 <p id="usage">Beside it, the <strong>Usage</strong> button shows how much of the model's context window the conversation fills, in red beyond 80 %, and what the session cost: “◔ 55 % · $4.82”. Click it for every figure: the context and its last compaction, the cost of each model, the running time and runs, the tokens read from the agent's transcripts and its responses. The cost is an API equivalent, marked <code>≈</code>: the tokens at each model's public price, what the session would have cost paid by the token. A model without a known price is flagged and left out of the total. See <a href="#usage-window">the Usage window</a> for the prices, and <a href="settings.html#usage">Settings › Privacy</a> to turn tracking off.</p>
 <p>While the agent waits for an answer in its terminal — a permission, a question — the composer is closed, and the request is shown instead: see <a href="requests.html">Answer your agents</a>.</p>
+
+<h2 id="reply">Reply to a passage</h2>
+<p>As in a thread, you can answer one paragraph of the agent, or a few words you select, rather than its whole message. The agent receives the passage word for word, in front of your message.</p>
+<vm-shot name="reply" alt="A reply in the conversation: the quoted paragraph on top of the user's bubble, and below, the composer's band reading Replying to Claude Code with the next passage.">The quoted passage tops the reply, and the composer shows the one you are answering.</vm-shot>
+<ul>
+  <li>Rest the pointer on a paragraph of the agent: <strong>Reply</strong> shows at its end.</li>
+  <li>Select some text: <strong>Reply to Selection</strong> shows at the end of the selection.</li>
+  <li>On your own message, <strong>Reply</strong> shows beside its time.</li>
+  <li>The context menu of a message offers <strong>Reply</strong> too, and quotes it whole: that is the way with the keyboard or VoiceOver.</li>
+</ul>
+<p>A band above the composer shows <strong>Replying to …</strong>, the time and the passage; ✕ or <kbd>Esc</kbd> takes it back. The passage is sent as a quote, said not to be an instruction, 1,000 characters at most. A <code>/</code> command or a <code>!</code> shell command never takes it: it waits for your next message.</p>
+<p>In the thread, the reply stays in its place, the passage on top of its bubble. Click the passage to go to it — it lights up for a moment — then <strong>Back to Your Reply</strong> to come back. Under the original message, <strong>N replies</strong> goes to the last one.</p>
+
+<h2 id="bookmarks">Bookmarks and overview</h2>
+<p>Rest the pointer on a message: a pale bookmark shows in the left margin, level with its first line. Click it to bookmark the message, again to remove the bookmark. A message of yours, a reply of the agent or a tool call can be bookmarked.</p>
+<vm-shot name="bookmarks" alt="A conversation with two bookmarks in the left margin, and on the right the overview: the whole conversation drawn in small, the frame of what is on screen, and the bookmarks as accent lines.">Bookmarks in the margin, and the overview in place of the scroll bar.</vm-shot>
+<p>The <strong>overview</strong>, on the right in place of the scroll bar, draws the whole conversation in small: bubbles, text, tool calls, failures in red. A frame shows what is on screen: click to go elsewhere, drag it or use the wheel to scroll. Each bookmark is an accent line; hover over it to read the start of its message, click to go there. The overview takes the margin to the right of the text; turn it off in <a href="settings.html#conversation">Settings › Conversation</a> to get the usual scroll bar back.</p>
+<ul>
+  <li><strong>View › Toggle Bookmark</strong> (<kbd>⌘B</kbd>) bookmarks the selected message, or the one at the top of the screen.</li>
+  <li><strong>Next Bookmark</strong> (<kbd>⌥⌘J</kbd>) and <strong>Previous Bookmark</strong> (<kbd>⌥⌘K</kbd>) go from one to the next, with a beep at either end.</li>
+  <li>VoiceOver lists them in a <strong>Bookmarks</strong> rotor.</li>
+</ul>
+<p>Bookmarks are kept on this Mac, beside the session's notes.</p>
 
 <h2 id="files">Attaching files</h2>
 <p>Drop files on the conversation, click <strong>+</strong> in the composer, or choose <strong>Session › Attach Files…</strong> (<kbd>⌘O</kbd>): they become chips in the composer and are sent as paths with your message. Dropped on the terminal, a file's path is typed, escaped as Terminal does, without pressing Return. You can also drop files on a session's row in the sidebar.</p>

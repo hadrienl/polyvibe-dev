@@ -1,7 +1,7 @@
 # Ticket resolvers
 
 When a new session names a ticket's address — in its Ticket field, its name, or its prompt,
-including a template's values — Vibe Manager opens the ticket's page in the session's web view and
+including a template's values — Polyvibe opens the ticket's page in the session's web view and
 puts its title at the top of the session's notes:
 
 ```

@@ -46,10 +46,10 @@ public final class FloatingRequestPanelModel {
   // MARK: - What it shows
 
   /// Every request waiting, the selected session's included: when the panel is on screen, the
-  /// user is not looking at Vibe Manager, and nobody types into that session's terminal.
+  /// user is not looking at Polyvibe, and nobody types into that session's terminal.
   public var requests: [PendingRequest] { app?.allPendingRequests ?? [] }
 
-  /// Whether the panel is on screen: on, and Vibe Manager not in front with its window — then the
+  /// Whether the panel is on screen: on, and Polyvibe not in front with its window — then the
   /// sidebar has its palette, and the same request is never shown twice.
   public var isShown: Bool {
     guard isEnabled, let app else { return false }

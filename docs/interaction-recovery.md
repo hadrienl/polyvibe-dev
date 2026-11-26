@@ -16,7 +16,7 @@ completed/confirmed (`interrupted`), the app opens the affected session in termi
 the request pending and never automatically retries input. A request already settled elsewhere is
 not treated as a bug.
 
-The same failure queues a GitHub issue in `hadrienl/vibe-manager`, labelled `bug`. The report includes
+The same failure queues a GitHub issue in `hadrienl/polyvibe-dev`, labelled `bug`. The report includes
 the request content, selected answer, planned and successfully written key groups, terminal text
 before/after, timestamp, app build, OS and recovery behavior. Common credential forms (including AWS environment variables and Basic/Bearer authorization) are masked;
 pasted text is omitted from key traces. The terminal text and request content are included so a
@@ -30,5 +30,5 @@ SHA-256 fingerprint: an existing local result or a matching GitHub issue prevent
 including after a crash between issue creation and saving its URL. Completed entries retain the
 issue URL in their JSON file. Network/API failures do not delay the terminal fallback.
 
-Regression case: [#558](https://github.com/hadrienl/vibe-manager/issues/558), Claude Code 2.1.326,
+Regression case: [#558](https://github.com/hadrienl/polyvibe-dev/issues/558), Claude Code 2.1.326,
 Parcourses “Liens #120”, a single-choice question with a preview taller than the option list.

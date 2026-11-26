@@ -97,7 +97,6 @@ p { margin: 0; }
 picture { display: block; min-width: 0; }
 picture .shot { height: auto; }
 .pic-fade .shot { -webkit-mask-image: linear-gradient(90deg, #000 70%, transparent), linear-gradient(180deg, #000 80%, transparent); mask-image: linear-gradient(90deg, #000 70%, transparent); border-right: 0; }
-.pic-narrow { justify-self: center; width: 100%; max-width: 400px; }
 
 /* Bande "le problème" */
 .pain { background: var(--bg-tint); padding-block: 132px 80px; }

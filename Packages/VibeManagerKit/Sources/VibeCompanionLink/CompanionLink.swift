@@ -9,7 +9,7 @@ import os
 /// The application's side of the mobile companion (#347): it starts the companion agent embedded in
 /// the bundle, hands it the active sessions and takes the tests it finds.
 ///
-/// The agent is a process of its own — `Contents/Helpers/Vibe Manager Companion.app` — because the
+/// The agent is a process of its own — `Contents/Helpers/Polyvibe Companion.app` — because the
 /// iCloud entitlement, and the provisioning profile checked at every launch that comes with it,
 /// must stay out of the application's binary, which is also the terminal host and the gateway
 /// (ADR 0021). The application listens on a socket of its terminal host's private directory, and
@@ -20,7 +20,7 @@ public actor CompanionLink: CompanionPublishing {
     public var socketPath: String
     /// Makes the socket's private directory, before it is listened on.
     public var prepare: @Sendable () throws -> Void
-    /// `Vibe Manager Companion.app`.
+    /// `Polyvibe Companion.app`.
     public var agentBundle: URL
     /// Where the agent keeps its sync engine's state and the records it knows.
     public var stateDirectory: URL

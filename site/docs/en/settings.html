@@ -1,5 +1,5 @@
 <h1>Settings</h1>
-<p class="lede">Every page of <strong>Vibe Manager › Settings…</strong> (<kbd>⌘,</kbd>), and what each setting does. The sidebar groups them as System Settings does; the window widens by itself for the pages that need the room, such as the templates.</p>
+<p class="lede">Every page of <strong>Polyvibe › Settings…</strong> (<kbd>⌘,</kbd>), and what each setting does. The sidebar groups them as System Settings does; the window widens by itself for the pages that need the room, such as the templates.</p>
 
 <vm-shot name="settings-general" alt="Settings, General page: the sidebar of the pages, and beside it the sessions and the side terminals.">The General page, and the sidebar of every page.</vm-shot>
 
@@ -22,6 +22,7 @@
   <dt>Theme</dt><dd>See <a href="personalize.html#themes">Themes and avatars</a>.</dd>
   <dt>Display</dt><dd>Accent colour, message font, code font, text size (Small to Extra Large, the terminals' too, and changed from anywhere with <kbd>⌘+</kbd> <kbd>⌘−</kbd> <kbd>⌘0</kbd>), density (Compact or Comfortable), your messages as Bubbles or Lines.</dd>
   <dt>Technical details</dt><dd>Group consecutive calls of the same kind; unfold a failed call; unfold file edits; show reasoning rows; wrap lines in code blocks; line numbers in diffs.</dd>
+  <dt>Show the overview beside the conversation</dt><dd>On by default: the conversation drawn in small in place of the scroll bar, with its bookmarks. See <a href="conversation.html#bookmarks">Bookmarks and overview</a>.</dd>
 </dl>
 
 <h2 id="badges">Badges</h2>
@@ -34,7 +35,7 @@
   <dt>Notifications</dt>
   <dd><strong>Notify me of requests</strong>, showing <strong>The kind of request</strong> or <strong>The command or the question</strong>. Unavailable while the floating panel is on, which already signals them.</dd>
   <dt id="sound">Sound</dt>
-  <dd>The sound played when a session you are not looking at needs you, with ▶ to hear it. <strong>Manage Sounds…</strong> opens the <strong>Sounds</strong> page: describe a sound to an agent for it to compose, or import an audio file of 30 seconds at most.</dd>
+  <dd>The sound played when a session you are not looking at needs you, with ▶ to hear it. <strong>Manage Sounds…</strong> opens the <strong>Sounds</strong> page: describe a sound to an agent for it to compose, or import an audio file of 30 seconds at most. <strong>Accompany the sound with a rhythm on the trackpad</strong>, on by default, taps the sound's rhythm on the trackpad as it plays, felt with a finger resting on it; it is greyed out when the sound is None.</dd>
   <dt>Palette</dt>
   <dd>Show the number of requests on the Dock icon; unfold the palette when a request arrives.</dd>
   <dt>Manage Avatars…</dt>
@@ -42,15 +43,17 @@
 </dl>
 
 <h2 id="agents">Agents</h2>
-<p>One page per agent: Claude Code, Codex. The dot in the sidebar says whether it is ready (green), usable with something to fix, too old or not signed in (orange), or not found (red). The page shows where its command-line tool was found and its version; <strong>Detect Again</strong> looks for it again, after an installation or an update.</p>
+<p>One page per agent: Claude Code, Codex, Antigravity. The dot in the sidebar says whether it is ready (green), usable with something to fix, too old or not signed in (orange), or not found (red). The page shows where its command-line tool was found and its version; <strong>Detect Again</strong> looks for it again, after an installation or an update.</p>
 <dl>
   <dt>Track … activity</dt>
   <dd>For an agent that has its hooks approved, such as Codex. On, the hooks report when it works, asks or finishes, which the sidebar and the requests need. The first time, a sheet shows the commands the hooks run, and you approve them once. Claude Code has no such setting: its hooks need no approval.</dd>
+  <dt>Approval mode</dt>
+  <dd>Codex, its accounts and the endpoints it drives, and Antigravity: <strong>Manual</strong> or <strong>Automatic</strong>. See <a href="agents.html#approval">Approval mode</a>.</dd>
 </dl>
 <p><strong>Add an Account…</strong>, below the agents, runs Claude Code or Codex on another account, with its own configuration folder. An account's page renames it, changes its folder or deletes it. See <a href="agents.html#accounts">Several accounts</a>.</p>
 
 <h2 id="endpoints">Endpoints</h2>
-<p>Each model server you declared has its page, and the dot in the sidebar gives the result of its last test. See <a href="agents.html#endpoints">Agents on an endpoint</a>. <strong>Add an Endpoint…</strong> starts from Ollama, LM Studio, OpenRouter or an <strong>Other Server</strong>: a known server fills in the address, the key it expects and the protocol; only another server asks for its protocol. See <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>Each model server you declared has its page, and the dot in the sidebar gives the result of its last test. <strong>Driven by</strong> chooses the agent that runs its models: Automatic, Claude Code, Codex or Antigravity. See <a href="agents.html#endpoints">Agents on an endpoint</a>. <strong>Add an Endpoint…</strong> starts from Ollama, LM Studio, OpenRouter or an <strong>Other Server</strong>: a known server fills in the address, the key it expects and the protocol; only another server asks for its protocol. See <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="web-view">Web View</h2>
 <dl>
@@ -71,7 +74,7 @@
 <p>The archive rules and the protections: see <a href="archive.html">Automatic archive</a>.</p>
 
 <h2 id="worktrees">Worktrees</h2>
-<p>Where agents create their worktrees: <code>{repo}/.claude/worktrees/{branch}</code> by default, beside the repository, in <code>~/Worktrees/{project}/{branch}</code>, or a custom path built from variables, with a preview. Exceptions are set project by project (<strong>Add…</strong>), and <strong>Restore Default</strong> goes back to the default path. Vibe Manager creates nothing in Git: it tells the agent this path, for its new worktrees only.</p>
+<p>Where agents create their worktrees: <code>{repo}/.claude/worktrees/{branch}</code> by default, beside the repository, in <code>~/Worktrees/{project}/{branch}</code>, or a custom path built from variables, with a preview. Exceptions are set project by project (<strong>Add…</strong>), and <strong>Restore Default</strong> goes back to the default path. Polyvibe creates nothing in Git: it tells the agent this path, for its new worktrees only.</p>
 
 <h2 id="companion">iPhone Companion</h2>
 <p>The companion helper and the paired iPhones: see <a href="companion.html">iPhone companion</a>.</p>
@@ -81,10 +84,10 @@
 
 <h2 id="tickets">Tickets</h2>
 <p>When a new session names a ticket — in its Ticket field, its name or its prompt — its page is opened in the web view, and with <strong>Insert ticket titles in the notes</strong> its title is added at the top of the notes, in the <strong>Line format</strong> you choose (<code>{title}</code>, <code>{id}</code>, <code>{url}</code>).</p>
-<p>The <strong>Resolvers</strong> line opens their page. A resolver says which addresses are tickets: GitHub, GitLab, GitLab merge requests, Jira Cloud and Linear are shipped. Add your own for a self-hosted GitLab, a Jira Server or a Redmine: a name, an <strong>address pattern</strong> with a named capture such as <code>(?&lt;number&gt;[0-9]+)</code>, an <strong>identifier</strong> such as <code>#{number}</code>, and <strong>title cleanup</strong> patterns. <strong>Test with an address</strong> checks it. Resolvers can be imported and exported; see <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/ticket-resolvers.md">docs/ticket-resolvers.md</a>.</p>
+<p>The <strong>Resolvers</strong> line opens their page. A resolver says which addresses are tickets: GitHub, GitLab, GitLab merge requests, Jira Cloud and Linear are shipped. Add your own for a self-hosted GitLab, a Jira Server or a Redmine: a name, an <strong>address pattern</strong> with a named capture such as <code>(?&lt;number&gt;[0-9]+)</code>, an <strong>identifier</strong> such as <code>#{number}</code>, and <strong>title cleanup</strong> patterns. <strong>Test with an address</strong> checks it. Resolvers can be imported and exported; see <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/ticket-resolvers.md">docs/ticket-resolvers.md</a>.</p>
 
 <h2 id="privacy">Privacy</h2>
-<p>Whether Vibe Manager has <strong>Full Disk Access</strong> — Granted, Not granted, or Granted, not yet in effect — with <strong>Open System Settings</strong>. Agents inherit the access of the process that runs them, which may have started before you granted it: <strong>Restart When Idle</strong> lets it go once its last agent ends, <strong>Restart Now…</strong> stops the agents it names and resumes them. The <strong>Process by Process</strong> section appears when they disagree.</p>
+<p>Whether Polyvibe has <strong>Full Disk Access</strong> — Granted, Not granted, or Granted, not yet in effect — with <strong>Open System Settings</strong>. Agents inherit the access of the process that runs them, which may have started before you granted it: <strong>Restart When Idle</strong> lets it go once its last agent ends, <strong>Restart Now…</strong> stops the agents it names and resumes them. The <strong>Process by Process</strong> section appears when they disagree.</p>
 <dl>
   <dt id="usage">Data on This Mac › Track agent usage</dt>
   <dd>Records running time and reads token counters for the <a href="conversation.html#usage">Usage button</a> of the status bar and the <a href="conversation.html#usage-window">Usage window</a>, and downloads the public price list their costs are computed with, at most once a day. Turned off, nothing is read and nothing is downloaded. <strong>Clear Usage Data…</strong> erases what was recorded, not the agents' transcripts.</dd>
@@ -97,6 +100,6 @@
   <dt>Check for updates automatically</dt><dd>Daily, weekly or monthly.</dd>
   <dt>Download and install updates automatically</dt><dd>Installs in the background; otherwise you are asked.</dd>
   <dt>Channel</dt><dd><strong>Stable</strong>, or <strong>Unstable</strong> to also receive release candidates.</dd>
-  <dt>Check Now</dt><dd>Also in <strong>Vibe Manager › Check for Updates…</strong>.</dd>
+  <dt>Check Now</dt><dd>Also in <strong>Polyvibe › Check for Updates…</strong>.</dd>
 </dl>
 <p>Updates are signed twice — with the app's Developer ID and with an EdDSA key — and verified before they are installed. When agents are running, the update asks the same question as quitting: install and keep them running, or stop them all.</p>

@@ -5,14 +5,14 @@ import Foundation
 enum AppcastWriter {
   static let sparkleNamespace = "http://www.andymatuschak.org/xml-namespaces/sparkle"
   static let vibeNamespace = "https://hadrienl.github.io/vibe-manager/xml-namespaces/vibe"
-  static let feedURL = "https://hadrienl.github.io/vibe-manager/appcast.xml"
+  static let feedURL = "https://polyvibe.dev/appcast.xml"
 
   static func xml(for entries: [AppcastEntry]) -> String {
     var lines = [
       #"<?xml version="1.0" encoding="utf-8"?>"#,
       #"<rss version="2.0" xmlns:sparkle="\#(sparkleNamespace)" xmlns:vibe="\#(vibeNamespace)">"#,
       "  <channel>",
-      "    <title>Vibe Manager</title>",
+      "    <title>Polyvibe</title>",
       "    <link>\(escaped(feedURL))</link>",
       "    <language>en</language>",
     ]
@@ -28,7 +28,7 @@ enum AppcastWriter {
     let item = entry.item
     var lines = [
       "<item>",
-      "  <title>\(escaped("Vibe Manager \(item.version)"))</title>",
+      "  <title>\(escaped("Polyvibe \(item.version)"))</title>",
       "  <link>\(escaped(release.htmlURL))</link>",
       "  <sparkle:version>\(entry.build.description)</sparkle:version>",
       "  <sparkle:shortVersionString>\(escaped(item.version))</sparkle:shortVersionString>",

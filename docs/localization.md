@@ -1,6 +1,6 @@
 # Localization
 
-Vibe Manager speaks the 17 languages of its website (`site/i18n/`): Arabic (`ar`), German (`de`),
+Polyvibe speaks the 17 languages of its website (`site/i18n/`): Arabic (`ar`), German (`de`),
 English (`en`), Spanish (`es`), French (`fr`), Hindi (`hi`), Italian (`it`), Japanese (`ja`), Korean
 (`ko`), Dutch (`nl`), Polish (`pl`), Brazilian Portuguese (`pt-BR`), Russian (`ru`), Turkish
 (`tr`), Ukrainian (`uk`), Simplified Chinese (`zh-Hans`, the site's `zh-CN`) and Traditional

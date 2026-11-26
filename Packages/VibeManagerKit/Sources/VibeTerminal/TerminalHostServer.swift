@@ -169,7 +169,7 @@ public actor TerminalHostServer {
       configuration.diagnostics.record(
         .host, .notice, "host.clientRefused", ["reason": .token(DiagnosticToken("otherClient"))])
       let reason = String(
-        localized: "Another copy of Vibe Manager is attached to this terminal host.",
+        localized: "Another copy of Polyvibe is attached to this terminal host.",
         bundle: .module)
       await reply(request.request, .refused(reason: reason, refusal: .otherClient), to: client)
       return false

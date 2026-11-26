@@ -61,7 +61,7 @@ struct SignallingSettings: View {
         Toggle(isOn: $model.notifiesRequests) {
           Text("Notify me of requests and replies", bundle: .module)
           Text(
-            "Also when an agent stops. Only while Vibe Manager is not in front.",
+            "Also when an agent stops. Only while Polyvibe is not in front.",
             bundle: .module)
         }
         Picker(selection: $model.requestNotificationContent) {
@@ -83,7 +83,7 @@ struct SignallingSettings: View {
             }
           } label: {
             Label {
-              Text("Notifications are turned off for Vibe Manager.", bundle: .module)
+              Text("Notifications are turned off for Polyvibe.", bundle: .module)
             } icon: {
               Image(systemName: "bell.slash")
             }
@@ -138,7 +138,7 @@ struct FloatingPanelSettingsSection: View {
       Toggle(isOn: $panel.isEnabled) {
         Text("Show requests above other applications", bundle: .module)
         Text(
-          "When Vibe Manager is not in front, an avatar presents the requests in a bubble. Notifications are then not needed.",
+          "When Polyvibe is not in front, an avatar presents the requests in a bubble. Notifications are then not needed.",
           bundle: .module)
       }
       .accessibilityIdentifier("floating-panel-toggle")

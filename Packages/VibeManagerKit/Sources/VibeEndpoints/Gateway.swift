@@ -124,7 +124,7 @@ public final class Gateway: GatewayRequestHandling {
     else {
       let failure = EndpointFailure(
         kind: .authentication,
-        message: "This session is not known to the gateway. Restart it from Vibe Manager.")
+        message: "This session is not known to the gateway. Restart it from Polyvibe.")
       await Self.respond(failure, harness: harness, writer: writer)
       return
     }

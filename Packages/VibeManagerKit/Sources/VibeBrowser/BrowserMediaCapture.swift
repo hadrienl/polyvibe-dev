@@ -21,7 +21,7 @@ enum BrowserMediaCapture {
     -> Decision
   {
     guard type == .microphone else {
-      return .deny(reason: "Camera refused: Vibe Manager gives pages the microphone only.")
+      return .deny(reason: "Camera refused: Polyvibe gives pages the microphone only.")
     }
     if asksBeforeEffects { return .askUser }
     // WebKit's question would open in a window out of sight, and the page would wait for ever.

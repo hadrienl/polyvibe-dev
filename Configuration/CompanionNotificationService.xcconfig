@@ -1,4 +1,4 @@
-// The notification service extension of Vibe Companion (#368), embedded in the application's
+// The notification service extension of Polyvibe Companion (#368), embedded in the application's
 // PlugIns: it fetches the encrypted request a CloudKit push is about and writes its texts in the
 // alert. An App ID and a profile of its own, with the application's iCloud container.
 #include "CompanionBase.xcconfig"
@@ -10,7 +10,7 @@ TARGETED_DEVICE_FAMILY = 1,2
 // Under the application's identifier, as an extension's must be.
 PRODUCT_BUNDLE_IDENTIFIER = eu.hadrien.VibeManager.Companion.NotificationService
 PRODUCT_NAME = VibeCompanionNotificationService
-INFOPLIST_KEY_CFBundleDisplayName = Vibe Companion Notifications
+INFOPLIST_KEY_CFBundleDisplayName = Polyvibe Companion Notifications
 // Merged with the generated keys: the extension point has no setting.
 INFOPLIST_FILE = App/VibeCompanionNotificationService/Info.plist
 CODE_SIGN_ENTITLEMENTS = App/VibeCompanionNotificationService/VibeCompanionNotificationService.entitlements

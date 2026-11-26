@@ -706,7 +706,7 @@ extension AppModel {
   }
 
   private func listAgents(for coordinator: WorkSession) async -> String {
-    guard let agents else { return "No agent is known to Vibe Manager." }
+    guard let agents else { return "No agent is known to Polyvibe." }
     let availabilities = await agents.availabilities()
     var lines: [String] = []
     for descriptor in await agents.descriptors()
@@ -759,7 +759,7 @@ extension AppModel {
     defer {
       if start { coordination.startingChildren[coordinator.id, default: 1] -= 1 }
     }
-    guard let agents else { throw CoordinationRefusal.failed("No agent is known to Vibe Manager.") }
+    guard let agents else { throw CoordinationRefusal.failed("No agent is known to Polyvibe.") }
     let draft = SessionDraft(
       name: name,
       initialPrompt: CoordinationPolicy.fromCoordinator(mission, coordinatorName: coordinator.name),
@@ -966,7 +966,7 @@ extension AppModel {
     let date = coordination.now().addingTimeInterval(TimeInterval(minutes * 60))
     coordination.setWake(CoordinationWake(date: date, reason: reason), for: coordinator.id)
     startCoordinationTicker()
-    return "Vibe Manager will write to you in \(minutes) minutes. End your turn now."
+    return "Polyvibe will write to you in \(minutes) minutes. End your turn now."
   }
 
   private func callUser(for coordinator: WorkSession, _ arguments: JSONValue) throws -> String {

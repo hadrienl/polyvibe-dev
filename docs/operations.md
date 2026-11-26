@@ -1,4 +1,4 @@
-# Operations: recovering, and what Vibe Manager does not do
+# Operations: recovering, and what Polyvibe does not do
 
 Linked from Help → Troubleshooting. Each section starts from a symptom. When none fits, Help →
 Export Diagnostics… produces a file to attach to an issue: the sheet shows all of it before it is
@@ -52,7 +52,7 @@ The terminal host is alive and holds them, but will not serve this copy: another
 or it did not answer in time. **Try Again** in the banner asks once more. If it never answers:
 
 ```sh
-pkill -f -- 'Vibe Manager --terminal-host'
+pkill -f -- 'Polyvibe --terminal-host'
 ```
 
 This stops the host, and **the agents it kept stop with it**: their conversations are resumed at the
@@ -71,14 +71,14 @@ tccutil reset SystemPolicyAllFiles eu.hadrien.VibeManager
 ### Settings say "Not granted", and the switch is on
 
 The application learns the access by opening a file only it unlocks: TCC's system database. By hand,
-from a terminal of Vibe Manager, whose agents answer as the application does:
+from a terminal of Polyvibe, whose agents answer as the application does:
 
 ```sh
 head -c 15 "/Library/Application Support/com.apple.TCC/TCC.db"   # "SQLite format 3" when granted
 ```
 
-Refused while the switch is on: the switch belongs to another signature of Vibe Manager. Remove the
-entry with **−**, add `/Applications/Vibe Manager.app` with **+**, and let the background process
+Refused while the switch is on: the switch belongs to another signature of Polyvibe. Remove the
+entry with **−**, add `/Applications/Polyvibe.app` with **+**, and let the background process
 restart (below). Before #225, the application read the user's database, which macOS 27 no longer
 shows at all, and said "Not granted" to everyone.
 
@@ -90,7 +90,7 @@ Privacy shows what each process has: **Restart When Idle** lets that process go 
 agent ends, **Restart Now…** stops the agents it names and resumes them. When no agent runs, it
 restarts by itself.
 
-System Settings may list several "Vibe Manager": each signature is a separate entry, and nothing
+System Settings may list several "Polyvibe": each signature is a separate entry, and nothing
 tells them apart. It only happens to whoever runs several builds — Debug, Apple Development,
 Developer ID — so the application says nothing about it (#151): reveal the copy in use in the
 Finder and drag it into the list.
@@ -113,7 +113,7 @@ not look — the login shell's `PATH` is asked as a last resort — set its path
 ### Working on a copy that must not touch your sessions
 
 ```sh
-VIBE_DATA_DIRECTORY=/tmp/vibe-copy open -n "/Applications/Vibe Manager.app"
+VIBE_DATA_DIRECTORY=/tmp/vibe-copy open -n "/Applications/Polyvibe.app"
 ```
 
 The copy has its own store, runtime document, notes, logs (`<folder>/Logs`), preferences and
@@ -122,10 +122,10 @@ alone.
 
 ### An update is not offered
 
-Vibe Manager → Check for Updates…, or Settings → Updates, says why when this copy does not update
+Polyvibe → Check for Updates…, or Settings → Updates, says why when this copy does not update
 itself: a build of the source (only a copy downloaded from GitHub does), an isolated copy
 (`VIBE_DATA_DIRECTORY`), or `VIBE_UPDATES=off`. A release candidate is only offered on the
-Unstable channel. The feed is `https://hadrienl.github.io/vibe-manager/appcast.xml`: a version
+Unstable channel. The feed is `https://polyvibe.dev/appcast.xml`: a version
 missing from it was not published, or the Appcast workflow failed — run it again from the Actions
 tab. An update that cannot be installed can always be downloaded as a disk image from GitHub
 Releases and dragged over the application.
@@ -164,7 +164,7 @@ so renewing the certificate alone changes nothing.
 Quit the application, choosing Stop All if it asks, then:
 
 ```sh
-rm -rf "/Applications/Vibe Manager.app" \
+rm -rf "/Applications/Polyvibe.app" \
   ~/Library/Application\ Support/com.hadrienl.VibeManager \
   ~/Library/Logs/Vibe\ Manager \
   ~/Library/Saved\ Application\ State/eu.hadrien.VibeManager.savedState \
@@ -198,7 +198,7 @@ The agents' own files — `~/.claude`, `~/.codex` — belong to them and are lef
 - **No App Sandbox**: an agent needs to run tools and read the folders it is given
   ([ADR 0001](architecture/0001-project-foundation.md)).
 - **The agents' permissions are theirs.** What Claude Code or Codex may do inside a session is
-  their own configuration; Vibe Manager neither widens nor narrows it.
+  their own configuration; Polyvibe neither widens nor narrows it.
 - **Each terminal keeps 5,000 lines** on screen and in its history (about 17 MB for a full one of
   120 columns): many long-running sessions add up. Only the drawer of the session on screen is
   drawn; the side terminals of the others keep their history in the terminal host.

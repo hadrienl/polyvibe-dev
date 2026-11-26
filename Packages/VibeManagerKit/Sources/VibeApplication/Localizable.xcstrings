@@ -913,102 +913,102 @@
         }
       }
     },
-    "%@ does not let Vibe Manager choose a model." : {
+    "%@ does not let Polyvibe choose a model." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لا يسمح %@ لـ Vibe Manager باختيار نموذج."
+            "value" : "لا يسمح %@ لـ Polyvibe باختيار نموذج."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ lässt Vibe Manager kein Modell auswählen."
+            "value" : "%@ lässt Polyvibe kein Modell auswählen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ no permite que Vibe Manager elija un modelo."
+            "value" : "%@ no permite que Polyvibe elija un modelo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ ne permet pas à Vibe Manager de choisir un modèle."
+            "value" : "%@ ne permet pas à Polyvibe de choisir un modèle."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ Vibe Manager को मॉडल चुनने नहीं देता।"
+            "value" : "%@ Polyvibe को मॉडल चुनने नहीं देता।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ non consente a Vibe Manager di scegliere un modello."
+            "value" : "%@ non consente a Polyvibe di scegliere un modello."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ではVibe Managerがモデルを選択できません。"
+            "value" : "%@ではPolyvibeがモデルを選択できません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@은(는) Vibe Manager가 모델을 선택하도록 허용하지 않습니다."
+            "value" : "%@은(는) Polyvibe가 모델을 선택하도록 허용하지 않습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ laat Vibe Manager geen model kiezen."
+            "value" : "%@ laat Polyvibe geen model kiezen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ nie pozwala Vibe Manager wybrać modelu."
+            "value" : "%@ nie pozwala Polyvibe wybrać modelu."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ não permite que o Vibe Manager escolha um modelo."
+            "value" : "%@ não permite que o Polyvibe escolha um modelo."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ не позволяет Vibe Manager выбрать модель."
+            "value" : "%@ не позволяет Polyvibe выбрать модель."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@, Vibe Manager’ın model seçmesine izin vermiyor."
+            "value" : "%@, Polyvibe’ın model seçmesine izin vermiyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ не дозволяє Vibe Manager вибирати модель."
+            "value" : "%@ не дозволяє Polyvibe вибирати модель."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 不允许 Vibe Manager 选择模型。"
+            "value" : "%@ 不允许 Polyvibe 选择模型。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 不允許 Vibe Manager 選擇模型。"
+            "value" : "%@ 不允許 Polyvibe 選擇模型。"
           }
         }
       }
@@ -22904,102 +22904,102 @@
         }
       }
     },
-    "This agent does not let Vibe Manager choose a model." : {
+    "This agent does not let Polyvibe choose a model." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لا يسمح هذا الوكيل لـ Vibe Manager باختيار نموذج."
+            "value" : "لا يسمح هذا الوكيل لـ Polyvibe باختيار نموذج."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser Agent lässt Vibe Manager kein Modell auswählen."
+            "value" : "Dieser Agent lässt Polyvibe kein Modell auswählen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este agente no permite que Vibe Manager elija un modelo."
+            "value" : "Este agente no permite que Polyvibe elija un modelo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cet agent ne permet pas à Vibe Manager de choisir un modèle."
+            "value" : "Cet agent ne permet pas à Polyvibe de choisir un modèle."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "यह एजेंट Vibe Manager को मॉडल चुनने नहीं देता।"
+            "value" : "यह एजेंट Polyvibe को मॉडल चुनने नहीं देता।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questo agente non consente a Vibe Manager di scegliere un modello."
+            "value" : "Questo agente non consente a Polyvibe di scegliere un modello."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このエージェントではVibe Managerがモデルを選択できません。"
+            "value" : "このエージェントではPolyvibeがモデルを選択できません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 에이전트는 Vibe Manager가 모델을 선택하도록 허용하지 않습니다."
+            "value" : "이 에이전트는 Polyvibe가 모델을 선택하도록 허용하지 않습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze agent laat Vibe Manager geen model kiezen."
+            "value" : "Deze agent laat Polyvibe geen model kiezen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ten agent nie pozwala Vibe Manager wybrać modelu."
+            "value" : "Ten agent nie pozwala Polyvibe wybrać modelu."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Este agente não permite que o Vibe Manager escolha um modelo."
+            "value" : "Este agente não permite que o Polyvibe escolha um modelo."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Этот агент не позволяет Vibe Manager выбрать модель."
+            "value" : "Этот агент не позволяет Polyvibe выбрать модель."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu ajan, Vibe Manager’ın model seçmesine izin vermiyor."
+            "value" : "Bu ajan, Polyvibe’ın model seçmesine izin vermiyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Цей агент не дозволяє Vibe Manager вибирати модель."
+            "value" : "Цей агент не дозволяє Polyvibe вибирати модель."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此智能体不允许 Vibe Manager 选择模型。"
+            "value" : "此智能体不允许 Polyvibe 选择模型。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此代理程式不允許 Vibe Manager 選擇模型。"
+            "value" : "此代理程式不允許 Polyvibe 選擇模型。"
           }
         }
       }
@@ -25208,7 +25208,7 @@
         }
       }
     },
-    "Vibe Manager already runs %lld terminals, the most it runs at once." : {
+    "Polyvibe already runs %lld terminals, the most it runs at once." : {
       "localizations" : {
         "ar" : {
           "variations" : {
@@ -25216,37 +25216,37 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفيات، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفيات، وهو الحد الأقصى في وقت واحد."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
                 }
               },
               "two" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفيتين، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفيتين، وهو الحد الأقصى في وقت واحد."
                 }
               },
               "zero" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "يشغّل Vibe Manager بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
+                  "value" : "يشغّل Polyvibe بالفعل %lld طرفية، وهو الحد الأقصى في وقت واحد."
                 }
               }
             }
@@ -25258,13 +25258,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager führt bereits %lld Terminal aus, das gleichzeitige Maximum."
+                  "value" : "Polyvibe führt bereits %lld Terminal aus, das gleichzeitige Maximum."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager führt bereits %lld Terminals aus, das gleichzeitige Maximum."
+                  "value" : "Polyvibe führt bereits %lld Terminals aus, das gleichzeitige Maximum."
                 }
               }
             }
@@ -25276,13 +25276,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager already runs %lld terminal, the most it runs at once."
+                  "value" : "Polyvibe already runs %lld terminal, the most it runs at once."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager already runs %lld terminals, the most it runs at once."
+                  "value" : "Polyvibe already runs %lld terminals, the most it runs at once."
                 }
               }
             }
@@ -25294,19 +25294,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager ya ejecuta %lld terminales, el máximo simultáneo."
+                  "value" : "Polyvibe ya ejecuta %lld terminales, el máximo simultáneo."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager ya ejecuta %lld terminal, el máximo simultáneo."
+                  "value" : "Polyvibe ya ejecuta %lld terminal, el máximo simultáneo."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager ya ejecuta %lld terminales, el máximo simultáneo."
+                  "value" : "Polyvibe ya ejecuta %lld terminales, el máximo simultáneo."
                 }
               }
             }
@@ -25318,19 +25318,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager exécute déjà %lld terminaux, le maximum simultané."
+                  "value" : "Polyvibe exécute déjà %lld terminaux, le maximum simultané."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager exécute déjà %lld terminal, le maximum simultané."
+                  "value" : "Polyvibe exécute déjà %lld terminal, le maximum simultané."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager exécute déjà %lld terminaux, le maximum simultané."
+                  "value" : "Polyvibe exécute déjà %lld terminaux, le maximum simultané."
                 }
               }
             }
@@ -25342,13 +25342,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager पहले से %lld टर्मिनल चला रहा है, जो एक साथ चलाने की अधिकतम सीमा है।"
+                  "value" : "Polyvibe पहले से %lld टर्मिनल चला रहा है, जो एक साथ चलाने की अधिकतम सीमा है।"
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager पहले से %lld टर्मिनल चला रहा है, जो एक साथ चलाने की अधिकतम सीमा है।"
+                  "value" : "Polyvibe पहले से %lld टर्मिनल चला रहा है, जो एक साथ चलाने की अधिकतम सीमा है।"
                 }
               }
             }
@@ -25360,19 +25360,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager esegue già %lld terminali, il massimo consentito contemporaneamente."
+                  "value" : "Polyvibe esegue già %lld terminali, il massimo consentito contemporaneamente."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager esegue già %lld terminale, il massimo consentito contemporaneamente."
+                  "value" : "Polyvibe esegue già %lld terminale, il massimo consentito contemporaneamente."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager esegue già %lld terminali, il massimo consentito contemporaneamente."
+                  "value" : "Polyvibe esegue già %lld terminali, il massimo consentito contemporaneamente."
                 }
               }
             }
@@ -25384,7 +25384,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Managerはすでに同時実行の上限である%lld個のターミナルを実行しています。"
+                  "value" : "Polyvibeはすでに同時実行の上限である%lld個のターミナルを実行しています。"
                 }
               }
             }
@@ -25396,7 +25396,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager가 이미 동시 실행 한도인 터미널 %lld개를 실행 중입니다."
+                  "value" : "Polyvibe가 이미 동시 실행 한도인 터미널 %lld개를 실행 중입니다."
                 }
               }
             }
@@ -25408,13 +25408,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager draait al %lld terminal, het maximum tegelijk."
+                  "value" : "Polyvibe draait al %lld terminal, het maximum tegelijk."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager draait al %lld terminals, het maximum tegelijk."
+                  "value" : "Polyvibe draait al %lld terminals, het maximum tegelijk."
                 }
               }
             }
@@ -25426,25 +25426,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager uruchomił już %lld terminale – maksymalną liczbę naraz."
+                  "value" : "Polyvibe uruchomił już %lld terminale – maksymalną liczbę naraz."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager uruchomił już %lld terminali – maksymalną liczbę naraz."
+                  "value" : "Polyvibe uruchomił już %lld terminali – maksymalną liczbę naraz."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager uruchomił już %lld terminal – maksymalną liczbę naraz."
+                  "value" : "Polyvibe uruchomił już %lld terminal – maksymalną liczbę naraz."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager uruchomił już %lld terminala – maksymalną liczbę naraz."
+                  "value" : "Polyvibe uruchomił już %lld terminala – maksymalną liczbę naraz."
                 }
               }
             }
@@ -25456,19 +25456,19 @@
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "O Vibe Manager já executa %lld terminais, o máximo simultâneo."
+                  "value" : "O Polyvibe já executa %lld terminais, o máximo simultâneo."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "O Vibe Manager já executa %lld terminal, o máximo simultâneo."
+                  "value" : "O Polyvibe já executa %lld terminal, o máximo simultâneo."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "O Vibe Manager já executa %lld terminais, o máximo simultâneo."
+                  "value" : "O Polyvibe já executa %lld terminais, o máximo simultâneo."
                 }
               }
             }
@@ -25480,25 +25480,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустил %lld терминала — максимум одновременно."
+                  "value" : "Polyvibe уже запустил %lld терминала — максимум одновременно."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустил %lld терминалов — максимум одновременно."
+                  "value" : "Polyvibe уже запустил %lld терминалов — максимум одновременно."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустил %lld терминал — максимум одновременно."
+                  "value" : "Polyvibe уже запустил %lld терминал — максимум одновременно."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустил %lld терминала — максимум одновременно."
+                  "value" : "Polyvibe уже запустил %lld терминала — максимум одновременно."
                 }
               }
             }
@@ -25510,13 +25510,13 @@
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager zaten %lld terminal çalıştırıyor; bu, aynı anda çalıştırabileceği en yüksek sayı."
+                  "value" : "Polyvibe zaten %lld terminal çalıştırıyor; bu, aynı anda çalıştırabileceği en yüksek sayı."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager zaten %lld terminal çalıştırıyor; bu, aynı anda çalıştırabileceği en yüksek sayı."
+                  "value" : "Polyvibe zaten %lld terminal çalıştırıyor; bu, aynı anda çalıştırabileceği en yüksek sayı."
                 }
               }
             }
@@ -25528,25 +25528,25 @@
               "few" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустив %lld термінали — максимум одночасно."
+                  "value" : "Polyvibe уже запустив %lld термінали — максимум одночасно."
                 }
               },
               "many" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустив %lld терміналів — максимум одночасно."
+                  "value" : "Polyvibe уже запустив %lld терміналів — максимум одночасно."
                 }
               },
               "one" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустив %lld термінал — максимум одночасно."
+                  "value" : "Polyvibe уже запустив %lld термінал — максимум одночасно."
                 }
               },
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager уже запустив %lld термінала — максимум одночасно."
+                  "value" : "Polyvibe уже запустив %lld термінала — максимум одночасно."
                 }
               }
             }
@@ -25558,7 +25558,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager 已在运行 %lld 个终端，达到同时运行的上限。"
+                  "value" : "Polyvibe 已在运行 %lld 个终端，达到同时运行的上限。"
                 }
               }
             }
@@ -25570,7 +25570,7 @@
               "other" : {
                 "stringUnit" : {
                   "state" : "translated",
-                  "value" : "Vibe Manager 已在執行 %lld 個終端機，已達同時執行的上限。"
+                  "value" : "Polyvibe 已在執行 %lld 個終端機，已達同時執行的上限。"
                 }
               }
             }
@@ -25578,102 +25578,102 @@
         }
       }
     },
-    "Vibe Manager is not allowed to run %@." : {
+    "Polyvibe is not allowed to run %@." : {
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "غير مسموح لـ Vibe Manager بتشغيل %@."
+            "value" : "غير مسموح لـ Polyvibe بتشغيل %@."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager darf %@ nicht ausführen."
+            "value" : "Polyvibe darf %@ nicht ausführen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager no tiene permiso para ejecutar %@."
+            "value" : "Polyvibe no tiene permiso para ejecutar %@."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager n’est pas autorisé à exécuter %@."
+            "value" : "Polyvibe n’est pas autorisé à exécuter %@."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager को %@ चलाने की अनुमति नहीं है।"
+            "value" : "Polyvibe को %@ चलाने की अनुमति नहीं है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager non è autorizzato a eseguire %@."
+            "value" : "Polyvibe non è autorizzato a eseguire %@."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Managerには%@を実行する権限がありません。"
+            "value" : "Polyvibeには%@を実行する権限がありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager에 %@을(를) 실행할 권한이 없습니다."
+            "value" : "Polyvibe에 %@을(를) 실행할 권한이 없습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager mag %@ niet uitvoeren."
+            "value" : "Polyvibe mag %@ niet uitvoeren."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager nie ma pozwolenia na uruchomienie %@."
+            "value" : "Polyvibe nie ma pozwolenia na uruchomienie %@."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager não tem permissão para executar %@."
+            "value" : "O Polyvibe não tem permissão para executar %@."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager не разрешено запускать %@."
+            "value" : "Polyvibe не разрешено запускать %@."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager’ın %@ dosyasını çalıştırmasına izin verilmiyor."
+            "value" : "Polyvibe’ın %@ dosyasını çalıştırmasına izin verilmiyor."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager не має дозволу на запуск %@."
+            "value" : "Polyvibe не має дозволу на запуск %@."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 不被允许运行 %@。"
+            "value" : "Polyvibe 不被允许运行 %@。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager 不被允許執行 %@。"
+            "value" : "Polyvibe 不被允許執行 %@。"
           }
         }
       }

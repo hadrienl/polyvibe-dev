@@ -41,7 +41,7 @@ expect() {
 expect accepted "a complete catalog" "$(catalog complete "{
   \"Close\": {\"localizations\": {\"fr\": $translated}},
   \"%lld files\": {\"localizations\": {\"en\": $plural_en, \"fr\": $plural_fr}},
-  \"Vibe Manager\": {\"shouldTranslate\": false}
+  \"Polyvibe\": {\"shouldTranslate\": false}
 }")"
 expect refused "a string without French" "$(catalog missing '{"Close": {}}')"
 expect refused "a French string left empty" "$(catalog empty '{

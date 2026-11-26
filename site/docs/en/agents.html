@@ -2,37 +2,47 @@
 <p class="lede">Change agent or model without losing the work, put a closed session back to work, and quit without interrupting an agent in the middle of its turn.</p>
 
 <h2 id="supported">Supported agents</h2>
-<p>Vibe Manager runs <strong>Claude Code</strong> and <strong>Codex CLI</strong>, each in its own terminal interface, with your account and your configuration. It passes no flag that lowers the permissions you set for your CLI, and reads no credential of their accounts. The only key it knows is that of an <a href="#endpoints">endpoint</a> you declared yourself. What an agent may do inside a session is its own configuration: Vibe Manager neither widens nor narrows it.</p>
+<p>Polyvibe runs <strong>Claude Code</strong>, <strong>Codex CLI</strong> and <strong>Antigravity</strong> (<code>agy</code>), each in its own terminal interface, with your account and your configuration. It passes no flag that widens what you allowed your CLI, apart from the <a href="#approval">automatic approval mode</a> if you choose it, and reads no credential of their accounts. The only key it knows is that of an <a href="#endpoints">endpoint</a> you declared yourself. Apart from the approval mode of Codex and Antigravity, what an agent may do inside a session is its own configuration: Polyvibe neither widens nor narrows it.</p>
 <p>Two additions are made at launch, for that launch only: the agent's <strong>hooks</strong> report its activity — working, waiting, finished — once you have approved them (<a href="settings.html#agents">Settings › Agents</a>), and its <strong>tool server</strong> <code>vibe-browser</code> gives it the <a href="terminals.html#agent-browser">web view</a>.</p>
+<p>Antigravity's tools show in the conversation as those of the other two do: a command with its output and exit code, a file read, an edit with its diff, a web search, an MCP tool, a question with its answers, a sub-agent with its own transcript.</p>
+
+<h3 id="approval">Approval mode</h3>
+<p>Codex and Antigravity each have an <strong>Approval mode</strong> in <a href="settings.html#agents">Settings › Agents</a>: <strong>Manual</strong>, the default, makes the agent ask you: Codex runs with its <code>on-request</code> policy and you as the reviewer, Antigravity in request-review. It replaces the approval setting of the CLI's own configuration. <strong>Automatic</strong> lets the agent approve its own actions, inside its sandbox, instead of stopping to ask: for Codex it is <em>Approve for me</em>; for Antigravity, its auto mode in the terminal sandbox, which needs a personal Antigravity account. Codex keeps a choice per account and per endpoint it drives; an endpoint driven by Antigravity always runs in Manual. The choice is read again at every launch and restart: a running session keeps the mode it started with.</p>
 
 <h2 id="accounts">Several accounts</h2>
-<p>The same agent can run on several accounts: your personal subscription and your company's, for instance. An account is Claude Code or Codex with its own configuration folder.</p>
+<p>The same agent can run on several accounts: your personal subscription and your company's, for instance. An account is Claude Code or Codex with its own configuration folder. Antigravity has no additional account: it keeps a single sign-in in the keychain, whatever its folder.</p>
 <ol>
   <li><strong>Settings › Add an Account…</strong>, below the list of agents.</li>
   <li>Choose the agent, give the account a name and set its <strong>Configuration Folder</strong>. The folder is created if needed.</li>
   <li>Sign in from the account's page. It then shows among the agents, when you create a session as in <a href="#switch">Switch Agent</a>.</li>
 </ol>
 <div class="callout"><p>A new account starts from nothing: it has neither the MCP servers, the plugins nor the skills of the agent's own account. Add them to its folder.</p></div>
-<p>Each account's page says which account it is signed in to, organisation included. Vibe Manager tells you when two agents are signed in to the same account, or when an agent signed in again to an account other than its own: <strong>Sign In Again</strong> or <strong>Keep This Account</strong>. Deleting an account removes it from the list; its folder and its conversations stay on the disk.</p>
+<p>Each account's page says which account it is signed in to, organisation included. Polyvibe tells you when two agents are signed in to the same account, or when an agent signed in again to an account other than its own: <strong>Sign In Again</strong> or <strong>Keep This Account</strong>. Deleting an account removes it from the list; its folder and its conversations stay on the disk.</p>
 
 <h2 id="endpoints">Agents on an endpoint</h2>
-<p>An <strong>endpoint</strong> is a model server reachable over HTTP: on this Mac (Ollama, LM Studio) or in the cloud (OpenRouter, your company's gateway). Its models appear beside Claude Code and Codex when you create a session, and the session runs Claude Code or Codex against them: same terminal, same conversation view, same requests, same resume after a relaunch.</p>
+<p>An <strong>endpoint</strong> is a model server reachable over HTTP: on this Mac (Ollama, LM Studio) or in the cloud (OpenRouter, your company's gateway). Its models appear beside the agents when you create a session, and the session runs Claude Code, Codex or Antigravity against them: same terminal, same conversation view, same requests, same resume after a relaunch.</p>
 <ol>
   <li><strong>Settings › Endpoints › Add an Endpoint…</strong>, then a starting point: Ollama, LM Studio, OpenRouter, or an <strong>Other Server</strong>. A known server fills in the address, the protocol and the key it expects.</li>
   <li><strong>Key</strong>: typed once, written to the login keychain (one item per endpoint, never synchronised) and never shown again. Deleting the endpoint deletes it.</li>
   <li><strong>Models</strong>: <strong>Read from the Endpoint</strong> lists what the server offers. A model that cannot call tools is kept but not offered: without tools, an agent can read no file. Give each model its real context window.</li>
-  <li><strong>Driven by</strong>: <strong>Automatic</strong> picks Claude Code or Codex from the server's protocol; you can force either one.</li>
+  <li><strong>Driven by</strong>: <strong>Automatic</strong> picks Claude Code or Codex from the server's protocol; you can force Claude Code, Codex or <strong>Antigravity</strong>. Antigravity reaches the endpoint through Polyvibe's own gateway, without a Google sign-in, and always in Manual mode.</li>
   <li><strong>Test</strong> sends a short request asking the model to call a tool, and says what worked: reachable, authentication, streamed answer and speed, tool call, answer after the tool, tokens reported. An endpoint whose last test failed is not offered for new sessions.</li>
 </ol>
-<p>A server that follows no standard is described with the <strong>Custom</strong> protocol, in a JSON document: <strong>Insert the Example</strong> gives one to start from. The format is detailed in <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>A server that follows no standard is described with the <strong>Custom</strong> protocol, in a JSON document: <strong>Insert the Example</strong> gives one to start from. The format is detailed in <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="switch">Switch agent or model</h2>
 <p>The agent's button in the status bar, under the session, names the agent and model, as in “Claude Code · Opus 5.5”. Its menu shows the agent under its logo, with its state, the history of its switches as a submenu, and <strong>Switch To</strong>, with the models of each agent under its logo: choose one to open the switch on it, or <strong>Other Settings…</strong>. <strong>Session › Switch Agent…</strong> (<kbd>⌃⌘M</kbd>) opens the switch too.</p>
-<vm-shot name="switch-agent" class="center" alt="The Switch Agent sheet: the current agent, the list of agents to switch to with a model picker, and the editable summary handed to the new agent.">The new agent receives a summary you can read and edit first.</vm-shot>
-<ul>
-  <li><strong>Another model of the same agent</strong> resumes the same conversation and sends nothing.</li>
-  <li><strong>Another agent</strong> starts a new conversation, handed a summary of the session: who worked in it, where the work stands on each branch and worktree, its notes and the prompt it was created with. The summary is shown and editable before it is sent, and never presented as the conversation itself.</li>
-</ul>
+<p>In the sheet, choose the agent and its model, then, in the <strong>Conversation</strong> menu, what the new one starts from.</p>
+<vm-shot name="switch-agent" class="center" alt="The Switch Agent sheet: the current agent, Claude Code, Codex and Antigravity to switch to, the model, and the Conversation menu.">Change agent or model, and choose what the new one is given.</vm-shot>
+<dl>
+  <dt>Continue the conversation</dt>
+  <dd>The agent resumes the same conversation with its own resume, and is sent nothing. Offered when the agent stays the same, and chosen by default for a change of model.</dd>
+  <dt>New conversation with history</dt>
+  <dd>A new conversation, handed copies of the transcripts of every agent the session had — previous accounts and endpoints, sub-agents included — that it reads as it needs. The copies are made once the agent has stopped, so they hold its last turn, and stay on this Mac, readable by you alone, until you delete them: they may hold sensitive information.</dd>
+  <dt>New conversation with summary</dt>
+  <dd>A new conversation, handed a summary of the session: who worked in it, where the work stands on each branch and worktree, its notes and the prompt it was created with. The summary is shown and editable before it is sent, and never presented as the conversation itself.</dd>
+</dl>
+<p>History or summary start afresh, even with the same agent. Your choice and your edits to the summary are kept while you try other models.</p>
 <p>Nothing is stopped until you confirm with <strong>Stop and Switch</strong> (<kbd>⌘Return</kbd>). If the new agent fails to start, the session goes back to its previous agent, resumable as before. Every switch is kept in the session's history, and the conversation view keeps reading the transcripts of every agent the session had.</p>
 
 <h2 id="restart">Restart a closed session</h2>
@@ -45,7 +55,7 @@
 <p>A session created with <strong>Add to To Do</strong> has never run: the same command reads <strong>Start Session</strong>.</p>
 
 <h2 id="quit">Quit without stopping the agents</h2>
-<p>Every terminal runs in a <strong>terminal host</strong>, a background process with no window and no Dock icon. So when agents are working and you quit, Vibe Manager asks:</p>
+<p>Every terminal runs in a <strong>terminal host</strong>, a background process with no window and no Dock icon. So when agents are working and you quit, Polyvibe asks:</p>
 <dl>
   <dt>Keep Running</dt>
   <dd>The agents carry on with their turn. At the next launch each one is back on screen as it was, nothing relaunched, nothing sent; one that finished meanwhile shows its last output. Side terminals keep running too.</dd>

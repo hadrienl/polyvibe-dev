@@ -12,7 +12,7 @@ enum AlertSoundPresentation {
       String(
         localized: LocalizedStringResource(
           "System Default", bundle: .module,
-          comment: "The alert sound chosen in System Settings, as an alert sound of Vibe Manager."))
+          comment: "The alert sound chosen in System Settings, as an alert sound of Polyvibe."))
     case .none:
       String(
         localized: LocalizedStringResource(
@@ -70,7 +70,7 @@ enum AlertSoundPresentation {
     case .bundled:
       return String(
         localized: LocalizedStringResource(
-          "Shipped with Vibe Manager", bundle: .module,
+          "Shipped with Polyvibe", bundle: .module,
           comment: "Where an alert sound comes from."))
     case .macOS:
       return String(

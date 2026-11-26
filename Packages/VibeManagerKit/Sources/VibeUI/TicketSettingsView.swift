@@ -447,7 +447,7 @@ struct TicketSettingsView: View {
         imported: decoded.resolvers.count, skipped: decoded.skipped)
     } catch {
       importReport = String(
-        localized: "This file is not a file of ticket resolvers that Vibe Manager can read.",
+        localized: "This file is not a file of ticket resolvers that Polyvibe can read.",
         bundle: .module)
     }
   }

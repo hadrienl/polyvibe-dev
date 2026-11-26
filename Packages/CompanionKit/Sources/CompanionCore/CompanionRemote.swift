@@ -309,7 +309,7 @@ public struct RemoteEntry: Codable, Hashable, Sendable, Identifiable {
   public var id: String
   public var kind: Kind
   public var date: Date?
-  /// For a `user` entry Vibe Manager or a coordinator wrote, who did and what it says: the phone
+  /// For a `user` entry Polyvibe or a coordinator wrote, who did and what it says: the phone
   /// folds it under its author. A phone that does not read it shows the text as the user's.
   public var relayed: RemoteRelayed?
 
@@ -321,11 +321,11 @@ public struct RemoteEntry: Codable, Hashable, Sendable, Identifiable {
   }
 }
 
-/// A message a session was sent by Vibe Manager or by its coordinator, as the Mac folds it.
+/// A message a session was sent by Polyvibe or by its coordinator, as the Mac folds it.
 public struct RemoteRelayed: Codable, Hashable, Sendable {
-  /// The coordinator's name; `nil` for Vibe Manager.
+  /// The coordinator's name; `nil` for Polyvibe.
   public var coordinator: String?
-  /// The sessions Vibe Manager's news is about.
+  /// The sessions Polyvibe's news is about.
   public var children: [String]
   /// What it says, in Markdown, in English as the agent read it.
   public var body: String

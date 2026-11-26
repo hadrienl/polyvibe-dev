@@ -27,7 +27,7 @@ enum SingleInstance {
     let alert = NSAlert()
     alert.alertStyle = .warning
     alert.messageText = String(
-      localized: "Vibe Manager is already running with this data.",
+      localized: "Polyvibe is already running with this data.",
       comment: "Title of the alert shown when a second copy is launched on the same data.")
     alert.informativeText = String(
       localized:

@@ -120,7 +120,7 @@ public struct CoordinationInbox: Sendable {
     pending[coordinator] = nil
   }
 
-  /// The message a coordinator is sent: marked as Vibe Manager's, one line per event.
+  /// The message a coordinator is sent: marked as Polyvibe's, one line per event.
   public static func message(for events: [CoordinationEvent]) -> String {
     let shown = events.prefix(shownLimit)
     var lines = shown.map { "- " + $0.line }

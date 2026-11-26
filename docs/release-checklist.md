@@ -81,19 +81,19 @@ GitHub.
 - [ ] **Three real sessions** — Claude Code and Codex, one of them on a real task — for fifteen
       minutes: output keeps up, typing never lags, the Git inspector follows the changes, notes are
       kept.
-- [ ] **Memory**, during those fifteen minutes: `footprint "Vibe Manager"` under 400 MB for the
+- [ ] **Memory**, during those fifteen minutes: `footprint "Polyvibe"` under 400 MB for the
       application and under 60 MB for the terminal host
-      (`footprint $(pgrep -f -- '--terminal-host')`); `leaks "Vibe Manager"` and `leaks` on the
+      (`footprint $(pgrep -f -- '--terminal-host')`); `leaks "Polyvibe"` and `leaks` on the
       host report nothing the application owns. Idle CPU with the application in the background
       under 1 %, host included (Activity Monitor, 60 s). The transcript probes of Claude Code and
       Codex poll every 500 ms: if idle CPU is over budget with them, they move to file events
       before the release.
 - [ ] **Update by Sparkle from the version before**, with `Scripts/update-check.sh` (two builds of
       this commit signed with the Developer ID, a feed of its own on this Mac, a copy of its own):
-      with N running a session, Vibe Manager → Check for Updates… offers N+1, Install and Relaunch
+      with N running a session, Polyvibe → Check for Updates… offers N+1, Install and Relaunch
       asks the question, Keep Running and Install relaunches N+1, and the session is taken back,
       running, its history on screen. Full Disk Access is still granted, and the TCC log below
-      still attributes the agent's access to Vibe Manager. The script also shows an archive with a
+      still attributes the agent's access to Polyvibe. The script also shows an archive with a
       wrong signature refused, and a release candidate offered only on the Unstable channel.
 - [ ] **What TCC attributes to the terminal host** (ADR 0017 left this to measure). Grant Full
       Disk Access, start an agent in a session, quit with Keep Running, then have the agent read
@@ -103,8 +103,8 @@ GitHub.
       log stream --predicate 'subsystem == "com.apple.TCC"' --info
       ```
 
-      The access must be attributed to Vibe Manager, and granted. Revoke Full Disk Access and
-      repeat: it must be refused, attributed to Vibe Manager. **Blocking**: if the chain names
+      The access must be attributed to Polyvibe, and granted. Revoke Full Disk Access and
+      repeat: it must be refused, attributed to Polyvibe. **Blocking**: if the chain names
       anything else, the release waits for the fallback of ADR 0017 (a minimal helper `.app` in
       `Contents/Library/`). Whatever the outcome, the quit setting stays **Ask** by default: Keep
       Running is never chosen for the user.
@@ -118,8 +118,11 @@ GitHub.
 - [ ] The draft's notes: what changed, then `<!-- release-checklist -->`, then this list filled in
       and the SHA-256.
 - [ ] Publish the draft.
-- [ ] The Appcast workflow went green, and `https://hadrienl.github.io/vibe-manager/appcast.xml`
+- [ ] The Appcast workflow went green, and `https://polyvibe.dev/appcast.xml`
       lists the version — without a channel for a final version, on `unstable` for a release
       candidate — and no draft.
-- [ ] A copy of the version before, on the right channel, offers this one (Vibe Manager → Check
+- [ ] `https://hadrienl.github.io/vibe-manager/appcast.xml`, served by `hadrienl/hadrienl.github.io`,
+      lists the version too: every copy built before the rename to Polyvibe still reads that
+      address (ADR 0046).
+- [ ] A copy of the version before, on the right channel, offers this one (Polyvibe → Check
       for Updates…).

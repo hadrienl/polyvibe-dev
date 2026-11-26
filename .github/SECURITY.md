@@ -1,19 +1,19 @@
 # Security policy
 
-Vibe Manager launches coding agents and shells, reads their transcripts and holds access to the
+Polyvibe launches coding agents and shells, reads their transcripts and holds access to the
 folders you give it. A flaw in any of that matters, so please report it privately first.
 
 ## Supported versions
 
 Only the latest release receives security fixes. The application updates itself through Sparkle;
-check **Vibe Manager › Check for Updates…** before reporting.
+check **Polyvibe › Check for Updates…** before reporting.
 
 ## Reporting a vulnerability
 
 Do not open a public issue. Use one of:
 
 - GitHub's private vulnerability reporting:
-  [Report a vulnerability](https://github.com/hadrienl/vibe-manager/security/advisories/new)
+  [Report a vulnerability](https://github.com/hadrienl/polyvibe-dev/security/advisories/new)
 - Email: [hadrien@lanneau.me](mailto:hadrien@lanneau.me)
 
 Include the version, the macOS version, what an attacker controls, what they gain, and the steps to

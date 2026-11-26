@@ -228,13 +228,13 @@ extension SessionContextBriefBuilder {
 
   static let handoverPreamble = """
     You are taking over a session another coding agent was working in. Its conversation is not \
-    available to you: nothing below comes from it. This is what Vibe Manager recorded about the \
+    available to you: nothing below comes from it. This is what Polyvibe recorded about the \
     session.
     """
 
   static let sameAgentPreamble = """
     You are taking over a session an earlier conversation was working in. That conversation is \
-    not available to you: nothing below comes from it. This is what Vibe Manager recorded about \
+    not available to you: nothing below comes from it. This is what Polyvibe recorded about \
     the session.
     """
 

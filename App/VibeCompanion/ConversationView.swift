@@ -461,8 +461,8 @@ private struct EntryView: View {
   }
 }
 
-/// A message Vibe Manager or the session's coordinator sent it, folded under who wrote it — and,
-/// for Vibe Manager's news, the sessions it is about —, as on the Mac. Unfolded, what the agent
+/// A message Polyvibe or the session's coordinator sent it, folded under who wrote it — and,
+/// for Polyvibe's news, the sessions it is about —, as on the Mac. Unfolded, what the agent
 /// read, in English as it read it.
 private struct RelayedRow: View {
   let relayed: RemoteRelayed
@@ -496,7 +496,7 @@ private struct RelayedRow: View {
         HStack(alignment: .top, spacing: 10) {
           Capsule().fill(palette.secondaryText.opacity(0.3)).frame(width: 2)
           VStack(alignment: .leading, spacing: 10) {
-            // Vibe Manager's news is escaped prose; a coordinator's Markdown is kept as written.
+            // Polyvibe's news is escaped prose; a coordinator's Markdown is kept as written.
             let body = relayed.coordinator == nil ? Self.bulleted(relayed.body) : relayed.body
             let segments = RemoteMarkdown.segments(body)
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
@@ -518,10 +518,10 @@ private struct RelayedRow: View {
     }
   }
 
-  /// Who wrote it, and the sessions Vibe Manager's news is about.
+  /// Who wrote it, and the sessions Polyvibe's news is about.
   private var summary: Text {
     guard let coordinator = relayed.coordinator else {
-      var line = AttributedString("Vibe Manager")
+      var line = AttributedString("Polyvibe")
       line.inlinePresentationIntent = .stronglyEmphasized
       if !relayed.children.isEmpty {
         line += AttributedString(" · " + relayed.children.joined(separator: ", "))

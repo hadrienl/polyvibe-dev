@@ -17,11 +17,11 @@ public final class InMemoryWorktreeLocationPreferences: WorktreeLocationPreferen
 }
 
 /// What an agent is told of where to create its worktrees (#432), on top of the instructions it is
-/// already given. Vibe Manager creates nothing in git: the agent does, at this path.
+/// already given. Polyvibe creates nothing in git: the agent does, at this path.
 public enum WorktreeInstructions {
   /// `nil` when the path is empty: the agents choose where.
   ///
-  /// The variables Vibe Manager knows for this session are resolved; the branch and the ticket are
+  /// The variables Polyvibe knows for this session are resolved; the branch and the ticket are
   /// the agent's to fill, as it names the branch. A coordinator creates worktrees for children of
   /// other repositories and tickets: only the agent and the date are resolved for it.
   public static func text(

@@ -1,5 +1,5 @@
 <h1>Réglages</h1>
-<p class="lede">Chaque page de <strong>Vibe Manager › Réglages…</strong> (<kbd>⌘,</kbd>), et le rôle de chaque réglage. La barre latérale les regroupe comme Réglages Système ; la fenêtre s’élargit d’elle-même pour les pages qui demandent de la place, comme les gabarits.</p>
+<p class="lede">Chaque page de <strong>Polyvibe › Réglages…</strong> (<kbd>⌘,</kbd>), et le rôle de chaque réglage. La barre latérale les regroupe comme Réglages Système ; la fenêtre s’élargit d’elle-même pour les pages qui demandent de la place, comme les gabarits.</p>
 
 <vm-shot name="settings-general" alt="Réglages, page Général : la barre latérale des pages, à côté les sessions et les terminaux annexes.">La page Général, et la barre latérale de toutes les pages.</vm-shot>
 
@@ -22,6 +22,7 @@
   <dt>Thème</dt><dd>Voir <a href="personalize.html#themes">Thèmes et avatars</a>.</dd>
   <dt>Affichage</dt><dd>Couleur d’accent, police des messages, police du code, taille du texte (de Petit à Très grand, aussi celle des terminaux, et que <kbd>⌘+</kbd> <kbd>⌘−</kbd> <kbd>⌘0</kbd> changent depuis n’importe où), densité (Compacte ou Confortable), vos messages en Bulles ou en Lignes.</dd>
   <dt>Détails techniques</dt><dd>Regrouper les appels consécutifs de même nature ; déplier un appel en échec ; déplier les modifications de fichiers ; afficher les rangées de raisonnement ; retour à la ligne dans les blocs de code ; numéros de ligne dans les diffs.</dd>
+  <dt>Afficher la vue d’ensemble à côté de la conversation</dt><dd>Activé par défaut : la conversation dessinée en petit à la place de la barre de défilement, avec ses signets. Voir <a href="conversation.html#bookmarks">Signets et vue d’ensemble</a>.</dd>
 </dl>
 
 <h2 id="badges">Badges</h2>
@@ -34,7 +35,7 @@
   <dt>Notifications</dt>
   <dd><strong>Me notifier des demandes</strong>, en montrant <strong>Le type de demande</strong> ou <strong>La commande ou la question</strong>. Indisponible tant que le panneau flottant est actif, puisqu’il les signale déjà.</dd>
   <dt id="sound">Son</dt>
-  <dd>Le son joué quand une session que vous ne regardez pas a besoin de vous, avec ▶ pour l’écouter. <strong>Gérer les sons…</strong> ouvre la page <strong>Sons</strong> : décrivez un son à un agent pour qu’il le compose, ou importez un fichier audio de 30 secondes au plus.</dd>
+  <dd>Le son joué quand une session que vous ne regardez pas a besoin de vous, avec ▶ pour l’écouter. <strong>Gérer les sons…</strong> ouvre la page <strong>Sons</strong> : décrivez un son à un agent pour qu’il le compose, ou importez un fichier audio de 30 secondes au plus. <strong>Accompagner le son d’un rythme sur le trackpad</strong>, activé par défaut, tape le rythme du son sur le trackpad pendant qu’il joue, ressenti avec un doigt posé dessus ; il est grisé quand le son est Aucun.</dd>
   <dt>Palette</dt>
   <dd>Afficher le nombre de demandes sur l’icône du Dock ; déplier la palette à l’arrivée d’une demande.</dd>
   <dt>Gérer les avatars…</dt>
@@ -42,15 +43,17 @@
 </dl>
 
 <h2 id="agents">Agents</h2>
-<p>Une page par agent : Claude Code, Codex. Le point de la barre latérale dit s’il est prêt (vert), utilisable avec quelque chose à régler, trop ancien ou pas connecté (orange), ou introuvable (rouge). La page montre où son outil en ligne de commande a été trouvé et sa version ; <strong>Relancer la détection</strong> le cherche à nouveau, après une installation ou une mise à jour.</p>
+<p>Une page par agent : Claude Code, Codex, Antigravity. Le point de la barre latérale dit s’il est prêt (vert), utilisable avec quelque chose à régler, trop ancien ou pas connecté (orange), ou introuvable (rouge). La page montre où son outil en ligne de commande a été trouvé et sa version ; <strong>Relancer la détection</strong> le cherche à nouveau, après une installation ou une mise à jour.</p>
 <dl>
   <dt>Suivre l’activité de …</dt>
-  <dd>Pour un agent qui fait approuver ses hooks, comme Codex. Activé, les hooks signalent quand il travaille, demande ou termine, ce dont la barre latérale et les demandes ont besoin. La première fois, une feuille montre les commandes qu’exécutent les hooks, et vous les approuvez une fois pour toutes. Claude Code n’a pas ce réglage : ses hooks n’ont pas à être approuvés.</dd>
+  <dd>Pour un agent qui fait approuver ses hooks, comme Codex. Activé, les hooks signalent quand il travaille, demande ou termine, ce dont la barre latérale et les demandes ont besoin. La première fois, une feuille montre les commandes qu’exécutent les hooks, et vous les approuvez une fois pour toutes. Claude Code n’a pas ce réglage : ses hooks n’ont pas à être approuvés.</dd>
+  <dt>Mode d’autorisation</dt>
+  <dd>Codex, ses comptes et les endpoints qu’il pilote, et Antigravity : <strong>Manuel</strong> ou <strong>Automatique</strong>. Voir <a href="agents.html#approval">Mode d’autorisation</a>.</dd>
 </dl>
 <p><strong>Ajouter un compte…</strong>, sous les agents, fait tourner Claude Code ou Codex sur un autre compte, avec son propre dossier de configuration. La page d’un compte le renomme, change son dossier ou le supprime. Voir <a href="agents.html#accounts">Plusieurs comptes</a>.</p>
 
 <h2 id="endpoints">Endpoints</h2>
-<p>Chaque serveur de modèles déclaré a sa page, et le point de la barre latérale dit le résultat de son dernier test. Voir <a href="agents.html#endpoints">Agents sur un endpoint</a>. <strong>Ajouter un endpoint…</strong> part d’Ollama, de LM Studio, d’OpenRouter ou d’un <strong>Autre serveur</strong> : un serveur connu remplit l’adresse, la clé attendue et le protocole ; seul un autre serveur demande son protocole. Voir <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
+<p>Chaque serveur de modèles déclaré a sa page, et le point de la barre latérale dit le résultat de son dernier test. <strong>Piloté par</strong> choisit l’agent qui fait tourner ses modèles : Automatique, Claude Code, Codex ou Antigravity. Voir <a href="agents.html#endpoints">Agents sur un endpoint</a>. <strong>Ajouter un endpoint…</strong> part d’Ollama, de LM Studio, d’OpenRouter ou d’un <strong>Autre serveur</strong> : un serveur connu remplit l’adresse, la clé attendue et le protocole ; seul un autre serveur demande son protocole. Voir <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/endpoints.md">docs/endpoints.md</a>.</p>
 
 <h2 id="web-view">Vue web</h2>
 <dl>
@@ -71,7 +74,7 @@
 <p>Les règles d’archivage et les protections : voir <a href="archive.html">Archivage automatique</a>.</p>
 
 <h2 id="worktrees">Worktrees</h2>
-<p>Où les agents créent leurs worktrees : <code>{repo}/.claude/worktrees/{branch}</code> par défaut, à côté du dépôt, dans <code>~/Worktrees/{project}/{branch}</code>, ou un chemin personnalisé construit avec des variables, avec un aperçu. Des exceptions se règlent projet par projet (<strong>Ajouter…</strong>), et <strong>Rétablir le défaut</strong> revient au chemin par défaut. Vibe Manager ne crée rien dans Git : il indique ce chemin à l’agent, pour ses nouveaux worktrees seulement.</p>
+<p>Où les agents créent leurs worktrees : <code>{repo}/.claude/worktrees/{branch}</code> par défaut, à côté du dépôt, dans <code>~/Worktrees/{project}/{branch}</code>, ou un chemin personnalisé construit avec des variables, avec un aperçu. Des exceptions se règlent projet par projet (<strong>Ajouter…</strong>), et <strong>Rétablir le défaut</strong> revient au chemin par défaut. Polyvibe ne crée rien dans Git : il indique ce chemin à l’agent, pour ses nouveaux worktrees seulement.</p>
 
 <h2 id="companion">Compagnon iPhone</h2>
 <p>L’assistant du compagnon et les iPhone appairés : voir <a href="companion.html">Compagnon iPhone</a>.</p>
@@ -81,10 +84,10 @@
 
 <h2 id="tickets">Tickets</h2>
 <p>Quand une nouvelle session désigne un ticket — dans son champ Ticket, son nom ou son prompt —, sa page s’ouvre dans la vue web et, avec <strong>Insérer le titre des tickets dans les notes</strong>, son titre est ajouté en haut des notes, dans le <strong>Format de la ligne</strong> de votre choix (<code>{title}</code>, <code>{id}</code>, <code>{url}</code>).</p>
-<p>La ligne <strong>Résolveurs</strong> ouvre leur page. Un résolveur indique quelles adresses sont des tickets : GitHub, GitLab, les merge requests GitLab, Jira Cloud et Linear sont fournis. Ajoutez les vôtres pour un GitLab auto-hébergé, un Jira Server ou un Redmine : un nom, un <strong>motif d’adresse</strong> avec une capture nommée comme <code>(?&lt;number&gt;[0-9]+)</code>, un <strong>identifiant</strong> comme <code>#{number}</code>, et des motifs de <strong>nettoyage du titre</strong>. <strong>Tester avec une adresse</strong> le vérifie. Les résolveurs peuvent être importés et exportés ; voir <a href="https://github.com/hadrienl/vibe-manager/blob/main/docs/ticket-resolvers.md">docs/ticket-resolvers.md</a>.</p>
+<p>La ligne <strong>Résolveurs</strong> ouvre leur page. Un résolveur indique quelles adresses sont des tickets : GitHub, GitLab, les merge requests GitLab, Jira Cloud et Linear sont fournis. Ajoutez les vôtres pour un GitLab auto-hébergé, un Jira Server ou un Redmine : un nom, un <strong>motif d’adresse</strong> avec une capture nommée comme <code>(?&lt;number&gt;[0-9]+)</code>, un <strong>identifiant</strong> comme <code>#{number}</code>, et des motifs de <strong>nettoyage du titre</strong>. <strong>Tester avec une adresse</strong> le vérifie. Les résolveurs peuvent être importés et exportés ; voir <a href="https://github.com/hadrienl/polyvibe-dev/blob/main/docs/ticket-resolvers.md">docs/ticket-resolvers.md</a>.</p>
 
 <h2 id="privacy">Confidentialité</h2>
-<p>Indique si Vibe Manager dispose de l’<strong>Accès complet au disque</strong> — Accordé, Non accordé, ou Accordé, pas encore effectif —, avec <strong>Ouvrir Réglages Système</strong>. Les agents héritent de l’accès du processus qui les fait tourner, lequel a pu démarrer avant que vous l’accordiez : <strong>Redémarrer à la fin des agents</strong> le laisse partir une fois son dernier agent terminé, <strong>Redémarrer maintenant…</strong> arrête les agents qu’il cite et les reprend. La section <strong>Processus par processus</strong> apparaît quand ils ne sont pas d’accord.</p>
+<p>Indique si Polyvibe dispose de l’<strong>Accès complet au disque</strong> — Accordé, Non accordé, ou Accordé, pas encore effectif —, avec <strong>Ouvrir Réglages Système</strong>. Les agents héritent de l’accès du processus qui les fait tourner, lequel a pu démarrer avant que vous l’accordiez : <strong>Redémarrer à la fin des agents</strong> le laisse partir une fois son dernier agent terminé, <strong>Redémarrer maintenant…</strong> arrête les agents qu’il cite et les reprend. La section <strong>Processus par processus</strong> apparaît quand ils ne sont pas d’accord.</p>
 <dl>
   <dt id="usage">Données de ce Mac › Suivre l’utilisation des agents</dt>
   <dd>Enregistre le temps d’exécution et lit les compteurs de jetons pour le <a href="conversation.html#usage">bouton Utilisation</a> de la barre d’état et la <a href="conversation.html#usage-window">fenêtre Utilisation</a>, et télécharge la liste publique des tarifs dont leurs coûts sont tirés, au plus une fois par jour. Désactivé, rien n’est lu et rien n’est téléchargé. <strong>Effacer les données d’utilisation…</strong> efface ce qui a été enregistré, pas les transcripts des agents.</dd>
@@ -97,6 +100,6 @@
   <dt>Rechercher automatiquement les mises à jour</dt><dd>Chaque jour, chaque semaine ou chaque mois.</dd>
   <dt>Télécharger et installer automatiquement les mises à jour</dt><dd>Installe en arrière-plan ; sinon, la question vous est posée.</dd>
   <dt>Canal</dt><dd><strong>Stable</strong>, ou <strong>Instable</strong> pour recevoir aussi les versions candidates.</dd>
-  <dt>Rechercher maintenant</dt><dd>Aussi dans <strong>Vibe Manager › Rechercher les mises à jour…</strong>.</dd>
+  <dt>Rechercher maintenant</dt><dd>Aussi dans <strong>Polyvibe › Rechercher les mises à jour…</strong>.</dd>
 </dl>
 <p>Les mises à jour sont signées deux fois — avec le Developer ID de l’app et avec une clé EdDSA — et vérifiées avant d’être installées. Quand des agents tournent, la mise à jour pose la même question qu’en quittant : installer en les laissant tourner, ou tout arrêter.</p>

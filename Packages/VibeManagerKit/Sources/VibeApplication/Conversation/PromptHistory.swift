@@ -20,7 +20,7 @@ public struct PromptHistory: Hashable, Sendable {
     let written = entries.compactMap { entry -> String? in
       switch entry.content {
       case .userPrompt(let typed, _):
-        // What the application typed — a coordinator's message, Vibe Manager's events — is not
+        // What the application typed — a coordinator's message, Polyvibe's events — is not
         // the user's to recall (#352).
         guard let userText = CoordinatorInstructions.userText(of: typed) else { return nil }
         // A reply is recalled without the passage it quoted (#565).

@@ -1,13 +1,13 @@
 <h1>Compagnon iPhone (alpha)</h1>
 <p class="lede">Suivez vos sessions depuis l’iPhone et répondez aux demandes de vos agents, même loin du Mac. Le compagnon est en alpha : l’app iPhone se distribue par TestFlight, et il demande un Mac Apple Silicon.</p>
 
-<vm-shot name="companion" alt="Réglages, page Compagnon iPhone : le réglage Utiliser Vibe Manager depuis votre iPhone, et la mention alpha avec le lien Installer l’alpha….">La page Compagnon iPhone des réglages.</vm-shot>
+<vm-shot name="companion" alt="Réglages, page Compagnon iPhone : le réglage Utiliser Polyvibe depuis votre iPhone, et la mention alpha avec le lien Installer l’alpha….">La page Compagnon iPhone des réglages.</vm-shot>
 
 <p><a class="btn btn-primary" href="https://testflight.apple.com/join/DsJgybUh">Rejoindre la bêta TestFlight</a></p>
 
 <h2 id="install">Installer l’alpha</h2>
 <ol>
-  <li>Sur le Mac, ouvrez <strong>Réglages › Compagnon iPhone</strong> et activez <strong>Utiliser Vibe Manager depuis votre iPhone</strong> ; l’assistant est livré avec Vibe Manager et désactivé par défaut.</li>
+  <li>Sur le Mac, ouvrez <strong>Réglages › Compagnon iPhone</strong> et activez <strong>Utiliser Polyvibe depuis votre iPhone</strong> ; l’assistant est livré avec Polyvibe et désactivé par défaut.</li>
   <li><strong>Installer l’alpha…</strong> ouvre les instructions pour rejoindre le test TestFlight et installer l’app sur l’iPhone.</li>
   <li>Ouvrez l’app sur l’iPhone, avec le même compte iCloud que le Mac : il apparaît dans la liste des iPhone. <strong>Retirer…</strong> l’en enlève. Dans l’app iPhone, balayez la ligne d’un Mac qui n’est plus là pour le retirer de la liste.</li>
 </ol>
@@ -19,7 +19,12 @@
   <li><strong>Nouvelle session</strong>, dans un dossier récent ou n’importe quel dossier du Mac, que vous pouvez créer depuis l’iPhone (<strong>Nouveau dossier</strong>). La session s’ouvre dès que vous validez, sans attendre le Mac.</li>
   <li>Des notifications quand un agent a besoin de vous : <strong>Autoriser</strong> (après Face ID ou le code) ou <strong>Refuser</strong> sans ouvrir l’app.</li>
   <li>Les questions, y compris celles qui en posent plusieurs, auxquelles vous répondez depuis l’iPhone.</li>
+  <li>Dans les réponses de l’agent, les blocs de code avec <strong>Copier</strong>, et <strong>Exécuter</strong> pour une commande <code>! …</code> : elle parvient à la session comme si elle était tapée sur le Mac.</li>
+  <li>Les <a href="coordination.html#messages">messages entre sessions</a> repliés, comme sur le Mac.</li>
 </ul>
+
+<h2 id="devices">Simulateurs et téléphones Android</h2>
+<p>Dans une conversation, le bouton <strong>Simulateurs</strong>, un téléphone, liste les <a href="terminals.html#devices">simulateurs, émulateurs et téléphones Android</a> que le Mac peut afficher. Choisissez-en un : il s’ouvre en plein écran, en direct, et vous vous en servez au toucher. Chaque geste va à l’appareil ; seul le bouton retour vous rend le compagnon. La conversation reste suivie pendant ce temps, et ne se recharge donc pas à votre retour.</p>
 
 <h2 id="web">La vue web</h2>
 <p>Dans une conversation, le bouton <strong>Vue web</strong> ouvre la vue web de la session. Elle affiche la page active du Mac et la suit, pages locales (<code>file://</code>) comprises, et le menu des onglets passe d’un onglet du Mac à l’autre. Le sous-titre indique <strong>Synchronisée avec le Mac</strong>. Le Mac et l’iPhone ne partagent pas de session : chacun a ses propres cookies.</p>
@@ -32,5 +37,5 @@
 <div class="callout"><p>Les passkeys ne fonctionnent pas dans la vue web. Connectez-vous avec un mot de passe, ou ouvrez la page dans Safari.</p></div>
 
 <h2 id="privacy">Sans serveur</h2>
-<p>Le Mac et l’iPhone se parlent par CloudKit, dans votre iCloud privé : aucun serveur de Vibe Manager entre les deux. Seuls les iPhone dont la clé est publiée dans votre iCloud sont admis.</p>
-<div class="callout"><p>Alpha : attendez-vous à des changements et à quelques bugs. Signalez-les dans un <a href="https://github.com/hadrienl/vibe-manager/issues">ticket</a>.</p></div>
+<p>Le Mac et l’iPhone se parlent par CloudKit, dans votre iCloud privé : aucun serveur de Polyvibe entre les deux. Seuls les iPhone dont la clé est publiée dans votre iCloud sont admis.</p>
+<div class="callout"><p>Alpha : attendez-vous à des changements et à quelques bugs. Signalez-les dans un <a href="https://github.com/hadrienl/polyvibe-dev/issues">ticket</a>.</p></div>

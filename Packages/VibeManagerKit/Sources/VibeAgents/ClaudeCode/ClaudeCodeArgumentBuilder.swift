@@ -4,7 +4,7 @@ import VibeApplication
 /// Builds the `claude` command line for one launch.
 ///
 /// Claude Code accepts the session identifier it is given, so a fresh launch carries one that
-/// Vibe Manager generated: nothing has to be discovered afterwards. Resuming passes that same
+/// Polyvibe generated: nothing has to be discovered afterwards. Resuming passes that same
 /// identifier back, and never alongside `--session-id`, which the CLI refuses.
 public struct ClaudeCodeArgumentBuilder: CommandLineAgentArgumentBuilder {
   public static let sessionIdentifierOption = "--session-id"

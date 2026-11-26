@@ -62,7 +62,7 @@ public struct ReportedLaunch: Sendable {
   public let plan: AgentLaunchPlan
   /// `nil` when the agent reports nothing: its activity is then read from its output.
   public let decoder: (any AgentSignalDecoding)?
-  /// Whether the CLI will really run the hooks the plan carries: approved in Vibe Manager, or not
+  /// Whether the CLI will really run the hooks the plan carries: approved in Polyvibe, or not
   /// needing an approval. `false` when their approval is unknown or did not take — the CLI then
   /// asks for itself, and the user may say no (#144).
   public let hooksApproved: Bool

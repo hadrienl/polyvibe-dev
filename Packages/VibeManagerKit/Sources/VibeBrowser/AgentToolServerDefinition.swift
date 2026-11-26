@@ -72,7 +72,7 @@ public struct AgentToolServerDefinition: Sendable {
   public static let browser = AgentToolServerDefinition(
     name: BrowserToolCatalog.serverName,
     instructions: """
-      These tools drive the web view of this Vibe Manager session, beside its terminal: open \
+      These tools drive the web view of this Polyvibe session, beside its terminal: open \
       a preview, reload it, read it, look at its console, click and type in it. The user sees \
       every tab and every action. Whenever the user should see a page — a preview, a document \
       or an artifact you made, a pull request, a ticket — open it with tab_open rather than in a \
@@ -84,5 +84,5 @@ public struct AgentToolServerDefinition: Sendable {
     closedMessage: BrowserBridge.closedMessage,
     refusal:
       "This process cannot drive a session's web view: it does not run in the terminal of a "
-      + "Vibe Manager session, or agents are not given the web view (Settings › Web View).")
+      + "Polyvibe session, or agents are not given the web view (Settings › Web View).")
 }

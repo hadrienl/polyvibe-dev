@@ -72,7 +72,7 @@ public actor FilePromptTemplateRepository: PromptTemplateRepository {
     } catch PromptTemplateCodecError.unsupportedVersion {
       throw PromptTemplateStoreError.unreadable(
         reason: String(
-          localized: "the file was written by a newer version of Vibe Manager.", bundle: .module))
+          localized: "the file was written by a newer version of Polyvibe.", bundle: .module))
     } catch {
       throw PromptTemplateStoreError.unreadable(
         reason: String(localized: "the file is damaged.", bundle: .module))

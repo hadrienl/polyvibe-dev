@@ -4660,103 +4660,103 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         }
       }
@@ -12639,7 +12639,7 @@
       }
     },
     "No session in 30 days" : {
-      "comment" : "An account without any session run in Vibe Manager over the last thirty days: no cost to say.",
+      "comment" : "An account without any session run in Polyvibe over the last thirty days: no cost to say.",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -13850,103 +13850,103 @@
         }
       }
     },
-    "On your Mac, turn on Vibe Manager › Settings › iPhone Companion, with the same iCloud account as this iPhone." : {
+    "On your Mac, turn on Polyvibe › Settings › iPhone Companion, with the same iCloud account as this iPhone." : {
       "comment" : "The banner when no Mac published itself.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sur votre Mac, activez Vibe Manager › Réglages › Compagnon iPhone, avec le même compte iCloud que cet iPhone."
+            "value" : "Sur votre Mac, activez Polyvibe › Réglages › Compagnon iPhone, avec le même compte iCloud que cet iPhone."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktiviere auf deinem Mac Vibe Manager › Einstellungen › iPhone-Begleiter, mit demselben iCloud-Account wie auf diesem iPhone."
+            "value" : "Aktiviere auf deinem Mac Polyvibe › Einstellungen › iPhone-Begleiter, mit demselben iCloud-Account wie auf diesem iPhone."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "En tu Mac, activa Vibe Manager › Ajustes › Compañero para iPhone, con la misma cuenta de iCloud que este iPhone."
+            "value" : "En tu Mac, activa Polyvibe › Ajustes › Compañero para iPhone, con la misma cuenta de iCloud que este iPhone."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sul Mac, attiva Vibe Manager › Impostazioni › Companion per iPhone, con lo stesso account iCloud di questo iPhone."
+            "value" : "Sul Mac, attiva Polyvibe › Impostazioni › Companion per iPhone, con lo stesso account iCloud di questo iPhone."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zet op je Mac Vibe Manager › Instellingen › iPhone-companion aan, met hetzelfde iCloud-account als deze iPhone."
+            "value" : "Zet op je Mac Polyvibe › Instellingen › iPhone-companion aan, met hetzelfde iCloud-account als deze iPhone."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Na Macu włącz Vibe Manager › Ustawienia › Companion na iPhone’a, z tym samym kontem iCloud co na tym iPhonie."
+            "value" : "Na Macu włącz Polyvibe › Ustawienia › Companion na iPhone’a, z tym samym kontem iCloud co na tym iPhonie."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No seu Mac, ative Vibe Manager › Ajustes › Companion para iPhone, com a mesma conta do iCloud deste iPhone."
+            "value" : "No seu Mac, ative Polyvibe › Ajustes › Companion para iPhone, com a mesma conta do iCloud deste iPhone."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "На Mac включите Vibe Manager › Настройки › Компаньон для iPhone с той же учётной записью iCloud, что и на этом iPhone."
+            "value" : "На Mac включите Polyvibe › Настройки › Компаньон для iPhone с той же учётной записью iCloud, что и на этом iPhone."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "На Mac увімкніть Vibe Manager › Параметри › Компаньйон для iPhone з тим самим обліковим записом iCloud, що й на цьому iPhone."
+            "value" : "На Mac увімкніть Polyvibe › Параметри › Компаньйон для iPhone з тим самим обліковим записом iCloud, що й на цьому iPhone."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac’inizde Vibe Manager › Ayarlar › iPhone Yardımcısı’nı bu iPhone ile aynı iCloud hesabıyla açın."
+            "value" : "Mac’inizde Polyvibe › Ayarlar › iPhone Yardımcısı’nı bu iPhone ile aynı iCloud hesabıyla açın."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macで、このiPhoneと同じiCloudアカウントを使い、Vibe Manager › 設定 › iPhoneコンパニオンをオンにしてください。"
+            "value" : "Macで、このiPhoneと同じiCloudアカウントを使い、Polyvibe › 設定 › iPhoneコンパニオンをオンにしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac에서 이 iPhone과 같은 iCloud 계정으로 Vibe Manager › 설정 › iPhone 컴패니언을 켜십시오."
+            "value" : "Mac에서 이 iPhone과 같은 iCloud 계정으로 Polyvibe › 설정 › iPhone 컴패니언을 켜십시오."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请在 Mac 上使用与此 iPhone 相同的 iCloud 账户，打开 Vibe Manager › 设置 › iPhone 伴侣。"
+            "value" : "请在 Mac 上使用与此 iPhone 相同的 iCloud 账户，打开 Polyvibe › 设置 › iPhone 伴侣。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請在 Mac 上使用與此 iPhone 相同的 iCloud 帳號，開啟 Vibe Manager › 設定 › iPhone 夥伴。"
+            "value" : "請在 Mac 上使用與此 iPhone 相同的 iCloud 帳號，開啟 Polyvibe › 設定 › iPhone 夥伴。"
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "على Mac، فعّل Vibe Manager › الإعدادات › رفيق iPhone، باستخدام حساب iCloud نفسه المستخدم على هذا الـ iPhone."
+            "value" : "على Mac، فعّل Polyvibe › الإعدادات › رفيق iPhone، باستخدام حساب iCloud نفسه المستخدم على هذا الـ iPhone."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "अपने Mac पर, इसी iPhone वाले iCloud खाते के साथ Vibe Manager › सेटिंग्ज़ › iPhone कंपेनियन चालू करें।"
+            "value" : "अपने Mac पर, इसी iPhone वाले iCloud खाते के साथ Polyvibe › सेटिंग्ज़ › iPhone कंपेनियन चालू करें।"
           }
         }
       }
@@ -17183,103 +17183,103 @@
         }
       }
     },
-    "Seen %@. Open Vibe Manager on the Mac, with Settings › iPhone Companion turned on." : {
+    "Seen %@. Open Polyvibe on the Mac, with Settings › iPhone Companion turned on." : {
       "comment" : "The banner of a Mac offline; %@ is when it was last seen.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vu %@. Ouvrez Vibe Manager sur le Mac, avec Réglages › Compagnon iPhone activé."
+            "value" : "Vu %@. Ouvrez Polyvibe sur le Mac, avec Réglages › Compagnon iPhone activé."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zuletzt gesehen %@. Öffne Vibe Manager auf dem Mac, mit aktiviertem Einstellungen › iPhone-Begleiter."
+            "value" : "Zuletzt gesehen %@. Öffne Polyvibe auf dem Mac, mit aktiviertem Einstellungen › iPhone-Begleiter."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Visto %@. Abre Vibe Manager en el Mac, con Ajustes › Compañero para iPhone activado."
+            "value" : "Visto %@. Abre Polyvibe en el Mac, con Ajustes › Compañero para iPhone activado."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Visto %@. Apri Vibe Manager sul Mac, con Impostazioni › Companion per iPhone attivo."
+            "value" : "Visto %@. Apri Polyvibe sul Mac, con Impostazioni › Companion per iPhone attivo."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gezien %@. Open Vibe Manager op de Mac, met Instellingen › iPhone-companion aan."
+            "value" : "Gezien %@. Open Polyvibe op de Mac, met Instellingen › iPhone-companion aan."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Widziany %@. Otwórz Vibe Manager na Macu i włącz Ustawienia › Companion na iPhone’a."
+            "value" : "Widziany %@. Otwórz Polyvibe na Macu i włącz Ustawienia › Companion na iPhone’a."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Visto %@. Abra o Vibe Manager no Mac, com Ajustes › Companion para iPhone ativado."
+            "value" : "Visto %@. Abra o Polyvibe no Mac, com Ajustes › Companion para iPhone ativado."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Был в сети %@. Откройте Vibe Manager на Mac и включите Настройки › Компаньон для iPhone."
+            "value" : "Был в сети %@. Откройте Polyvibe на Mac и включите Настройки › Компаньон для iPhone."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Був у мережі %@. Відкрийте Vibe Manager на Mac і ввімкніть Параметри › Компаньйон для iPhone."
+            "value" : "Був у мережі %@. Відкрийте Polyvibe на Mac і ввімкніть Параметри › Компаньйон для iPhone."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Son görülme %@. Mac’te Vibe Manager’ı açın ve Ayarlar › iPhone Yardımcısı’nı açık tutun."
+            "value" : "Son görülme %@. Mac’te Polyvibe’ı açın ve Ayarlar › iPhone Yardımcısı’nı açık tutun."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@に確認。MacでVibe Managerを開き、設定 › iPhoneコンパニオンをオンにしてください。"
+            "value" : "%@に確認。MacでPolyvibeを開き、設定 › iPhoneコンパニオンをオンにしてください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@에 확인됨. Mac에서 Vibe Manager를 열고 설정 › iPhone 컴패니언을 켜십시오."
+            "value" : "%@에 확인됨. Mac에서 Polyvibe를 열고 설정 › iPhone 컴패니언을 켜십시오."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上次在线：%@。请在 Mac 上打开 Vibe Manager，并开启“设置 › iPhone 伴侣”。"
+            "value" : "上次在线：%@。请在 Mac 上打开 Polyvibe，并开启“设置 › iPhone 伴侣”。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上次在線：%@。請在 Mac 上打開 Vibe Manager，並開啟「設定 › iPhone 夥伴」。"
+            "value" : "上次在線：%@。請在 Mac 上打開 Polyvibe，並開啟「設定 › iPhone 夥伴」。"
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "شوهد %@. افتح Vibe Manager على Mac مع تفعيل الإعدادات › رفيق iPhone."
+            "value" : "شوهد %@. افتح Polyvibe على Mac مع تفعيل الإعدادات › رفيق iPhone."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ देखा गया। Mac पर Vibe Manager खोलें, और सेटिंग्ज़ › iPhone कंपेनियन चालू रखें।"
+            "value" : "%@ देखा गया। Mac पर Polyvibe खोलें, और सेटिंग्ज़ › iPhone कंपेनियन चालू रखें।"
           }
         }
       }
@@ -20415,103 +20415,103 @@
         }
       }
     },
-    "The Macs of your iCloud account where Vibe Manager runs the companion. There’s nothing else to pair." : {
+    "The Macs of your iCloud account where Polyvibe runs the companion. There’s nothing else to pair." : {
       "comment" : "Settings: footer of the Mac section.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les Macs de votre compte iCloud où Vibe Manager a activé le compagnon. Rien d’autre à appairer."
+            "value" : "Les Macs de votre compte iCloud où Polyvibe a activé le compagnon. Rien d’autre à appairer."
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أجهزة Mac في حساب iCloud الخاص بك التي يشغّل فيها Vibe Manager الرفيق. لا يلزم إقران أي شيء آخر."
+            "value" : "أجهزة Mac في حساب iCloud الخاص بك التي يشغّل فيها Polyvibe الرفيق. لا يلزم إقران أي شيء آخر."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Macs deines iCloud-Accounts, auf denen Vibe Manager den Companion ausführt. Du musst nichts weiter koppeln."
+            "value" : "Die Macs deines iCloud-Accounts, auf denen Polyvibe den Companion ausführt. Du musst nichts weiter koppeln."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los Mac de tu cuenta de iCloud donde Vibe Manager ejecuta el companion. No hay nada más que vincular."
+            "value" : "Los Mac de tu cuenta de iCloud donde Polyvibe ejecuta el companion. No hay nada más que vincular."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "तुम्हारे iCloud खाते के वे Mac जहाँ Vibe Manager कंपैनियन चलाता है। और कुछ पेयर करने की ज़रूरत नहीं है।"
+            "value" : "तुम्हारे iCloud खाते के वे Mac जहाँ Polyvibe कंपैनियन चलाता है। और कुछ पेयर करने की ज़रूरत नहीं है।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I Mac del tuo account iCloud su cui Vibe Manager esegue il companion. Non c’è nient’altro da associare."
+            "value" : "I Mac del tuo account iCloud su cui Polyvibe esegue il companion. Non c’è nient’altro da associare."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お使いのiCloudアカウントで、Vibe Managerがコンパニオンを実行しているMacです。ほかにペアリングする必要はありません。"
+            "value" : "お使いのiCloudアカウントで、Polyvibeがコンパニオンを実行しているMacです。ほかにペアリングする必要はありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager가 컴패니언을 실행하는 iCloud 계정의 Mac이에요. 따로 페어링할 필요는 없어요."
+            "value" : "Polyvibe가 컴패니언을 실행하는 iCloud 계정의 Mac이에요. 따로 페어링할 필요는 없어요."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De Macs van je iCloud-account waarop Vibe Manager de companion draait. Je hoeft verder niets te koppelen."
+            "value" : "De Macs van je iCloud-account waarop Polyvibe de companion draait. Je hoeft verder niets te koppelen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Maki z twojego konta iCloud, na których Vibe Manager uruchamia companiona. Nie trzeba niczego więcej parować."
+            "value" : "Maki z twojego konta iCloud, na których Polyvibe uruchamia companiona. Nie trzeba niczego więcej parować."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Os Macs da sua conta do iCloud em que o Vibe Manager executa o companion. Não há mais nada para parear."
+            "value" : "Os Macs da sua conta do iCloud em que o Polyvibe executa o companion. Não há mais nada para parear."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac из твоей учётной записи iCloud, где Vibe Manager запускает компаньон. Больше ничего связывать не нужно."
+            "value" : "Mac из твоей учётной записи iCloud, где Polyvibe запускает компаньон. Больше ничего связывать не нужно."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iCloud hesabındaki, Vibe Manager’ın yardımcıyı çalıştırdığı Mac’ler. Eşleştirilecek başka bir şey yok."
+            "value" : "iCloud hesabındaki, Polyvibe’ın yardımcıyı çalıştırdığı Mac’ler. Eşleştirilecek başka bir şey yok."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac з вашого облікового запису iCloud, де Vibe Manager запускає компаньйон. Більше нічого зв’язувати не потрібно."
+            "value" : "Mac з вашого облікового запису iCloud, де Polyvibe запускає компаньйон. Більше нічого зв’язувати не потрібно."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你的 iCloud 账户中运行 Vibe Manager 配套功能的 Mac。无需再配对其他设备。"
+            "value" : "你的 iCloud 账户中运行 Polyvibe 配套功能的 Mac。无需再配对其他设备。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你的 iCloud 帳號中、執行 Vibe Manager 協作功能的 Mac。不需要再配對其他裝置。"
+            "value" : "你的 iCloud 帳號中、執行 Polyvibe 協作功能的 Mac。不需要再配對其他裝置。"
           }
         }
       }
@@ -21830,7 +21830,7 @@
       }
     },
     "This Mac Is Still Connected" : {
-      "comment" : "Title of the alert shown when a Mac of the settings’ list can’t be removed: Vibe Manager still runs on it.",
+      "comment" : "Title of the alert shown when a Mac of the settings’ list can’t be removed: Polyvibe still runs on it.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -23243,97 +23243,97 @@
         }
       }
     },
-    "Vibe Companion · Diagnostic" : {
+    "Polyvibe Companion · Diagnostic" : {
       "comment" : "Diagnostic screen: label or value.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · diagnostic"
+            "value" : "Polyvibe Companion · diagnostic"
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · التشخيص"
+            "value" : "Polyvibe Companion · التشخيص"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnose"
+            "value" : "Polyvibe Companion · Diagnose"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnóstico"
+            "value" : "Polyvibe Companion · Diagnóstico"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · डायग्नोस्टिक"
+            "value" : "Polyvibe Companion · डायग्नोस्टिक"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnostica"
+            "value" : "Polyvibe Companion · Diagnostica"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · 診断"
+            "value" : "Polyvibe Companion · 診断"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · 진단"
+            "value" : "Polyvibe Companion · 진단"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnose"
+            "value" : "Polyvibe Companion · Diagnose"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnostyka"
+            "value" : "Polyvibe Companion · Diagnostyka"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Diagnóstico"
+            "value" : "Polyvibe Companion · Diagnóstico"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Диагностика"
+            "value" : "Polyvibe Companion · Диагностика"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Tanılama"
+            "value" : "Polyvibe Companion · Tanılama"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · Діагностика"
+            "value" : "Polyvibe Companion · Діагностика"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Companion · 诊断"
+            "value" : "Polyvibe Companion · 诊断"
           }
         },
         "zh-Hant" : {
@@ -23344,204 +23344,204 @@
         }
       }
     },
-    "Vibe Manager" : {
+    "Polyvibe" : {
       "comment" : "The app's name, title of the session list. Not translated.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager"
+            "value" : "Polyvibe"
           }
         }
       }
     },
-    "Vibe Manager is running on this Mac and would put it back in the list. Quit it there first. If it has already stopped, try again in a while." : {
-      "comment" : "The alert shown when a Mac of the settings’ list can’t be removed. “It” is Vibe Manager; “try again in a while”: a Mac that stopped without saying so counts as connected for 20 minutes.",
+    "Polyvibe is running on this Mac and would put it back in the list. Quit it there first. If it has already stopped, try again in a while." : {
+      "comment" : "The alert shown when a Mac of the settings’ list can’t be removed. “It” is Polyvibe; “try again in a while”: a Mac that stopped without saying so counts as connected for 20 minutes.",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager tourne sur ce Mac et le remettrait dans la liste. Quittez-le d’abord. S’il est déjà arrêté, réessayez un peu plus tard."
+            "value" : "Polyvibe tourne sur ce Mac et le remettrait dans la liste. Quittez-le d’abord. S’il est déjà arrêté, réessayez un peu plus tard."
           }
         },
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يعمل Vibe Manager على هذا الـMac وسيعيده إلى القائمة. أغلقه هناك أولاً. وإذا كان قد توقف بالفعل، فحاول مرة أخرى بعد قليل."
+            "value" : "يعمل Polyvibe على هذا الـMac وسيعيده إلى القائمة. أغلقه هناك أولاً. وإذا كان قد توقف بالفعل، فحاول مرة أخرى بعد قليل."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager läuft auf diesem Mac und würde ihn wieder in die Liste aufnehmen. Beende es zuerst dort. Falls es schon beendet ist, versuch es etwas später noch einmal."
+            "value" : "Polyvibe läuft auf diesem Mac und würde ihn wieder in die Liste aufnehmen. Beende es zuerst dort. Falls es schon beendet ist, versuch es etwas später noch einmal."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager se está ejecutando en este Mac y volvería a ponerlo en la lista. Ciérralo allí primero. Si ya se ha detenido, inténtalo de nuevo más tarde."
+            "value" : "Polyvibe se está ejecutando en este Mac y volvería a ponerlo en la lista. Ciérralo allí primero. Si ya se ha detenido, inténtalo de nuevo más tarde."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager इस Mac पर चल रहा है और इसे सूची में वापस जोड़ देगा। पहले उसे वहाँ बंद करो। अगर वह पहले ही रुक चुका है, तो थोड़ी देर बाद फिर कोशिश करो।"
+            "value" : "Polyvibe इस Mac पर चल रहा है और इसे सूची में वापस जोड़ देगा। पहले उसे वहाँ बंद करो। अगर वह पहले ही रुक चुका है, तो थोड़ी देर बाद फिर कोशिश करो।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager è in esecuzione su questo Mac e lo rimetterebbe nell’elenco. Prima chiudilo lì. Se si è già arrestato, riprova tra un po’."
+            "value" : "Polyvibe è in esecuzione su questo Mac e lo rimetterebbe nell’elenco. Prima chiudilo lì. Se si è già arrestato, riprova tra un po’."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このMacではVibe Managerが実行中で、リストに再び表示されます。先にMacでVibe Managerを終了してください。すでに停止している場合は、しばらくしてからもう一度お試しください。"
+            "value" : "このMacではPolyvibeが実行中で、リストに再び表示されます。先にMacでPolyvibeを終了してください。すでに停止している場合は、しばらくしてからもう一度お試しください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 Mac에서 Vibe Manager가 실행 중이라 목록에 다시 나타나요. 먼저 Mac에서 종료해 주세요. 이미 멈췄다면 잠시 후 다시 시도해 주세요."
+            "value" : "이 Mac에서 Polyvibe가 실행 중이라 목록에 다시 나타나요. 먼저 Mac에서 종료해 주세요. 이미 멈췄다면 잠시 후 다시 시도해 주세요."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager draait op deze Mac en zou hem weer in de lijst zetten. Sluit het daar eerst af. Is het al gestopt, probeer het dan later opnieuw."
+            "value" : "Polyvibe draait op deze Mac en zou hem weer in de lijst zetten. Sluit het daar eerst af. Is het al gestopt, probeer het dan later opnieuw."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager działa na tym Macu i dodałby go z powrotem do listy. Najpierw zamknij go na Macu. Jeśli już się zatrzymał, spróbuj ponownie za jakiś czas."
+            "value" : "Polyvibe działa na tym Macu i dodałby go z powrotem do listy. Najpierw zamknij go na Macu. Jeśli już się zatrzymał, spróbuj ponownie za jakiś czas."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Vibe Manager está em execução neste Mac e o colocaria de volta na lista. Encerre-o lá primeiro. Se ele já parou, tente de novo daqui a pouco."
+            "value" : "O Polyvibe está em execução neste Mac e o colocaria de volta na lista. Encerre-o lá primeiro. Se ele já parou, tente de novo daqui a pouco."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "На этом Mac работает Vibe Manager, и он снова добавит его в список. Сначала закрой его на Mac. Если он уже остановлен, попробуй ещё раз чуть позже."
+            "value" : "На этом Mac работает Polyvibe, и он снова добавит его в список. Сначала закрой его на Mac. Если он уже остановлен, попробуй ещё раз чуть позже."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vibe Manager bu Mac’te çalışıyor ve onu yeniden listeye ekler. Önce orada kapat. Zaten durduysa biraz sonra yeniden dene."
+            "value" : "Polyvibe bu Mac’te çalışıyor ve onu yeniden listeye ekler. Önce orada kapat. Zaten durduysa biraz sonra yeniden dene."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "На цьому Mac працює Vibe Manager, і він знову додасть його до списку. Спочатку закрийте його на Mac. Якщо він уже зупинився, спробуйте ще раз трохи згодом."
+            "value" : "На цьому Mac працює Polyvibe, і він знову додасть його до списку. Спочатку закрийте його на Mac. Якщо він уже зупинився, спробуйте ще раз трохи згодом."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这台 Mac 上正在运行 Vibe Manager，它会重新出现在列表中。请先在 Mac 上退出 Vibe Manager。如果已经停止，请稍后再试。"
+            "value" : "这台 Mac 上正在运行 Polyvibe，它会重新出现在列表中。请先在 Mac 上退出 Polyvibe。如果已经停止，请稍后再试。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "這台 Mac 上正在執行 Vibe Manager，它會重新出現在列表中。請先在 Mac 上結束 Vibe Manager。如果已經停止，請稍後再試一次。"
+            "value" : "這台 Mac 上正在執行 Polyvibe，它會重新出現在列表中。請先在 Mac 上結束 Polyvibe。如果已經停止，請稍後再試一次。"
           }
         }
       }
@@ -24152,103 +24152,103 @@
         }
       }
     },
-    "What the tokens of the sessions run in Vibe Manager over the last thirty days would cost at public API prices." : {
+    "What the tokens of the sessions run in Polyvibe over the last thirty days would cost at public API prices." : {
       "comment" : "Explains the thirty-day cost of the Quotas popover (#599).",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ما ستكلّفه رموز الجلسات المُشغَّلة في Vibe Manager خلال آخر ثلاثين يومًا بأسعار API العامة."
+            "value" : "ما ستكلّفه رموز الجلسات المُشغَّلة في Polyvibe خلال آخر ثلاثين يومًا بأسعار API العامة."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was die Tokens der in Vibe Manager ausgeführten Sitzungen der letzten dreißig Tage zu öffentlichen API-Preisen kosten würden."
+            "value" : "Was die Tokens der in Polyvibe ausgeführten Sitzungen der letzten dreißig Tage zu öffentlichen API-Preisen kosten würden."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que costarían, a precios públicos de API, los tokens de las sesiones ejecutadas en Vibe Manager durante los últimos treinta días."
+            "value" : "Lo que costarían, a precios públicos de API, los tokens de las sesiones ejecutadas en Polyvibe durante los últimos treinta días."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce que coûteraient, aux tarifs publics de l’API, les jetons des sessions lancées dans Vibe Manager ces trente derniers jours."
+            "value" : "Ce que coûteraient, aux tarifs publics de l’API, les jetons des sessions lancées dans Polyvibe ces trente derniers jours."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "पिछले तीस दिनों में Vibe Manager में चलाए गए सत्रों के टोकन की सार्वजनिक API कीमतों पर लागत।"
+            "value" : "पिछले तीस दिनों में Polyvibe में चलाए गए सत्रों के टोकन की सार्वजनिक API कीमतों पर लागत।"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quanto costerebbero, ai prezzi pubblici delle API, i token delle sessioni eseguite in Vibe Manager negli ultimi trenta giorni."
+            "value" : "Quanto costerebbero, ai prezzi pubblici delle API, i token delle sessioni eseguite in Polyvibe negli ultimi trenta giorni."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "過去30日間にVibe Managerで実行したセッションのトークンを、公開API価格で換算した費用です。"
+            "value" : "過去30日間にPolyvibeで実行したセッションのトークンを、公開API価格で換算した費用です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "최근 30일 동안 Vibe Manager에서 실행한 세션의 토큰을 공개 API 가격으로 환산한 비용입니다."
+            "value" : "최근 30일 동안 Polyvibe에서 실행한 세션의 토큰을 공개 API 가격으로 환산한 비용입니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wat de tokens van de sessies die de afgelopen dertig dagen in Vibe Manager liepen tegen openbare API-prijzen zouden kosten."
+            "value" : "Wat de tokens van de sessies die de afgelopen dertig dagen in Polyvibe liepen tegen openbare API-prijzen zouden kosten."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ile kosztowałyby, według publicznych cen API, tokeny sesji uruchomionych w Vibe Manager w ciągu ostatnich trzydziestu dni."
+            "value" : "Ile kosztowałyby, według publicznych cen API, tokeny sesji uruchomionych w Polyvibe w ciągu ostatnich trzydziestu dni."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Quanto custariam, a preços públicos de API, os tokens das sessões executadas no Vibe Manager nos últimos trinta dias."
+            "value" : "Quanto custariam, a preços públicos de API, os tokens das sessões executadas no Polyvibe nos últimos trinta dias."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Сколько стоили бы по публичным ценам API токены сеансов, запущенных в Vibe Manager за последние тридцать дней."
+            "value" : "Сколько стоили бы по публичным ценам API токены сеансов, запущенных в Polyvibe за последние тридцать дней."
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Son otuz günde Vibe Manager’da çalıştırılan oturumların token’larının herkese açık API fiyatlarıyla maliyeti."
+            "value" : "Son otuz günde Polyvibe’da çalıştırılan oturumların token’larının herkese açık API fiyatlarıyla maliyeti."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Скільки коштували б за публічними цінами API токени сеансів, запущених у Vibe Manager за останні тридцять днів."
+            "value" : "Скільки коштували б за публічними цінами API токени сеансів, запущених у Polyvibe за останні тридцять днів."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "过去三十天在 Vibe Manager 中运行的会话的令牌按公开 API 价格计算的费用。"
+            "value" : "过去三十天在 Polyvibe 中运行的会话的令牌按公开 API 价格计算的费用。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "過去三十天在 Vibe Manager 中執行的工作階段的權杖按公開 API 價格計算的費用。"
+            "value" : "過去三十天在 Polyvibe 中執行的工作階段的權杖按公開 API 價格計算的費用。"
           }
         }
       }

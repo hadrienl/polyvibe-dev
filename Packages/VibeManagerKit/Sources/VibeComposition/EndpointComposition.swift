@@ -7,7 +7,7 @@ import VibePersistence
 import VibeTerminal
 
 /// The gateway of #107 as a program of the application's binary:
-/// `Vibe Manager --endpoint-gateway <directory> --endpoints <file> --keychain-service <service>`.
+/// `Polyvibe --endpoint-gateway <directory> --endpoints <file> --keychain-service <service>`.
 ///
 /// Started detached by the application when a session on an endpoint needs it, it outlives the
 /// application as long as a session token is left, and stops by itself after. Never returns.

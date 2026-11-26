@@ -51,7 +51,7 @@ struct EndpointTests {
     #expect(!EndpointModel(id: "a", contextWindow: 65_536).hasShortContext)
     #expect(!EndpointModel(id: "a").hasShortContext)
     var original = endpoint(authentication: .query(name: "key"))
-    original.headers = [EndpointHeader(name: "X-Title", value: "Vibe Manager")]
+    original.headers = [EndpointHeader(name: "X-Title", value: "Polyvibe")]
     original.harness = .codex
     original.lastTest = EndpointTestOutcome(
       verdict: .passedWithWarnings, date: Date(timeIntervalSince1970: 7))

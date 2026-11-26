@@ -5,20 +5,20 @@ import VibeDomain
 
 @testable import VibeUI
 
-/// "Vibe Manager › <session>" in the window's header (#159).
+/// "Polyvibe › <session>" in the window's header (#159).
 @MainActor
 @Suite("The window's title names the session on screen")
 struct WindowTitleTests {
   @Test("Before the sessions are read, and with none selected, the title is the application alone")
   func applicationAlone() async {
     let model = AppModel(repository: StubRepository(sessions: []))
-    #expect(model.windowTitle.full == "Vibe Manager")
+    #expect(model.windowTitle.full == "Polyvibe")
 
     await model.load()
 
     #expect(model.windowTitle.sessionName == nil)
-    #expect(model.windowTitle.full == "Vibe Manager")
-    #expect(model.windowTitle.spoken == "Vibe Manager")
+    #expect(model.windowTitle.full == "Polyvibe")
+    #expect(model.windowTitle.spoken == "Polyvibe")
   }
 
   @Test("The session selected follows the application, and the title follows the selection")
@@ -29,13 +29,13 @@ struct WindowTitleTests {
     await model.load()
 
     model.select(first.id)
-    #expect(model.windowTitle.full == "Vibe Manager › Alpha")
+    #expect(model.windowTitle.full == "Polyvibe › Alpha")
 
     model.select(second.id)
-    #expect(model.windowTitle.full == "Vibe Manager › Beta")
+    #expect(model.windowTitle.full == "Polyvibe › Beta")
 
     model.select(nil)
-    #expect(model.windowTitle.full == "Vibe Manager")
+    #expect(model.windowTitle.full == "Polyvibe")
   }
 
   @Test("An archived session shown is named like any other")
@@ -46,7 +46,7 @@ struct WindowTitleTests {
 
     model.select(archived.id)
 
-    #expect(model.windowTitle.full == "Vibe Manager › Old work")
+    #expect(model.windowTitle.full == "Polyvibe › Old work")
   }
 
   @Test("A session renamed is renamed in the title")
@@ -56,14 +56,14 @@ struct WindowTitleTests {
     let model = AppModel(repository: repository)
     await model.load()
     model.select(session.id)
-    #expect(model.windowTitle.full == "Vibe Manager › Before")
+    #expect(model.windowTitle.full == "Polyvibe › Before")
 
     var renamed = session
     renamed.name = "After"
     await repository.replace(with: [renamed])
     await model.reload()
 
-    #expect(model.windowTitle.full == "Vibe Manager › After")
+    #expect(model.windowTitle.full == "Polyvibe › After")
   }
 
   @Test("Under a multiple selection, the title names the session on screen")
@@ -78,7 +78,7 @@ struct WindowTitleTests {
 
     #expect(model.hasMultipleSelection)
     let onScreen = try #require(model.selectedSession)
-    #expect(model.windowTitle.full == "Vibe Manager › \(onScreen.name)")
+    #expect(model.windowTitle.full == "Polyvibe › \(onScreen.name)")
   }
 
   @Test("Over a new session's draft, the title names the draft as its row does")
@@ -98,33 +98,33 @@ struct WindowTitleTests {
     #expect(model.windowTitle.sessionName == draft.placeholderName)
 
     draft.draft.name = "Refonte"
-    #expect(model.windowTitle.full == "Vibe Manager › Refonte")
+    #expect(model.windowTitle.full == "Polyvibe › Refonte")
 
     model.select(shown.id)
-    #expect(model.windowTitle.full == "Vibe Manager › Underneath")
+    #expect(model.windowTitle.full == "Polyvibe › Underneath")
   }
 
   @Test("The application's name is the one the bundle gives")
   func applicationName() async {
     let session = WorkSession(name: "Alpha")
     let model = AppModel(repository: StubRepository(sessions: [session]))
-    model.applicationName = "Vibe Manager Copy"
+    model.applicationName = "Polyvibe Copy"
     await model.load()
     model.select(session.id)
 
-    #expect(model.windowTitle.full == "Vibe Manager Copy › Alpha")
+    #expect(model.windowTitle.full == "Polyvibe Copy › Alpha")
   }
 
   @Test("A name on several lines is said on one; a blank one leaves the application alone")
   func singleLine() {
-    let title = WindowTitle(applicationName: "Vibe Manager", sessionName: "Refonte\nde l'API ")
-    #expect(title.full == "Vibe Manager › Refonte de l'API")
-    #expect(title.spoken == "Vibe Manager, Refonte de l'API")
+    let title = WindowTitle(applicationName: "Polyvibe", sessionName: "Refonte\nde l'API ")
+    #expect(title.full == "Polyvibe › Refonte de l'API")
+    #expect(title.spoken == "Polyvibe, Refonte de l'API")
     #expect(!title.spoken.contains("›"))
 
-    let blank = WindowTitle(applicationName: "Vibe Manager", sessionName: "  ")
+    let blank = WindowTitle(applicationName: "Polyvibe", sessionName: "  ")
     #expect(blank.sessionName == nil)
-    #expect(blank.full == "Vibe Manager")
+    #expect(blank.full == "Polyvibe")
   }
 }
 

@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # A Release build to try out before a pull request is merged or a version tagged, named after what
-# it carries: "Vibe Manager #159" in the Dock, ⌘⇥, the menu bar and the window's title, so that
+# it carries: "Polyvibe #159" in the Dock, ⌘⇥, the menu bar and the window's title, so that
 # several copies running side by side can be told apart.
 #
 #   Scripts/local-build.sh          # labelled after the branch's ticket (#159), or the commit
@@ -33,7 +33,7 @@ if [[ -z "$label" ]]; then
   fi
 fi
 readonly label
-readonly name="Vibe Manager $label"
+readonly name="Polyvibe $label"
 readonly derived_data="${DERIVED_DATA_PATH:-${TMPDIR:-/tmp}/vibe-local-build-$commit}"
 readonly destination="$HOME/Downloads/VibeManager-local-$commit"
 
@@ -50,7 +50,7 @@ xcodebuild \
   VIBE_EMBED_COMPANION=YES \
   build | grep -E '(error|warning):|\*\* BUILD' || true
 
-readonly built="$derived_data/Build/Products/Release/Vibe Manager.app"
+readonly built="$derived_data/Build/Products/Release/Polyvibe.app"
 [[ -d "$built" ]] || fail "no application was built at $built"
 
 print "==> Naming it $name"
@@ -75,7 +75,7 @@ codesign --verify --strict "$app" || fail "the renamed application does not veri
 # The mobile companion's agent (#347), embedded: it holds iCloud and the pushes, signed with its own
 # profile, and the application keeps the microphone alone (ADR 0021). Checked in the final bundle,
 # where an entitlement lost in a copy would only show when CloudKit refuses.
-readonly agent="$app/Contents/Helpers/Vibe Manager Companion.app"
+readonly agent="$app/Contents/Helpers/Polyvibe Companion.app"
 [[ -d "$agent" ]] || fail "the companion agent is not embedded"
 codesign --verify --deep --strict "$app" || fail "the embedded companion agent does not verify"
 [[ -f "$agent/Contents/embedded.provisionprofile" ]] \

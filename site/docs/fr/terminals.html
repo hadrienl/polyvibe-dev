@@ -1,5 +1,5 @@
 <h1>Terminaux annexes et vue web</h1>
-<p class="lede">Chaque session a son propre tiroir de terminaux pour un serveur, un journal ou une commande <code>git</code>, et sa propre vue web, que vous partagez avec l’agent.</p>
+<p class="lede">Chaque session a son propre tiroir de terminaux pour un serveur, un journal ou une commande <code>git</code>, et sa propre vue web, que vous partagez avec l’agent, simulateurs et téléphones Android compris.</p>
 
 <h2 id="side-terminals">Terminaux annexes</h2>
 <p><strong>Présentation › Afficher les terminaux</strong> (<kbd>⌘J</kbd>), ou le bouton terminal de la barre d’état, ouvre un tiroir sous la session. <strong>Présentation › Nouveau terminal</strong> (<kbd>⌘T</kbd>) ajoute un onglet ; le clavier dans la vue web, <kbd>⌘T</kbd> ouvre plutôt un onglet web. Chaque onglet est un shell de connexion lancé dans le dossier de la session, intitulé d’après la commande qu’il exécute ou le dossier où il se trouve.</p>
@@ -19,9 +19,30 @@
 <ul>
   <li>Le menu <strong>Web</strong> propose les commandes habituelles : <strong>Ouvrir l’adresse…</strong> (<kbd>⌘L</kbd>), <strong>Recharger la page</strong> (<kbd>⌘R</kbd>), <strong>Précédent</strong> et <strong>Suivant</strong> (<kbd>⌘[</kbd> <kbd>⌘]</kbd>), <strong>Ouvrir la page dans le navigateur</strong>.</li>
   <li>Le champ d’adresse accepte aussi un ticket : tapez <code>#142</code>.</li>
-  <li>Le <strong>ticket</strong> de la session est son premier onglet, épinglé. C’est celui que vous avez donné à la session, ou celui que nomme sa branche (<code>feat/142-…</code> sur GitHub ou GitLab). Le menu <strong>Plus</strong> permet de le définir, de le changer ou de le retirer.</li>
+  <li>Le <strong>ticket</strong> de la session est son premier onglet épinglé. C’est celui que vous avez donné à la session, ou celui que nomme sa branche (<code>feat/142-…</code> sur GitHub ou GitLab). Le menu <strong>Plus</strong> permet de le définir, de le changer ou de le retirer.</li>
   <li>Un <kbd>⌘</kbd>-clic sur un lien dans un terminal l’ouvre dans la vue web ou dans votre navigateur — <a href="settings.html#web-view">Réglages › Vue web</a> en décide, et un <kbd>⌥⌘</kbd>-clic fait l’inverse.</li>
   <li>Toutes les sessions partagent un même jeu de cookies, distinct de celui de Safari : connectez-vous une fois à GitHub ou GitLab, et tous les onglets de tickets sont connectés.</li>
+</ul>
+
+<h2 id="tabs">Les onglets</h2>
+<p>Au-dessus de la page, un seul bouton représente les onglets : l’icône et le titre entier de l’onglet affiché, et le nombre d’onglets. Cliquez dessus pour en voir la liste, aussi large que la vue web.</p>
+<vm-shot name="webview-tabs" alt="La liste des onglets de la vue web : la section Épinglés avec le ticket et un onglet épinglé, puis la section Onglets, et Nouvel onglet en bas.">Le ticket et les onglets épinglés d’abord, puis les autres.</vm-shot>
+<ul>
+  <li><strong>Épinglés</strong> vient d’abord — le ticket, puis les onglets que vous avez épinglés —, et <strong>Onglets</strong> en dessous. Chaque ligne montre son titre sur deux lignes et son hôte ; au survol, sa punaise et son bouton de fermeture.</li>
+  <li><kbd>↑</kbd> <kbd>↓</kbd> et <kbd>Return</kbd> choisissent un onglet, <kbd>Esc</kbd> ferme la liste. <strong>Nouvel onglet</strong> (<kbd>⌘T</kbd>) est en bas.</li>
+  <li>Épinglez un onglet avec sa punaise, avec <strong>Épingler l’onglet</strong> dans son menu contextuel, ou en le glissant parmi les épinglés ; glissé en dessous, il est détaché. Les onglets épinglés reviennent en tête après une relance.</li>
+  <li><strong>Monter</strong> et <strong>Descendre</strong>, dans le menu contextuel, gardent un onglet dans sa section. <kbd>⌃⇥</kbd> passe par le ticket, les épinglés, puis les autres ; <kbd>⌘W</kbd> ferme aussi un onglet épinglé.</li>
+</ul>
+
+<h2 id="devices">Simulateurs et téléphones Android</h2>
+<p>Le bouton <strong>Simulateurs</strong>, un téléphone à côté du globe dans la barre d’outils, liste les simulateurs iOS et les émulateurs Android démarrés sur ce Mac, ainsi que les téléphones Android branchés en USB ou déjà appairés en Wi-Fi. Choisissez-en un : il s’ouvre en direct dans un onglet de la vue web, et vous vous en servez à la souris.</p>
+<vm-shot name="devices" alt="Un simulateur iOS affiché en direct dans un onglet de la vue web de la session, à côté de la conversation.">Un simulateur dans la vue web, à côté de l’agent qui travaille sur son app.</vm-shot>
+<ul>
+  <li><strong>Arrêter le simulateur</strong>, dans l’onglet d’un simulateur ou d’un émulateur, l’éteint et ferme l’onglet. Un téléphone n’a pas ce bouton.</li>
+  <li>Les simulateurs demandent Xcode. Android demande <code>adb</code>, fourni par Android Studio ou par <code>brew install --cask android-platform-tools</code>, et un téléphone demande le débogage USB, activé dans ses options pour les développeurs puis accepté sur le téléphone. La liste signale un téléphone qui l’attend, ou hors ligne.</li>
+  <li>Sur un téléphone Android, un petit serveur d’écran, celui de scrcpy, est copié le temps du miroir. Rien n’est installé sur un simulateur ni sur un émulateur.</li>
+  <li>L’agent peut en ouvrir un aussi, avec les outils <code>devices_list</code> et <code>device_open</code> de <code>vibe-browser</code>.</li>
+  <li>Le <a href="companion.html#devices">compagnon iPhone</a> les affiche aussi, au toucher.</li>
 </ul>
 
 <h2 id="agent-browser">Ce que l’agent peut en faire</h2>
@@ -38,7 +59,7 @@
 <p>Avant de <strong>lire</strong> une page d’un autre site, l’agent demande aussi : « L’agent veut lire une page de github.com. » Autorisé, il peut lire ce site jusqu’à la fin de la session — y compris ce que vous y voyez une fois connecté ; refusé, il reçoit un refus sans nouvelle question. Tant qu’un site n’est pas lisible, ni son titre ni son adresse complète ne lui sont donnés. Le journal <strong>Actions de l’agent</strong> liste en tête les sites que la session <strong>Peut lire</strong> et ceux <strong>Refusé</strong>, chacun avec <strong>Retirer</strong> ; archiver la session ou relancer l’app les oublie aussi.</p>
 <ul>
   <li>Un onglet que l’agent a ouvert ou fait agir passe au premier plan avant de charger un site distant, et marque la ligne de sa session si elle n’est pas affichée. Il reste à l’agent jusqu’à ce que vous cliquiez ou tapiez dedans.</li>
-  <li>Un <strong>téléchargement</strong> lancé dans un onglet de l’agent est demandé ; tout fichier téléchargé reçoit la quarantaine de macOS, au nom de Vibe Manager.</li>
+  <li>Un <strong>téléchargement</strong> lancé dans un onglet de l’agent est demandé ; tout fichier téléchargé reçoit la quarantaine de macOS, au nom de Polyvibe.</li>
   <li>Une page qui veut <strong>ouvrir une autre application</strong> (<code>zoommtg:</code>, <code>x-apple.systempreferences:</code>…) le demande toujours, même après votre clic ; sans clic, c’est refusé.</li>
 </ul>
 <div class="callout warn"><p>Une fois un site autorisé, l’agent lit ce que vous y voyez connecté, un ticket privé par exemple. Désactivez <strong>Donner la vue web aux agents</strong> dans <a href="settings.html#web-view">Réglages › Vue web</a> si vous ne le souhaitez pas.</p></div>

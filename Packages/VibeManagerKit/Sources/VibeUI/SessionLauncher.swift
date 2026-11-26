@@ -409,7 +409,7 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
   }
 
   /// Types a message into a session's agent as its composer would, and submits it (#352): a
-  /// coordinator's message to a child, or Vibe Manager's to a coordinator. The caller has checked
+  /// coordinator's message to a child, or Polyvibe's to a coordinator. The caller has checked
   /// the agent waits for no answer and shows no panel: keys typed into a dialog would answer it.
   /// `state` is asked again before each write and before Return: an agent gone to work meanwhile
   /// is given the message queued, as its composer queues one; one gone to wait for the user is

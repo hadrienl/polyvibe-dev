@@ -107,7 +107,7 @@ enum QuotaWords {
       return String(
         localized: "No session in 30 days",
         comment:
-          "An account without any session run in Vibe Manager over the last thirty days: no cost to say."
+          "An account without any session run in Polyvibe over the last thirty days: no cost to say."
       )
     }
     guard cost.hasPrice else {
@@ -281,7 +281,7 @@ struct QuotasSheet: View {
         } footer: {
           VStack(alignment: .leading, spacing: 4) {
             Text(
-              "What the tokens of the sessions run in Vibe Manager over the last thirty days would cost at public API prices.",
+              "What the tokens of the sessions run in Polyvibe over the last thirty days would cost at public API prices.",
               comment: "Explains the thirty-day cost of the Quotas popover (#599).")
             if quotas.leavesOutUnpriced {
               Text(

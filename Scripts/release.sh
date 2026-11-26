@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Builds, signs, notarizes and packages a release of Vibe Manager, then drafts it on GitHub
+# Builds, signs, notarizes and packages a release of Polyvibe, then drafts it on GitHub
 # (ADR 0021). Two places run it:
 #
 # - **The release workflow**, `.github/workflows/release.yml`, when a tag `v<version>` is pushed.
@@ -76,9 +76,9 @@ done
 [[ "$team" =~ '^[A-Z0-9]{10}$' ]] || fail "no team: set VIBE_TEAM_ID or DEVELOPMENT_TEAM"
 
 readonly work="$repository_root/build/release/$version"
-readonly archive="$work/Vibe Manager.xcarchive"
+readonly archive="$work/Polyvibe.xcarchive"
 readonly exported="$work/export"
-readonly app="$exported/Vibe Manager.app"
+readonly app="$exported/Polyvibe.app"
 # No space in the name: GitHub turns spaces of a release asset into dots, and the checksum file
 # would name a file nobody downloads.
 readonly dmg="$work/VibeManager-$version.dmg"
@@ -286,7 +286,7 @@ for bridge in sim-bridge emu-bridge adb-bridge; do
 done
 [[ -f "$app/Contents/Resources/scrcpy-server" && -f "$app/Contents/Resources/scrcpy-LICENSE" ]] \
   || fail "the scrcpy server adb-bridge runs on the phone, or its license, is missing (#526)"
-readonly agent="$app/Contents/Helpers/Vibe Manager Companion.app"
+readonly agent="$app/Contents/Helpers/Polyvibe Companion.app"
 [[ -d "$agent" ]] || fail "the companion agent is not embedded"
 [[ -f "$agent/Contents/embedded.provisionprofile" ]] \
   || fail "the companion agent carries no provisioning profile"
@@ -318,8 +318,8 @@ if (( dry_run )); then
   step "Dry run: notarization skipped"
 else
   step "Notarizing the application"
-  ditto -c -k --keepParent "$app" "$work/Vibe Manager.zip"
-  notarize "$app" "$work/Vibe Manager.zip"
+  ditto -c -k --keepParent "$app" "$work/Polyvibe.zip"
+  notarize "$app" "$work/Polyvibe.zip"
   spctl -a -vvv -t exec "$app" || fail "Gatekeeper rejects the application"
 fi
 
@@ -363,9 +363,9 @@ cat "$appcast_item"
 step "Building the disk image"
 staging="$work/dmg"
 mkdir -p "$staging"
-ditto "$app" "$staging/Vibe Manager.app"
+ditto "$app" "$staging/Polyvibe.app"
 ln -s /Applications "$staging/Applications"
-hdiutil create -volname "Vibe Manager" -srcfolder "$staging" -format UDZO -ov "$dmg"
+hdiutil create -volname "Polyvibe" -srcfolder "$staging" -format UDZO -ov "$dmg"
 codesign --sign "$identity" --timestamp --identifier "$bundle_identifier.dmg" "$dmg"
 codesign --verify --verbose=2 "$dmg" || fail "the disk image signature does not verify"
 if (( ! dry_run )); then
@@ -386,7 +386,7 @@ if (( dry_run )); then
 fi
 
 step "Drafting the release"
-release_options=(--draft --title "Vibe Manager $version" --generate-notes)
+release_options=(--draft --title "Polyvibe $version" --generate-notes)
 if (( in_ci )); then
   release_options+=(--verify-tag)
 else

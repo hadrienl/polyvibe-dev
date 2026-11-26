@@ -75,7 +75,7 @@ struct SessionsView: View {
       }
       .listStyle(.insetGrouped)
       .sensoryFeedback(.impact, trigger: foldTicks)
-      .navigationTitle("Vibe Manager")
+      .navigationTitle("Polyvibe")
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
           Button("Settings", systemImage: "gearshape") { showsSettings = true }
@@ -508,7 +508,7 @@ struct ConnectionBanner: View {
           symbol: "desktopcomputer", tint: .secondary, title: "No Mac",
           detail: String(
             localized:
-              "On your Mac, turn on Vibe Manager › Settings › iPhone Companion, with the same iCloud account as this iPhone."
+              "On your Mac, turn on Polyvibe › Settings › iPhone Companion, with the same iCloud account as this iPhone."
           ))
       }
       if !model.isConnected {
@@ -522,7 +522,7 @@ struct ConnectionBanner: View {
             title: "\(name) Is Offline",
             detail: String(
               localized:
-                "Seen \(seen). Open Vibe Manager on the Mac, with Settings › iPhone Companion turned on."
+                "Seen \(seen). Open Polyvibe on the Mac, with Settings › iPhone Companion turned on."
             ))
       }
       if case .failed(let reason) = channel.phase {

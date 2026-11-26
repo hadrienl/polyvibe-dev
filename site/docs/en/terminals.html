@@ -1,5 +1,5 @@
 <h1>Side terminals and web view</h1>
-<p class="lede">Each session has its own drawer of terminals for a server, a log or a <code>git</code> command, and its own web view that you and the agent both use.</p>
+<p class="lede">Each session has its own drawer of terminals for a server, a log or a <code>git</code> command, and its own web view that you and the agent both use, simulators and Android phones included.</p>
 
 <h2 id="side-terminals">Side terminals</h2>
 <p><strong>View › Show Terminals</strong> (<kbd>⌘J</kbd>), or the terminal button of the status bar, opens a drawer under the session. <strong>View › New Terminal</strong> (<kbd>⌘T</kbd>) adds a tab; with the keyboard in the web view, <kbd>⌘T</kbd> opens a web tab instead. Each tab is a login shell started in the session's folder, titled by the command it runs or the folder it is in.</p>
@@ -19,9 +19,30 @@
 <ul>
   <li>The <strong>Web</strong> menu has the usual commands: <strong>Open Location…</strong> (<kbd>⌘L</kbd>), <strong>Reload Page</strong> (<kbd>⌘R</kbd>), <strong>Back</strong> and <strong>Forward</strong> (<kbd>⌘[</kbd> <kbd>⌘]</kbd>), <strong>Open Page in Browser</strong>.</li>
   <li>The address field also takes a ticket: type <code>#142</code>.</li>
-  <li>The session's <strong>ticket</strong> is its first tab, pinned. It is the one you gave the session, or the one its branch names (<code>feat/142-…</code> on GitHub or GitLab). The <strong>More</strong> menu sets, changes or removes it.</li>
+  <li>The session's <strong>ticket</strong> is its first pinned tab. It is the one you gave the session, or the one its branch names (<code>feat/142-…</code> on GitHub or GitLab). The <strong>More</strong> menu sets, changes or removes it.</li>
   <li><kbd>⌘</kbd>-click a link in a terminal opens it in the web view, or in your browser — <a href="settings.html#web-view">Settings › Web View</a> decides, and <kbd>⌥⌘</kbd>-click does the other.</li>
   <li>All sessions share one set of cookies, apart from Safari's: sign in to GitHub or GitLab once, and every ticket tab is signed in.</li>
+</ul>
+
+<h2 id="tabs">Tabs</h2>
+<p>Above the page, one button stands for the tabs: the icon and the full title of the tab on screen, and how many tabs there are. Click it for the list, as wide as the web view.</p>
+<vm-shot name="webview-tabs" alt="The list of the web view's tabs: the Pinned section with the ticket and a pinned tab, then the Tabs section, and New Tab at the foot.">The ticket and the pinned tabs first, then the others.</vm-shot>
+<ul>
+  <li><strong>Pinned</strong> comes first — the ticket, then the tabs you pinned — and <strong>Tabs</strong> below. Each row shows its title on two lines and its host; hover over it for its pin and its close button.</li>
+  <li><kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Return</kbd> choose a tab, <kbd>Esc</kbd> closes the list. <strong>New Tab</strong> (<kbd>⌘T</kbd>) is at its foot.</li>
+  <li>Pin a tab with its pin, with <strong>Pin Tab</strong> in its context menu, or by dragging it among the pinned ones; dragged below them, it is unpinned. Pinned tabs come back first after a relaunch.</li>
+  <li><strong>Move Up</strong> and <strong>Move Down</strong>, in the context menu, keep a tab in its section. <kbd>⌃⇥</kbd> goes through the ticket, the pinned tabs, then the others; <kbd>⌘W</kbd> closes a pinned tab too.</li>
+</ul>
+
+<h2 id="devices">Simulators and Android phones</h2>
+<p>The <strong>Simulators</strong> button, a phone beside the globe in the toolbar, lists the iOS simulators and the Android emulators running on this Mac, and the Android phones plugged in by USB or already paired over Wi-Fi. Pick one: it opens live in a tab of the web view, and you use it with the mouse.</p>
+<vm-shot name="devices" alt="An iOS simulator shown live in a tab of the session's web view, beside the conversation.">A simulator in the web view, beside the agent that works on its app.</vm-shot>
+<ul>
+  <li><strong>Stop Simulator</strong>, in the tab of a simulator or an emulator, shuts it down and closes the tab. A phone has no such button.</li>
+  <li>Simulators need Xcode. Android needs <code>adb</code>, from Android Studio or <code>brew install --cask android-platform-tools</code>, and a phone needs USB debugging, turned on in its Developer options then accepted on the phone. The list says when a phone waits for that, or is offline.</li>
+  <li>For an Android phone, a small screen server, scrcpy's, is copied to it for the time of the mirror. Nothing is installed on a simulator or an emulator.</li>
+  <li>The agent opens one too, with the <code>devices_list</code> and <code>device_open</code> tools of <code>vibe-browser</code>.</li>
+  <li>The <a href="companion.html#devices">iPhone companion</a> shows them as well, by touch.</li>
 </ul>
 
 <h2 id="agent-browser">What the agent can do with it</h2>
@@ -38,7 +59,7 @@
 <p>Before <strong>reading</strong> a page of another site, the agent asks too: “The agent wants to read a page of github.com.” Allowed, it can read that site until the session ends — what you see there once signed in included; refused, it gets a refusal and no new question. As long as a site is not readable, neither its title nor its full address is given to it. The <strong>Agent Actions</strong> log lists first the sites the session <strong>Can read</strong> and those <strong>Refused</strong>, each with <strong>Remove</strong>; archiving the session or relaunching the app forgets them too.</p>
 <ul>
   <li>A tab the agent opened or acted on comes to the front before it loads a remote site, and marks its session's row if that session is not on screen. It stays the agent's until you click or type in it.</li>
-  <li>A <strong>download</strong> started in an agent's tab is asked; every downloaded file gets macOS's quarantine, in Vibe Manager's name.</li>
+  <li>A <strong>download</strong> started in an agent's tab is asked; every downloaded file gets macOS's quarantine, in Polyvibe's name.</li>
   <li>A page that wants to <strong>open another application</strong> (<code>zoommtg:</code>, <code>x-apple.systempreferences:</code>…) always asks, even after your click; without a click, it is refused.</li>
 </ul>
 <div class="callout warn"><p>Once a site is allowed, the agent reads what you see there signed in, a private ticket for instance. Turn off <strong>Give agents the web view</strong> in <a href="settings.html#web-view">Settings › Web View</a> if you do not want that.</p></div>

@@ -316,7 +316,7 @@ struct SessionAdoptionTests {
     #expect(model.detachedNotice == AppModel.DetachedNotice(runningCount: 1, endedCount: 1))
     #expect(
       model.detachedNotice?.message
-        == "2 agents kept running while Vibe Manager was closed; 1 has finished since.")
+        == "2 agents kept running while Polyvibe was closed; 1 has finished since.")
     #expect(launcher.isRunning(running.id))
     #expect(launcher.pane(for: ended.id)?.status == .exited(code: 0))
     #expect(await repository.status(of: running.id) == .active)

@@ -15,7 +15,7 @@ public struct WindowTitle: Equatable, Sendable {
     self.sessionName = sessionName.flatMap(Self.singleLine)
   }
 
-  /// The window's title: "Vibe Manager › <session>", or the application alone.
+  /// The window's title: "Polyvibe › <session>", or the application alone.
   public var full: String {
     guard let sessionName else { return applicationName }
     return String(

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Polyvibe: three agents, three waves that meet. Coral, violet and green are the session colors. -->
+  <defs>
+    <linearGradient id="bg" x1="150" y1="110" x2="870" y2="920" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#232a3e"/>
+      <stop offset="1" stop-color="#0d1020"/>
+    </linearGradient>
+    <clipPath id="tile"><rect width="1024" height="1024"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  
+  <g clip-path="url(#tile)">
+    <g style="isolation:isolate">
+      <circle cx="512" cy="392" r="58" fill="#ff8b65" style="mix-blend-mode:screen"/>
+      <circle cx="512" cy="392" r="118" fill="none" stroke="#ff8b65" stroke-opacity="0.9" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="512" cy="392" r="178" fill="none" stroke="#ff8b65" stroke-opacity="0.55" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="512" cy="392" r="238" fill="none" stroke="#ff8b65" stroke-opacity="0.28" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="58" fill="#7667e8" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="118" fill="none" stroke="#7667e8" stroke-opacity="0.9" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="178" fill="none" stroke="#7667e8" stroke-opacity="0.55" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="408" cy="592" r="238" fill="none" stroke="#7667e8" stroke-opacity="0.28" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="58" fill="#47c3a2" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="118" fill="none" stroke="#47c3a2" stroke-opacity="0.9" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="178" fill="none" stroke="#47c3a2" stroke-opacity="0.55" stroke-width="20" style="mix-blend-mode:screen"/>
+      <circle cx="616" cy="592" r="238" fill="none" stroke="#47c3a2" stroke-opacity="0.28" stroke-width="20" style="mix-blend-mode:screen"/>
+    </g>
+  </g>
+</svg>

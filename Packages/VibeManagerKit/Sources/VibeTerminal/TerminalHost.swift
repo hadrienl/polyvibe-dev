@@ -379,7 +379,7 @@ public enum DetachedProcess {
 /// A process macOS holds responsible for a child answers for it to TCC. Left alone, the host would
 /// answer to the application — a pid that dies when the application quits, while the agents it
 /// hosts carry on reading the user's folders. Disclaimed, the host answers for itself, and it is
-/// the application's own signed binary: TCC sees Vibe Manager either way, and the Full Disk Access
+/// the application's own signed binary: TCC sees Polyvibe either way, and the Full Disk Access
 /// granted to it goes on applying (ADR 0017). Private, and stable since macOS 10.14; looked up
 /// rather than linked, so a system without it spawns the host as before instead of failing.
 enum ResponsibilityDisclaimer {

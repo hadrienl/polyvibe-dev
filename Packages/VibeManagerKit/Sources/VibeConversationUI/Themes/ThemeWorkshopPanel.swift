@@ -437,7 +437,7 @@ struct ThemeLoadProblemsView: View {
     case .notJSON:
       LocalizedStringResource("not a theme file", bundle: .module)
     case .unknownFormat:
-      LocalizedStringResource("made by a later version of Vibe Manager", bundle: .module)
+      LocalizedStringResource("made by a later version of Polyvibe", bundle: .module)
     case .missingKey(let key):
       LocalizedStringResource("“\(key)” is missing", bundle: .module)
     case .unknownKey(let key):
