@@ -26,6 +26,7 @@ struct ReplySelectableText: UIViewRepresentable {
 
   func updateUIView(_ view: UITextView, context: Context) {
     context.coordinator.reply = reply
+    // Opens outside: a tapped link uses the same SwiftUI OpenURLAction as the previous Text.
     context.coordinator.openURL = { openURL($0) }
     let attributed = NSMutableAttributedString(attributedString: NSAttributedString(text))
     let base = UIFont.preferredFont(forTextStyle: code ? .footnote : .body)
