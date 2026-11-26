@@ -11,6 +11,11 @@ For Claude questions with previews, the selected option must be visibly highligh
 is written. Tall previews are recognized by their frame and Notes footer, rather than the distance
 between the last numbered choice and the bottom of the screen.
 
+The terminal is read as a view shows it. A frame drawn inside a synchronized update
+(`ESC[?2026h` … `ESC[?2026l`, which Claude Code uses once SwiftTerm reports the mode) is read only
+once the update has ended; until then the previous frame is what reads. Claude Code clears the
+screen and writes each frame over several reads, so a frame read half drawn had lost its dialog.
+
 If the dialog cannot be read or identified (`notOnScreen`, `otherDialog`), or an answer cannot be
 completed/confirmed (`interrupted`), the app opens the affected session in terminal view. It leaves
 the request pending and never automatically retries input. A request already settled elsewhere is
@@ -30,5 +35,9 @@ SHA-256 fingerprint: an existing local result or a matching GitHub issue prevent
 including after a crash between issue creation and saving its URL. Completed entries retain the
 issue URL in their JSON file. Network/API failures do not delay the terminal fallback.
 
-Regression case: [#558](https://github.com/hadrienl/polyvibe-dev/issues/558), Claude Code 2.1.326,
-Parcourses “Liens #120”, a single-choice question with a preview taller than the option list.
+Regression cases:
+
+- [#558](https://github.com/hadrienl/polyvibe-dev/issues/558), Claude Code 2.1.326,
+  Parcourses “Liens #120”, a single-choice question with a preview taller than the option list.
+- [#580](https://github.com/hadrienl/polyvibe-dev/issues/580), Claude Code 2.1.332, a subagent's
+  question answered from its card while the next frame was being drawn (`notOnScreen`).
