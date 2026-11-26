@@ -328,11 +328,12 @@ public struct ConversationView: View {
         let selection = selection
         model.accessibilityBookmarkPlace = { selection.accessibilityBookmarkPlace(in: $0) }
         model.visibleBookmarkPlace = { selection.firstVisibleBookmarkPlace() }
-        model.selectedBookmarkPlace = { [weak model] in
+        let bookmarkModel = model
+        model.selectedBookmarkPlace = { [weak bookmarkModel] in
           guard selection.isActive, selection.hasSelection,
             let anchor = selection.anchor, let focus = selection.focus
           else { return nil }
-          let order = model?.blocks.map(\.id) ?? []
+          let order = bookmarkModel?.blocks.map(\.id) ?? []
           let a = (order.firstIndex(of: anchor.block) ?? 0, anchor.segment, anchor.offset)
           let b = (order.firstIndex(of: focus.block) ?? 0, focus.segment, focus.offset)
           return a <= b ? anchor : focus
