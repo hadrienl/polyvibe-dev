@@ -159,6 +159,9 @@ enum MarkdownProse {
         text.addAttribute(
           .quoteBars, value: context.quotes, range: NSRange(location: 0, length: text.length))
       }
+      text.addAttribute(
+        .bookmarkParagraph, value: paragraphs.count,
+        range: NSRange(location: 0, length: text.length))
       paragraphs.append(Paragraph(text: text, style: style))
     }
 
@@ -229,6 +232,7 @@ enum MarkdownProse {
 }
 
 extension NSAttributedString.Key {
+  static let bookmarkParagraph = NSAttributedString.Key("VibeBookmarkParagraph")
   /// Where the bars of the quotes a paragraph is in are drawn: `[CGFloat]`.
   static let quoteBars = NSAttributedString.Key("VibeMarkdownQuoteBars")
 }

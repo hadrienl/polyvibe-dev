@@ -132,4 +132,6 @@ public struct LitPassage: Hashable, Sendable {
   public var quote: ReplyQuote
   /// The request that brought it into view: shown again, it is lit and scrolled to again.
   public var request: Int
+  var segment: Int?
+  var range: NSRange?
 }

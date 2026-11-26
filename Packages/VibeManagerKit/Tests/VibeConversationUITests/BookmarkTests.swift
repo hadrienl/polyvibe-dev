@@ -173,7 +173,8 @@ struct BookmarkTests {
     Self.laidOut(model, top: 0)
     #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m1")
-    #expect(model.highlightedBlockID == "m1")
+    #expect(model.litPassage?.blockID == "m1")
+    #expect(model.litPassage?.range != nil)
     // The view now at m1's start.
     model.overview.scrolled(readableTop: 120, readableHeight: 300)
     #expect(model.revealNextMoment())
