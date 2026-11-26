@@ -152,9 +152,7 @@ struct ConversationView: View {
     .onAppear { if channel.conversation?.sessionID != sessionID { channel.show(sessionID) } }
     // Still followed under a view pushed on top: coming back shows it at once, nothing reloads.
     .onDisappear {
-      if !showsWeb, !showsDevices, channel.conversation?.sessionID == sessionID {
-        channel.show(nil)
-      }
+      if !showsWeb, !showsDevices { channel.hide(sessionID) }
     }
   }
 

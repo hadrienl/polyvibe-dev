@@ -86,7 +86,8 @@ final class RemoteChannel {
   private var sending: RemoteFrameQueue?
   private var tasks: [Task<Void, Never>] = []
   private var attempt = 0
-  private var shownSessionID: String?
+  private var conversationFollow = RemoteConversationFollow()
+  private var shownSessionID: String? { conversationFollow.sessionID }
   private var searchToken = 0
   private let deviceName: String
   /// Called with the endpoint's identifier as soon as it is bound, for the pairing record.
@@ -146,7 +147,7 @@ final class RemoteChannel {
     macName = nil
     sessions = []
     conversation = nil
-    shownSessionID = nil
+    conversationFollow = RemoteConversationFollow()
     macTellsQuotas = false
   }
 
@@ -310,9 +311,16 @@ final class RemoteChannel {
 
   func show(_ sessionID: String?) {
     if shownSessionID != sessionID { sessionUsage = nil }
-    shownSessionID = sessionID
     if conversation?.sessionID != sessionID { conversation = nil }
-    write(.show(sessionID: sessionID))
+    write(conversationFollow.show(sessionID))
+  }
+
+  /// Stop the requested watch even if its first conversation frame has not arrived yet.
+  func hide(_ sessionID: String) {
+    guard let stop = conversationFollow.hide(sessionID) else { return }
+    conversation = nil
+    sessionUsage = nil
+    write(stop)
   }
 
   func send(_ text: String, files: [RemoteFile] = [], to sessionID: String) {
