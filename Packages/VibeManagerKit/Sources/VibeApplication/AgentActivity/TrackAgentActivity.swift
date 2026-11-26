@@ -512,6 +512,43 @@ public actor TrackAgentActivity {
     return request.awaitsPermissionDialog
   }
 
+  /// Whether the screen is read for the request, first of its queue: a permission awaiting its
+  /// dialog, or a form only announced (#603). Nothing is typed by this reading.
+  public func readsDialogOnScreen(_ id: AgentRequestID) -> Bool {
+    guard let tracked = sessions[id.sessionID],
+      tracked.decoder?.answerKeymap?.readsRequestOnScreen == true,
+      let request = tracked.state.requests.first, request.id == id
+    else { return false }
+    return request.awaitsScreenReading
+  }
+
+  /// A dialog no hook reports is drawn, read whole off the screen (#603) — Codex's Computer Use
+  /// asking to use an app: it is queued, shown, in place of the form the CLI only announced. The
+  /// permissions reported before it and never drawn were settled with no dialog, as when a dialog
+  /// drawn names a later request: the CLI draws its dialogs in turn.
+  /// `before` is read before `text`: a dialog on both, never one merely flashing by.
+  @discardableResult
+  public func dialogUnreportedOnScreen(
+    _ text: String, readBefore before: String, in session: SessionID
+  ) -> Bool {
+    guard let tracked = sessions[session], tracked.state.isStructured,
+      let keymap = tracked.decoder?.answerKeymap, keymap.readsRequestOnScreen,
+      let notice = keymap.unreportedRequest(onScreen: text),
+      keymap.unreportedRequest(onScreen: before) == notice,
+      let dialog = keymap.drawnDialog(onScreen: text),
+      !tracked.state.requests.contains(where: dialog.matches)
+    else { return false }
+    let previous = tracked.state
+    let asked = AgentSignal.questionAsked(.approval, tool: notice.reference.tool, notice: notice)
+    let id = AgentRequestID(sessionID: session, key: "screen:\(UUID().uuidString)")
+    var state = reduce(tracked.state, .signal(asked), for: session, requestID: id)
+    guard let index = state.requests.firstIndex(where: dialog.matches) else { return false }
+    state.arm(at: index)
+    sessions[session]?.state = state
+    changed(session, from: previous)
+    return true
+  }
+
   /// A dialog is drawn under a permission still awaiting its own, and the screen cannot say it is
   /// that one alone: cut short, unreadable, or as fit for another request (#283). Codex is held
   /// on a dialog all the same — the permission is put among the ones it may be, shown to the user

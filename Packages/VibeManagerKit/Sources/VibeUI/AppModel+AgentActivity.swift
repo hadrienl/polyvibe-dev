@@ -61,16 +61,17 @@ extension AppModel {
   }
 
   /// A permission Codex reported before its automatic review is followed on screen until its
-  /// dialog is drawn, or it is settled with none: nothing is typed meanwhile.
+  /// dialog is drawn, or it is settled with none: nothing is typed meanwhile. So is a form Codex
+  /// only announced, which its screen may show to be a request no hook reports (#603).
   private func readPermissionDialog(of state: AgentActivityState?, for session: SessionID) {
     let first = state?.requests.first
     for (id, read) in permissionDialogReads where id.sessionID == session {
-      if first?.id != id || first?.awaitsPermissionDialog != true {
+      if first?.id != id || first?.awaitsScreenReading != true {
         read.task.cancel()
         permissionDialogReads[id] = nil
       }
     }
-    guard let request = first, request.awaitsPermissionDialog,
+    guard let request = first, request.awaitsScreenReading,
       permissionDialogReads[request.id] == nil, let answerRequest
     else { return }
     let id = request.id

@@ -35,6 +35,12 @@ public struct AgentRequest: Identifiable, Hashable, Codable, Sendable {
   public var awaitsPermissionDialog: Bool {
     !isShown && kind == .approval && AgentDrawnDialog.showsWhole(self)
   }
+  /// Whether its screen is read while it is first: a permission awaiting its dialog, or a form
+  /// only announced, which the dialog drawn may tell more of than the CLI said (#603).
+  public var awaitsScreenReading: Bool {
+    if case .inTerminal(let prompt) = content, prompt.kind == .form { return true }
+    return awaitsPermissionDialog
+  }
   /// Asked without stopping the agent, which goes on meanwhile — Codex's
   /// `request_user_input_async` (#273): it never comes before a request that holds the agent.
   public var isAsynchronous: Bool
@@ -543,6 +549,9 @@ public protocol AgentAnswerKeymap: Sendable {
   var readsRequestOnScreen: Bool { get }
   /// The dialog drawn last, as the screen shows it, or `nil` when it cannot be read whole.
   func drawnDialog(onScreen text: String) -> AgentDrawnDialog?
+  /// The request a dialog drawn last is, read off the screen, when no hook reports it (#603): the
+  /// screen alone then makes a request of it. Its dialog, read, names it.
+  func unreportedRequest(onScreen text: String) -> AgentRequestNotice?
   /// What a dialog of the CLI's start says, read off the screen, when it is one this keymap
   /// answers: an update offered.
   func startupDialog(onScreen text: String) -> AgentTerminalPrompt?
@@ -574,6 +583,11 @@ extension AgentAnswerKeymap {
   }
 
   public func drawnDialog(onScreen text: String) -> AgentDrawnDialog? {
+    nil
+  }
+
+  /// Every request is reported by a hook, or announced and answered in the terminal.
+  public func unreportedRequest(onScreen text: String) -> AgentRequestNotice? {
     nil
   }
 

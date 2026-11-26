@@ -12,6 +12,10 @@ import VibeApplication
 /// An MCP tool's form names its server and its tool, but shows its arguments shortened, cut, and
 /// not all of them (`mcp_server_elicitation.rs`): it is read as the tool alone, which names a
 /// request only while no other call of it waits.
+///
+/// Computer Use asks in the same form, in its own words — `Allow Computer Use to use "Notes"?` —
+/// for its `js` tool of `cua_repl`, before it touches an app (0.171). No hook reports it, only the
+/// notification `Approval requested by cua_repl`: the screen makes a request of it (#603).
 enum CodexDrawnDialogReading {
   static let commandTitle = "Would you like to run the following command?"
   static let editsTitle = "Would you like to make the following edits?"
@@ -118,10 +122,42 @@ enum CodexDrawnDialogReading {
   }
 
   /// `Allow the echo-box MCP server to run tool "write_note"?`: the server and the tool.
+  /// Computer Use's own title is its tool's.
   static func toolTitle(_ line: String) -> (server: String, tool: String)? {
-    line.wholeMatch(of: #/Allow the (.+) MCP server to run tool "(.+)"\?/#).map {
+    if computerUseApp(inTitle: line) != nil {
+      return (computerUseServer, computerUseTool)
+    }
+    return line.wholeMatch(of: #/Allow the (.+) MCP server to run tool "(.+)"\?/#).map {
       (String($0.1), String($0.2))
     }
+  }
+
+  /// The server and the tool Codex's Computer Use runs, `mcp__cua_repl__js` to the hooks.
+  static let computerUseServer = "cua_repl"
+  static let computerUseTool = "js"
+
+  /// `Allow Computer Use to use "J-Method"?`: the app.
+  static func computerUseApp(inTitle line: String) -> String? {
+    line.wholeMatch(of: #/Allow Computer Use to use "(.+)"\?/#).map { String($0.1) }
+  }
+
+  /// The permission Computer Use asks on screen, which no hook reports (#603): to use the app its
+  /// title names, through its tool. `nil` when the screen does not end on its form, read whole.
+  static func computerUse(onScreen text: String) -> AgentRequestNotice? {
+    guard
+      dialog(onScreen: text)
+        == AgentDrawnDialog(.mcpTool(server: computerUseServer, tool: computerUseTool)),
+      let title = text.split(separator: "\n").map({ $0.trimmingCharacters(in: .whitespaces) })
+        .last(where: { computerUseApp(inTitle: $0) != nil }),
+      let app = computerUseApp(inTitle: title)
+    else { return nil }
+    let toolName = "mcp__\(computerUseServer)__\(computerUseTool)"
+    return AgentRequestNotice(
+      content: .permission(
+        AgentToolPermission(
+          tool: .mcp(server: computerUseServer, tool: computerUseTool), toolName: toolName,
+          subject: app, purpose: title)),
+      reference: AgentToolReference(tool: toolName), isShown: true)
   }
 
   /// `[… 9 lines] ctrl+a view all`: the top of what the dialog asks is not drawn.

@@ -198,12 +198,16 @@ public struct AnswerAgentRequest: Sendable {
 
   /// Observe the real dialog after a permission hook, without typing any answer. Automatic
   /// review can finish without one; terminal input approvals may draw without an OSC notice.
+  /// A form only announced is read too: the dialog drawn may be one no hook reports (#603).
   public func followPermissionDialog(_ id: AgentRequestID) async {
-    while !Task.isCancelled, await tracker.awaitsPermissionDialog(id) {
+    while !Task.isCancelled, await tracker.readsDialogOnScreen(id) {
       if let before = await screen(id.sessionID), await tracker.catchUp(id.sessionID),
         !Task.isCancelled, let after = await screen(id.sessionID)
       {
         if await tracker.dialogOnScreen(after, readBefore: before, isFor: id) { return }
+        if await tracker.dialogUnreportedOnScreen(after, readBefore: before, in: id.sessionID) {
+          return
+        }
         // Drawn, but not to be told apart: shown to be answered in the terminal, and still read
         // until it is told apart, or settled.
         await tracker.dialogUnnamedOnScreen(after, readBefore: before, isFor: id)
