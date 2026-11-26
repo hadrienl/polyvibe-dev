@@ -90,4 +90,25 @@ struct NonTextBookmarkGutterTests {
     hosting.layoutSubtreeIfNeeded()
     #expect(buttons(in: hosting).count == 2)
   }
+  @Test func unsharedReasoningBookmarkDescribesTheReasoning() throws {
+    let model = ConversationModel(sessionID: SessionID())
+    model.apply(
+      ConversationSnapshot(
+        entries: [
+          ConversationEntry(id: "reasoning", content: .reasoning(nil))
+        ], availability: .available))
+    model.loadBookmarks(["reasoning"])
+    let block = try #require(model.blocks.first)
+    let expected = String(localized: "Reasoning not shared by the agent", bundle: .module)
+    #expect(ConversationModel.bookmarkExcerpt(of: block) == expected)
+    #expect(ConversationModel.bookmarkLabel(of: block) == expected)
+    let margin = try #require(
+      MomentPreviewContent(
+        margin: .bookmark, of: block, model: model,
+        appearance: model.appearance))
+    #expect(margin.items.first?.label == expected)
+    let overview = MomentPreviewContent(placed: model.shownMoments, model: model)
+    #expect(overview.items.first?.label == expected)
+  }
+
 }

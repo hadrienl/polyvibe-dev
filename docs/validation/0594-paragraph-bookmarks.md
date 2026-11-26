@@ -70,3 +70,14 @@ ran the new tests together with `BookmarkTests`, `MarkdownUnitsTests` and
 `ParagraphBookmarkLayoutTests`: **45 tests passed**. Formatting, localization checks and
 `git diff --check` also pass. The earlier full-suite numbers above belong to the initial feature;
 the follow-up was checked with this focused suite.
+
+## Follow-up — unshared-reasoning preview label
+
+An unshared reasoning entry has no tool execution state. Its bookmark excerpt previously fell
+through to the tool accessibility title, whose missing-state fallback is “succeeded”. It now
+uses the existing, fully translated “Reasoning not shared by the agent” label, as the row does.
+`unsharedReasoningBookmarkDescribesTheReasoning` covers the excerpt, accessibility label and
+both margin/overview previews; all four assertions fail before the fix.
+
+The focused bookmark/geometry/navigation suite passes **46 tests** after this correction;
+localization and formatting checks also pass.

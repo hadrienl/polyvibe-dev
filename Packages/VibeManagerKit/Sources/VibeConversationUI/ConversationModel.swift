@@ -1496,6 +1496,8 @@ public final class ConversationModel {
       case .agentText(let answer), .reasoning(let answer?):
         // As it reads, without its Markdown: only its start is shown, only its start is read.
         text = plainText(ofMarkdown: String(answer.prefix(2000)))
+      case .reasoning(nil):
+        text = String(localized: "Reasoning not shared by the agent", bundle: .module)
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:
