@@ -42,6 +42,7 @@ struct SegmentView: NSViewRepresentable {
   @Environment(\.replyToPassage) private var replyToPassage
   @Environment(\.litPassage) private var litPassage
   @Environment(\.conversationIsLive) private var isLive
+  @Environment(\.paragraphBookmarkLayout) private var bookmarkLayout
 
   struct Input: Equatable {
     var content: Content
@@ -83,6 +84,8 @@ struct SegmentView: NSViewRepresentable {
   func updateNSView(_ view: SegmentTextView, context: Context) {
     context.coordinator.openURL = openURL
     context.coordinator.links = links
+    view.bookmarkLayout = bookmarkLayout
+    bookmarkLayout?.register(view)
     view.isLive = isLive
     view.links = links
     view.markdown = markdown
@@ -141,6 +144,7 @@ struct SegmentView: NSViewRepresentable {
   func sizeThatFits(_ proposal: ProposedViewSize, nsView view: SegmentTextView, context: Context)
     -> CGSize?
   {
+    defer { view.bookmarkLayout?.refresh() }
     guard let proposed = proposal.width.flatMap({ $0.isFinite ? $0 : nil }) else {
       // Scrolled sideways: as wide as its longest line.
       let natural = view.naturalWidth
@@ -158,6 +162,7 @@ struct SegmentView: NSViewRepresentable {
 final class SegmentTextView: NSTextView {
   nonisolated static let quoteBarWidth: CGFloat = 3
 
+  weak var bookmarkLayout: ParagraphBookmarkLayout?
   var kind = SegmentKind.prose
   /// The message's Markdown, for Copy Message and Copy as Markdown.
   var markdown: String? {
@@ -190,6 +195,7 @@ final class SegmentTextView: NSTextView {
   var replyFill = NSColor.windowBackgroundColor
   var replyBorder = NSColor.separatorColor
   /// The passage of a reply its message lights, looked for here.
+  var pendingPassageLight: PassageLight?
   var litRequest: LitPassage?
   /// Where it is lit here: `nil` where it is not.
   var litRange: NSRange?
@@ -451,6 +457,12 @@ final class SegmentTextView: NSTextView {
 
   override func viewDidMoveToWindow() {
     super.viewDidMoveToWindow()
+    if window != nil {
+      DispatchQueue.main.async { [weak self] in
+        guard let self else { return }
+        self.light(self.pendingPassageLight, color: self.litColor)
+      }
+    }
     if window == nil {
       FocusedMarkdown.shared.release(ObjectIdentifier(self))
     } else {

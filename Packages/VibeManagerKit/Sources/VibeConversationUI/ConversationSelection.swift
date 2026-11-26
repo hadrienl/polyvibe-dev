@@ -119,6 +119,36 @@ final class ConversationSelection {
     return anchor != focus
   }
 
+  func accessibilityBookmarkPlace(in block: String) -> SelectionPlace? {
+    for item in shown where item.block == block && item.view.isAccessibilityFocused() {
+      let range = item.view.accessibilitySelectedTextRange()
+      return SelectionPlace(block: block, segment: item.segment, offset: range.location)
+    }
+    return nil
+  }
+
+  /// Measured on command only: an ordinary unmarked message does no geometry work while scrolling.
+  func firstVisibleBookmarkPlace() -> SelectionPlace? {
+    for item in shown {
+      let view = item.view
+      guard let storage = view.textStorage, let manager = view.layoutManager,
+        let container = view.textContainer, view.visibleRect.height > 0
+      else { continue }
+      manager.ensureLayout(for: container)
+      for range in MarkdownUnits.ranges(in: storage, kind: view.kind) {
+        guard manager.numberOfGlyphs > 0 else { continue }
+        let glyph = manager.glyphIndexForCharacter(
+          at: min(range.location, max(0, storage.length - 1)))
+        let line = manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+          .offsetBy(dx: view.textContainerOrigin.x, dy: view.textContainerOrigin.y)
+        if line.minY >= view.visibleRect.minY - 0.5 && line.minY < view.visibleRect.maxY {
+          return SelectionPlace(block: item.block, segment: item.segment, offset: range.location)
+        }
+      }
+    }
+    return nil
+  }
+
   // MARK: Selecting
 
   /// Follows a drag that started with `event` in `view`, until the button is released.

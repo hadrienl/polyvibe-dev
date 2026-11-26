@@ -365,6 +365,8 @@ public final class ConversationModel {
   public let sessionID: SessionID
   public private(set) var snapshot = ConversationSnapshot(availability: .loading)
   public private(set) var blocks: [ConversationBlock] = []
+  /// Stable menu dependency: content updates only notify readers when emptiness changes (#588).
+  public private(set) var hasMessages = false
   /// The blocks of the accessibility rotors.
   public private(set) var rotor = ConversationRotor()
   public var promptBlocks: [ConversationBlock] { rotor.prompts.map { blocks[$0] } }
@@ -871,6 +873,8 @@ public final class ConversationModel {
     let appended = rebuilt[restart...].filter { !previousIDs.contains($0.id) }.count
     let wasEmpty = blocks.isEmpty
     blocks = rebuilt
+    let hasMessages = !rebuilt.isEmpty
+    if hasMessages != self.hasMessages { self.hasMessages = hasMessages }
     layoutState.starts = starts
     rotor.update(blocks, from: restart)
     updateMoments(from: restart)
@@ -1151,6 +1155,16 @@ public final class ConversationModel {
     return blocksChangedFrom
   }
   /// The block the selection of text is in, if one is: what Toggle Bookmark marks first.
+  @ObservationIgnored var accessibilityBookmarkPlace: (String) -> SelectionPlace? = { _ in nil }
+  @ObservationIgnored var visibleBookmarkPlace: () -> SelectionPlace? = { nil }
+  @ObservationIgnored var selectedBookmarkPlace: () -> SelectionPlace? = { nil }
+  private var bookmarkedUnitsByEntry: [String: Set<Int>] = [:]
+  @ObservationIgnored var bookmarkContentTops: [String: Double] = [:]
+  @ObservationIgnored private var bookmarkPositions: [String: [ParagraphBookmarkLayout.Position]] =
+    [:]
+  @ObservationIgnored private var bookmarkUnitCache: [String: (String, [MarkdownUnit])] = [:]
+  @ObservationIgnored private var lastRevealedUnit = 0
+  @ObservationIgnored private var lastRevealedWasBookmark = false
   @ObservationIgnored var selectedBlockID: () -> String? = { nil }
   /// Where the rows are as they are built: what the overview and the commands start from.
   @ObservationIgnored public let overview = ConversationOverviewTracker()
@@ -1203,11 +1217,13 @@ public final class ConversationModel {
   }
 
   public func isBookmarked(_ block: ConversationBlock) -> Bool {
-    ConversationBookmarks.isMarked(block, in: bookmarks)
+    ConversationBookmarks.entryIDs(of: block).contains {
+      bookmarkedUnitsByEntry[$0]?.isEmpty == false
+    }
   }
 
-  public func toggleBookmark(_ block: ConversationBlock) {
-    bookmarks = ConversationBookmarks.toggled(bookmarks, on: block)
+  public func toggleBookmark(_ block: ConversationBlock, unit: Int = 0) {
+    bookmarks = ConversationBookmarks.toggled(bookmarks, on: block, unit: unit)
     updateMoments(from: blocks.count, bookmarksChanged: true)
     saveBookmarks?(bookmarks)
   }
@@ -1216,6 +1232,14 @@ public final class ConversationModel {
   /// kept as they were: a conversation that grows reads only its end. Bookmarks changed, they
   /// are placed again throughout, the blocks' own moments still kept.
   private func updateMoments(from start: Int, bookmarksChanged: Bool = false) {
+    if bookmarksChanged {
+      var byEntry: [String: Set<Int>] = [:]
+      for stored in bookmarks {
+        let anchor = BookmarkAnchor(stored)
+        byEntry[anchor.entryID, default: []].insert(anchor.unit)
+      }
+      if byEntry != bookmarkedUnitsByEntry { bookmarkedUnitsByEntry = byEntry }
+    }
     let start = min(max(start, 0), blockMoments.count, blocks.count)
     // The blocks' own moments, and the row margins' dictionary, from `start` only.
     for gone in blockMoments[start...] where !gone.moments.isEmpty {
@@ -1237,16 +1261,32 @@ public final class ConversationModel {
     var marked = indices.drop { $0 < placedFrom }.makeIterator()
     var nextMarked = marked.next()
     for index in placedFrom..<blockMoments.count {
+      let first = placed.count
       if index == nextMarked {
         nextMarked = marked.next()
-        if let bookmark = ConversationMoments.bookmark(of: blocks[index], at: index, in: bookmarks)
+        for var bookmark in ConversationMoments.bookmarks(
+          of: blocks[index], at: index, in: bookmarks)
         {
+          let units = units(in: blocks[index])
+          let unit = bookmark.moment.unit
+          if bookmarkTextIsCollapsed(in: blocks[index]) {
+            bookmark.unitOffset = bookmarkHeaderOffset(for: blocks[index].id)
+          } else if let positions = bookmarkPositions[blocks[index].id] {
+            bookmark.unitOffset =
+              positions.first(where: { $0.unit == unit })?.top
+              ?? bookmarkHeaderOffset(for: blocks[index].id)
+          } else if units.indices.contains(unit) {
+            let before = units.prefix(unit).reduce(0) { $0 + max(1, $1.range.length) }
+            let total = units.reduce(0) { $0 + max(1, $1.range.length) }
+            bookmark.unitFraction = Double(before) / Double(max(1, total))
+          }
           placed.append(bookmark)
         }
       }
       for moment in blockMoments[index].moments {
         placed.append(.init(blockIndex: index, moment: moment))
       }
+      placed.replaceSubrange(first..., with: ConversationMoments.ordered(placed[first...]))
     }
     lastMomentsWork = (blocks.count - start, blockMoments.count - placedFrom)
     guard !moments[kept...].elementsEqual(placed) else { return }
@@ -1273,10 +1313,26 @@ public final class ConversationModel {
   /// what is read otherwise. `false` when there is none.
   @discardableResult
   public func toggleBookmarkInView() -> Bool {
-    guard usesMoments, let id = selectedBlockID() ?? overview.top?.blockID,
+    let visible = topIndex.flatMap {
+      blocks[$0].bookmarkMarkdown == nil ? nil : visibleBookmarkPlace()
+    }
+    let place = selectedBookmarkPlace() ?? visible
+    guard usesMoments, let id = place?.block ?? selectedBlockID() ?? overview.top?.blockID,
       let block = blocks.first(where: { $0.id == id })
     else { return false }
-    toggleBookmark(block)
+    let units = units(in: block)
+    let unit: Int
+    if let place {
+      unit =
+        units.last {
+          $0.segment < place.segment
+            || ($0.segment == place.segment && $0.range.location <= place.offset)
+        }?.index ?? 0
+    } else {
+      let offset = overview.top?.blockID == id ? overview.top?.offset ?? 0 : 0
+      unit = bookmarkPositions[id]?.first { $0.top >= offset - 0.5 }?.unit ?? 0
+    }
+    toggleBookmark(block, unit: unit)
     return true
   }
 
@@ -1284,33 +1340,56 @@ public final class ConversationModel {
   /// (#572). `false` past the last.
   @discardableResult
   public func revealNextMoment() -> Bool {
-    var index = topIndex ?? -1
-    if let last = lastRevealedOnScreen { index = max(index, last) }
-    guard let next = ConversationBookmarks.next(after: index, in: momentIndices) else {
-      return false
-    }
-    revealMoment(blocks[next].id)
+    let index = topIndex ?? -1
+    let offset = overview.top?.offset ?? 0
+    let last = lastRevealedOnScreen
+    guard
+      let next = shownMoments.first(where: {
+        if let last, ($0.blockIndex, $0.moment.unit) <= (last, lastRevealedUnit) { return false }
+        return $0.blockIndex > index
+          || ($0.blockIndex == index
+            && (momentOffset($0) > offset + ConversationBookmarks.startTolerance
+              || ($0.moment.kind == .bookmark && $0.moment.unit > 0
+                && bookmarkTextIsCollapsed(in: blocks[index]))))
+      })
+    else { return false }
+    revealMoment(
+      blocks[next.blockIndex].id, unit: next.moment.unit, bookmark: next.moment.kind == .bookmark)
     return true
   }
 
   /// Previous Moment, ⌥⌘K. `false` before the first.
   @discardableResult
   public func revealPreviousMoment() -> Bool {
-    guard var index = topIndex else { return false }
-    var offset = overview.top?.offset ?? 0
-    if let last = lastRevealedOnScreen, last > index { (index, offset) = (last, 0) }
+    guard let index = topIndex else { return false }
+    let offset = overview.top?.offset ?? 0
+    let last = lastRevealedOnScreen
     guard
-      let previous = ConversationBookmarks.previous(
-        before: index, offset: offset, in: momentIndices)
+      let previous = shownMoments.last(where: {
+        if let last { return ($0.blockIndex, $0.moment.unit) < (last, lastRevealedUnit) }
+        return $0.blockIndex < index
+          || ($0.blockIndex == index
+            && momentOffset($0) < offset - ConversationBookmarks.startTolerance)
+      })
     else { return false }
-    revealMoment(blocks[previous].id)
+    revealMoment(
+      blocks[previous.blockIndex].id, unit: previous.moment.unit,
+      bookmark: previous.moment.kind == .bookmark)
     return true
   }
 
   /// The last moment brought up, while it is still in what is read.
   private var lastRevealedOnScreen: Int? {
     guard let id = lastRevealedMoment, overview.isRead(id) else { return nil }
-    return blocks.firstIndex { $0.id == id }
+    guard let index = blocks.firstIndex(where: { $0.id == id }) else { return nil }
+    if lastRevealedWasBookmark,
+      let moment = shownMoments.first(where: {
+        $0.blockIndex == index && $0.moment.kind == .bookmark && $0.moment.unit == lastRevealedUnit
+      }), !overview.isRead(id, offset: momentOffset(moment))
+    {
+      return nil
+    }
+    return index
   }
 
   /// The block at the top of what is read.
@@ -1321,9 +1400,89 @@ public final class ConversationModel {
 
   /// Brings the block of a moment to the top of what is read, and lights it a moment, as a reply
   /// lights the message it answers (#565).
-  public func revealMoment(_ blockID: String) {
+  public func revealMoment(_ blockID: String, unit: Int = 0, bookmark: Bool = false) {
     lastRevealedMoment = blockID
-    reveal(blockID)
+    lastRevealedUnit = unit
+    lastRevealedWasBookmark = bookmark
+    if bookmark, let block = blocks.first(where: { $0.id == blockID }),
+      let target = units(in: block).first(where: { $0.index == unit })
+    {
+      if case .entry(let entry) = block {
+        switch entry.content {
+        case .reasoning, .userPrompt: setExpanded(true, for: entry.id)
+        case .tool: setExpanded(true, for: entry.id)
+        default: break
+        }
+      }
+      reveal(
+        blockID,
+        passage: ReplyQuote(
+          excerpt: target.text.isEmpty ? " " : target.text, author: .agent, date: nil))
+      litPassage?.segment = target.segment
+      litPassage?.range = target.range
+    } else {
+      reveal(blockID)
+    }
+  }
+
+  func units(in block: ConversationBlock) -> [MarkdownUnit] {
+    guard let text = block.bookmarkMarkdown else { return [] }
+    if let cached = bookmarkUnitCache[block.id], cached.0 == text { return cached.1 }
+    let units = MarkdownUnits.units(in: block.bookmarkContents)
+    if bookmarkUnitCache.count > 2_000 { bookmarkUnitCache.removeAll() }
+    bookmarkUnitCache[block.id] = (text, units)
+    return units
+  }
+
+  func bookmarkUnits(in block: ConversationBlock) -> [Int] {
+    Set(ConversationBookmarks.entryIDs(of: block).flatMap { bookmarkedUnitsByEntry[$0] ?? [] })
+      .sorted()
+  }
+
+  func forgetBookmarkPositions() {
+    bookmarkPositions.removeAll()
+    updateMoments(from: blocks.count, bookmarksChanged: true)
+  }
+
+  func recordBookmarkPositions(_ positions: [ParagraphBookmarkLayout.Position], for id: String) {
+    // A queued measurement from a disappearing text view must not restore an expanded
+    // paragraph's offset after its disclosure was closed.
+    let positions = toggles[id] == false ? [] : positions
+    guard bookmarkPositions[id] != positions else { return }
+    bookmarkPositions[id] = positions
+    for index in moments.indices
+    where blocks[moments[index].blockIndex].id == id && moments[index].moment.kind == .bookmark {
+      moments[index].unitOffset =
+        positions.first(where: {
+          $0.unit == moments[index].moment.unit
+        })?.top ?? bookmarkHeaderOffset(for: id)
+      moments[index].unitFraction = 0
+    }
+    updateShownMoments()
+  }
+
+  private func bookmarkHeaderOffset(for id: String) -> Double {
+    let top = overview.top(of: id) ?? 0
+    return max(0, (bookmarkContentTops[id] ?? top) - top)
+  }
+
+  private func bookmarkTextIsCollapsed(in block: ConversationBlock) -> Bool {
+    guard case .entry(let entry) = block else { return false }
+    switch entry.content {
+    case .reasoning:
+      return !isExpanded(id: entry.id, default: false)
+    case .userPrompt where Self.relayedMessage(of: block) != nil:
+      return !isExpanded(id: entry.id, default: false)
+    case .tool(let call) where call.kind == .plan:
+      return !isExpanded(block)
+    default:
+      return false
+    }
+  }
+
+  private func momentOffset(_ placed: ConversationMoments.Placed) -> Double {
+    placed.unitOffset + placed.unitFraction
+      * (overview.measured[blocks[placed.blockIndex].id] ?? 100)
   }
 
   /// Scrolls to where the overview was clicked or dragged.
@@ -1370,6 +1529,8 @@ public final class ConversationModel {
       case .agentText(let answer), .reasoning(let answer?):
         // As it reads, without its Markdown: only its start is shown, only its start is read.
         text = plainText(ofMarkdown: String(answer.prefix(2000)))
+      case .reasoning(nil):
+        text = String(localized: "Reasoning not shared by the agent", bundle: .module)
       default: text = ToolBlockView.accessibilityTitle(of: block)
       }
     case .toolGroup, .subagentGroup:
@@ -1537,6 +1698,11 @@ public final class ConversationModel {
   public func setExpanded(_ isExpanded: Bool, for id: String) {
     toggles[id] = isExpanded
     toggleRevision += 1
+    if !isExpanded,
+      bookmarkPositions[id] != nil || bookmarkedUnitsByEntry[id]?.isEmpty == false
+    {
+      recordBookmarkPositions([], for: id)
+    }
   }
 
   public func isExpanded(id: String, default fallback: Bool) -> Bool {

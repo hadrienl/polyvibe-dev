@@ -194,6 +194,24 @@ shell mode; relative paths resolve there. It is disabled while that mode cannot 
 This action is separate from opening attachments or following URLs: local files do not become
 ordinary clickable URL links, and remote script destinations are not accepted.
 
+### Paragraph bookmarks
+
+A bookmark names a semantic unit of a message (#594): a heading, paragraph (including hard line
+breaks), each paragraph of a list item or quote, each logical line of code, or a whole table.
+Rules contribute no unit. Tool and sub-agent groups keep one bookmark. Plain prompts use their
+blank-line-separated paragraphs. Standalone plans use the same Markdown units as answers.
+
+The existing set of entry identifiers remains the storage format: an identifier alone means
+unit zero, `entryID#uN` means unit N. Older bookmarks therefore still find the first paragraph.
+Units are numbered in reading order and do not depend on the width. Prose keeps a single text
+view and its cross-paragraph selection; an attributed-string marker records the semantic ranges.
+Only hovered or bookmarked rows acquire a geometry tracker, which reads TextKit 1's first-line
+rectangles. The overview estimates an unseen unit by the preceding text's share of the message,
+then uses its measured offset. Clicking a unit reveals and highlights its exact segment/range,
+so repeated text cannot send a bookmark to the wrong occurrence. ⌘B uses the start of the text
+selection, otherwise the first unit whose first line is visible. Existing add/remove labels are
+reused in every shipped language.
+
 ### Conversation by default, switched per session
 
 The Settings choose how sessions open (conversation by default); each session keeps what the user

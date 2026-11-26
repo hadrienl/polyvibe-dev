@@ -21,6 +21,65 @@ struct BookmarkTests {
     return model
   }
 
+  @Test("Bookmark menu observation ignores 100 updates while messages remain present (#588)")
+  func menuObservation() {
+    let model = Self.model(1)
+    final class Flag: @unchecked Sendable { var told = false }
+    var invalidations = 0
+    var menuInvalidations = 0
+    for index in 0..<100 {
+      let flag = Flag()
+      let menuFlag = Flag()
+      withObservationTracking {
+        _ = model.usesMoments && model.hasMessages
+      } onChange: {
+        menuFlag.told = true
+      }
+      withObservationTracking {
+        _ = model.usesMoments && !model.blocks.isEmpty
+      } onChange: {
+        flag.told = true
+      }
+      model.apply(
+        ConversationSnapshot(
+          entries: [ConversationEntry(id: "m0", content: .agentText("answer \(index)"))],
+          availability: .available))
+      if flag.told { invalidations += 1 }
+      if menuFlag.told { menuInvalidations += 1 }
+    }
+    #expect(invalidations == 100)
+    #expect(menuInvalidations == 0)
+  }
+
+  @Test("Menu availability observes first message, clearing and overview changes (#588)")
+  func menuAvailabilityTransitions() {
+    let model = Self.model(0)
+    final class Flag: @unchecked Sendable { var told = false }
+    func changes(_ update: () -> Void) -> Bool {
+      let flag = Flag()
+      withObservationTracking {
+        _ = model.usesMoments && model.hasMessages
+      } onChange: {
+        flag.told = true
+      }
+      update()
+      return flag.told
+    }
+    #expect(!model.hasMessages)
+    #expect(
+      changes {
+        model.apply(
+          ConversationSnapshot(
+            entries: [ConversationEntry(id: "first", content: .agentText("answer"))],
+            availability: .available))
+      })
+    #expect(model.hasMessages)
+    #expect(changes { model.appearance.showsOverview = false })
+    #expect(changes { model.appearance.showsOverview = true })
+    #expect(changes { model.apply(ConversationSnapshot(availability: .available)) })
+    #expect(!model.hasMessages)
+  }
+
   /// Rows built where they would be: 100 points each, 20 apart; the top of what is read at `top`.
   private static func laidOut(_ model: ConversationModel, top: Double) {
     for (index, block) in model.blocks.enumerated() {
@@ -114,7 +173,8 @@ struct BookmarkTests {
     Self.laidOut(model, top: 0)
     #expect(model.revealNextMoment())
     #expect(model.revealedBlockID == "m1")
-    #expect(model.highlightedBlockID == "m1")
+    #expect(model.litPassage?.blockID == "m1")
+    #expect(model.litPassage?.range != nil)
     // The view now at m1's start.
     model.overview.scrolled(readableTop: 120, readableHeight: 300)
     #expect(model.revealNextMoment())
@@ -320,7 +380,8 @@ struct BookmarkTests {
         scale: 0.1) == nil)
   }
 
-  @Test("Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
+  @Test(
+    "Rows measured again or a smaller scale take the preview with its icon; a moment gone has none")
   func previewFollowsTheLayout() {
     let model = Self.model()
     model.loadBookmarks(["m2"])

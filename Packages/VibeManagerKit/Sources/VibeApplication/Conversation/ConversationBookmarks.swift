@@ -43,12 +43,66 @@ public actor InMemoryConversationBookmarkStore: ConversationBookmarkStore {
   }
 }
 
+/// A paragraph anchor in the existing set of entry identifiers. Unit zero keeps its legacy form.
+public struct BookmarkAnchor: Hashable, Sendable {
+  public let entryID: String
+  public let unit: Int
+
+  public init(entryID: String, unit: Int = 0) {
+    self.entryID = entryID
+    self.unit = max(0, unit)
+  }
+
+  public init(_ stored: String) {
+    if let suffix = stored.range(of: "#u", options: .backwards),
+      let unit = Int(stored[suffix.upperBound...]), unit > 0
+    {
+      self.init(entryID: String(stored[..<suffix.lowerBound]), unit: unit)
+    } else {
+      self.init(entryID: stored)
+    }
+  }
+
+  public var stored: String { unit == 0 ? entryID : "\(entryID)#u\(unit)" }
+}
+
 /// Which blocks of a conversation hold a bookmark, and the way from one to the next (#567).
 ///
 /// A bookmark names an entry, never a block: a group of tools is named after its first call, and
 /// comes apart when tool calls stop being grouped. The entry stays the same either way, so that
 /// the bookmark finds its block whatever the settings.
 public enum ConversationBookmarks {
+  public static func anchors(of block: ConversationBlock, in bookmarks: Set<String>)
+    -> [BookmarkAnchor]
+  {
+    let entries = Set(entryIDs(of: block))
+    return bookmarks.map(BookmarkAnchor.init).filter { entries.contains($0.entryID) }
+      .sorted { ($0.unit, $0.entryID) < ($1.unit, $1.entryID) }
+  }
+
+  public static func isMarked(_ block: ConversationBlock, unit: Int, in bookmarks: Set<String>)
+    -> Bool
+  {
+    anchors(of: block, in: bookmarks).contains { $0.unit == unit }
+  }
+
+  public static func toggled(_ bookmarks: Set<String>, on block: ConversationBlock, unit: Int)
+    -> Set<String>
+  {
+    let marked = anchors(of: block, in: bookmarks).filter { $0.unit == unit }
+    if !marked.isEmpty { return bookmarks.subtracting(marked.map(\.stored)) }
+    guard let first = entryIDs(of: block).first else { return bookmarks }
+    return bookmarks.union([BookmarkAnchor(entryID: first, unit: unit).stored])
+  }
+
+  public static func marked(in blocks: [ConversationBlock], bookmarks: Set<String>) -> [(
+    blockIndex: Int, unit: Int
+  )] {
+    blocks.enumerated().flatMap { index, block in
+      Set(anchors(of: block, in: bookmarks).map(\.unit)).sorted().map { (index, $0) }
+    }
+  }
+
   /// The entries a block shows, in their order.
   public static func entryIDs(of block: ConversationBlock) -> [String] {
     switch block {
@@ -58,13 +112,12 @@ public enum ConversationBookmarks {
   }
 
   public static func isMarked(_ block: ConversationBlock, in bookmarks: Set<String>) -> Bool {
-    !bookmarks.isEmpty && entryIDs(of: block).contains(where: bookmarks.contains)
+    !bookmarks.isEmpty && !anchors(of: block, in: bookmarks).isEmpty
   }
 
   /// The bookmarks once the block is toggled: every entry of it unmarked when one is, its first
   /// marked otherwise.
-  public static func toggled(_ bookmarks: Set<String>, on block: ConversationBlock) -> Set<String>
-  {
+  public static func toggled(_ bookmarks: Set<String>, on block: ConversationBlock) -> Set<String> {
     let entries = entryIDs(of: block)
     if entries.contains(where: bookmarks.contains) {
       return bookmarks.subtracting(entries)

@@ -92,6 +92,14 @@ public final class ConversationOverviewTracker {
     return frame.maxY > readableTop && frame.minY < readableTop + readableHeight
   }
 
+  /// A unit's first line, rather than any part of its possibly very long message.
+  func isRead(_ id: String, offset: Double) -> Bool {
+    guard let frame = frames[id] else { return false }
+    let y = Double(frame.minY) + offset
+    return y >= readableTop - ConversationBookmarks.startTolerance
+      && y < readableTop + readableHeight
+  }
+
   /// Forgets the heights measured at another width or text size: estimated again until their
   /// rows are built anew. Those built now are measured as they are.
   func forgetMeasures() {
@@ -251,7 +259,10 @@ struct ConversationOverview: View {
       let layout: ConversationOverviewLayout
       if key.metrics != self.layout.metrics {
         // Heights measured at another width or text size no longer hold.
-        if self.layout.metrics != nil { tracker.forgetMeasures() }
+        if self.layout.metrics != nil {
+          tracker.forgetMeasures()
+          model.forgetBookmarkPositions()
+        }
         layout = ConversationOverviewLayout(
           blocks: model.blocks, measured: tracker.measured, metrics: key.metrics,
           shapes: tracker.shapes)
@@ -282,7 +293,7 @@ struct ConversationOverview: View {
   ) -> [(moments: Range<Int>, y: Double)] {
     // In order: those of blocks the layout does not have yet are the last.
     let placed = moments.prefix { $0.blockIndex < layout.count }
-    let tops = placed.map { layout.tops[$0.blockIndex] }
+    let tops = placed.map { momentTop($0, layout: layout) }
     return ConversationOverviewLayout.clusters(tops, scale: scale).map {
       ($0, iconY(top: tops[$0.lowerBound], scale: scale))
     }
@@ -313,7 +324,7 @@ struct ConversationOverview: View {
       let onIcon = iconSquare(y: cluster.y).contains(point)
       // Each bookmark's line is drawn at its own block, the first of its cluster or not.
       func lineDistance(_ index: Int) -> Double {
-        abs(iconY(top: layout.tops[moments[index].blockIndex], scale: scale) - point.y)
+        abs(iconY(top: momentTop(moments[index], layout: layout), scale: scale) - point.y)
       }
       let line = cluster.moments
         .filter { moments[$0].moment.kind == .bookmark }
@@ -349,6 +360,13 @@ struct ConversationOverview: View {
     CGRect(x: 0, y: y - tagMargin / 2, width: tagMargin, height: tagMargin)
   }
 
+  static func momentTop(_ placed: ConversationMoments.Placed, layout: ConversationOverviewLayout)
+    -> Double
+  {
+    layout.tops[placed.blockIndex] + placed.unitOffset + placed.unitFraction
+      * layout.heights[placed.blockIndex]
+  }
+
   /// Where a moment's icon is centred, and a bookmark's line: at the top of its block.
   static func iconY(top: Double, scale: Double) -> Double {
     max(top * scale + 1.5, iconSize / 2)
@@ -371,7 +389,13 @@ struct ConversationOverview: View {
           {
             // A moment clicked: nothing more until the button is released.
             frameDrag.grab = .infinity
-            model.revealMoment(blockID)
+            if let touched = Self.cluster(
+              near: value.startLocation, moments: model.shownMoments, layout: layout, scale: scale)?
+              .touched
+            {
+              let moment = model.shownMoments[touched].moment
+              model.revealMoment(blockID, unit: moment.unit, bookmark: moment.kind == .bookmark)
+            }
             return
           }
           let thumb = OverviewViewport.thumb(
@@ -561,7 +585,8 @@ private struct OverviewBlocks: View, Equatable {
     let left = ConversationOverview.tagMargin
     for placed in moments.placed
     where placed.moment.kind == .bookmark && placed.blockIndex < layout.count {
-      let y = ConversationOverview.iconY(top: layout.tops[placed.blockIndex], scale: scale)
+      let y = ConversationOverview.iconY(
+        top: ConversationOverview.momentTop(placed, layout: layout), scale: scale)
       context.fill(
         Path(CGRect(x: left - 2, y: y - 0.75, width: size.width - left - 2, height: 1.5)),
         with: .color(colors.accent.opacity(0.6)))
@@ -688,6 +713,42 @@ struct BookmarkShape: Shape {
   }
 }
 
+/// Which paragraph the pointer entered from the margin, even after its bookmark is removed.
+struct BookmarkGutterHover: Equatable {
+  var unit = 0
+  private var hoveredTag: Int?
+
+  var isHovered: Bool { hoveredTag != nil }
+
+  mutating func moved(_ hovered: Bool, on unit: Int) {
+    if hovered {
+      self.unit = unit
+      hoveredTag = unit
+    } else if hoveredTag == unit {
+      hoveredTag = nil
+    }
+  }
+
+  func canReleaseLayout(bodyHovered: Bool, isMarked: Bool) -> Bool {
+    !bodyHovered && !isHovered && !isMarked
+  }
+}
+
+/// The tag views kept in the margin. A whole-block tag must survive the gap between the
+/// body's hover ending and the tag's own hover beginning; it has no paragraph tracker.
+struct BookmarkGutterUnits<Content: View>: View {
+  let marked: [Int]
+  let hoveredUnit: Int
+  let showsHoveredUnit: Bool
+  let keepsWholeBlockTag: Bool
+  @ViewBuilder var content: (Int) -> Content
+
+  var body: some View {
+    let units = Set(marked + ((keepsWholeBlockTag || showsHoveredUnit) ? [hoveredUnit] : []))
+    ForEach(units.sorted(), id: \.self, content: content)
+  }
+}
+
 /// The bookmark of a message, in the margin left of it: pale while the pointer is on the message,
 /// plain once set. A click sets it, another takes it away. The pointer on one set shows the
 /// overview's preview of it (#608); on one not set, what a click does.
@@ -699,6 +760,9 @@ struct BookmarkGutter: View {
   /// The height of the message's first line, which it is centred on.
   let lineHeight: Double
   let toggle: () -> Void
+  var unit: Int = 0
+  var excerpt = ""
+  var hovered: (Bool) -> Void = { _ in }
   @Environment(\.conversationTheme) private var theme
   @State private var isHovered = false
 
@@ -732,11 +796,16 @@ struct BookmarkGutter: View {
       // One tracking of the pointer, for its look and its preview.
       .modifier(
         MarginPreviewSource(
-          preview: preview, blockID: blockID, target: .bookmark, isEnabled: isMarked,
-          hovered: { isHovered = $0 })
+          preview: preview, blockID: blockID,
+          target: unit == 0 ? .bookmark : .paragraphBookmark(unit), isEnabled: isMarked,
+          hovered: {
+            isHovered = $0
+            hovered($0)
+          })
       )
       .accessibilityElement()
       .accessibilityLabel(label)
+      .accessibilityValue(Text(verbatim: excerpt))
       .accessibilityAddTraits(.isButton)
       .accessibilityAction { toggle() }
   }

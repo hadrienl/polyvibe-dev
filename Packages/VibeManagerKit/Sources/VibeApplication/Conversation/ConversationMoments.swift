@@ -42,12 +42,14 @@ public struct ConversationMoment: Hashable, Sendable {
     case interrupted
   }
 
+  public let unit: Int
   public let detail: Detail
   /// The entry it happened in, never the block: it finds its block whether tools are grouped.
   public let entryID: String
   public let date: Date?
 
-  public init(_ detail: Detail, entryID: String, date: Date?) {
+  public init(_ detail: Detail, entryID: String, date: Date?, unit: Int = 0) {
+    self.unit = unit
     self.detail = detail
     self.entryID = entryID
     self.date = date
@@ -75,6 +77,8 @@ public struct ConversationMoment: Hashable, Sendable {
 public enum ConversationMoments {
   /// A moment and the block that shows it.
   public struct Placed: Hashable, Sendable {
+    public var unitOffset: Double = 0
+    public var unitFraction: Double = 0
     public let blockIndex: Int
     public let moment: ConversationMoment
 
@@ -107,23 +111,49 @@ public enum ConversationMoments {
     var placed: [Placed] = []
     for index in blocks.indices.dropFirst(max(start, 0)) {
       let block = blocks[index]
-      if let bookmark = bookmark(of: block, at: index, in: bookmarks) { placed.append(bookmark) }
+      let first = placed.count
+      placed.append(contentsOf: self.bookmarks(of: block, at: index, in: bookmarks))
       for moment in moments(of: block) {
         placed.append(Placed(blockIndex: index, moment: moment))
       }
+      placed.replaceSubrange(first..., with: ordered(placed[first...]))
     }
     return placed
+  }
+
+  /// Reading order inside a message, with non-bookmark events at its start.
+  public static func ordered(_ placed: some Collection<Placed>) -> [Placed] {
+    placed.enumerated().sorted {
+      ($0.element.moment.unit, $0.offset) < ($1.element.moment.unit, $1.offset)
+    }.map(\.element)
   }
 
   /// The block's bookmark, named after its first entry marked; `nil` when it has none.
   public static func bookmark(
     of block: ConversationBlock, at index: Int, in bookmarks: Set<String>
   ) -> Placed? {
-    guard let marked = ConversationBookmarks.entryIDs(of: block).first(where: bookmarks.contains)
-    else { return nil }
-    let date = entry(marked, of: block)?.date
-    return Placed(
-      blockIndex: index, moment: ConversationMoment(.bookmark, entryID: marked, date: date))
+    self.bookmarks(of: block, at: index, in: bookmarks).first
+  }
+
+  public static func bookmarks(
+    of block: ConversationBlock, at index: Int, in bookmarks: Set<String>
+  ) -> [Placed] {
+    let anchors: [BookmarkAnchor]
+    switch block {
+    case .entry: anchors = ConversationBookmarks.anchors(of: block, in: bookmarks)
+    case .toolGroup, .subagentGroup:
+      anchors =
+        ConversationBookmarks.entryIDs(of: block).first(where: bookmarks.contains).map {
+          [BookmarkAnchor(entryID: $0)]
+        } ?? []
+    }
+    return anchors.map { anchor in
+      Placed(
+        blockIndex: index,
+        moment: ConversationMoment(
+          .bookmark, entryID: anchor.entryID, date: entry(anchor.entryID, of: block)?.date,
+          unit: anchor.unit))
+    }
   }
 
   /// Those of the kinds shown.

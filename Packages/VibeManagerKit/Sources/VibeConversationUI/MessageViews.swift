@@ -419,13 +419,17 @@ struct NoticeRow: View {
     guard let resetsAt else {
       return Text(
         "\(previous) reached its limit, continuing with \(next)", bundle: .module,
-        comment: "A line of the conversation: the agent whose account reached its limit, then the agent the session goes on with.")
+        comment:
+          "A line of the conversation: the agent whose account reached its limit, then the agent the session goes on with."
+      )
     }
     let reset = resetsAt.formatted(
       .dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
     return Text(
       "\(previous) reached its limit (resets \(reset)), continuing with \(next)", bundle: .module,
-      comment: "A line of the conversation: the agent whose account reached its limit, when the limit lifts (“Fri 28 Nov, 13:39”), then the agent the session goes on with.")
+      comment:
+        "A line of the conversation: the agent whose account reached its limit, when the limit lifts (“Fri 28 Nov, 13:39”), then the agent the session goes on with."
+    )
   }
 
   private func centered(_ text: Text, symbol: String) -> some View {

@@ -310,7 +310,8 @@ extension SegmentTextView {
   /// where it starts.
   func light(_ light: PassageLight?, color: NSColor) {
     litColor = color
-    guard light?.passage != litRequest else { return }
+    pendingPassageLight = light
+    guard light?.passage != litRequest || (light != nil && litRange == nil) else { return }
     litRequest = light?.passage
     let start = applyLight(light?.passage)
     guard let light, let start else { return }
@@ -326,9 +327,19 @@ extension SegmentTextView {
       layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: litRange)
     }
     litRange = nil
-    guard let passage, let (range, start) = passage.quote.range(in: string),
-      NSMaxRange(range) <= textLength
-    else { return nil }
+    guard let passage else { return nil }
+    let range: NSRange
+    let start: Bool
+    if let segment = passage.segment, let exact = passage.range {
+      guard let item = selection?.shown.first(where: { $0.view === self }), item.segment == segment
+      else { return nil }
+      range = exact
+      start = true
+    } else {
+      guard let found = passage.quote.range(in: string) else { return nil }
+      (range, start) = found
+    }
+    guard NSMaxRange(range) <= textLength else { return nil }
     layoutManager?.addTemporaryAttribute(
       .backgroundColor, value: litColor.withAlphaComponent(0.32), forCharacterRange: range)
     litRange = range
@@ -342,7 +353,7 @@ extension SegmentTextView {
     DispatchQueue.main.asyncAfter(deadline: .now() + Self.scrollSettleDelay) { [weak self] in
       guard let self, self.litRequest == request, let range = self.litRange,
         let layoutManager = self.layoutManager, let textContainer = self.textContainer,
-        let clip = self.enclosingScrollView?.contentView
+        let clip = self.outermostScrollView?.contentView
       else { return }
       let glyphs = layoutManager.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
       var lit = layoutManager.boundingRect(forGlyphRange: glyphs, in: textContainer)
@@ -364,6 +375,12 @@ extension SegmentTextView {
         self.scrollToVisible(shown)
       }
     }
+  }
+
+  private var outermostScrollView: NSScrollView? {
+    var scroll = enclosingScrollView
+    while let outer = scroll?.enclosingScrollView { scroll = outer }
+    return scroll
   }
 
   /// What the conversation's own scroll to the message takes.
