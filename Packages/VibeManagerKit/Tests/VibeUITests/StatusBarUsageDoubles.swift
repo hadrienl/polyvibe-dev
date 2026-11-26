@@ -10,7 +10,10 @@ enum StatusBarUsage {
   static let model = "claude-sonnet-4-5-20250929"
 
   @MainActor
-  static func usage(of session: SessionID) -> UsageModel {
+  static func usage(
+    of session: SessionID, tracking: (any UsageTrackingStore)? = nil,
+    rates: ExchangeRateUpdater? = nil
+  ) -> UsageModel {
     let snapshot = TokenUsageSnapshot(files: [
       "transcript": TokenUsageFile(
         sessionID: session, providerID: "claude-code", currentModel: model,
@@ -26,7 +29,7 @@ enum StatusBarUsage {
     context.usage = ContextWindowUsage(
       usedTokens: 182_000, windowSize: 200_000, measuredAt: Date(), lastCompaction: nil)
     let ledger = NoLedger()
-    let tracking = NoTracking()
+    let tracking = tracking ?? NoTracking()
     // Dear enough for a cost in thousands: the widest the label draws.
     let price = ModelPrice(input: 0.01, cacheRead: 0.0001, cacheWrite: 0.001, output: 0.001)
     let service = UsageService(
@@ -35,7 +38,7 @@ enum StatusBarUsage {
       reader: FixedTokens(snapshot: snapshot), contextReader: FixedContext(file: context),
       prices: ModelPriceUpdater(
         fetcher: NoFetch(), store: NoPrices(),
-        bundled: ModelPriceList(fetchedAt: Date(), prices: [model: price])))
+        bundled: ModelPriceList(fetchedAt: Date(), prices: [model: price])), rates: rates)
     return UsageModel(service: service, refreshInterval: .seconds(3_600))
   }
 

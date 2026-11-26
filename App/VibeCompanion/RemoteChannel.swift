@@ -40,6 +40,7 @@ final class RemoteChannel {
   /// Every account's quota (#630), while the list or the Quotas sheet watches them and the
   /// channel is up: `nil` otherwise, and the dial is grey.
   private(set) var quotas: RemoteQuotas?
+  private(set) var sessionUsage: RemoteSessionUsage?
   /// Whether the Mac last connected tells its quotas: kept across a reconnection, for the button
   /// not to come and go with the channel.
   private(set) var macTellsQuotas = false
@@ -85,7 +86,8 @@ final class RemoteChannel {
   private var sending: RemoteFrameQueue?
   private var tasks: [Task<Void, Never>] = []
   private var attempt = 0
-  private var shownSessionID: String?
+  private var conversationFollow = RemoteConversationFollow()
+  private var shownSessionID: String? { conversationFollow.sessionID }
   private var searchToken = 0
   private let deviceName: String
   /// Called with the endpoint's identifier as soon as it is bound, for the pairing record.
@@ -134,6 +136,7 @@ final class RemoteChannel {
     path = .unknown
     // No longer said by the Mac: told again once connected.
     quotas = nil
+    sessionUsage = nil
     // The next Mac says its own in its welcome.
     macProtocolVersion = nil
   }
@@ -144,7 +147,7 @@ final class RemoteChannel {
     macName = nil
     sessions = []
     conversation = nil
-    shownSessionID = nil
+    conversationFollow = RemoteConversationFollow()
     macTellsQuotas = false
   }
 
@@ -244,6 +247,9 @@ final class RemoteChannel {
     case .webState(let state):
       guard state.sessionID == webSessionID else { return }
       webState = state
+    case .sessionUsage(let usage):
+      guard usage.sessionID == shownSessionID else { return }
+      sessionUsage = usage
     case .quotas(let quotas):
       guard quotaWatch != nil else { return }
       self.quotas = quotas
@@ -304,9 +310,17 @@ final class RemoteChannel {
   // MARK: - What the user does
 
   func show(_ sessionID: String?) {
-    shownSessionID = sessionID
+    if shownSessionID != sessionID { sessionUsage = nil }
     if conversation?.sessionID != sessionID { conversation = nil }
-    write(.show(sessionID: sessionID))
+    write(conversationFollow.show(sessionID))
+  }
+
+  /// Stop the requested watch even if its first conversation frame has not arrived yet.
+  func hide(_ sessionID: String) {
+    guard let stop = conversationFollow.hide(sessionID) else { return }
+    conversation = nil
+    sessionUsage = nil
+    write(stop)
   }
 
   func send(_ text: String, files: [RemoteFile] = [], to sessionID: String) {
