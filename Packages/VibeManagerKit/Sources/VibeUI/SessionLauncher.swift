@@ -911,6 +911,20 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
     }.value
   }
 
+  /// Has the agent of a session draw its whole screen again when the history `screen(of:)`
+  /// replays was trimmed: what it drew once and left alone — a dialog under a spinner, ten hours
+  /// on — is no longer in it (#563). `false` when nothing was asked: the history is whole, or no
+  /// agent runs.
+  public func redrawScreenIfTrimmed(of id: SessionID) async -> Bool {
+    guard let pane = panes[id], pane.status == .running, let terminal = pane.session else {
+      return false
+    }
+    let history = await terminal.history()
+    guard history.startOffset > 0 || history.droppedByteCount > 0 else { return false }
+    await terminal.redraw()
+    return true
+  }
+
   /// The screen as `screen(of:)` reads it, and the same without its dim text: what an agent
   /// shows greyed in its prompt is not text typed into it (#464).
   public func screens(of id: SessionID) async -> TerminalScreens? {

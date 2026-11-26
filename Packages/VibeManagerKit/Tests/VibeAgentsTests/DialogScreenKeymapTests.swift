@@ -133,6 +133,24 @@ enum DialogScreens {
     It may permanently remove data, tables, schemas or other objects.
     Run it on project msrauwqwfahxpgwrhmlb?
     """
+  /// The same form in a pane 54 columns wide, as #564 reported it: the server's name cut short in
+  /// the title too.
+  static let claudeNarrowConfirmation = """
+      Calling Supabase · 30s…
+      ⎿  Fulfilling input required by 'tools/call' (round
+         1)
+
+    ──────────────────────────────────────────────────────
+      MCP server “claude.ai Supa…” requests your input
+
+      This SQL includes destructive operations (DROP,…
+      It may permanently remove data, tables, schemas…
+      Run it on project msrauwqwfahxpgwrhmlb?
+
+      ❯ Accept    Decline
+
+      Esc to cancel · ↑/↓ to navigate
+    """
 
   /// The update Codex 0.159.2 offers as it starts.
   static let codexUpdate = """
@@ -311,6 +329,27 @@ struct AgentDialogScreenTests {
     #expect(asked(DialogScreens.confirmationMessage.replacingOccurrences(of: "\n", with: "\r\n")))
   }
 
+  @Test("A confirmation whose server's name is cut short in its title is still known (#564)")
+  func cutServerConfirmation() throws {
+    let form = try #require(
+      DialogScreens.dialog(DialogScreens.claudeNarrowConfirmation)?.confirmation)
+    #expect(form.server == "claude.ai Supa…")
+    let asked = { (server: String) in
+      form.asks(
+        AgentElicitation(
+          server: server, message: DialogScreens.confirmationMessage, fieldCount: 0))
+    }
+    #expect(asked("claude.ai Supabase"))
+    // Another server's name, or one the title would have shown whole: another form.
+    #expect(!asked("claude.ai Slack"))
+    #expect(!asked("claude.ai Sup"))
+    #expect(!asked("Supabase"))
+    // Nothing left of the name but its ellipsis tells no server.
+    #expect(
+      !AgentDialogScreen.Confirmation(server: "…", message: "Go?", isAcceptPointed: true)
+        .asks(AgentElicitation(server: "claude.ai Supabase", message: "Go?", fieldCount: 0)))
+  }
+
   @Test("Past four lines, the lines left out are counted: the count must be right")
   func confirmationLinesLeftOut() {
     let words = (1...6).map { "Line \($0)" }.joined(separator: "\n")
@@ -407,6 +446,10 @@ struct DialogScreenKeymapTests {
     let cut = DialogScreens.dialog(DialogScreens.claudeCutConfirmation)
     #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: cut) == [[0x0D]])
     #expect(claude.keystrokes(for: .deny, to: elicitation, screen: cut) == [[0x1B]])
+    // In a narrow pane, its server's name cut short as well (#564): the same keys.
+    let narrow = DialogScreens.dialog(DialogScreens.claudeNarrowConfirmation)
+    #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: narrow) == [[0x0D]])
+    #expect(claude.keystrokes(for: .deny, to: elicitation, screen: narrow) == [[0x1B]])
     // Not drawn yet: a key would land in the prompt, and Escape stop the turn.
     #expect(claude.keystrokes(for: .allowOnce, to: elicitation, screen: nil) == nil)
     #expect(claude.keystrokes(for: .deny, to: elicitation, screen: nil) == nil)

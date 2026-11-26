@@ -126,6 +126,15 @@ private struct PendingPermissionKeymap: AgentAnswerKeymap {
   }
 }
 
+/// How many times the agent was asked to draw its screen again.
+private actor Redraws {
+  var value = 0
+
+  func count() {
+    value += 1
+  }
+}
+
 /// What a terminal shows, which a test changes.
 private actor LiveScreen {
   var text: String?
@@ -351,6 +360,60 @@ struct AnswerAgentRequestTests {
       #expect(await fixture.answer(.allowOnce, to: request) == .notOnScreen)
       #expect(await fixture.terminals.written[id] == nil)
       #expect(await fixture.tracker.state(for: id)?.requests.count == 1)
+    }
+  }
+
+  /// #563: after ten hours of a spinner, the history kept no longer holds the dialog Claude Code
+  /// drew once, only what it changed since — replayed, the screen shows no dialog at all.
+  static let screenWithoutItsDialog = """
+      Called Supabase, ran 1 shell command
+
+    ⏺                  · 10h 35m 37s…
+      ⎿  Fulfilling input required by 'tools/call' (round
+         1)
+    """
+
+  @Test("A screen replayed without its dialog has the agent draw it again, then is read (#563)")
+  func redrawnScreen() async {
+    let live = LiveScreen(Self.screenWithoutItsDialog)
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let redraws = Redraws()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text },
+      redraw: { _ in
+        await redraws.count()
+        await live.show(Self.screenWithoutItsDialog + "\n\n ❯ 1. Yes\n   2. No")
+        return true
+      },
+      sleep: { _ in await Task.yield() })
+    #expect(await answer(.allowOnce, to: request) == .sent)
+    #expect(await fixture.terminals.written[id] == [Array("1".utf8)])
+    #expect(await redraws.value == 1)
+  }
+
+  @Test("A dialog on screen, or a history kept whole, is not drawn again (#563)")
+  func noRedraw() async {
+    for screen in [" ❯ 1. Yes\n   2. No", Self.screenWithoutItsDialog] {
+      let fixture = Fixture(screen: screen, keymap: ScreenKeymap())
+      let (id, request) = await fixture.asking("touch a")
+      let redraws = Redraws()
+      let answer = AnswerAgentRequest(
+        tracker: fixture.tracker,
+        write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+        screen: { _ in screen },
+        // Nothing trimmed: what is replayed is what the terminal shows.
+        redraw: { _ in
+          await redraws.count()
+          return false
+        },
+        sleep: { _ in await Task.yield() })
+      let hasDialog = screen != Self.screenWithoutItsDialog
+      #expect(await answer(.allowOnce, to: request) == (hasDialog ? .sent : .notOnScreen))
+      #expect(await fixture.terminals.written[id] == (hasDialog ? [Array("1".utf8)] : nil))
+      #expect(await redraws.value == (hasDialog ? 0 : 1))
     }
   }
 

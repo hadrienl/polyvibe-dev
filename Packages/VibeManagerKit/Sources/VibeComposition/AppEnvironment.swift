@@ -491,6 +491,7 @@ public final class AppEnvironment {
         write: { [weak launcher] id, bytes in await launcher?.writeAnswer(bytes, to: id) ?? false },
         lastOutput: { [weak launcher] id in await launcher?.lastOutput(of: id) },
         screen: { [weak launcher] id in await launcher?.screen(of: id) },
+        redraw: { [weak launcher] id in await launcher?.redrawScreenIfTrimmed(of: id) ?? false },
         diagnostics: diagnostics, confirmsDelivery: true,
         failed: { await interactionFailures.enqueue($0) }),
       requestPreferences: UserDefaultsRequestPreferences(suiteName: data.defaultsSuite),

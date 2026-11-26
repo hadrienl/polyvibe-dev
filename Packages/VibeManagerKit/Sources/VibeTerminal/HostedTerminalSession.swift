@@ -81,6 +81,12 @@ public actor HostedTerminalSession: HostedTerminal {
     await supervisor.send(.redraw(session: id))
   }
 
+  /// Drawn by the host, which holds the process: what it draws reaches this side as output.
+  public func redraw() async {
+    guard !hasEnded else { return }
+    await supervisor.send(.redraw(session: id))
+  }
+
   public func stop(gracePeriod: Duration) async {
     guard !hasEnded else { return }
     let milliseconds = Int(gracePeriod / .milliseconds(1))

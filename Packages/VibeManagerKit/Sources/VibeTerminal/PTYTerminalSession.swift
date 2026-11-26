@@ -134,7 +134,11 @@ public actor PTYTerminalSession: VibeApplication.TerminalSession {
   /// is not enough: Node, and so the agents built on it, only redraw when the size they read has
   /// changed, and a program that draws by differences sends nothing for an unchanged screen. The
   /// terminal is made a row shorter, then given its size back once `hold` has passed (#367).
-  public func redraw(holdingFor hold: Duration = PTYTerminalSession.redrawHold) {
+  public func redraw() {
+    redraw(holdingFor: Self.redrawHold)
+  }
+
+  public func redraw(holdingFor hold: Duration) {
     guard !isFinalized else { return }
     let size = lastSize
     terminal.resize(
