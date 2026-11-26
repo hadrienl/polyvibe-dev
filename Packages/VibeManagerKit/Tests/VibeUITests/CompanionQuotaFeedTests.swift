@@ -59,7 +59,10 @@ struct CompanionQuotaFeedTests {
     // At once, before any answer.
     #expect(fixture.sent["phone"]?.count == 1)
     let quotas = await fixture.last("phone") { quotas in
+      // Costs finish independently of quota readings. Wait for both before comparing the
+      // second phone's snapshot, which can already include the completed cost calculation.
       quotas.accounts.allSatisfy { !$0.isAsking && ($0.measuredAt != nil || $0.unavailable != nil) }
+        && quotas.accounts.last?.cost != nil
     }
     #expect(quotas.isTrackingOn)
     #expect(quotas.accounts.map(\.id) == ["codex", "claude-code"])
