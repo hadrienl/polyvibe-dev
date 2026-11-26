@@ -99,6 +99,19 @@ final class CompanionRemoteServer {
       Task { await self.type(text, into: id, for: peer) }
     case .sendFiles(let id, let text, let files):
       Task { await self.type(text, into: id, files: files, for: peer) }
+    case .prepareReply(let id, let requestID, let sourceID, let excerpt):
+      let entries = peers[peer]?.viewed?.snapshot.entries ?? []
+      let reply =
+        peers[peer]?.shown == Self.sessionID(id)
+        ? CompanionRemoteReply.prepare(sourceID: sourceID, excerpt: excerpt, entries: entries) : nil
+      send(peer, .replyPrepared(sessionID: id, requestID: requestID, reply: reply))
+    case .sendReply(let id, let requestID, let text, let files, let reply):
+      Task {
+        let result = await self.type(text, into: id, files: files, for: peer, reply: reply)
+        self.send(
+          peer,
+          .replySent(sessionID: id, requestID: requestID, sent: result.sent, quoted: result.quoted))
+      }
     case .answer(let id, let requestID, let choiceIDs, let text):
       Task {
         await self.answer(
@@ -189,7 +202,7 @@ final class CompanionRemoteServer {
       quotaFeed?.watch(watch, for: peer)
     case .welcome, .sessions, .conversation, .searchResults, .failure, .newSessionOffer, .created,
       .folderListing, .folderNotCreated, .iconData, .webState, .attachmentData, .httpResponse,
-      .folderIconData, .quotas, .sessionUsage:
+      .folderIconData, .quotas, .sessionUsage, .replyPrepared, .replySent:
       break
     }
   }
@@ -311,7 +324,10 @@ final class CompanionRemoteServer {
     let conversation = withObservationTracking {
       RemoteConversation(
         sessionID: id.rawValue.uuidString,
-        entries: Self.entries(model.snapshot.entries.suffix(Self.entryLimit)),
+        entries: Self.entries(
+          model.snapshot.entries,
+          replies: CompanionRemote.takesReplies(peers[peer]?.protocolVersion),
+          limit: Self.entryLimit),
         request: appModel.shownActivity(for: id)?.requests.first.flatMap(Self.request(of:)),
         theme: Self.theme(of: appModel.sessions.first { $0.id == id }, in: appModel))
     } onChange: { [weak self] in
@@ -358,8 +374,12 @@ final class CompanionRemoteServer {
     return RemoteTheme(light: light, dark: dark, fontStyle: lightTheme.fontStyle.rawValue)
   }
 
-  static func entries(_ entries: some Sequence<ConversationEntry>) -> [RemoteEntry] {
-    entries.compactMap { entry in
+  static func entries(
+    _ entries: some Sequence<ConversationEntry>, replies: Bool = false, limit: Int? = nil
+  ) -> [RemoteEntry] {
+    let entries = Array(entries)
+    return entries.indices.suffix(limit ?? entries.count).compactMap { index in
+      let entry = entries[index]
       let kind: RemoteEntry.Kind
       var relayed: RemoteRelayed?
       switch entry.content {
@@ -403,6 +423,13 @@ final class CompanionRemoteServer {
         }
       case .reasoning:
         return nil
+      }
+      if replies, let shown = CompanionRemoteReply.shown(entry, before: entries[..<index]),
+        case .user(_, let attachments) = kind
+      {
+        return RemoteEntry(
+          id: entry.id, kind: .user(shown.message, attachments: attachments), date: entry.date,
+          reply: shown.reply)
       }
       return RemoteEntry(id: entry.id, kind: kind, date: entry.date, relayed: relayed)
     }
@@ -448,32 +475,50 @@ final class CompanionRemoteServer {
     }
   }
 
+  private var sendingMessages: Set<String> = []
+
   // MARK: - Actions
 
   /// Through the conversation's composer, as if typed in the window: a working agent gets it
   /// queued, an answer to a question goes as one. What the user left in the composer stays.
+  @discardableResult
   private func type(
-    _ text: String, into id: String, files: [RemoteFile] = [], for peer: String
-  ) async {
+    _ text: String, into id: String, files: [RemoteFile] = [], for peer: String,
+    reply: RemoteReply? = nil
+  ) async -> (sent: Bool, quoted: Bool) {
     guard let appModel, let sessionID = Self.sessionID(id),
       let session = appModel.sessions.first(where: { $0.id == sessionID })
-    else { return }
+    else { return (false, false) }
+    // Remote sends on one conversation cannot borrow each other's temporary composer state.
+    guard sendingMessages.insert(id).inserted else {
+      if reply == nil { send(peer, .failure(.messageNotSent)) }
+      return (false, false)
+    }
+    defer { sendingMessages.remove(id) }
     let model = appModel.conversations.show(session)
-    let kept = model.draft
-    // What the user left in the composer on the Mac is put aside, never sent with the phone's.
-    let keptFiles = model.attachments
-    keptFiles.forEach(model.removeAttachment)
-    // So is the passage it would have replied to (#565).
-    let keptReply = model.setReplyAside()
-    let written = saved(files)
-    if !written.isEmpty { model.attach(written, focusing: false) }
-    model.draft = text
-    let sent = await model.send()
-    model.attachments.filter(written.contains).forEach(model.removeAttachment)
-    if !keptFiles.isEmpty { model.attach(keptFiles, focusing: false) }
-    if model.draft == text || sent { model.draft = kept }
-    model.restoreReply(keptReply)
-    if !sent { send(peer, .failure(.messageNotSent)) }
+    let prepared: RemoteReply?
+    if let reply {
+      guard let sourceID = reply.sourceID,
+        let checked = CompanionRemoteReply.prepare(
+          sourceID: sourceID, excerpt: reply.excerpt, entries: model.snapshot.entries),
+        checked == reply
+      else { return (false, false) }
+      prepared = checked
+    } else {
+      prepared = nil
+    }
+    let target = prepared.flatMap { prepared in
+      prepared.sourceID.map { sourceID in
+        ReplyTarget(
+          quote: ReplyQuote(
+            excerpt: prepared.excerpt,
+            author: prepared.author == .agent ? .agent : .user, date: prepared.date),
+          blockID: sourceID)
+      }
+    }
+    let result = await model.sendFromCompanion(text, files: saved(files), reply: target)
+    if !result.sent, reply == nil { send(peer, .failure(.messageNotSent)) }
+    return result
   }
 
   private func answer(

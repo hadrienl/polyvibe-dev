@@ -10,6 +10,16 @@ struct ConversationView: View {
   let sessionID: String
   @Environment(RemoteChannel.self) private var channel
   @State private var draft = ""
+  @State private var replyTarget: RemoteReply?
+  @State private var preparingReply = false
+  @State private var replyRequest = UUID()
+  @State private var sendingReply = false
+  @State private var scrollTarget: String?
+  @State private var highlightedID: String?
+  @State private var highlightRequest = UUID()
+  @State private var returnToID: String?
+  @State private var inspectedReply: RemoteReply?
+  @State private var showsQuote = false
   @Environment(\.scenePhase) private var scenePhase
   @State private var calendar = Calendar.current
   @State private var calendarNow = Date.now
@@ -52,6 +62,111 @@ struct ConversationView: View {
   @State private var showsDevices = false
 
   var body: some View {
+    conversationScroll
+      .background(palette.background.ignoresSafeArea())
+      .foregroundStyle(palette.text)
+      .fontDesign(palette.fontDesign)
+      .tint(palette.accent)
+      .environment(\.conversationPalette, palette)
+      .onChange(of: conversation?.entries, initial: true) { _, entries in
+        days = RemoteConversationDays(entries: entries ?? [], calendar: calendar)
+      }
+      .onChange(of: draft) { _, _ in saveDraft() }
+      .onChange(of: files) { _, _ in saveDraft() }
+      .onChange(of: replyTarget) { _, _ in saveDraft() }
+      .onChange(of: scenePhase) { _, phase in if phase == .active { refreshCalendar() } }
+      .onReceive(
+        NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
+          .merge(
+            with: NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange),
+            NotificationCenter.default.publisher(
+              for: UIApplication.significantTimeChangeNotification),
+            NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)
+          )
+          .receive(on: RunLoop.main)
+      ) { _ in refreshCalendar() }
+      .onChange(of: conversation?.theme) { _, theme in if let theme { lastTheme = theme } }
+      .scrollDismissesKeyboard(.interactively)
+      // The whole screen's, keyboard and request card aside: what the card may take of it does
+      // not move with the card itself.
+      .background {
+        Color.clear.ignoresSafeArea()
+          .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+      }
+      .safeAreaInset(edge: .bottom, spacing: 0) { composerArea }
+      .navigationTitle(session?.name ?? "")
+      .navigationSubtitle(usage == nil ? subtitle : "")
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        if let usage, let session {
+          ToolbarItem(placement: .principal) {
+            SessionUsageHeader(title: session.name, state: activitySubtitle(session), usage: usage)
+          }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Button("Web View", systemImage: "globe") { showsWeb = true }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          // A view of its own here, one view showing at a time on the phone.
+          Button {
+            showsDevices = true
+          } label: {
+            Label {
+              Text("Simulators")
+            } icon: {
+              Image(systemName: "iphone")
+            }
+          }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+          Menu("More", systemImage: "ellipsis") {
+            if let usage {
+              Button {
+                showsUsage = true
+              } label: {
+                Label {
+                  Text("Usage")
+                  Text(verbatim: SessionUsageWords.summary(usage, locale: locale, family: false))
+                } icon: {
+                  SessionUsageRing.image(percent: usage.context?.percentUsed)
+                }
+              }
+              Divider()
+            }
+            Button("Close Session", systemImage: "power", role: .destructive) {
+              showsCloseConfirmation = true
+            }
+            .disabled(session == nil || session?.activity == .stopped)
+          }
+        }
+      }
+      .confirmationDialog(
+        "Close the session?", isPresented: $showsCloseConfirmation, titleVisibility: .visible
+      ) {
+        Button("Close Session", role: .destructive) { channel.close(sessionID) }
+      } message: {
+        Text("The agent stops. The session keeps its conversation and can be restarted.")
+      }
+      .sheet(isPresented: $showsQuote) { quoteSheet }
+      .sheet(isPresented: $showsUsage) { SessionUsageSheet(sessionID: sessionID) }
+      .navigationDestination(isPresented: $showsWeb) { WebMirrorView(sessionID: sessionID) }
+      .navigationDestination(isPresented: $showsDevices) { DeviceListScreen() }
+      .onAppear {
+        if let saved = channel.conversationDrafts[sessionID] {
+          draft = saved.text
+          files = saved.files
+          replyTarget = saved.reply
+        }
+        refreshCalendar()
+        if channel.conversation?.sessionID != sessionID { channel.show(sessionID) }
+      }
+      // Still followed under a view pushed on top: coming back shows it at once, nothing reloads.
+      .onDisappear {
+        if !showsWeb, !showsDevices { channel.hide(sessionID) }
+      }
+  }
+
+  private var conversationScroll: some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 10) {
         if conversation == nil {
@@ -61,124 +176,74 @@ struct ConversationView: View {
           if let day = days.day(opening: entry.id) {
             ConversationDaySeparator(day: day, now: calendarNow, calendar: calendar)
           }
-          EntryView(entry: entry, runsIn: canRun ? sessionID : nil, calendar: calendar)
+          EntryView(
+            entry: entry, runsIn: canRun ? sessionID : nil, calendar: calendar,
+            agentName: session?.agentName ?? String(localized: "The agent"),
+            reply: replyAction,
+            showSource: { quote in showSource(quote, replyID: entry.id) }
+          )
+          .padding(.vertical, 2)
+          .background(
+            highlightedID == entry.id ? palette.accent.opacity(0.15) : .clear,
+            in: .rect(cornerRadius: 10)
+          )
+          .id(entry.id)
         }
 
       }
+      .scrollTargetLayout()
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
     }
     .defaultScrollAnchor(.bottom)
-    .background(palette.background.ignoresSafeArea())
-    .foregroundStyle(palette.text)
-    .fontDesign(palette.fontDesign)
-    .tint(palette.accent)
-    .environment(\.conversationPalette, palette)
-    .onChange(of: conversation?.entries, initial: true) { _, entries in
-      days = RemoteConversationDays(entries: entries ?? [], calendar: calendar)
-    }
-    .onChange(of: scenePhase) { _, phase in if phase == .active { refreshCalendar() } }
-    .onReceive(
-      NotificationCenter.default.publisher(for: .NSCalendarDayChanged)
-        .merge(
-          with: NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange),
-          NotificationCenter.default.publisher(
-            for: UIApplication.significantTimeChangeNotification),
-          NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)
-        )
-        .receive(on: RunLoop.main)
-    ) { _ in refreshCalendar() }
-    .onChange(of: conversation?.theme) { _, theme in if let theme { lastTheme = theme } }
-    .scrollDismissesKeyboard(.interactively)
-    // The whole screen's, keyboard and request card aside: what the card may take of it does
-    // not move with the card itself.
-    .background {
-      Color.clear.ignoresSafeArea()
-        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
-    }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      VStack(spacing: 8) {
-        if isWorking, conversation?.request == nil {
-          WorkingLine(
-            agent: session?.agentName ?? String(localized: "The agent"), tool: runningTool,
-            interrupt: { channel.interrupt(sessionID) })
-        }
-        if let request = conversation?.request {
-          RequestCard(request: request, sessionID: sessionID, maxHeight: height * 0.5)
-            .padding(.horizontal, 12)
-        }
-        if let session, session.activity == .stopped {
-          closedBar(session)
-        } else {
-          inputBar
-        }
+    .scrollPosition(id: $scrollTarget, anchor: .center)
+  }
+
+  private var composerArea: some View {
+    VStack(spacing: 8) {
+      if let returnToID {
+        Button("Back to Your Reply", systemImage: "arrow.down") {
+          withAnimation { scrollTarget = returnToID }
+          self.returnToID = nil
+        }.font(.footnote).buttonStyle(.bordered)
       }
-      .padding(.bottom, 6)
+      if isWorking, conversation?.request == nil {
+        WorkingLine(
+          agent: session?.agentName ?? String(localized: "The agent"), tool: runningTool,
+          interrupt: { channel.interrupt(sessionID) })
+      }
+      if let request = conversation?.request {
+        RequestCard(request: request, sessionID: sessionID, maxHeight: height * 0.5)
+          .padding(.horizontal, 12)
+      }
+      if let session, session.activity == .stopped {
+        closedBar(session)
+      } else {
+        inputBar
+      }
     }
-    .navigationTitle(session?.name ?? "")
-    .navigationSubtitle(usage == nil ? subtitle : "")
-    .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      if let usage, let session {
-        ToolbarItem(placement: .principal) {
-          SessionUsageHeader(title: session.name, state: activitySubtitle(session), usage: usage)
-        }
-      }
-      ToolbarItem(placement: .topBarTrailing) {
-        Button("Web View", systemImage: "globe") { showsWeb = true }
-      }
-      ToolbarItem(placement: .topBarTrailing) {
-        // A view of its own here, one view showing at a time on the phone.
-        Button {
-          showsDevices = true
-        } label: {
-          Label {
-            Text("Simulators")
-          } icon: {
-            Image(systemName: "iphone")
+    .padding(.bottom, 6)
+  }
+
+  private var quoteSheet: some View {
+    NavigationStack {
+      ScrollView {
+        if let inspectedReply {
+          Text(verbatim: inspectedReply.excerpt).textSelection(.enabled).padding()
+          if !sourceIsLoaded(inspectedReply) {
+            Text("Original message not loaded").font(.footnote).foregroundStyle(.secondary)
           }
         }
       }
-      ToolbarItem(placement: .topBarTrailing) {
-        Menu("More", systemImage: "ellipsis") {
-          if let usage {
-            Button {
-              showsUsage = true
-            } label: {
-              Label {
-                Text("Usage")
-                Text(verbatim: SessionUsageWords.summary(usage, locale: locale, family: false))
-              } icon: {
-                SessionUsageRing.image(percent: usage.context?.percentUsed)
-              }
-            }
-            Divider()
-          }
-          Button("Close Session", systemImage: "power", role: .destructive) {
-            showsCloseConfirmation = true
-          }
-          .disabled(session == nil || session?.activity == .stopped)
-        }
-      }
+      .navigationTitle("Quoted passage")
+      .toolbar { Button("Done") { showsQuote = false } }
     }
-    .confirmationDialog(
-      "Close the session?", isPresented: $showsCloseConfirmation, titleVisibility: .visible
-    ) {
-      Button("Close Session", role: .destructive) { channel.close(sessionID) }
-    } message: {
-      Text("The agent stops. The session keeps its conversation and can be restarted.")
-    }
-    .sheet(isPresented: $showsUsage) { SessionUsageSheet(sessionID: sessionID) }
-    .navigationDestination(isPresented: $showsWeb) { WebMirrorView(sessionID: sessionID) }
-    .navigationDestination(isPresented: $showsDevices) { DeviceListScreen() }
-    .onAppear {
-      refreshCalendar()
-      if channel.conversation?.sessionID != sessionID { channel.show(sessionID) }
-    }
-    // Still followed under a view pushed on top: coming back shows it at once, nothing reloads.
-    .onDisappear {
-      if !showsWeb, !showsDevices { channel.hide(sessionID) }
-    }
+    .presentationDetents([.medium, .large])
+  }
+
+  private var replyAction: ((RemoteEntry, String) -> Void)? {
+    guard canReply else { return nil }
+    return { entry, excerpt in prepareReply(entry, excerpt: excerpt) }
   }
 
   /// One clock per conversation, refreshed on return and calendar changes, never per row.
@@ -255,12 +320,87 @@ struct ConversationView: View {
     return title
   }
 
+  private func saveDraft() {
+    let saved = RemoteConversationDraft(text: draft, files: files, reply: replyTarget)
+    channel.conversationDrafts[sessionID] = saved.isEmpty ? nil : saved
+  }
+
+  private var canReply: Bool {
+    CompanionRemote.takesReplies(channel.macProtocolVersion) && channel.phase == .connected
+      && session?.activity != .stopped && conversation?.request == nil && !sendingReply
+  }
+
+  private func prepareReply(_ entry: RemoteEntry, excerpt: String) {
+    let request = UUID()
+    replyRequest = request
+    preparingReply = true
+    Task { @MainActor in
+      let prepared = await channel.prepareReply(to: entry, excerpt: excerpt, in: sessionID)
+      guard replyRequest == request else { return }
+      preparingReply = false
+      if let prepared {
+        replyTarget = prepared
+        fieldFocused = true
+      } else {
+        channel.failure = .other(
+          String(
+            localized: "This passage could not be quoted. Try again while connected to the Mac."))
+      }
+    }
+  }
+
+  private func sourceIsLoaded(_ quote: RemoteReply) -> Bool {
+    guard let id = quote.sourceID else { return false }
+    return conversation?.entries.contains { $0.id == id } == true
+  }
+
+  private func inspect(_ quote: RemoteReply) {
+    inspectedReply = quote
+    showsQuote = true
+  }
+
+  private func showSource(_ quote: RemoteReply, replyID: String) {
+    guard sourceIsLoaded(quote), let id = quote.sourceID else {
+      inspect(quote)
+      return
+    }
+    returnToID = replyID
+    let request = UUID()
+    highlightRequest = request
+    withAnimation {
+      scrollTarget = id
+      highlightedID = id
+    }
+    Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(1_600))
+      if highlightRequest == request { highlightedID = nil }
+    }
+  }
+
   private var canSend: Bool {
-    !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty
+    !preparingReply && !sendingReply && channel.phase == .connected
+      && (!draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !files.isEmpty)
   }
 
   private var inputBar: some View {
     VStack(spacing: 6) {
+      if preparingReply { ProgressView().accessibilityLabel("Preparing reply") }
+      if let replyTarget {
+        HStack(alignment: .top) {
+          ConversationReplyQuote(
+            reply: replyTarget, agentName: session?.agentName ?? String(localized: "The agent"),
+            action: { inspect(replyTarget) }, composing: true)
+          Button("Remove quote", systemImage: "xmark") {
+            self.replyTarget = nil
+            replyRequest = UUID()
+            fieldFocused = true
+          }.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+        }
+        .padding(10)
+        .background(palette.raised, in: .rect(cornerRadius: 12))
+        .padding(.horizontal, 12)
+        .accessibilityElement(children: .contain)
+      }
       if !files.isEmpty {
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: 6) {
@@ -307,9 +447,28 @@ struct ConversationView: View {
         Button {
           let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
           guard canSend else { return }
-          channel.send(text, files: files, to: sessionID)
-          draft = ""
-          files = []
+          if let replyTarget {
+            sendingReply = true
+            let sentFiles = files
+            Task { @MainActor in
+              let result = await channel.sendReply(
+                text, files: sentFiles, reply: replyTarget, to: sessionID)
+              sendingReply = false
+              if result.sent {
+                if draft.trimmingCharacters(in: .whitespacesAndNewlines) == text { draft = "" }
+                if files == sentFiles { files = [] }
+                if result.quoted, self.replyTarget == replyTarget { self.replyTarget = nil }
+              } else {
+                channel.failure = .other(
+                  String(
+                    localized: "Reply not confirmed. Check the conversation before sending again."))
+              }
+            }
+          } else {
+            channel.send(text, files: files, to: sessionID)
+            draft = ""
+            files = []
+          }
         } label: {
           Image(systemName: "arrow.up")
             .font(.body.weight(.bold))
@@ -441,6 +600,9 @@ private struct EntryView: View {
   /// none can be. A value, not a closure, so that an entry left unchanged is not drawn again.
   var runsIn: String?
   let calendar: Calendar
+  var agentName: String
+  var reply: ((RemoteEntry, String) -> Void)?
+  var showSource: (RemoteReply) -> Void
   @Environment(\.conversationPalette) private var palette
 
   var body: some View {
@@ -457,11 +619,19 @@ private struct EntryView: View {
     .accessibilityElement(children: .contain)
   }
 
+  private var replyToEntry: ((String) -> Void)? {
+    guard let reply else { return nil }
+    return { excerpt in reply(entry, excerpt) }
+  }
+
   @ViewBuilder
   private var message: some View {
     switch entry.kind {
     case .user(let text, let attachments):
       VStack(alignment: .trailing, spacing: 6) {
+        if let quote = entry.reply {
+          ConversationReplyQuote(reply: quote, agentName: agentName, action: { showSource(quote) })
+        }
         if !attachments.isEmpty {
           AttachmentStrip(attachments: attachments)
         }
@@ -482,14 +652,27 @@ private struct EntryView: View {
         ForEach(Array(RemoteMarkdown.segments(text).enumerated()), id: \.offset) { _, segment in
           switch segment {
           case .prose(let prose):
-            Text(Self.markdown(prose))
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .textSelection(.enabled)
+            ReplySelectableText(
+              text: Self.markdown(prose), color: UIColor(palette.text), design: palette.fontDesign,
+              reply: replyToEntry
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
           case .code(let language, let code):
-            CodeBlock(language: language, code: code, runsIn: runsIn)
+            CodeBlock(
+              language: language, code: code, runsIn: runsIn,
+              reply: replyToEntry)
           }
         }
-        ConversationMessageTime(date: entry.messageDate, calendar: calendar)
+        HStack {
+          ConversationMessageTime(date: entry.messageDate, calendar: calendar)
+          Spacer()
+          if let reply {
+            Button("Reply", systemImage: "arrowshape.turn.up.left") { reply(entry, text) }
+              .labelStyle(.iconOnly)
+              .foregroundStyle(palette.secondaryText)
+              .frame(minWidth: 44, minHeight: 44)
+          }
+        }
       }
     case .tool(let symbol, let title, let detail, let running, let failed):
       HStack(spacing: 8) {
@@ -614,6 +797,7 @@ private struct CodeBlock: View {
   let language: String?
   let code: String
   let runsIn: String?
+  var reply: ((String) -> Void)?
   @Environment(RemoteChannel.self) private var channel
   @Environment(\.conversationPalette) private var palette
   @State private var copied = false
@@ -649,12 +833,19 @@ private struct CodeBlock: View {
       .padding(.vertical, 8)
       Divider()
       ScrollView(.horizontal) {
-        Text(verbatim: code)
-          .font(.footnote.monospaced())
-          .foregroundStyle(palette.text)
-          .textSelection(.enabled)
-          .fixedSize()
-          .padding(12)
+        if let reply {
+          ReplySelectableText(
+            text: AttributedString(code), color: UIColor(palette.text), code: true, reply: reply
+          )
+          .fixedSize().padding(12)
+        } else {
+          Text(verbatim: code)
+            .font(.footnote.monospaced())
+            .foregroundStyle(palette.text)
+            .textSelection(.enabled)
+            .fixedSize()
+            .padding(12)
+        }
       }
     }
     .background(palette.raised, in: .rect(cornerRadius: 12))
