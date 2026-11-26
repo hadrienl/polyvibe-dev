@@ -11,8 +11,10 @@ import VibeApplication
 /// Both are written before the question is drawn and after it is gone: nothing says when its
 /// dialog is on screen, so these questions are shown, and answered in the terminal.
 ///
-/// The rollout is the one named after the session `SessionStart` reports; without its identifier,
-/// the one created for this working directory once the session started, the oldest of them, as
+/// The rollout is the one named after the session `SessionStart` reports, whenever it was created:
+/// Codex may create it seconds before the hook runs, and a session resumed writes on in the one it
+/// was created with, days before (#637). Without its identifier, it is the one created for this
+/// working directory once the session started, the oldest of them, as
 /// `CodexRolloutSessionDiscovery` picks — two Codex sessions started in the same folder in the
 /// same seconds could then read each other's.
 ///
@@ -59,7 +61,7 @@ public struct CodexQuestionWatch: Sendable {
         }
         // What the rollout holds already is the past: only the questions still unanswered in it
         // are said, once — not every question the session ever asked, answered long ago.
-        let (unanswered, waiting, offset) = Self.unanswered(in: rollout)
+        let (unanswered, waiting, offset) = Self.unanswered(in: rollout, since: watch.since)
         var pending = unanswered
         for signal in waiting { continuation.yield(signal) }
         let lines = AppendedLines(file: rollout, start: .offset(offset), needles: Self.needles)
@@ -83,7 +85,11 @@ public struct CodexQuestionWatch: Sendable {
 
   /// The questions the rollout holds that no output has answered yet, and where its last whole
   /// line ends: what follows is followed as it comes. Read by blocks, never whole.
-  static func unanswered(in rollout: URL) -> (Set<String>, [AgentSignal], UInt64) {
+  /// A question asked before `since` was a run's before this one — a session resumed — whose
+  /// dialog went with it.
+  static func unanswered(in rollout: URL, since: Date = .distantPast)
+    -> (Set<String>, [AgentSignal], UInt64)
+  {
     guard let handle = try? FileHandle(forReadingFrom: rollout) else { return ([], [], 0) }
     defer { try? handle.close() }
     var pending: Set<String> = []
@@ -99,6 +105,11 @@ public struct CodexQuestionWatch: Sendable {
           guard case .questionAsked(_, _, let notice) = signal,
             let key = notice?.reference.subject
           else { continue }
+          if let written = writtenAt(line), written < since {
+            pending.remove(key)
+            pending.remove(asyncMark + key)
+            continue
+          }
           asked[key] = signal
           order.append(key)
         }
@@ -224,27 +235,46 @@ public struct CodexQuestionWatch: Sendable {
     let deadline = ContinuousClock.now.advanced(by: discoveryTimeout)
     let workingDirectory = Self.canonicalPath(workingDirectoryPath)
     while !Task.isCancelled {
-      let found = candidates()
       // `rollout-2026-11-11T09-16-32-<session>.jsonl`: the session's own, whoever shares its
       // folder. Another session's of the same folder would tell this one its turns' ends.
-      if let sessionIdentifier,
-        let own = found.first(where: {
-          $0.lastPathComponent.hasSuffix("-\(sessionIdentifier).jsonl")
-        })
-      {
-        return own
-      }
-      if sessionIdentifier == nil,
-        let byFolder = found.first(where: {
-          Self.workingDirectory(of: $0).map(Self.canonicalPath) == workingDirectory
-        })
-      {
+      if let sessionIdentifier {
+        if let own = ownRollout(sessionIdentifier) { return own }
+      } else if let byFolder = candidates().first(where: {
+        Self.workingDirectory(of: $0).map(Self.canonicalPath) == workingDirectory
+      }) {
         return byFolder
       }
       guard ContinuousClock.now < deadline else { return nil }
       try? await Task.sleep(for: discoveryInterval, tolerance: discoveryInterval / 2)
     }
     return nil
+  }
+
+  /// The rollout named after the session, created whenever: in the folders of the days from the
+  /// one before it was created — which its identifier says — or before it started.
+  private func ownRollout(_ identifier: String) -> URL? {
+    let created = min(since, Self.creationDate(of: identifier) ?? since)
+    return AgentTranscriptLocator(codexSessions: sessionsDirectory)
+      .codexRollouts(for: identifier, since: created)
+      .first { $0.lastPathComponent.hasSuffix("-\(identifier).jsonl") }
+  }
+
+  /// When Codex created the session, out of its identifier: a UUID of version 7 (0.171), whose
+  /// first 48 bits are that instant in milliseconds. `nil` for any other identifier.
+  static func creationDate(of identifier: String) -> Date? {
+    guard let uuid = UUID(uuidString: identifier)?.uuid, uuid.6 >> 4 == 7 else { return nil }
+    let milliseconds = [uuid.0, uuid.1, uuid.2, uuid.3, uuid.4, uuid.5].reduce(UInt64(0)) {
+      $0 << 8 | UInt64($1)
+    }
+    return Date(timeIntervalSince1970: Double(milliseconds) / 1000)
+  }
+
+  /// When the rollout's line was written, `nil` when it does not say.
+  static func writtenAt(_ line: Data) -> Date? {
+    guard let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any],
+      let text = object["timestamp"] as? String
+    else { return nil }
+    return try? Date.ISO8601FormatStyle(includingFractionalSeconds: true).parse(text)
   }
 
   /// Rollouts created since the session started, oldest first, in the folders of those days.

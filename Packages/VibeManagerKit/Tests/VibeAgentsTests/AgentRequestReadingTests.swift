@@ -262,9 +262,11 @@ struct CodexQuestionWatchTests {
     try Data(#"{"type":"session_meta","payload":{"cwd":"/elsewhere"}}"#.utf8).write(to: other)
     let rollout = folder.appendingPathComponent("rollout-mine.jsonl")
     let meta = #"{"type":"session_meta","payload":{"cwd":"\#(work)"}}"# + "\n"
-    // One question answered long ago, one still waiting: only the second is said.
-    let waiting = RequestPayloads.codexQuestionCall.replacingOccurrences(
-      of: "call_1", with: "call_3")
+    // One question answered long ago, one still waiting, asked since the session started: only
+    // the second is said.
+    let waiting = Self.dated(
+      RequestPayloads.codexQuestionCall.replacingOccurrences(of: "call_1", with: "call_3"),
+      since.addingTimeInterval(1))
     let history = [
       meta, RequestPayloads.codexQuestionCall, RequestPayloads.codexQuestionOutput, waiting,
     ].joined(separator: "\n")
@@ -317,6 +319,92 @@ struct CodexQuestionWatchTests {
       sessionIdentifier: "missing", discoveryInterval: .milliseconds(20),
       discoveryTimeout: .milliseconds(200))
     #expect(await unknown.rollout() == nil)
+  }
+
+  /// The folder Codex files a rollout created at `date` under, made in `sessions`.
+  private static func dayFolder(in sessions: URL, for date: Date) throws -> URL {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+    let parts = calendar.dateComponents([.year, .month, .day], from: date)
+    let folder = sessions.appendingPathComponent(
+      String(format: "%04d/%02d/%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0))
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    return folder
+  }
+
+  /// A session's identifier as Codex makes it: a UUIDv7 of the instant it created the session.
+  private static func identifier(createdAt date: Date) -> String {
+    let time = String(format: "%012llx", UInt64(date.timeIntervalSince1970 * 1000))
+    return "\(time.prefix(8))-\(time.suffix(4))-7031-becc-a4c87cf491f4"
+  }
+
+  /// A rollout's line as written at `date`.
+  private static func dated(_ line: String, _ date: Date) -> String {
+    let stamp = Date.ISO8601FormatStyle(includingFractionalSeconds: true).format(date)
+    return line.replacing(#/"timestamp":"[^"]*"/#, with: #""timestamp":"\#(stamp)""#)
+  }
+
+  @Test("Created before its SessionStart, the rollout is followed: a failed turn ends (#637)")
+  func rolloutCreatedBeforeTheHook() async throws {
+    let sessions = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "codex-sessions-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: sessions) }
+    let created = Date()
+    let folder = try Self.dayFolder(in: sessions, for: created)
+    let work = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path
+    let identifier = Self.identifier(createdAt: created)
+    let rollout = folder.appendingPathComponent("rollout-2026-11-25T20-56-55-\(identifier).jsonl")
+    // As in the report: the rollout created at 19:56:55.357, the hook's line dated 19:56:58.
+    let started = created.addingTimeInterval(3)
+    let waiting = Self.dated(RequestPayloads.codexQuestionCall, started.addingTimeInterval(1))
+    let meta = #"{"type":"session_meta","payload":{"cwd":"\#(work)"}}"#
+    try Data((meta + "\n" + waiting + "\n").utf8).write(to: rollout)
+
+    let watch = CodexQuestionWatch(
+      sessionsDirectory: sessions, workingDirectoryPath: work, since: started,
+      sessionIdentifier: identifier, discoveryInterval: .milliseconds(20),
+      discoveryTimeout: .milliseconds(500))
+    var iterator = watch.signals().makeAsyncIterator()
+    #expect(requestNotice(in: await iterator.next())?.key == "codex:call_1")
+
+    // Out of quota, Codex runs no `Stop` hook: the rollout alone says the turn is over, and with
+    // it the permission its automatic review settled and no tool's end ever did.
+    let handle = try FileHandle(forWritingTo: rollout)
+    try handle.seekToEnd()
+    try handle.write(contentsOf: Data((AsyncQuestionWatchTests.failedTurn + "\n").utf8))
+    try handle.close()
+    #expect(await iterator.next() == .turnEnded)
+  }
+
+  @Test("A session resumed reads on in the rollout of the day it was created, past its questions")
+  func resumedRollout() async throws {
+    let sessions = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "codex-sessions-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: sessions) }
+    let created = Date().addingTimeInterval(-3 * 86_400)
+    let resumed = Date()
+    let work = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path
+    let identifier = Self.identifier(createdAt: created)
+    #expect(
+      abs(try #require(CodexQuestionWatch.creationDate(of: identifier)).timeIntervalSince(created))
+        < 0.01)
+    let rollout = try Self.dayFolder(in: sessions, for: created)
+      .appendingPathComponent("rollout-2026-11-22T10-00-00-\(identifier).jsonl")
+    // The run before was stopped on a question it never had an answer to: its dialog went with it.
+    let gone = Self.dated(RequestPayloads.codexQuestionCall, created.addingTimeInterval(60))
+    let asked = Self.dated(
+      RequestPayloads.codexQuestionCall.replacingOccurrences(of: "call_1", with: "call_2"),
+      resumed.addingTimeInterval(1))
+    let meta = #"{"type":"session_meta","payload":{"cwd":"\#(work)"}}"#
+    try Data(([meta, gone, asked].joined(separator: "\n") + "\n").utf8).write(to: rollout)
+
+    let watch = CodexQuestionWatch(
+      sessionsDirectory: sessions, workingDirectoryPath: work, since: resumed,
+      sessionIdentifier: identifier, discoveryInterval: .milliseconds(20),
+      discoveryTimeout: .milliseconds(500))
+    var iterator = watch.signals().makeAsyncIterator()
+    #expect(requestNotice(in: await iterator.next())?.key == "codex:call_2")
+    #expect(CodexQuestionWatch.creationDate(of: "00000000-0000-4000-8000-000000000000") == nil)
   }
 }
 

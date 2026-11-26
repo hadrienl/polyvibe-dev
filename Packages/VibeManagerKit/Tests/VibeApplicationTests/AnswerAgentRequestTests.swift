@@ -53,6 +53,7 @@ private struct PermissionDecoder: AgentSignalDecoding {
     case "done":
       let command = event.payload.map { String(decoding: $0, as: UTF8.self) }
       return .toolFinished("Bash", subject: command)
+    case "end": return .turnEnded
     default: return nil
     }
   }
@@ -284,6 +285,47 @@ struct AnswerAgentRequestTests {
     await live.show("approval:touch a")
     await watching.value
     #expect(await fixture.tracker.state(for: id)?.requests.first?.isShown == true)
+    #expect(await fixture.terminals.written[id] == nil)
+  }
+
+  /// The foot of the terminal in #637: Codex out of quota, offering a cheaper model.
+  static let rateLimitOffer = """
+    ■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://
+    chatgpt.com/settings/usage to purchase more credits or try again at 11:27 PM.
+
+
+      Approaching rate limits
+      Switch to gpt-6-luna for lower credit usage?
+
+
+    › 1. Switch to gpt-6-luna                   Fast and affordable model for easier tasks.
+      2. Keep current model
+      3. Keep current model (never show again)  Hide future rate limit reminders about switching
+                                                models
+
+      enter select · esc back
+    """
+
+  @Test("Out of quota, Codex's offer of a model is no permission: the failed turn ends it (#637)")
+  func rateLimitOffer() async throws {
+    let live = LiveScreen("working")
+    let fixture = Fixture(live: live, keymap: PendingPermissionKeymap(), shown: false)
+    // Settled by the automatic review and still running: no tool's end comes.
+    let (id, request) = await fixture.asking("Scripts/local-build.sh '#598+#636'")
+    let watching = Task { await fixture.answer.followPermissionDialog(request) }
+    await live.show(Self.rateLimitOffer)
+    while await fixture.tracker.state(for: id)?.drawnCandidates.contains(request) != true {
+      await Task.yield()
+    }
+    // As reported: answered from its card, the offer gets nothing typed.
+    #expect(await fixture.answer(.allowOnce, to: request) == .otherDialog)
+    // Codex runs no `Stop` hook then: its rollout says the turn ended (#637), and the permission
+    // goes with it. The offer is answered in the terminal.
+    await fixture.logs.write("end", at: t1, for: id)
+    await watching.value
+    let state = try #require(await fixture.tracker.state(for: id))
+    #expect(state.requests.isEmpty)
+    #expect(state.activity == .idle)
     #expect(await fixture.terminals.written[id] == nil)
   }
 
