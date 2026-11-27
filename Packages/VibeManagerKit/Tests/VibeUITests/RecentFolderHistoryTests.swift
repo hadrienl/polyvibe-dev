@@ -319,7 +319,7 @@ private struct UnreadableRepository: SessionRepository {
   func save(_: WorkSession) throws { throw Unreadable() }
 }
 
-private actor HistoryRepository: SessionRepository {
+actor HistoryRepository: SessionRepository {
   private let values: [WorkSession]
 
   init(values: [WorkSession]) {

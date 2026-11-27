@@ -15,6 +15,22 @@ extension AppModel {
     offeredRecentFolders.map(\.path)
   }
 
+  /// The agent a new session proposes for each of these folders (#634), as the New Session sheet
+  /// does: the one remembered for the folder, unless it cannot run. A folder with no such agent
+  /// is left out.
+  public func companionAgents(forFolders paths: [String]) async -> [String: String] {
+    guard let agents else { return [:] }
+    let availabilities = await agents.availabilities(forceRefresh: false)
+    var found: [String: String] = [:]
+    for path in paths {
+      guard let agent = rememberedAgent(forFolder: path),
+        availabilities[AgentProviderID(agent)]?.isUsable == true
+      else { continue }
+      found[path] = agent
+    }
+    return found
+  }
+
   /// A project icon's PNG, as the sessions wear it.
   public func companionIconPNG(_ sha256: String) async -> Data? {
     guard let id = SessionIconID(sha256: sha256) else { return nil }

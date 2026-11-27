@@ -490,16 +490,20 @@ public struct RemoteNewSessionOptions: Codable, Hashable, Sendable {
   public var symbols: [String]
   public var colors: [String]
   public var templates: [RemoteTemplate]
+  /// The agent the Mac would propose for each folder offered, recent or a template's (#634);
+  /// `nil` from a Mac that came before.
+  public var folderAgents: [String: String]?
 
   public init(
     folders: [String], agents: [RemoteAgent], symbols: [String] = [], colors: [String] = [],
-    templates: [RemoteTemplate] = []
+    templates: [RemoteTemplate] = [], folderAgents: [String: String]? = nil
   ) {
     self.folders = folders
     self.agents = agents
     self.symbols = symbols
     self.colors = colors
     self.templates = templates
+    self.folderAgents = folderAgents
   }
 }
 
@@ -538,11 +542,16 @@ public struct RemoteFolderListing: Codable, Hashable, Sendable {
   public var folders: [String]
   /// It could not be read: macOS's privacy protection, or it went.
   public var isUnreadable: Bool
+  /// The agent the Mac would propose for this folder (#634), for one chosen in the browser.
+  public var agentID: String?
 
-  public init(path: String, folders: [String], isUnreadable: Bool = false) {
+  public init(
+    path: String, folders: [String], isUnreadable: Bool = false, agentID: String? = nil
+  ) {
     self.path = path
     self.folders = folders
     self.isUnreadable = isUnreadable
+    self.agentID = agentID
   }
 }
 

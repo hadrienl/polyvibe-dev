@@ -640,20 +640,23 @@ final class CompanionRemoteServer {
           }))
     }
     let palette = appModel.appearancePalette.offered
+    let folders = appModel.companionRecentFolders
+    let templates = appModel.companionTemplates.map { template in
+      RemoteTemplate(
+        id: template.id.rawValue.uuidString, name: template.name, body: template.body,
+        folder: template.workingDirectoryPath.map { ($0 as NSString).expandingTildeInPath },
+        appearance: template.appearance.map {
+          RemoteAppearance(symbol: $0.symbolName, color: $0.colorHex)
+        })
+    }
+    let folderAgents = await appModel.companionAgents(
+      forFolders: folders + templates.compactMap(\.folder))
     send(
       peer,
       .newSessionOffer(
         RemoteNewSessionOptions(
-          folders: appModel.companionRecentFolders, agents: agents, symbols: palette.symbols,
-          colors: palette.swatches.map(\.hex),
-          templates: appModel.companionTemplates.map { template in
-            RemoteTemplate(
-              id: template.id.rawValue.uuidString, name: template.name, body: template.body,
-              folder: template.workingDirectoryPath.map { ($0 as NSString).expandingTildeInPath },
-              appearance: template.appearance.map {
-                RemoteAppearance(symbol: $0.symbolName, color: $0.colorHex)
-              })
-          })))
+          folders: folders, agents: agents, symbols: palette.symbols,
+          colors: palette.swatches.map(\.hex), templates: templates, folderAgents: folderAgents)))
   }
 
   private func create(_ request: RemoteNewSession, for peer: String) async {
@@ -686,8 +689,20 @@ final class CompanionRemoteServer {
     let previous = folderWork
     folderWork = Task {
       await previous?.value
-      for message in await Task.detached(operation: work).value { send(peer, message) }
+      for message in await Task.detached(operation: work).value {
+        send(peer, await withFolderAgent(message))
+      }
     }
+  }
+
+  /// A listing, with the agent a new session in its folder proposes (#634): read on the main
+  /// actor, once the disk was read away from it.
+  private func withFolderAgent(_ message: RemoteMessage) async -> RemoteMessage {
+    guard case .folderListing(var listing) = message, !listing.isUnreadable, let appModel else {
+      return message
+    }
+    listing.agentID = await appModel.companionAgents(forFolders: [listing.path])[listing.path]
+    return .folderListing(listing)
   }
 
   /// The subfolders of a folder of the Mac, hidden ones and packages left out, as the Finder
