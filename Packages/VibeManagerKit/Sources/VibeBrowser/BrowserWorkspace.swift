@@ -195,7 +195,7 @@ public final class BrowserWorkspace {
       browser.restore(state, records: records) { tab in
         self.makeTab(
           tab.url, id: tab.id, title: tab.title, openedBy: tab.openedBy,
-          isAgentDriven: tab.isAgentDriven, isPinned: tab.isPinned, in: id)
+          isAgentDriven: tab.isAgentDriven, isPinned: tab.isPinned, groupID: tab.groupID, in: id)
       }
       self.restoreTasks[id] = nil
       self.visibilityDidChange?(id)
@@ -291,8 +291,7 @@ public final class BrowserWorkspace {
     // A tab the agent's page opens stays asked of whatever its opener scripts in it (#241).
     let tab = makeTab(
       url, openedBy: openedBy, isOpenedByAgentPage: openedBy == .agent && origin != nil, in: id)
-    browser.append(
-      tab, activate: activate, after: anchor(origin, in: browser), isOpener: origin != nil)
+    browser.append(tab, activate: activate, after: anchor(origin, in: browser), opener: origin)
     if activate || openedBy != .agent { tab.ensureWebView() }
     touch(tab)
     if !browser.isVisible {
@@ -313,8 +312,7 @@ public final class BrowserWorkspace {
     let tab = makeTab(
       url, openedBy: byAgent ? .agent : .user, isOpenedByAgentPage: byAgent, in: id)
     tab.adopt(popup)
-    browser.append(
-      tab, activate: activate, after: anchor(origin, in: browser), isOpener: origin != nil)
+    browser.append(tab, activate: activate, after: anchor(origin, in: browser), opener: origin)
     touch(tab)
   }
 
@@ -341,6 +339,12 @@ public final class BrowserWorkspace {
   public func closeUnpinnedTabs(in id: SessionID) {
     guard let browser = browsers[id] else { return }
     for tab in browser.tabs where !tab.isPinned { close(tab.id, in: id) }
+  }
+
+  /// Closes every tab of a group (#648), each as `close` would: the group goes with its last.
+  public func closeGroup(_ groupID: BrowserTabGroupID, in id: SessionID) {
+    guard let browser = browsers[id] else { return }
+    for tab in browser.members(of: groupID) { close(tab.id, in: id) }
   }
 
   public func close(_ tabID: BrowserTabID, in id: SessionID) {
@@ -389,12 +393,13 @@ public final class BrowserWorkspace {
   func makeTab(
     _ url: URL, id tabID: BrowserTabID = BrowserTabID(), title: String = "",
     openedBy: BrowserTab.Opener, isAgentDriven: Bool? = nil, isOpenedByAgentPage: Bool = false,
-    isPinnedTicket: Bool = false, isPinned: Bool = false, in id: SessionID
+    isPinnedTicket: Bool = false, isPinned: Bool = false, groupID: BrowserTabGroupID? = nil,
+    in id: SessionID
   ) -> BrowserTabModel {
     let tab = BrowserTabModel(
       id: tabID, url: url, title: title, openedBy: openedBy, isAgentDriven: isAgentDriven,
       isOpenedByAgentPage: isOpenedByAgentPage, isPinnedTicket: isPinnedTicket,
-      isPinned: isPinned, configuration: configuration)
+      isPinned: isPinned, groupID: groupID, configuration: configuration)
     tab.didChange = { [weak self] in
       guard !isPinnedTicket else { return }
       self?.scheduleSave(id)

@@ -23,9 +23,13 @@ public struct BrowserTabGroup: Identifiable, Hashable, Codable, Sendable {
   public enum Origin: Hashable, Codable, Sendable {
     /// A tab opened a link: the two were its first tabs. Left with one, it goes.
     case opener
-    /// A pinned tab — the ticket's or one the user pinned — opened a link: the group gathers that
-    /// tab's links, the tab staying pinned. It lives on with one tab while that tab is pinned.
+    /// A tab the user pinned opened a link: the group gathers that tab's links, the tab staying
+    /// pinned. It lives on with one tab while that tab is pinned.
     case pinnedOpener(BrowserTabID)
+    /// The ticket's page opened a link: the group gathers the ticket's links. The ticket's tab is
+    /// made again at each launch, under another identifier: the group is the ticket's, not a tab's.
+    /// It goes once empty.
+    case ticket
     /// The user made it: it goes once empty.
     case user
   }

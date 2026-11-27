@@ -55,7 +55,7 @@ struct BrowserTabArrangementTests {
     arrangement.insertOpened(b, at: 1, from: ticket, name: "Ticket")
 
     let group = try #require(arrangement.group(of: a))
-    #expect(group.origin == .pinnedOpener(ticket))
+    #expect(group.origin == .ticket)
     #expect(arrangement.members(of: group.id) == [a, b])
     #expect(arrangement.entry(t[0])?.isPinned == true)
     #expect(arrangement.entry(t[0])?.groupID == nil)

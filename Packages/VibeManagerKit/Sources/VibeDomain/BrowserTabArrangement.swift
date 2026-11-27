@@ -59,7 +59,7 @@ public struct BrowserTabArrangement: Equatable, Sendable {
 
   public private(set) var entries: [Entry]
   public private(set) var groups: [BrowserTabGroup]
-  /// The ticket's tab, which a `.pinnedOpener` group may follow.
+  /// The ticket's tab, whose links gather in the `.ticket` group.
   public var ticketID: BrowserTabID?
 
   public init(
@@ -135,16 +135,20 @@ public struct BrowserTabArrangement: Equatable, Sendable {
         groupID = group.id
       }
       entries.insert(Entry(id: id, groupID: groupID), at: position)
-    } else if let group = groups.first(where: { $0.origin == .pinnedOpener(opener) }),
+    } else if let group = groups.first(where: { $0.origin == pinnedOrigin(of: opener) }),
       let last = entries.lastIndex(where: { $0.groupID == group.id })
     {
       entries.insert(Entry(id: id, groupID: group.id), at: last + 1)
     } else {
-      let group = BrowserTabGroup(name: name, origin: .pinnedOpener(opener))
+      let group = BrowserTabGroup(name: name, origin: pinnedOrigin(of: opener))
       groups.append(group)
       entries.insert(Entry(id: id, groupID: group.id), at: position)
     }
     normalize()
+  }
+
+  private func pinnedOrigin(of opener: BrowserTabID) -> BrowserTabGroup.Origin {
+    opener == ticketID ? .ticket : .pinnedOpener(opener)
   }
 
   // MARK: - Moving
@@ -321,9 +325,8 @@ public struct BrowserTabArrangement: Equatable, Sendable {
       case .opener:
         return count >= 2
       case .pinnedOpener(let opener):
-        let isOpenerPinned = opener == ticketID || pinnedIDs.contains(opener)
-        return count >= (isOpenerPinned ? 1 : 2)
-      case .user:
+        return count >= (pinnedIDs.contains(opener) ? 1 : 2)
+      case .ticket, .user:
         return count >= 1
       }
     }

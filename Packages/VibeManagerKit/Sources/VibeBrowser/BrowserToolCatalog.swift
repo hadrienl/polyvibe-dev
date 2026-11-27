@@ -53,7 +53,8 @@ public enum BrowserToolCatalog {
       name: "tabs_list", actionClass: .read,
       description: """
         Lists the tabs of this session's web view in Polyvibe: id, title, address, whether \
-        each is in front, loaded or loading, and who opened it. Only this session's tabs exist.
+        each is in front, loaded or loading, who opened it, and the group the user keeps it in, \
+        in the order the user sees them. Only this session's tabs exist.
         """,
       inputSchema: schema([:], namesTab: false)),
     Tool(
