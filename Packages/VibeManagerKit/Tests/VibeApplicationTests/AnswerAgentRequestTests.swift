@@ -415,6 +415,48 @@ struct AnswerAgentRequestTests {
     #expect(await failures.values.first?.before == "  Working…")
   }
 
+  @Test("Another dialog left over in what is replayed is drawn again too (#563)")
+  func redrawnOverAnotherDialog() async {
+    let live = LiveScreen(" ❯ 1. Maybe\n   2. No")
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text },
+      redraw: { _ in
+        await live.show(" ❯ 1. Yes\n   2. No")
+        return true
+      },
+      sleep: { _ in await Task.yield() })
+    #expect(await answer(.allowOnce, to: request) == .sent)
+    #expect(await fixture.terminals.written[id] == [Array("1".utf8)])
+  }
+
+  @Test("A redraw drawn late is waited for: the screen is read again until it shows the dialog")
+  func lateRedraw() async {
+    let live = LiveScreen(Self.screenWithoutItsDialog)
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let waits = Redraws()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      screen: { _ in await live.text },
+      redraw: { _ in true },
+      sleep: { duration in
+        if duration == AnswerAgentRequest.redrawWait {
+          await waits.count()
+          // The agent draws only after the screen was first read again.
+          if await waits.value == 2 { await live.show(" ❯ 1. Yes\n   2. No") }
+        }
+        await Task.yield()
+      })
+    #expect(await answer(.allowOnce, to: request) == .sent)
+    #expect(await fixture.terminals.written[id] == [Array("1".utf8)])
+    #expect(await waits.value == 2)
+  }
+
   @Test("A dialog on screen, or a history kept whole, is not drawn again (#563)")
   func noRedraw() async {
     for screen in [" ❯ 1. Yes\n   2. No", Self.screenWithoutItsDialog] {

@@ -136,7 +136,7 @@ public struct AnswerAgentRequest: Sendable {
     guard await tracker.offers(answer, to: id) else {
       return await tracker.isFirstRequest(id) ? .notAnswerable : .requestGone
     }
-    let read = await readScreen(id.sessionID)
+    let read = await readScreen(answering: answer, to: id)
     if read.isRedrawn { redrawn = read.text }
     var text = read.text
     // Whose dialog is drawn is read off the screen, against every request the agent reported
@@ -149,6 +149,7 @@ public struct AnswerAgentRequest: Sendable {
         return await tracker.isFirstRequest(id) ? .otherDialog : .requestGone
       }
       text = await screen(id.sessionID)
+      if read.isRedrawn { redrawn = text }
       guard let text, await tracker.dialogOnScreen(text, readBefore: before, isFor: id) else {
         return await tracker.isFirstRequest(id) ? .otherDialog : .requestGone
       }
@@ -270,22 +271,42 @@ public struct AnswerAgentRequest: Sendable {
   /// shorter for a quarter of a second, then given its size back, and the agent draws for both.
   public static let redrawWait: Duration = .milliseconds(400)
 
-  /// What the session's terminal shows, and whether it was drawn again first: when no dialog is
-  /// read off it and the history it is replayed from was trimmed (#563). A dialog is drawn once; an agent that draws
-  /// by differences then sends only what changes — ten hours of a spinner later, the history
-  /// kept holds the spinner, not the dialog still drawn under it.
-  private func readScreen(_ id: SessionID) async -> (text: String?, isRedrawn: Bool) {
-    let text = await screen(id)
-    guard text.flatMap(AgentDialogScreen.init(screen:)) == nil, await redraw(id) else {
+  /// How many times the screen is read again after a redraw, `redrawWait` apart, until it shows
+  /// the dialog: a hosted session's redraw is only asked of its host, and a busy Mac's agent may
+  /// draw long after its terminal was given its size back.
+  public static let redrawReadings = 3
+
+  /// What the session's terminal shows, and whether it was drawn again first: when the dialog
+  /// that takes `answer` is not read off it — none, or another's left over — and the history it
+  /// is replayed from was trimmed (#563). A dialog is drawn once; an agent that draws by
+  /// differences then sends only what changes — ten hours of a spinner later, the history kept
+  /// holds the spinner, not the dialog still drawn under it.
+  private func readScreen(answering answer: AgentAnswer, to id: AgentRequestID) async
+    -> (text: String?, isRedrawn: Bool)
+  {
+    var text = await screen(id.sessionID)
+    guard await !screen(text, answers: answer, to: id), await redraw(id.sessionID) else {
       return (text, false)
     }
-    do {
-      try await sleep(Self.redrawWait)
-    } catch {
-      return (text, false)
+    for _ in 0..<Self.redrawReadings {
+      do {
+        try await sleep(Self.redrawWait)
+      } catch {
+        break
+      }
+      await settle(id.sessionID)
+      text = await screen(id.sessionID)
+      if await screen(text, answers: answer, to: id) { break }
     }
-    await settle(id)
-    return (await screen(id), true)
+    return (text, true)
+  }
+
+  /// Whether `text` shows a dialog the keys of `answer` are read off.
+  private func screen(_ text: String?, answers answer: AgentAnswer, to id: AgentRequestID) async
+    -> Bool
+  {
+    let drawn = text.flatMap(AgentDialogScreen.init(screen:))
+    return await !(tracker.keystrokes(for: answer, to: id, screen: drawn) ?? []).isEmpty
   }
 
   /// Whether the dialog, read again, asks for `keys` and nothing else — waited for up to
