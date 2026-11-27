@@ -70,6 +70,10 @@ final class TerminalSubscribers: @unchecked Sendable {
   private let lock = NSLock()
   private var subscribers: [UUID: Subscriber] = [:]
   private var lastOutput: ContinuousClock.Instant?
+  private var lastBegin: ContinuousClock.Instant?
+  /// The escape sequence the last block ended inside of, read again with the next one: a begin
+  /// split across two blocks is one (#580).
+  private var unfinishedEscape: [UInt8] = []
   /// What delivers a planned pulse when it falls due: a task that waits for it, unless a test
   /// delivers them itself.
   private let schedule: @Sendable (PlannedPulse, TerminalSubscribers) -> Void
@@ -88,6 +92,11 @@ final class TerminalSubscribers: @unchecked Sendable {
   /// When the process last wrote something.
   var lastOutputAt: ContinuousClock.Instant? {
     lock.withLock { lastOutput }
+  }
+
+  /// When the process last began a synchronized update (#580).
+  var synchronizedUpdateBeganAt: ContinuousClock.Instant? {
+    lock.withLock { lastBegin }
   }
 
   /// What each subscriber reads, for the tests that check nobody reads more than it needs.
@@ -137,6 +146,7 @@ final class TerminalSubscribers: @unchecked Sendable {
     var planned: [PlannedPulse] = []
     lock.withLock {
       lastOutput = now
+      noteSynchronizedUpdates(in: bytes, at: now)
       for (id, subscriber) in subscribers {
         switch subscriber.interest {
         case .everything:
@@ -162,6 +172,17 @@ final class TerminalSubscribers: @unchecked Sendable {
     for pulse in planned { schedule(pulse, self) }
     return planned
   }
+
+  /// Notes when a block begins a synchronized update. Under the lock: the blocks come in order.
+  private func noteSynchronizedUpdates(in bytes: [UInt8], at now: ContinuousClock.Instant) {
+    let scanned = unfinishedEscape.isEmpty ? bytes : unfinishedEscape + bytes
+    let (marks, cutShort) = SynchronizedUpdate.marks(in: scanned[...])
+    if marks.contains(where: { $0.0 == .begin }) { lastBegin = now }
+    // Bounded: an escape sequence never ends would otherwise be carried on without end.
+    unfinishedEscape = cutShort.map { Array(scanned[$0...].prefix(Self.longestEscape)) } ?? []
+  }
+
+  private static let longestEscape = 64
 
   /// A planned pulse is due.
   func deliverPulse(to id: UUID, at now: ContinuousClock.Instant = .now) {

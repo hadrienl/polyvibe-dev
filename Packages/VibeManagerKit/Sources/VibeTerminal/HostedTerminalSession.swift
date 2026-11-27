@@ -60,6 +60,10 @@ public actor HostedTerminalSession: HostedTerminal {
     subscribers.lastOutputAt
   }
 
+  public func synchronizedUpdateBeganAt() async -> ContinuousClock.Instant? {
+    subscribers.synchronizedUpdateBeganAt
+  }
+
   public func state() -> TerminalProcessState {
     currentState
   }

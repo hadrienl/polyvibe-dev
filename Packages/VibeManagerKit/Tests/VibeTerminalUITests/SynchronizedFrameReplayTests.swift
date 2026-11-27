@@ -106,7 +106,7 @@ struct SynchronizedFrameReplayTests {
   func halfDrawnFrame() {
     let drawn = Self.begun(Self.reportedDialog) + Self.end
     let history = Self.bytes(drawn + Self.begun(Self.halfDrawn))
-    let screen = TerminalText.screen(replaying: history, size: Self.size)
+    let screen = TerminalText.screen(replaying: history, size: Self.size, waitingOnFrame: true)
     #expect(screen == TerminalText.screen(replaying: Self.bytes(drawn), size: Self.size))
     #expect(!screen.contains("userSays('Quel mail ?');"))
     let dialog = AgentDialogScreen(screen: screen)
@@ -116,11 +116,13 @@ struct SynchronizedFrameReplayTests {
     #expect(dialog?.options.last?.label == "Chat about this")
 
     // Its update ended, the next frame is what shows.
-    let ended = TerminalText.screens(replaying: history + Self.bytes(Self.end), size: Self.size)
+    let ended = TerminalText.screens(
+      replaying: history + Self.bytes(Self.end), size: Self.size, waitingOnFrame: true)
     #expect(ended.shown.contains("userSays('Quel mail ?');"))
     #expect(AgentDialogScreen(screen: ended.shown) == nil)
     #expect(
-      TerminalText.screens(replaying: history, size: Self.size).shown == screen)
+      TerminalText.screens(replaying: history, size: Self.size, waitingOnFrame: true).shown
+        == screen)
   }
 
   @Test("Read again and again, a frame half drawn is fed once its update has ended")
@@ -131,14 +133,16 @@ struct SynchronizedFrameReplayTests {
     let follower = TerminalScreenFollower()
 
     let first = await follower.screen(
-      of: TerminalHistorySnapshot(bytes: opened, droppedByteCount: 0), size: Self.size)
+      of: TerminalHistorySnapshot(bytes: opened, droppedByteCount: 0), size: Self.size,
+      waitingOnFrame: true)
     #expect(first == TerminalText.screen(replaying: drawn, size: Self.size))
     #expect(AgentDialogScreen(screen: first) != nil)
 
     let finished =
       opened + Self.bytes("\r\n" + lines.dropFirst(3).joined(separator: "\r\n") + Self.end)
     let second = await follower.screen(
-      of: TerminalHistorySnapshot(bytes: finished, droppedByteCount: 0), size: Self.size)
+      of: TerminalHistorySnapshot(bytes: finished, droppedByteCount: 0), size: Self.size,
+      waitingOnFrame: true)
     #expect(second == TerminalText.screen(replaying: finished, size: Self.size))
     #expect(second.contains("      1021        await tick();"))
     #expect(second.contains("userSays('Quel mail ?');"))
@@ -146,8 +150,8 @@ struct SynchronizedFrameReplayTests {
 
   @Test("Where the frames drawn end: before the update still open, its first beginning")
   func drawnThrough() {
-    func drawn(_ text: String) -> Int {
-      TerminalText.drawnThrough(Self.bytes(text)[...])
+    func drawn(_ text: String, waiting: Bool = true) -> Int {
+      TerminalText.drawnThrough(Self.bytes(text)[...], waiting: waiting)
     }
     for whole in ["plain\r\n\u{1B}[2Jtext", Self.begin + "frame" + Self.end] {
       #expect(drawn(whole) == whole.utf8.count)
@@ -159,12 +163,21 @@ struct SynchronizedFrameReplayTests {
     #expect(drawn("ab\u{1B}[?2026") == 2)
     #expect(drawn("ab\u{1B}[?20") == 2)
     #expect(drawn("ab\u{1B}") == 2)
-    for whole in ["ab\u{1B}[31m", "ab\u{1B}[?2004h", "ab\u{1B}[?2026$p"] {
+    // An escape cut short draws nothing yet: never fed, a frame waited on or not.
+    #expect(drawn("ab\u{1B}[?20", waiting: false) == 2)
+    #expect(drawn("ab\u{1B}[", waiting: false) == 2)
+    #expect(drawn("ab" + Self.begin + "half", waiting: false) == 14)
+    // The mode set among others begins one too; a reset of the terminal ends it, as a view's.
+    #expect(drawn("ab\u{1B}[?1049;2026hhalf") == 2)
+    #expect(drawn("ab\u{1B}[?2026;25lc" + Self.begin + "x") == 14)
+    #expect(drawn("ab" + Self.begin + "x\u{1B}cy") == 14)
+    #expect(drawn("ab" + Self.begin + "x\u{1B}[?1;2026l") == 21)
+    for whole in ["ab\u{1B}[31m", "ab\u{1B}[?2004h", "ab\u{1B}[?2026$p", "ab\u{1B}[?20260h"] {
       #expect(drawn(whole) == whole.utf8.count)
     }
     // Of a slice, an index of the whole.
     let whole = Self.bytes("frame " + Self.begin + "half")
-    #expect(TerminalText.drawnThrough(whole[3...]) == 6)
+    #expect(TerminalText.drawnThrough(whole[3...], waiting: true) == 6)
   }
 
   @Test("A begin cut short between two reads is waited on, the history trimmed in between")
@@ -176,12 +189,12 @@ struct SynchronizedFrameReplayTests {
     // Bytes before these were dropped from the history: where they stand in the stream counts.
     let first = await follower.screen(
       of: TerminalHistorySnapshot(bytes: drawn + cut, droppedByteCount: 500, startOffset: 500),
-      size: Self.size)
+      size: Self.size, waitingOnFrame: true)
     #expect(first == TerminalText.screen(replaying: drawn, size: Self.size))
     let second = await follower.screen(
       of: TerminalHistorySnapshot(
         bytes: drawn + cut + rest, droppedByteCount: 500, startOffset: 500),
-      size: Self.size)
+      size: Self.size, waitingOnFrame: true)
     #expect(second == first)
     #expect(AgentDialogScreen(screen: second) != nil)
   }
@@ -199,7 +212,7 @@ struct SynchronizedFrameReplayTests {
 
     let follower = TerminalScreenFollower()
     let snapshot = TerminalHistorySnapshot(bytes: history, droppedByteCount: 0)
-    let waited = await follower.screen(of: snapshot, size: Self.size)
+    let waited = await follower.screen(of: snapshot, size: Self.size, waitingOnFrame: true)
     #expect(AgentDialogScreen(screen: waited) != nil)
     let given = await follower.screen(of: snapshot, size: Self.size, waitingOnFrame: false)
     #expect(given == screen)
@@ -209,8 +222,8 @@ struct SynchronizedFrameReplayTests {
   func endlessUpdate() {
     let filler = String(repeating: "a", count: TerminalText.longestFrame)
     let history = Self.bytes("ab" + Self.begin + filler)
-    #expect(TerminalText.drawnThrough(history[...]) == history.count)
+    #expect(TerminalText.drawnThrough(history[...], waiting: true) == history.count)
     let shorter = Self.bytes("ab" + Self.begin + filler.dropLast(10))
-    #expect(TerminalText.drawnThrough(shorter[...]) == 2)
+    #expect(TerminalText.drawnThrough(shorter[...], waiting: true) == 2)
   }
 }

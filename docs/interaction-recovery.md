@@ -13,8 +13,9 @@ between the last numbered choice and the bottom of the screen.
 
 The terminal is read as a view shows it. A frame drawn inside a synchronized update
 (`ESC[?2026h` … `ESC[?2026l`, which Claude Code uses once SwiftTerm reports the mode) is read only
-once the update has ended; until then the previous frame is what reads. Claude Code clears the
-screen and writes each frame over several reads, so a frame read half drawn had lost its dialog.
+once the update has ended, or a second after it began, as SwiftTerm's view stops waiting then;
+until then the previous frame is what reads. Claude Code clears the screen and writes each frame
+over several reads, so a frame read half drawn had lost its dialog.
 
 If the dialog cannot be read or identified (`notOnScreen`, `otherDialog`), or an answer cannot be
 completed/confirmed (`interrupted`), the app opens the affected session in terminal view. It leaves

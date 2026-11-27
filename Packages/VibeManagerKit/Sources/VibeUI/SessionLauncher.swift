@@ -941,10 +941,12 @@ public final class SessionLauncher: SessionRuntime, SessionRestarting, SessionHa
   }
 
   /// Whether a frame the terminal has begun is still waited on, as a view waits on it (#580): the
-  /// program wrote within `TerminalText.frameWait`. One that stopped mid-frame shows what it drew.
+  /// program began one within `SynchronizedUpdate.wait`. Asked once the history is read: a begin
+  /// that came after it holds the screen back a second at most, where asked before, it could let
+  /// a frame half drawn through.
   private static func waitsOnFrame(of terminal: any TerminalSession) async -> Bool {
-    guard let last = await terminal.lastOutputAt() else { return false }
-    return ContinuousClock.now - last < TerminalText.frameWait
+    guard let began = await terminal.synchronizedUpdateBeganAt() else { return false }
+    return ContinuousClock.now - began < SynchronizedUpdate.wait
   }
 
   /// The screen, as `screen(of:)` reads it, by a follower that replays only what is new: for a

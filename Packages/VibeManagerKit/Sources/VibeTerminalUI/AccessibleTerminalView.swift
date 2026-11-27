@@ -430,9 +430,10 @@ public enum TerminalText {
   /// indented as drawn: the dialog an agent draws now, read before an answer is typed into it
   /// (#273), whose wrapped lines are told by their indent. The history is replayed into a
   /// terminal of its own, which no view shows.
-  /// A frame begun is waited on while `waitingOnFrame`: read once it has been drawn (#580).
+  /// A frame begun is waited on while `waitingOnFrame`, which the caller tells from when the session
+  /// last began one (#580): read once it has been drawn.
   public static func screen(
-    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = true
+    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = false
   ) -> String {
     let terminal = Terminal(
       delegate: SilentTerminalDelegate(),
@@ -445,7 +446,7 @@ public enum TerminalText {
   /// what an agent shows greyed in its prompt — `Try "…"`, a suggested answer — is not text typed
   /// into it. The history is replayed once for both.
   public static func screens(
-    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = true
+    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = false
   ) -> TerminalScreens {
     let terminal = Terminal(
       delegate: SilentTerminalDelegate(),
@@ -455,40 +456,30 @@ public enum TerminalText {
   }
 
   /// Where the output a program has finished drawing ends (#580): before the synchronized update
-  /// it began and has not ended yet — `ESC[?2026h`, its `ESC[?2026l` still to come. Claude Code
-  /// draws each frame inside one, once the terminal says it knows them, as SwiftTerm does: the
-  /// screen is cleared, then written again over several reads, and a view shows it only once the
-  /// update ends. Read in between, the screen holds a frame half drawn, its dialog gone — never
-  /// what the user sees. A view stops waiting on an update after `frameWait`: one that runs on
-  /// past `longestFrame` is read as drawn too, and none is waited on unless `waiting`.
-  static func drawnThrough(_ bytes: ArraySlice<UInt8>, waiting: Bool = true) -> Int {
-    guard waiting else { return bytes.endIndex }
+  /// it began and has not ended yet, while `waiting` — `ESC[?2026h`, its `ESC[?2026l` still to
+  /// come. Claude Code draws each frame inside one, once the terminal says it knows them, as
+  /// SwiftTerm does: the screen is cleared, then written again over several reads, and a view
+  /// shows it only once the update ends. Read in between, the screen holds a frame half drawn, its
+  /// dialog gone — never what the user sees. A view stops waiting on an update a second after it
+  /// began, which the session knows: one that runs on past `longestFrame` is read as drawn too.
+  /// An escape sequence the read cut short is never fed: it draws nothing yet, and may be a begin.
+  static func drawnThrough(_ bytes: ArraySlice<UInt8>, waiting: Bool) -> Int {
+    let (marks, cutShort) = SynchronizedUpdate.marks(in: bytes)
+    let read = cutShort ?? bytes.endIndex
+    guard waiting else { return read }
     var opened: Int?
-    var index = bytes.startIndex
-    while let escape = bytes[index...].firstIndex(of: 0x1B) {
-      let end = escape + synchronizedUpdate.count
-      if end < bytes.endIndex, bytes[escape..<end].elementsEqual(synchronizedUpdate) {
-        if bytes[end] == UInt8(ascii: "h") {
-          opened = opened ?? escape
-        } else if bytes[end] == UInt8(ascii: "l") {
-          opened = nil
-        }
-      } else if end >= bytes.endIndex, synchronizedUpdate.starts(with: bytes[escape...]) {
-        // Cut short by the read, it may begin an update: the next read tells, from here.
-        opened = opened ?? escape
+    for (mark, at) in marks {
+      switch mark {
+      case .begin: opened = opened ?? at
+      case .end: opened = nil
       }
-      index = escape + 1
     }
-    guard let opened, bytes.endIndex - opened <= longestFrame else { return bytes.endIndex }
+    guard let opened, bytes.endIndex - opened <= longestFrame else { return read }
     return opened
   }
 
-  /// `ESC[?2026`, then `h` to begin a synchronized update, `l` to end it.
-  private static let synchronizedUpdate = Array("\u{1B}[?2026".utf8)
   /// The most a frame is waited on, in bytes: a full screen, colours and all, is far less.
   static let longestFrame = 1 << 20
-  /// How long a view waits on a synchronized update before showing what it holds: SwiftTerm's.
-  public static let frameWait: Duration = .seconds(1)
 
   /// The screen's lines, trailing blanks and trailing empty lines removed — and leading blanks,
   /// unless `keepingIndent`. Dim text is read as blanks when `droppingDimText`.
@@ -594,7 +585,7 @@ public actor TerminalScreenFollower {
   public init() {}
 
   public func screen(
-    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = true
+    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = false
   ) -> String {
     TerminalText.visibleScreen(
       of: follow(history, size: size, waitingOnFrame: waitingOnFrame), keepingIndent: true)
@@ -602,7 +593,7 @@ public actor TerminalScreenFollower {
 
   /// The screen as it shows and without its dim text (#464).
   public func screens(
-    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = true
+    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = false
   ) -> TerminalScreens {
     TerminalScreens(of: follow(history, size: size, waitingOnFrame: waitingOnFrame))
   }
