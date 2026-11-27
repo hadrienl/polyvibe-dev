@@ -100,7 +100,7 @@ struct MomentPreviewContent: Equatable {
     Item(
       heading: heading(of: moment, block: block, agentName: agentName),
       label: MomentPresentation.label(of: moment, block: block),
-      isExcerpt: moment.kind == .bookmark,
+      isExcerpt: moment.kind == .bookmark || moment.kind == .message,
       answer: MomentPresentation.answer(of: moment))
   }
 
@@ -111,9 +111,9 @@ struct MomentPreviewContent: Equatable {
   ) -> String? {
     let time = MomentPresentation.time(of: moment.date)
     let who: String
-    if moment.kind == .bookmark {
+    if moment.kind == .bookmark || moment.kind == .message {
       guard let block, let author = author(of: block, agent: agentName) else {
-        return MomentPresentation.name(of: .bookmark)
+        return MomentPresentation.name(of: moment.kind)
       }
       who = author
     } else {

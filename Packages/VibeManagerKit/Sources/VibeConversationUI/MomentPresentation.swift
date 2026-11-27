@@ -13,6 +13,7 @@ enum MomentPresentation {
   static func symbol(of kind: ConversationMomentKind) -> String? {
     switch kind {
     case .bookmark: nil
+    case .message: "bubble.right"
     case .git: "arrow.triangle.branch"
     case .forge: "arrow.triangle.pull"
     case .tests: "checkmark.circle"
@@ -24,6 +25,7 @@ enum MomentPresentation {
   static func name(of kind: ConversationMomentKind) -> String {
     switch kind {
     case .bookmark: String(localized: "Bookmarks", bundle: .module)
+    case .message: String(localized: "Your messages", bundle: .module)
     case .git: "Git"
     case .forge: String(localized: "Tickets and Pull Requests", bundle: .module)
     case .tests: String(localized: "Tests", bundle: .module)
@@ -38,6 +40,7 @@ enum MomentPresentation {
   {
     switch kind {
     case .bookmark: theme.accent.color
+    case .message: Color(nsColor: .systemIndigo)
     case .git: Color(nsColor: .systemOrange)
     case .forge: Color(nsColor: .systemPurple)
     case .tests: theme.success.color
@@ -51,6 +54,7 @@ enum MomentPresentation {
   static func symbol(of moment: ConversationMoment) -> String {
     switch moment.detail {
     case .bookmark: "bookmark"
+    case .message: "bubble.right"
     case .commit: "smallcircle.filled.circle"
     case .push: "arrow.up.circle"
     case .branch: "arrow.triangle.branch"
@@ -69,10 +73,10 @@ enum MomentPresentation {
     moment.isFailure ? theme.failure.color : color(of: moment.kind, theme: theme)
   }
 
-  /// What happened, on one line: for a bookmark, the start of its message.
+  /// What happened, on one line: for a bookmark or a message, the start of its message.
   static func label(of moment: ConversationMoment, block: ConversationBlock?) -> String {
     switch moment.detail {
-    case .bookmark:
+    case .bookmark, .message:
       return block.map(ConversationModel.bookmarkExcerpt(of:)) ?? ""
     case .commit(let subject?):
       return String(localized: "Commit “\(subject)”", bundle: .module)
@@ -178,7 +182,8 @@ struct MomentIcon: View {
 /// how many there are when there are several. It does nothing: the pointer on it shows them, in
 /// the overview's preview (#608).
 struct MomentGutterMark: View {
-  /// Those of the kinds shown, bookmarks aside: a bookmark's shape is beside it already.
+  /// Those of the kinds shown, bookmarks and messages aside: a bookmark's shape is beside it
+  /// already, the message is the block itself.
   let moments: [ConversationMoment]
   let block: ConversationBlock
   let preview: ConversationMarginPreview
@@ -195,7 +200,8 @@ struct MomentGutterMark: View {
   static func moments(
     of block: ConversationBlock, model: ConversationModel, appearance: ConversationAppearance
   ) -> [ConversationMoment] {
-    model.moments(of: block).filter { appearance.shows($0.kind) }
+    // A message's own: the message is right beside it.
+    model.moments(of: block).filter { $0.kind != .message && appearance.shows($0.kind) }
   }
 
   var body: some View {

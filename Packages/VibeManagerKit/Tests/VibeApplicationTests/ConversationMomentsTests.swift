@@ -315,6 +315,48 @@ struct ConversationMomentsTests {
     #expect(moments.first?.date == date)
   }
 
+  @Test("Each message the user sent is one; Polyvibe's and a coordinator's are not")
+  func messages() {
+    let date = Date(timeIntervalSince1970: 2_000)
+    let entries = [
+      ConversationEntry(id: "u1", date: date, content: .userPrompt("Fix it", attachments: [])),
+      ConversationEntry(id: "a", content: .agentText("Done.")),
+      ConversationEntry(
+        id: "c",
+        content: .userPrompt(
+          CoordinationPolicy.fromCoordinator("Rebase on main.", coordinatorName: "V2"),
+          attachments: [])),
+      ConversationEntry(id: "cmd", content: .notice(.command("/clear"))),
+      ConversationEntry(id: "u2", content: .userPrompt("Thanks", attachments: [])),
+    ]
+    let moments = ConversationMoments.moments(in: entries)
+    #expect(moments.map(\.detail) == [.message, .message])
+    #expect(moments.map(\.kind) == [.message, .message])
+    #expect(moments.map(\.entryID) == ["u1", "u2"])
+    #expect(moments.first?.date == date)
+    let placed = ConversationMoments.placed(
+      in: ConversationGrouping.blocks(entries), bookmarks: [])
+    #expect(ConversationMoments.shown(placed, hiding: ["message"]).isEmpty)
+    // Bookmarked at its start, the bookmark alone; at another paragraph, both.
+    let marked = ConversationMoments.placed(
+      in: ConversationGrouping.blocks(entries), bookmarks: ["u1", "u2#u1"])
+    #expect(
+      ConversationMoments.shown(marked, hiding: []).map(\.moment.kind)
+        == [.bookmark, .message, .bookmark])
+  }
+
+  @Test("A group of icons shows what happened rather than the message that asked for it")
+  func iconOfAGroup() {
+    let message = ConversationMoments.Placed(
+      blockIndex: 0, moment: ConversationMoment(.message, entryID: "u", date: nil))
+    let failed = ConversationMoments.Placed(
+      blockIndex: 1,
+      moment: ConversationMoment(.tests(TestOutcome(total: 3, failed: 1)), entryID: "t", date: nil))
+    #expect(ConversationMoments.iconIndex(in: [message, failed], group: 0..<2) == 1)
+    #expect(ConversationMoments.iconIndex(in: [message, failed, message], group: 2..<3) == 2)
+    #expect(ConversationMoments.iconIndex(in: [failed, message], group: 0..<2) == 0)
+  }
+
   @Test("What a sub-agent did stays inside it")
   func subagents() {
     let inner = Self.shell("inner", "git commit -m inside")
@@ -339,14 +381,14 @@ struct ConversationMomentsTests {
     ]
     let grouped = ConversationGrouping.blocks(entries, grouping: true)
     let placed = ConversationMoments.placed(in: grouped, bookmarks: ["u"])
-    #expect(placed.map(\.blockIndex) == [0, 1, 1])
-    #expect(placed.map(\.moment.entryID) == ["u", "s2", "s3"])
-    #expect(placed.map(\.moment.kind) == [.bookmark, .git, .git])
+    #expect(placed.map(\.blockIndex) == [0, 0, 1, 1])
+    #expect(placed.map(\.moment.entryID) == ["u", "u", "s2", "s3"])
+    #expect(placed.map(\.moment.kind) == [.bookmark, .message, .git, .git])
     #expect(ConversationMoments.blockIndices(of: placed) == [0, 1])
 
     let ungrouped = ConversationGrouping.blocks(entries, grouping: false)
     let apart = ConversationMoments.placed(in: ungrouped, bookmarks: ["u"])
-    #expect(apart.map(\.blockIndex) == [0, 2, 3])
+    #expect(apart.map(\.blockIndex) == [0, 0, 2, 3])
     #expect(
       ConversationMoments.placed(in: ungrouped, bookmarks: ["u"], from: 3).map(\.blockIndex)
         == [3])

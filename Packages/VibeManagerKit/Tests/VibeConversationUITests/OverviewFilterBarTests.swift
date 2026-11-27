@@ -6,7 +6,7 @@ import VibeDomain
 
 @testable import VibeConversationUI
 
-/// The filters over the overview (#572): six buttons on one row, or, narrower than that, one
+/// The filters over the overview (#572): seven buttons on one row, or, narrower than that, one
 /// that opens a menu of the kinds — never two rows.
 @MainActor
 @Suite("The overview's filters, wide and narrow")
@@ -51,20 +51,35 @@ struct OverviewFilterBarTests {
     #expect(filters.count(of: .tests) == 0)
   }
 
+  @Test("A message bookmarked at its start counts as its bookmark, while bookmarks are shown")
+  func bookmarkedMessageCount() {
+    let moments: [ConversationMoments.Placed] = [
+      .init(blockIndex: 0, moment: .init(.bookmark, entryID: "u", date: nil)),
+      .init(blockIndex: 0, moment: .init(.message, entryID: "u", date: nil)),
+      .init(blockIndex: 1, moment: .init(.message, entryID: "v", date: nil)),
+    ]
+    let shown = OverviewFilters(moments: moments, appearance: Self.appearance())
+    #expect(shown.count(of: .message) == 1)
+    #expect(shown.count(of: .bookmark) == 1)
+    let hidden = OverviewFilters(
+      moments: moments, appearance: Self.appearance(hiding: ["bookmark"]))
+    #expect(hidden.count(of: .message) == 2)
+  }
+
   @Test("The menu's button says how many kinds are shown, only when some are hidden")
   func counter() {
     let model = Self.model()
     let all = OverviewFilters(moments: model.moments, appearance: Self.appearance())
     #expect(all.showsAll)
     #expect(all.badge == nil)
-    #expect(all.accessibilityValue == "6 of 6")
+    #expect(all.accessibilityValue == "7 of 7")
 
     let some = OverviewFilters(
       moments: model.moments, appearance: Self.appearance(hiding: ["tests"]))
     #expect(!some.showsAll)
-    #expect(some.shownCount == 5)
-    #expect(some.badge == "5/6")
-    #expect(some.accessibilityValue == "5 of 6")
+    #expect(some.shownCount == 6)
+    #expect(some.badge == "6/7")
+    #expect(some.accessibilityValue == "6 of 7")
   }
 
   @Test("A line of the menu turns its kind over, as its button does")
@@ -160,16 +175,16 @@ struct OverviewFilterBarTests {
     return form
   }
 
-  @Test("Wide enough, the six buttons on one row; narrower, the menu alone")
+  @Test("Wide enough, the seven buttons on one row; narrower, the menu alone")
   func rowOrMenu() {
     #expect(form(atWidth: 140) == .row)
     #expect(form(atWidth: ConversationOverviewLayout.minimumWidth) == .menu)
   }
 
-  @Test("The threshold is the row's own width: six buttons and their insets")
+  @Test("The threshold is the row's own width: seven buttons and their insets")
   func threshold() {
     let row =
-      6 * OverviewFilterBar.buttonSize + 5 * OverviewFilterBar.spacing + 2
+      7 * OverviewFilterBar.buttonSize + 6 * OverviewFilterBar.spacing + 2
       * OverviewFilterBar.inset
     #expect(form(atWidth: row) == .row)
     #expect(form(atWidth: row - 1) == .menu)

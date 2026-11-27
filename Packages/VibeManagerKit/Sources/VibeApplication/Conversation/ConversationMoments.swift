@@ -6,6 +6,8 @@ import VibeDomain
 public enum ConversationMomentKind: String, CaseIterable, Codable, Hashable, Sendable {
   /// Set by hand in the margin, or with ⌘B (#567).
   case bookmark
+  /// A message the user sent (#654): neither Polyvibe's nor a coordinator's (#568).
+  case message
   /// A commit, a push, a branch or a worktree created.
   case git
   /// A ticket or a pull request created, a pull request merged.
@@ -23,6 +25,8 @@ public enum ConversationMomentKind: String, CaseIterable, Codable, Hashable, Sen
 public struct ConversationMoment: Hashable, Sendable {
   public enum Detail: Hashable, Sendable {
     case bookmark
+    /// A message the user sent: its words are those of its block.
+    case message
     /// The commit's subject: its `-m`, or the line `git commit` printed.
     case commit(subject: String?)
     /// The branch pushed, when the command or its output names it.
@@ -58,6 +62,7 @@ public struct ConversationMoment: Hashable, Sendable {
   public var kind: ConversationMomentKind {
     switch detail {
     case .bookmark: .bookmark
+    case .message: .message
     case .commit, .push, .branch, .worktree: .git
     case .created, .merged: .forge
     case .tests: .tests
@@ -156,10 +161,27 @@ public enum ConversationMoments {
     }
   }
 
-  /// Those of the kinds shown.
+  /// Those of the kinds shown. A message bookmarked at its start is its bookmark alone (#654):
+  /// the same words, once.
   public static func shown(_ placed: [Placed], hiding hidden: Set<String>) -> [Placed] {
-    guard !hidden.isEmpty else { return placed }
-    return placed.filter { !hidden.contains($0.moment.kind.rawValue) }
+    let kinds =
+      hidden.isEmpty ? placed : placed.filter { !hidden.contains($0.moment.kind.rawValue) }
+    // Called at each row measured while scrolling: nothing copied without such a bookmark.
+    func isBookmarkedStart(_ item: Placed) -> Bool {
+      item.moment.kind == .bookmark && item.moment.unit == 0
+    }
+    guard kinds.contains(where: isBookmarkedStart) else { return kinds }
+    let bookmarkedStarts = Set(kinds.lazy.filter(isBookmarkedStart).map(\.moment.entryID))
+    return kinds.filter {
+      $0.moment.kind != .message || !bookmarkedStarts.contains($0.moment.entryID)
+    }
+  }
+
+  /// The moment of a group drawn together whose icon it shows, and which a click on it brings
+  /// up: its first one that is not a message (#654), a message only alone. Each turn starts with
+  /// one, and would hide what the agent did — a failed test run — behind its bubble.
+  public static func iconIndex(in placed: [Placed], group: Range<Int>) -> Int {
+    group.first { placed[$0].moment.kind != .message } ?? group.lowerBound
   }
 
   /// The blocks that show one, each once, in order: where Next and Previous go.
@@ -186,6 +208,9 @@ public enum ConversationMoments {
       ConversationMoment(detail, entryID: entry.id, date: entry.date)
     }
     switch entry.content {
+    case .userPrompt(let text, let attachments)
+    where RelayedMessage(text, attachments: attachments) == nil:
+      return [moment(.message)]
     case .notice(.error(let text)):
       return [moment(.error(text.trimmingCharacters(in: .whitespacesAndNewlines)))]
     case .notice(.interrupted):

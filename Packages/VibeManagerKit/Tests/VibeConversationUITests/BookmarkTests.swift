@@ -18,6 +18,8 @@ struct BookmarkTests {
           ? .userPrompt("prompt \(index)", attachments: []) : .agentText("answer \(index)"))
     }
     model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    // The bookmarks alone: each prompt is a moment of its own too.
+    model.appearance.hiddenMomentKinds = [ConversationMomentKind.message.rawValue]
     return model
   }
 
@@ -415,7 +417,8 @@ struct BookmarkTests {
           output: ToolOutput(text: output))))
   }
 
-  /// A prompt, a commit, an answer, an error, a push.
+  /// A prompt, a commit, an answer, an error, a push. The prompt's moment hidden: the others are
+  /// what is drawn.
   private static func momentsModel() -> ConversationModel {
     let model = ConversationModel(sessionID: SessionID())
     let entries = [
@@ -426,15 +429,17 @@ struct BookmarkTests {
       shell("m4", "git push origin main"),
     ]
     model.apply(ConversationSnapshot(entries: entries, availability: .available))
+    model.appearance.hiddenMomentKinds = [ConversationMomentKind.message.rawValue]
     return model
   }
 
   @Test("The moments are read from the blocks, bookmarks among them, in order")
   func moments() {
     let model = Self.momentsModel()
-    #expect(model.moments.map(\.moment.kind) == [.git, .incident, .git])
+    #expect(model.moments.map(\.moment.kind) == [.message, .git, .incident, .git])
     model.toggleBookmark(model.blocks[2])
-    #expect(model.moments.map(\.moment.kind) == [.git, .bookmark, .incident, .git])
+    #expect(model.moments.map(\.moment.kind) == [.message, .git, .bookmark, .incident, .git])
+    #expect(model.shownMoments.map(\.moment.kind) == [.git, .bookmark, .incident, .git])
     #expect(model.momentIndices == [1, 2, 3, 4])
     #expect(model.momentBlocks.map(\.block.id) == ["m1", "m2", "m3", "m4"])
   }
@@ -443,12 +448,12 @@ struct BookmarkTests {
   func hiddenKinds() {
     let model = Self.momentsModel()
     let revision = model.momentsRevision
-    model.appearance.hiddenMomentKinds = ["git"]
+    model.appearance.hiddenMomentKinds = ["git", "message"]
     #expect(model.shownMoments.map(\.moment.kind) == [.incident])
     #expect(model.momentIndices == [3])
     #expect(model.momentsRevision > revision)
     // Kept, though hidden: the filter says how many there are.
-    #expect(model.moments.count == 3)
+    #expect(model.moments.count == 4)
 
     Self.laidOut(model, top: 0)
     #expect(model.revealNextMoment())
@@ -514,6 +519,23 @@ struct BookmarkTests {
         clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.05) == "m1")
   }
 
+  @Test("An icon a message heads shows what came after it, and a click brings that up")
+  func iconHeadedByAMessage() {
+    let model = Self.momentsModel()
+    model.appearance.hiddenMomentKinds = []
+    let layout = Self.evenLayout(model)
+    // At a twentieth: the prompt of m0 at 0 points, the commit of m1 at 6: one icon, the commit's.
+    let clusters = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(clusters.first?.moments == 0..<2)
+    #expect(model.shownMoments[0].moment.kind == .message)
+    #expect(ConversationMoments.iconIndex(in: model.shownMoments, group: clusters[0].moments) == 1)
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: clusters[0].y), model: model, layout: layout, scale: 0.05)
+        == "m1")
+  }
+
   @Test("A click names the moment's block as the model has it, the layout a step behind")
   func clickWithALayoutBehind() {
     let model = Self.momentsModel()
@@ -575,7 +597,7 @@ struct BookmarkTests {
     // Read and placed as far as the layout went back, not from the start.
     #expect(model.lastLayoutWork.blocks == 2)
     #expect(model.lastMomentsWork == (read: 2, placed: 2))
-    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git])
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .message, .git, .git])
     expectWhole()
     // An answer after it, then an error.
     entries.append(ConversationEntry(id: "a5", content: .agentText("Pushed")))
@@ -587,7 +609,7 @@ struct BookmarkTests {
     publish(changedFrom: 6)
     #expect(model.lastMomentsWork.read == model.lastLayoutWork.blocks)
     #expect(model.lastMomentsWork.read < model.blocks.count)
-    #expect(model.moments.map(\.moment.kind) == [.bookmark, .git, .git, .incident])
+    #expect(model.moments.map(\.moment.kind) == [.bookmark, .message, .git, .git, .incident])
     expectWhole()
     model.toggleBookmark(model.blocks[3])
     expectWhole()
@@ -597,7 +619,7 @@ struct BookmarkTests {
   func momentsGoWithTheOverview() {
     let model = Self.momentsModel()
     model.toggleBookmark(model.blocks[2])
-    model.appearance.hiddenMomentKinds = ["incident"]
+    model.appearance.hiddenMomentKinds = ["incident", "message"]
     let shown = model.shownMoments
     #expect(shown.map(\.moment.kind) == [.git, .bookmark, .git])
     model.appearance.showsOverview = false
@@ -609,7 +631,7 @@ struct BookmarkTests {
     #expect(!model.revealNextMoment())
     // Kept: the bookmarks, and the filters.
     #expect(model.bookmarks == ["m2"])
-    #expect(model.appearance.hiddenMomentKinds == ["incident"])
+    #expect(model.appearance.hiddenMomentKinds == ["incident", "message"])
     model.appearance.showsOverview = true
     #expect(model.shownMoments == shown)
     #expect(model.momentIndices == [1, 2, 4])
