@@ -300,3 +300,32 @@ says Today, Yesterday or the full date. One set of notification subscriptions pe
 refreshes the calendar at midnight, on significant time, locale or zone changes and on foreground
 return; it is cancelled with the view. There is no timer per message. VoiceOver gets the full date
 alongside the message, with links, attachments and Run controls kept individually accessible.
+
+### Amendment #633 — replies from the iPhone
+
+The phone offers a reply icon after the agent's message, and Reply in the native text-selection
+menu. There is no paragraph context-menu action. Selecting either asks the Mac to prepare the
+passage with `ReplyQuote`, including its normalization and 1,000-character limit. The composer
+shows that prepared passage, can show it in full or remove it, and keeps each conversation's draft
+in the channel across navigation and reconnection. A missing source date stays missing.
+
+Protocol 6 adds preparation and send requests with correlation identifiers, prepared quotations,
+and send acknowledgments. The Mac validates the source again before submission. It temporarily
+installs the phone's quotation through `sendFromCompanion`, uses `ConversationModel.send()` and
+restores the Mac's draft, files and quotation. Remote sends to a conversation are serialized; a
+concurrent request is refused rather than borrowing another request's composer. CLI and shell
+commands remain unquoted; the acknowledgment tells the phone to retain its quotation. A refusal,
+connection loss or missing acknowledgment preserves the phone draft and asks the user to inspect
+the conversation before retrying. There is no automatic resend.
+
+For a protocol 6 phone, the server separates a received reply's quotation from its message with
+`ReplyLinks.shown` and finds its origin with `ReplyLinks.source` in the full snapshot before
+limiting the transmitted entries. The quotation can navigate to a loaded source, highlight it for
+1.6 seconds, and return to the reply. If the origin is outside the slice, the phone opens the full
+quotation with an explicit unavailable-origin label. Older phones continue to receive the complete
+quoted prompt as text. Reply controls are absent on a phone connected to a Mac below protocol 6.
+
+The phone's selectable prose is a non-editable UITextView with an extra edit-menu action. It keeps
+Markdown emphasis, links, theme fonts and Dynamic Type. Code retains its separate Copy/Run buttons;
+its selection menu adds Reply without adding a context menu over those controls. The phone does
+not parse or compose the agent-facing quotation format.

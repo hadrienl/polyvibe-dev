@@ -13,7 +13,9 @@ public enum CompanionRemote {
   /// 4: the phone watches the accounts' quotas (#630). A Mac older than that never answers
   /// `watchQuotas`: the phone shows no Quotas button there.
   /// 5: the Mac sends the shown conversation’s usage (#631).
-  public static let protocolVersion = 5
+  /// 6: replies to passages, prepared and composed by the Mac (#633).
+  public static let protocolVersion = 6
+  public static func takesReplies(_ version: Int?) -> Bool { (version ?? 1) >= 6 }
   /// Whether a Mac speaking `version` reads `answers`.
   public static func takesAnswers(_ version: Int?) -> Bool { (version ?? 1) >= 2 }
   /// Whether a Mac speaking `version` reads `createFolder`.
@@ -313,12 +315,17 @@ public struct RemoteEntry: Codable, Hashable, Sendable, Identifiable {
   /// For a `user` entry Polyvibe or a coordinator wrote, who did and what it says: the phone
   /// folds it under its author. A phone that does not read it shows the text as the user's.
   public var relayed: RemoteRelayed?
+  public var reply: RemoteReply?
 
-  public init(id: String, kind: Kind, date: Date? = nil, relayed: RemoteRelayed? = nil) {
+  public init(
+    id: String, kind: Kind, date: Date? = nil, relayed: RemoteRelayed? = nil,
+    reply: RemoteReply? = nil
+  ) {
     self.id = id
     self.kind = kind
     self.date = date
     self.relayed = relayed
+    self.reply = reply
   }
 }
 
@@ -735,6 +742,10 @@ public enum RemoteMessage: Codable, Equatable, Sendable {
   /// shown or `nil`.
   case show(sessionID: String?)
   case send(sessionID: String, text: String)
+  case prepareReply(sessionID: String, requestID: String, sourceID: String, excerpt: String)
+  case sendReply(
+    sessionID: String, requestID: String, text: String, files: [RemoteFile], reply: RemoteReply)
+
   /// A message with files: they join the conversation's composer on the Mac, as dropped there.
   case sendFiles(sessionID: String, text: String, files: [RemoteFile])
   /// Protocol 1's answer: a permission's choice, or a single question's.
@@ -775,6 +786,9 @@ public enum RemoteMessage: Codable, Equatable, Sendable {
   /// Every session, whole, at the start and at each change.
   case sessions([RemoteSession])
   case conversation(RemoteConversation)
+  case replyPrepared(sessionID: String, requestID: String, reply: RemoteReply?)
+  case replySent(sessionID: String, requestID: String, sent: Bool, quoted: Bool)
+
   case searchResults(token: Int, [RemoteSearchResult])
   case newSessionOffer(RemoteNewSessionOptions)
   case folderListing(RemoteFolderListing)

@@ -80,6 +80,12 @@ final class RemoteChannel {
   private(set) var endpointID: String?
   private(set) var path = CompanionPathKind.unknown
 
+  var conversationDrafts: [String: RemoteConversationDraft] = [:]
+
+  private var replyPreparations: [String: CheckedContinuation<RemoteReply?, Never>] = [:]
+  private var replySubmissions: [String: CheckedContinuation<(sent: Bool, quoted: Bool), Never>] =
+    [:]
+
   private var endpoint: Endpoint?
   private var macAddress: (id: String, relay: String?)?
   private var connection: Connection?
@@ -112,6 +118,12 @@ final class RemoteChannel {
   }
 
   func close() {
+    let preparations = replyPreparations
+    replyPreparations = [:]
+    preparations.values.forEach { $0.resume(returning: nil) }
+    let submissions = replySubmissions
+    replySubmissions = [:]
+    submissions.values.forEach { $0.resume(returning: (false, false)) }
     for (id, continuation) in fetches {
       continuation.resume(
         returning: RemoteHTTPResponse(
@@ -149,6 +161,7 @@ final class RemoteChannel {
     conversation = nil
     conversationFollow = RemoteConversationFollow()
     macTellsQuotas = false
+    conversationDrafts = [:]
   }
 
   private func connect(endpointID: String, relay: String?, attempt: Int) async {
@@ -239,6 +252,10 @@ final class RemoteChannel {
     case .conversation(let conversation):
       guard conversation.sessionID == shownSessionID else { return }
       self.conversation = conversation
+    case .replyPrepared(_, let requestID, let reply):
+      replyPreparations.removeValue(forKey: requestID)?.resume(returning: reply)
+    case .replySent(_, let requestID, let sent, let quoted):
+      replySubmissions.removeValue(forKey: requestID)?.resume(returning: (sent, quoted))
     case .searchResults(let token, let results):
       guard token == searchToken else { return }
       searchResults = results
@@ -280,7 +297,8 @@ final class RemoteChannel {
       if let answer = creation.created(id) { settle(answer) }
     case .failure(let reason):
       if let answer = creation.failed(reason) { settle(answer) } else { failure = reason }
-    case .hello, .show, .send, .sendFiles, .answer, .answers, .setStatus, .search,
+    case .hello, .show, .send, .sendFiles, .prepareReply, .sendReply, .answer, .answers, .setStatus,
+      .search,
       .newSessionOptions, .createSession, .listFolder, .createFolder, .icon, .interrupt, .showWeb,
       .web, .attachmentImage, .restart, .httpRequest, .folderIcon, .close, .watchQuotas:
       break
@@ -328,6 +346,44 @@ final class RemoteChannel {
       files.isEmpty
         ? .send(sessionID: sessionID, text: text)
         : .sendFiles(sessionID: sessionID, text: text, files: files))
+  }
+
+  func prepareReply(to entry: RemoteEntry, excerpt: String, in sessionID: String) async
+    -> RemoteReply?
+  {
+    guard phase == .connected, CompanionRemote.takesReplies(macProtocolVersion) else { return nil }
+    let requestID = UUID().uuidString
+    return await withCheckedContinuation { continuation in
+      replyPreparations[requestID] = continuation
+      write(
+        .prepareReply(
+          sessionID: sessionID, requestID: requestID, sourceID: entry.id, excerpt: excerpt))
+      Task { [weak self] in
+        try? await Task.sleep(for: .seconds(15))
+        self?.replyPreparations.removeValue(forKey: requestID)?.resume(returning: nil)
+      }
+    }
+  }
+
+  func sendReply(_ text: String, files: [RemoteFile], reply: RemoteReply, to sessionID: String)
+    async -> (sent: Bool, quoted: Bool)
+  {
+    guard phase == .connected, CompanionRemote.takesReplies(macProtocolVersion) else {
+      return (false, false)
+    }
+    let requestID = UUID().uuidString
+    return await withCheckedContinuation { continuation in
+      replySubmissions[requestID] = continuation
+      write(
+        .sendReply(
+          sessionID: sessionID, requestID: requestID, text: text, files: files, reply: reply))
+      // Past the Mac's own waits for the session's input, its prompt and a relayed answer: a
+      // reply said unconfirmed while still on its way would be sent twice.
+      Task { [weak self] in
+        try? await Task.sleep(for: .seconds(60))
+        self?.replySubmissions.removeValue(forKey: requestID)?.resume(returning: (false, false))
+      }
+    }
   }
 
   func answer(_ request: RemoteRequest, in sessionID: String, choiceIDs: [String], text: String?) {
