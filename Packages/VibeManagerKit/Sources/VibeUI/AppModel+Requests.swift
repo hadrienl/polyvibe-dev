@@ -237,7 +237,7 @@ extension AppModel {
       )
     }
     switch answer {
-    case .allowOnce, .allowAlways, .approvePlan:
+    case .allowOnce, .allowAlways, .allowEverywhere, .approvePlan:
       return LocalizedStringResource(
         "Allowed · \(sessionName)", bundle: .module,
         comment: "Said once an agent's request was allowed from the palette.")

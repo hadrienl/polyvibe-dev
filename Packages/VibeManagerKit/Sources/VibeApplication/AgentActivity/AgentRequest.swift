@@ -49,7 +49,8 @@ public struct AgentRequest: Identifiable, Hashable, Codable, Sendable {
   public enum ScreenReading: Hashable, Sendable {
     /// A permission awaiting its dialog.
     case permissionDialog
-    /// A form only announced, which the dialog drawn may tell more of than the CLI said.
+    /// A form or a permission only announced, which the dialog drawn may tell more of than the CLI
+    /// said: Antigravity's status line says a tool waits for review, never which (#541).
     case announcedForm
     /// A dialog no hook reports, made a request off the screen: read until it goes.
     case unreportedDialog
@@ -57,7 +58,9 @@ public struct AgentRequest: Identifiable, Hashable, Codable, Sendable {
 
   public var screenReading: ScreenReading? {
     if id.isReadOffScreen { return .unreportedDialog }
-    if case .inTerminal(let prompt) = content, prompt.kind == .form { return .announcedForm }
+    if case .inTerminal(let prompt) = content, [.form, .permission].contains(prompt.kind) {
+      return .announcedForm
+    }
     return awaitsPermissionDialog ? .permissionDialog : nil
   }
 
@@ -283,6 +286,9 @@ public struct AgentToolPermission: Hashable, Codable, Sendable {
   public let workingDirectory: String?
   /// The broader permission the CLI offers beside "allow once", when it offers one.
   public let alwaysAllow: AgentAlwaysAllow?
+  /// A broader one still, kept by the CLI for every project, when it offers it beside the first:
+  /// Antigravity's `(Persist to settings.json)` (#541).
+  public let alwaysAllowEverywhere: AgentAlwaysAllow?
   /// `false` when the report was cut short: what would be allowed cannot all be seen.
   public let isComplete: Bool
 
@@ -294,6 +300,7 @@ public struct AgentToolPermission: Hashable, Codable, Sendable {
     details: String? = nil,
     workingDirectory: String? = nil,
     alwaysAllow: AgentAlwaysAllow? = nil,
+    alwaysAllowEverywhere: AgentAlwaysAllow? = nil,
     isComplete: Bool = true
   ) {
     self.tool = tool
@@ -303,6 +310,7 @@ public struct AgentToolPermission: Hashable, Codable, Sendable {
     self.details = details
     self.workingDirectory = workingDirectory
     self.alwaysAllow = alwaysAllow
+    self.alwaysAllowEverywhere = alwaysAllowEverywhere
     self.isComplete = isComplete
   }
 }
@@ -318,6 +326,8 @@ public struct AgentAlwaysAllow: Hashable, Codable, Sendable {
     case mode(String)
     /// Commands starting like this one — Codex picks the prefix itself.
     case commandPrefix
+    /// Commands starting with these words, as the CLI's dialog names them: Antigravity's `'ls'`.
+    case commandsStartingWith(String)
     /// These files, for the rest of the session.
     case files
   }
@@ -459,6 +469,8 @@ public struct AgentRequestNotice: Hashable, Sendable {
 public enum AgentAnswer: Hashable, Sendable {
   case allowOnce
   case allowAlways
+  /// What the permission's `alwaysAllowEverywhere` names, from now on in every project.
+  case allowEverywhere
   case deny
   /// One answer per question, in order.
   case answers([AgentQuestionAnswer])
@@ -479,6 +491,7 @@ extension AgentAnswer {
     switch self {
     case .allowOnce: return [.allowOnce]
     case .allowAlways: return [.allowAlways]
+    case .allowEverywhere: return [.allowEverywhere]
     case .deny: return [.deny]
     case .approvePlan: return [.approvePlan]
     case .rejectPlan: return [.rejectPlan]
@@ -544,7 +557,7 @@ public enum AgentRequestAnswering: Hashable, Sendable {
 
 /// The answers a palette offers, without their values.
 public enum AgentAnswerKind: Hashable, Sendable {
-  case allowOnce, allowAlways, deny
+  case allowOnce, allowAlways, allowEverywhere, deny
   case chooseOption, chooseOptions, writeText
   case approvePlan, rejectPlan
   case skipUpdate
@@ -591,9 +604,21 @@ public protocol AgentAnswerKeymap: Sendable {
   func keystrokesLeft(
     for answer: AgentAnswer, to content: AgentRequestContent, screen: AgentDialogScreen?
   ) -> [[UInt8]]?
+  /// The characters this CLI points at an option with: Antigravity's `>` (#541) is read only for
+  /// its own screens.
+  var optionPointers: Set<Character> { get }
 }
 
 extension AgentAnswerKeymap {
+  public var optionPointers: Set<Character> {
+    AgentDialogScreen.defaultPointers
+  }
+
+  /// The dialog drawn last on this CLI's screen, its options read with its own pointers.
+  public func dialogScreen(onScreen text: String) -> AgentDialogScreen? {
+    AgentDialogScreen(screen: text, pointers: optionPointers)
+  }
+
   /// The keystrokes with no dialog read: enough for the dialogs whose keys never move.
   public func keystrokes(for answer: AgentAnswer, to content: AgentRequestContent) -> [[UInt8]]? {
     keystrokes(for: answer, to: content, screen: nil)
@@ -663,7 +688,7 @@ extension AgentActivityState {
     var kinds = keymap.answers(for: request.content)
     if case .permission(let permission) = request.content, !permission.isComplete {
       // What would be allowed is not all on screen: it may only be refused (#40, decision 2).
-      kinds.subtract([.allowOnce, .allowAlways])
+      kinds.subtract([.allowOnce, .allowAlways, .allowEverywhere])
       if kinds.isEmpty { return .inTerminalOnly(.truncated) }
     }
     return kinds.isEmpty ? .inTerminalOnly(.notSupported) : .fromPalette(kinds)

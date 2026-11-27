@@ -536,13 +536,32 @@ struct RequestCard: View {
           .buttonStyle(.borderedProminent)
         }
         if answers.contains(.allowAlways), let allow = permission.alwaysAllow {
-          Button {
-            send(.allowAlways)
-          } label: {
-            Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+          if answers.contains(.allowEverywhere), let everywhere = permission.alwaysAllowEverywhere {
+            // For this session, or everywhere: Antigravity offers both (#541).
+            Menu {
+              Button {
+                send(.allowAlways)
+              } label: {
+                Text(RequestPresentation.alwaysAllowTitle(allow))
+              }
+              Button {
+                send(.allowEverywhere)
+              } label: {
+                Text(RequestPresentation.alwaysAllowTitle(everywhere))
+              }
+            } label: {
+              Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+            }
+            .fixedSize()
+          } else {
+            Button {
+              send(.allowAlways)
+            } label: {
+              Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+            }
+            .instantTooltip(Text(RequestPresentation.alwaysAllowTitle(allow)))
+            .accessibilityLabel(Text(RequestPresentation.alwaysAllowTitle(allow)))
           }
-          .instantTooltip(Text(RequestPresentation.alwaysAllowTitle(allow)))
-          .accessibilityLabel(Text(RequestPresentation.alwaysAllowTitle(allow)))
         }
         if answers.contains(.deny) { denyButton }
       case .unreadable:
@@ -680,6 +699,15 @@ struct RequestCard: View {
         send(.allowAlways)
       } label: {
         Text("Always", bundle: .module)
+      }
+    }
+    if answers.contains(.allowEverywhere), case .permission(let permission) = pending.request.content,
+      let everywhere = permission.alwaysAllowEverywhere
+    {
+      Button {
+        send(.allowEverywhere)
+      } label: {
+        Text(RequestPresentation.alwaysAllowTitle(everywhere))
       }
     }
     if answers.contains(.deny) {

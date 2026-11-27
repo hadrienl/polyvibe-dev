@@ -97,6 +97,14 @@ modified. The existing activity log's private directory and permissions apply; n
 or socket is introduced. The application reads only the UUID-derived CLI transcript, confirming
 its existence before persisting an identifier; it does not open the CLI's conversation database.
 
+Since #541 a command's permission is answered from the card. The request is read off the screen
+alone — agy reports none — and everything in it is the agent's: it is shown, never interpreted.
+Keys are only digits the dialog draws, typed only while two readings of the screen still show the
+same command, line for line, and "always" only for the prefix that was read. A screen showing the
+dialog's title more than once, or not after a truly blank row, is not read, so a command cannot
+forge the title through a wrapped line; a folded command may only be refused. The persistent option
+is agy's own: it writes to agy's `settings.json`, as in the terminal; Polyvibe writes nothing.
+
 - **No shell with user data.** Arguments are arrays from the provider to `posix_spawn`. The one
   shell command line is the login shell lookup above, whose only parameter is the binary name of a
   provider, single quoted.

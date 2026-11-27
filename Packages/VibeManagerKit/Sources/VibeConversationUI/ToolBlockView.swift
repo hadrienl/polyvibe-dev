@@ -867,11 +867,32 @@ struct RequestActions: View {
           .buttonStyle(.borderedProminent)
           .tint(theme.accent.color)
         }
-        if answers.contains(.allowAlways), permission.alwaysAllow != nil {
-          Button {
-            model.answer(.allowAlways)
-          } label: {
-            Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+        if answers.contains(.allowAlways), let allow = permission.alwaysAllow {
+          if answers.contains(.allowEverywhere), let everywhere = permission.alwaysAllowEverywhere {
+            // For this session, or everywhere — the prefix in the words of each (#541).
+            Menu {
+              Button {
+                model.answer(.allowAlways)
+              } label: {
+                Text(PermissionWording.alwaysAllowTitle(allow))
+              }
+              Button {
+                model.answer(.allowEverywhere)
+              } label: {
+                Text(PermissionWording.alwaysAllowTitle(everywhere))
+              }
+            } label: {
+              Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+            }
+            .fixedSize()
+          } else {
+            Button {
+              model.answer(.allowAlways)
+            } label: {
+              Text("Always", bundle: .module, comment: "Allows what an agent asks, from now on.")
+            }
+            .instantTooltip(Text(PermissionWording.alwaysAllowTitle(allow)))
+            .accessibilityLabel(Text(PermissionWording.alwaysAllowTitle(allow)))
           }
         }
         if answers.contains(.deny) { denyButton }

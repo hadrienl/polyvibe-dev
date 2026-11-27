@@ -328,6 +328,14 @@ public actor TrackAgentActivity {
 
   /// The keystrokes that give `answer` to the request, if it is still the one on screen and this
   /// answer can be given to it from outside the terminal.
+  /// The dialog `text` ends on, read as the session's CLI draws its options (#541).
+  public func dialogScreen(_ text: String?, in session: SessionID) -> AgentDialogScreen? {
+    guard let text else { return nil }
+    let pointers =
+      sessions[session]?.decoder?.answerKeymap?.optionPointers ?? AgentDialogScreen.defaultPointers
+    return AgentDialogScreen(screen: text, pointers: pointers)
+  }
+
   public func keystrokes(
     for answer: AgentAnswer, to id: AgentRequestID, screen: AgentDialogScreen? = nil
   ) -> [[UInt8]]? {
@@ -601,7 +609,7 @@ public actor TrackAgentActivity {
     guard awaitsPermissionDialog(id), var tracked = sessions[id.sessionID],
       !tracked.state.drawnCandidates.contains(id),
       let keymap = tracked.decoder?.answerKeymap,
-      AgentDialogScreen(screen: text) != nil, AgentDialogScreen(screen: before) != nil
+      keymap.dialogScreen(onScreen: text) != nil, keymap.dialogScreen(onScreen: before) != nil
     else { return false }
     let requests = tracked.state.requests
     var candidates: Set<AgentRequestID> = [id]
