@@ -137,10 +137,14 @@ public struct AgentDialogScreen: Hashable, Sendable {
   /// under a few empty lines.
   static let bottomDistance = 14
 
+  /// The characters that point at an option: Claude Code's `❯`, Codex's `›`.
+  public static let defaultPointers: Set<Character> = ["❯", "›"]
+
   /// The dialog drawn last, or `nil` when the screen ends on none: its options numbered from 1,
-  /// one of them pointed at — `❯` for Claude Code, `›` for Codex, `>` for Antigravity (#541). An agent's own numbered list
+  /// one of them pointed at by one of `pointers` — Antigravity's `>` only when its keymap says so
+  /// (#541): a quoted `> 1.` line is common in other agents' words. An agent's own numbered list
   /// has no pointer, and is not near the bottom once the prompt is back.
-  public init?(screen text: String) {
+  public init?(screen text: String, pointers: Set<Character> = Self.defaultPointers) {
     let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
     guard
       let lastContent = lines.lastIndex(where: {
@@ -150,7 +154,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
     typealias Parsed = (line: Int, number: Int, indent: Int, isPointed: Bool, text: String)
     var parsed: [Parsed] = []
     for (index, line) in lines.enumerated() {
-      if let option = Self.optionLine(line) {
+      if let option = Self.optionLine(line, pointers: pointers) {
         parsed.append((index, option.number, option.indent, option.isPointed, option.text))
       }
     }
@@ -161,7 +165,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
         let indent = line.prefix { $0 == " " }.count
         let rest = line.trimmingCharacters(in: .whitespaces)
         guard indent > option.indent, !rest.isEmpty, !rest.hasPrefix("│"), !rest.hasPrefix("└"),
-          Self.optionLine(line) == nil
+          Self.optionLine(line, pointers: pointers) == nil
         else { break }
         words.append(rest)
       }
@@ -287,14 +291,14 @@ public struct AgentDialogScreen: Hashable, Sendable {
   }
 
   /// `❯ 1. Yes`, `  2. No`, `› 1. Yes, proceed (y)`, `> 1. Yes, run command`.
-  static func optionLine(_ line: String) -> (
+  static func optionLine(_ line: String, pointers: Set<Character> = defaultPointers) -> (
     number: Int, indent: Int, isPointed: Bool, text: String
   )? {
     var rest = Substring(line)
     let indent = rest.prefix { $0 == " " }.count
     rest = rest.drop { $0 == " " }
     var isPointed = false
-    if let first = rest.first, "❯›>".contains(first) {
+    if let first = rest.first, pointers.contains(first) {
       isPointed = true
       rest = rest.dropFirst().drop { $0 == " " }
     }

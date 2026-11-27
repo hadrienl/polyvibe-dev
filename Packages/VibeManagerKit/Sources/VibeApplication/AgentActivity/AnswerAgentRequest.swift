@@ -104,7 +104,7 @@ public struct AnswerAgentRequest: Sendable {
     var before = await screen(id.sessionID)
     var keys =
       await tracker.keystrokes(
-        for: answer, to: id, screen: before.flatMap(AgentDialogScreen.init(screen:))) ?? []
+        for: answer, to: id, screen: await tracker.dialogScreen(before, in: id.sessionID)) ?? []
     var written: [[UInt8]] = []
     var redrawn: String?
     let outcome = await give(answer, to: id, written: &written, redrawn: &redrawn)
@@ -113,7 +113,7 @@ public struct AnswerAgentRequest: Sendable {
       before = redrawn
       keys =
         await tracker.keystrokes(
-          for: answer, to: id, screen: AgentDialogScreen(screen: redrawn)) ?? []
+          for: answer, to: id, screen: await tracker.dialogScreen(redrawn, in: id.sessionID)) ?? []
     }
     if [.notOnScreen, .otherDialog, .interrupted].contains(outcome), let request {
       await failed(
@@ -166,7 +166,7 @@ public struct AnswerAgentRequest: Sendable {
       }
     }
     // Which key takes the answer is read off the dialog as drawn now (#273).
-    let drawn = text.flatMap(AgentDialogScreen.init(screen:))
+    let drawn = await tracker.dialogScreen(text, in: id.sessionID)
     guard let steps = await tracker.keystrokes(for: answer, to: id, screen: drawn),
       !steps.isEmpty
     else {
@@ -199,7 +199,7 @@ public struct AnswerAgentRequest: Sendable {
       written.append(step)
     }
     if confirmsDelivery {
-      let original = finalScreen.flatMap(AgentDialogScreen.init(screen:))
+      let original = await tracker.dialogScreen(finalScreen, in: id.sessionID)
       // Counted from the agent's first redraw after the last key: an agent too busy to read its
       // input, on a loaded Mac, read that key more than fifteen seconds late, and the same answer
       // given again from its card left its digit in the prompt (#653).
@@ -228,7 +228,7 @@ public struct AnswerAgentRequest: Sendable {
         let since = firstRedraw ?? typed
         if reading == nil { reading = await screen(id.sessionID) }
         if let current = reading {
-          let dialog = AgentDialogScreen(screen: current)
+          let dialog = await tracker.dialogScreen(current, in: id.sessionID)
           let changed =
             original == nil
             ? finalScreen.map { current != $0 } ?? false
@@ -374,7 +374,7 @@ public struct AnswerAgentRequest: Sendable {
   private func screen(_ text: String?, answers answer: AgentAnswer, to id: AgentRequestID) async
     -> Bool
   {
-    let drawn = text.flatMap(AgentDialogScreen.init(screen:))
+    let drawn = await tracker.dialogScreen(text, in: id.sessionID)
     return await !(tracker.keystrokes(for: answer, to: id, screen: drawn) ?? []).isEmpty
   }
 
@@ -385,7 +385,7 @@ public struct AnswerAgentRequest: Sendable {
   {
     let start = ContinuousClock.now
     while true {
-      let drawn = await screen(id.sessionID).flatMap(AgentDialogScreen.init(screen:))
+      let drawn = await tracker.dialogScreen(await screen(id.sessionID), in: id.sessionID)
       let left = await tracker.keystrokesLeft(for: answer, to: id, screen: drawn)
       if left == keys { return true }
       // A preview already pointing at the requested choice still accepts its digit again.

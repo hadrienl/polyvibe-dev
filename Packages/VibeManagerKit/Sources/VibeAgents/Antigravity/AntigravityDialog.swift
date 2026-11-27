@@ -34,6 +34,10 @@ enum AntigravityDialogReading {
   static let hint = "↑/↓ Navigate"
   /// The last line, the model's name after it.
   static let footer = "esc to cancel"
+  /// agy points at an option with `>`.
+  static let pointers = AgentDialogScreen.defaultPointers.union([">"])
+  /// The rows of a command a request's card shows (`lineLimit(6)`): more may only be refused.
+  static let shownRows = 6
   /// The command's own lines are drawn this far in.
   static let indent = "   "
 
@@ -43,7 +47,7 @@ enum AntigravityDialogReading {
   struct Dialog: Hashable {
     /// The command's lines as drawn, their indent taken off, a wrapped line on a line of its own.
     let command: String
-    /// Whether the command is folded: some of its lines are not drawn.
+    /// Whether the command is folded — some of its lines are not drawn — or too tall for a card.
     let isFolded: Bool
     /// The prefix both "always" options name, when they are drawn.
     let prefix: String?
@@ -54,9 +58,12 @@ enum AntigravityDialogReading {
   /// Where agy draws them: the title, the question and the footer at the left edge — the
   /// command's own lines are drawn further in.
   static func dialog(onScreen text: String) -> Dialog? {
-    guard let screen = AgentDialogScreen(screen: text) else { return nil }
+    guard let screen = AgentDialogScreen(screen: text, pointers: pointers) else { return nil }
+    // Only the spaces a terminal pads its rows with are taken off: a row of the command filled
+    // with other blanks — no-break spaces — is not empty, and must not pass for the blank line the
+    // title follows.
     let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map {
-      String($0.reversed().drop(while: \.isWhitespace).reversed())
+      String($0.reversed().drop(while: { $0 == " " }).reversed())
     }
     let trimmed = lines.map { $0.trimmingCharacters(in: .whitespaces) }
     guard let last = trimmed.lastIndex(where: { !$0.isEmpty }),
@@ -64,8 +71,10 @@ enum AntigravityDialogReading {
       let ask = lines[..<last].lastIndex(of: question),
       let start = lines[..<ask].lastIndex(of: title),
       // The command is the agent's: a line of it wrapped at the terminal's width goes on at the
-      // left edge, and may read as the title. Such a line follows a full one; the title follows a
-      // blank line, which in a command is followed by a line drawn further in.
+      // left edge, and may read as the title. The title is drawn once: two on screen, and which
+      // one starts the command is not known. It follows a blank line, as no line of a command at
+      // the left edge does — that one goes on from a full row.
+      lines.filter({ $0 == title }).count == 1,
       start > 0, lines[start - 1].isEmpty,
       // The options right under the question, numbered from 1 with nothing between.
       ask + 1 < last, isOption(trimmed[ask + 1], numbered: 1),
@@ -96,6 +105,9 @@ enum AntigravityDialogReading {
       }
       return line.hasPrefix(indent) ? String(line.dropFirst(indent.count)) : line
     }.joined(separator: "\n")
+    // A card shows six lines of a command: past them, what would be allowed is not all seen.
+    // Whether agy itself shortens a very long line without its fold is not verified either.
+    if body.count > shownRows { isFolded = true }
     let session = screen.options.lazy.compactMap { sessionPrefix(of: $0.label) }.first
     let persistent = screen.options.lazy.compactMap { persistentPrefix(of: $0.label) }.first
     // Both name the same prefix, or neither is offered: an option that says otherwise is not read.
@@ -126,7 +138,8 @@ enum AntigravityDialogReading {
   /// `ls`.
   static func persistentPrefix(of label: String) -> String? {
     label.wholeMatch(
-      of: #/Yes, and always allow for commands that start with '(.+)' \(Persist to settings\.json\)/#
+      of:
+        #/Yes, and always allow for commands that start with '(.+)' \(Persist to settings\.json\)/#
     ).map { String($0.1) }
   }
 
@@ -177,6 +190,10 @@ public struct AntigravityAnswerKeymap: AgentAnswerKeymap {
     true
   }
 
+  public var optionPointers: Set<Character> {
+    AntigravityDialogReading.pointers
+  }
+
   public func drawnDialog(onScreen text: String) -> AgentDrawnDialog? {
     AntigravityDialogReading.dialog(onScreen: text).map {
       AgentDrawnDialog(.shownCommand($0.command))
@@ -199,7 +216,8 @@ public struct AntigravityAnswerKeymap: AgentAnswerKeymap {
     }
     switch answer {
     case .allowOnce:
-      return ClaudeCodeAnswerKeymap.digit(of: screen?.option { $0 == AntigravityDialogReading.allowOnce })
+      return ClaudeCodeAnswerKeymap.digit(
+        of: screen?.option { $0 == AntigravityDialogReading.allowOnce })
     case .allowAlways:
       guard let expected = prefix(permission.alwaysAllow) else { return nil }
       return ClaudeCodeAnswerKeymap.digit(
@@ -209,7 +227,8 @@ public struct AntigravityAnswerKeymap: AgentAnswerKeymap {
       return ClaudeCodeAnswerKeymap.digit(
         of: screen?.option { AntigravityDialogReading.persistentPrefix(of: $0) == expected })
     case .deny:
-      return ClaudeCodeAnswerKeymap.digit(of: screen?.option { $0 == AntigravityDialogReading.deny })
+      return ClaudeCodeAnswerKeymap.digit(
+        of: screen?.option { $0 == AntigravityDialogReading.deny })
     default:
       return nil
     }

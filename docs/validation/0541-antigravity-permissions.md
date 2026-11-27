@@ -41,6 +41,7 @@ launches it (`--settings '{"agentMode":"","toolPermission":"request-review"}'`).
 | Prefix taken from the screen | IMPLEMENTED | `AntigravityDialogReading.sessionPrefix` / `persistentPrefix`; two prefixes that disagree are not read |
 | Command and options checked before each key, dialog checked closed | IMPLEMENTED | Shared #283/#558 path: two readings must name the request, keys read off the dialog, confirmation of the change after; `DialogOnScreenTests.unreportedOverAnnouncedPermission` |
 | `tab Amend` and `ctrl+g` in the terminal | IMPLEMENTED | Never typed; documented in the keymap |
+| A very long single line (more than ten rows) | NOT VERIFIED: the account's quota ran out. Past six rows a command may only be refused from the card |
 | Automatic mode and this dialog | NOT RE-VERIFIED | 1.5.5 showed Auto running a sandboxed write unasked (ADR 0045); unchanged here |
 
 ## Ticket bullets

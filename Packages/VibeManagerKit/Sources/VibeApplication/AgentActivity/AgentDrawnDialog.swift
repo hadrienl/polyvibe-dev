@@ -79,6 +79,9 @@ public struct AgentDrawnDialog: Hashable, Sendable {
       guard permission.purpose?.hasPrefix(Self.networkPurpose) != true,
         let subject = permission.subject
       else { return false }
+      // A request the screen made is what it read, line for line: `rm -rf ~/old` is not
+      // `rm -rf ~` then `/old`, which fits it but for a blank (#541).
+      if request.id.isReadOffScreen { return subject == command }
       return Self.fits(subject, shownAs: command)
     case (.patch(let destinations), .patch):
       let shown = Set(destinations.map(Self.withoutBlanks))

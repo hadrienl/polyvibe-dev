@@ -604,9 +604,21 @@ public protocol AgentAnswerKeymap: Sendable {
   func keystrokesLeft(
     for answer: AgentAnswer, to content: AgentRequestContent, screen: AgentDialogScreen?
   ) -> [[UInt8]]?
+  /// The characters this CLI points at an option with: Antigravity's `>` (#541) is read only for
+  /// its own screens.
+  var optionPointers: Set<Character> { get }
 }
 
 extension AgentAnswerKeymap {
+  public var optionPointers: Set<Character> {
+    AgentDialogScreen.defaultPointers
+  }
+
+  /// The dialog drawn last on this CLI's screen, its options read with its own pointers.
+  public func dialogScreen(onScreen text: String) -> AgentDialogScreen? {
+    AgentDialogScreen(screen: text, pointers: optionPointers)
+  }
+
   /// The keystrokes with no dialog read: enough for the dialogs whose keys never move.
   public func keystrokes(for answer: AgentAnswer, to content: AgentRequestContent) -> [[UInt8]]? {
     keystrokes(for: answer, to: content, screen: nil)

@@ -131,10 +131,14 @@ command three spaces in, `Run this command?`, the options, the `↑/↓ Navigate
   dialog must change (#558). Once the dialog goes, answered in the terminal or taken away, the
   card goes; the status line's return to work settles it too.
 - A line wrapped at the terminal's width goes on at the left edge, unindented: the request keeps
-  the lines as drawn (they `fit` the command they wrap). The title must follow a blank line, which
-  no line of the command can produce at the left edge, so a command forging the title is not read.
+  the lines as drawn (they `fit` the command they wrap), and is matched to a later screen by those
+  lines exactly. The title must be drawn once, after a blank line (only spaces are trimmed, never
+  no-break spaces): a command or words above it forging the title leave the dialog to the terminal.
+- `>` points at an option for agy's screens only (`AgentAnswerKeymap.optionPointers`): a quoted
+  `> 1.` line in Claude Code's or Codex's words is not read as a dialog.
 - A command of many lines is folded (`⋯ (26 lines hidden)`): it is incomplete and may only be
-  refused. Options wrapped at the left edge (about 90 columns and less, by the prefix's length) are
+  refused. So is one drawn on more than six rows, which a card does not show whole; whether agy
+  shortens a very long single line without its fold is not verified (the account's quota ran out). Options wrapped at the left edge (about 90 columns and less, by the prefix's length) are
   not read: answered in the terminal.
 - Not read, answered in the terminal: a file's creation or edit (its path is cut at the
   terminal's width with no mark), and `ask_question`, whose dialog the status line does not
