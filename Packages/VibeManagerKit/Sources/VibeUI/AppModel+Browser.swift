@@ -98,6 +98,27 @@ extension AppModel {
     webViewFocusRequest += 1
   }
 
+  /// ⇧⌘S and the button left of the address bar (#648): the sidebar of tabs opens over the page,
+  /// the view shown first if it was not, or closes.
+  public func toggleTabSidebar() {
+    if isTabSidebarShown {
+      closeTabSidebar()
+    } else {
+      guard isWebViewAvailable else { return }
+      showWebView()
+      isTabSidebarShown = true
+    }
+  }
+
+  /// The sidebar closes. `returningFocus`: the keyboard goes back to the page — or to the address
+  /// bar of an empty tab — rather than stay nowhere.
+  public func closeTabSidebar(returningFocus: Bool = true) {
+    guard isTabSidebarShown else { return }
+    isTabSidebarShown = false
+    guard returningFocus, let tab = activeWebTab else { return }
+    if tab.isBlank { addressBarFocusRequest += 1 } else { webViewFocusRequest += 1 }
+  }
+
   /// ⌘L: the address bar takes the keyboard, the view shown first if it was not.
   public func focusAddressBar() {
     showWebView()

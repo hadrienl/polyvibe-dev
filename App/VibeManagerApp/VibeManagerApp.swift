@@ -923,6 +923,17 @@ private struct WebCommands: Commands {
       }
       .disabled(!model.isWebViewAvailable)
 
+      // The sidebar of tabs over the page (#648).
+      Button(
+        model.isTabSidebarShown
+          ? String(localized: "Hide Tabs", comment: "Hides the web view's sidebar of tabs.")
+          : String(localized: "Show Tabs", comment: "Shows the web view's sidebar of tabs.")
+      ) {
+        model.toggleTabSidebar()
+      }
+      .keyboardShortcut("s", modifiers: [.command, .shift])
+      .disabled(!model.isWebViewAvailable)
+
       Button("Open Location…") {
         model.focusAddressBar()
       }

@@ -271,6 +271,17 @@ public final class SessionBrowser {
     stateDidChange?()
   }
 
+  /// Out of its group, right after it.
+  public func removeFromGroup(_ id: BrowserTabID) {
+    guard let groupID = tab(id)?.groupID,
+      let last = tabs.last(where: { $0.groupID == groupID && $0.id != id })
+    else {
+      move(id, to: .loose(.end))
+      return
+    }
+    move(id, to: .loose(.after(last.id)))
+  }
+
   public func members(of id: BrowserTabGroupID) -> [BrowserTabModel] {
     tabs.filter { $0.groupID == id }
   }
