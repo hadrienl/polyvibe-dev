@@ -138,7 +138,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
   static let bottomDistance = 14
 
   /// The dialog drawn last, or `nil` when the screen ends on none: its options numbered from 1,
-  /// one of them pointed at — `❯` for Claude Code, `›` for Codex. An agent's own numbered list
+  /// one of them pointed at — `❯` for Claude Code, `›` for Codex, `>` for Antigravity (#541). An agent's own numbered list
   /// has no pointer, and is not near the bottom once the prompt is back.
   public init?(screen text: String) {
     let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -286,7 +286,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
       server: String(server), message: message, isAcceptPointed: trimmed[choices].hasPrefix("❯"))
   }
 
-  /// `❯ 1. Yes`, `  2. No`, `› 1. Yes, proceed (y)`.
+  /// `❯ 1. Yes`, `  2. No`, `› 1. Yes, proceed (y)`, `> 1. Yes, run command`.
   static func optionLine(_ line: String) -> (
     number: Int, indent: Int, isPointed: Bool, text: String
   )? {
@@ -294,7 +294,7 @@ public struct AgentDialogScreen: Hashable, Sendable {
     let indent = rest.prefix { $0 == " " }.count
     rest = rest.drop { $0 == " " }
     var isPointed = false
-    if let first = rest.first, "❯›".contains(first) {
+    if let first = rest.first, "❯›>".contains(first) {
       isPointed = true
       rest = rest.dropFirst().drop { $0 == " " }
     }

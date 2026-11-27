@@ -291,7 +291,8 @@ struct AntigravityTests {
     #expect(decoder.signal(for: event("idle")) == .turnEnded)
     #expect(decoder.signal(for: event("idle")) == nil)
     #expect(decoder.conversationIdentifier(in: event("idle")) == identifier)
-    #expect(decoder.answerKeymap == nil)
+    #expect(decoder.answerKeymap is AntigravityAnswerKeymap)
+    #expect(decoder.answerKeymap?.readsRequestOnScreen == true)
     #expect(decoder.approvalAnswerKeys.isEmpty)
   }
 
@@ -317,7 +318,10 @@ struct AntigravityTests {
   @Test("A dialog is announced without fabricated choices and resolves when work resumes")
   func permissions() {
     let decoder = AntigravitySignalDecoder()
-    #expect(decoder.signal(for: event("working", pending: true)) != nil)
+    // A permission, which one only its screen says (#541).
+    #expect(
+      decoder.signal(for: event("working", pending: true))
+        == .dialogAnnounced(AgentTerminalPrompt(kind: .permission, message: nil)))
     #expect(decoder.signal(for: event("working", pending: true)) == nil)
     #expect(decoder.signal(for: event("working")) == .questionResolved)
     #expect(decoder.signal(for: event("idle")) == .turnEnded)

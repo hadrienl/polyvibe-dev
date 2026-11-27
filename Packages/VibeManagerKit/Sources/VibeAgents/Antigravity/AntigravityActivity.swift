@@ -106,6 +106,8 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
   /// The account's quota as the last snapshot gave it: what a failed turn is explained by.
   private var quota: [AntigravityQuotaBucket] = []
   public let approvalAnswerKeys: Set<[UInt8]> = []
+  /// A command's permission is read off the screen and answered from outside (#541).
+  public let answerKeymap: (any AgentAnswerKeymap)? = AntigravityAnswerKeymap()
   private let now: @Sendable () -> Date
   /// Where agy keeps the steps of a conversation; `nil` when they are not read.
   private let database: @Sendable (String) -> URL?
@@ -282,8 +284,9 @@ public final class AntigravitySignalDecoder: AgentSignalDecoding, @unchecked Sen
       guard let old, ["idle", "error"].contains(old) else { return .promptSubmitted(byUser: false) }
       return .promptSubmitted(byUser: true)
     case "reviewing":
-      // No invented choices or keys. The user answers the actual dialog in the terminal.
-      return .dialogAnnounced(AgentTerminalPrompt(kind: .other, message: nil))
+      // A tool waits for review, the status line never says which: the screen is read for a
+      // command's dialog (#541). Any other is answered in the terminal.
+      return .dialogAnnounced(AgentTerminalPrompt(kind: .permission, message: nil))
     case "idle":
       // An approval, and the rest of the turn ran between two snapshots: the turn ended.
       if let old, busy.contains(old) || old == "reviewing" { return .turnEnded }

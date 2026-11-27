@@ -1,5 +1,6 @@
 import Foundation
 import VibeApplication
+import VibeConversationUI
 import VibeDomain
 
 /// A request waiting in a session that is not in front of the user, with what the palette needs
@@ -227,51 +228,7 @@ public enum RequestPresentation {
 
   /// What "always allow" allows, in words: its rules and how long they last.
   public static func alwaysAllowTitle(_ allow: AgentAlwaysAllow) -> LocalizedStringResource {
-    let rules = allow.rules.map(ruleDescription).joined(separator: ", ")
-    switch allow.scope {
-    case .session:
-      return LocalizedStringResource(
-        "Always allow \(rules) for this session", bundle: .module,
-        comment: "A button answering an agent's permission. The argument lists what is allowed.")
-    case .project:
-      return LocalizedStringResource(
-        "Always allow \(rules) in this project", bundle: .module,
-        comment: "A button answering an agent's permission. The argument lists what is allowed.")
-    case .user:
-      return LocalizedStringResource(
-        "Always allow \(rules) everywhere", bundle: .module,
-        comment: "A button answering an agent's permission. The argument lists what is allowed.")
-    }
-  }
-
-  static func ruleDescription(_ rule: AgentAlwaysAllow.Rule) -> String {
-    switch rule {
-    case .directories(let folders):
-      let names = folders.map { URL(fileURLWithPath: $0).lastPathComponent }
-      return String(
-        localized: LocalizedStringResource(
-          "access to \(names.joined(separator: ", "))", bundle: .module,
-          comment: "What always allowing grants: access to these folders."))
-    case .toolRule(let tool, let content):
-      return DisplaySafeText.visible(content.map { "\(tool)(\($0))" } ?? tool)
-    case .mode(let mode):
-      return mode == "acceptEdits"
-        ? String(
-          localized: LocalizedStringResource(
-            "file edits", bundle: .module,
-            comment: "What always allowing grants: the agent's file edits, accepted as they come."))
-        : DisplaySafeText.visible(mode)
-    case .commandPrefix:
-      return String(
-        localized: LocalizedStringResource(
-          "commands starting the same way", bundle: .module,
-          comment: "What always allowing grants: commands with the same beginning."))
-    case .files:
-      return String(
-        localized: LocalizedStringResource(
-          "changes to these files", bundle: .module,
-          comment: "What always allowing grants: further changes to the same files."))
-    }
+    PermissionWording.alwaysAllowTitle(allow)
   }
 
   /// Why the request is answered in its terminal only, in one line.

@@ -425,6 +425,7 @@ extension AgentAnswer {
     switch self {
     case .allowOnce: return "allowOnce"
     case .allowAlways: return "allowAlways"
+    case .allowEverywhere: return "allowEverywhere"
     case .deny: return "deny"
     case .answers: return "answers"
     case .approvePlan: return "approvePlan"

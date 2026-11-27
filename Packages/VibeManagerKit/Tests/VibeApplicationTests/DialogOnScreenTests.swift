@@ -68,6 +68,10 @@ private struct CodexLikeDecoder: AgentSignalDecoding {
     if message.hasPrefix("file:") {
       return .dialogDrawn(AgentDrawnDialog(.file(String(message.dropFirst(5)))))
     }
+    // A tool waiting for review, which one not said: Antigravity's status line (#541).
+    if message == "permission" {
+      return .dialogAnnounced(AgentTerminalPrompt(kind: .permission, message: nil))
+    }
     // A server's form, which no hook reports: Codex's "Approval requested by <server>".
     if message.hasPrefix("form:") {
       let server = String(message.dropFirst(5))
@@ -692,6 +696,31 @@ struct DialogOnScreenTests {
     await fixture.tracker.dialogUnreportedOnScreen(
       "computer: J-Method", readBefore: "computer: J-Method", in: fixture.id)
     #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [request.id])
+  }
+
+  @Test("A permission only announced is read: the dialog drawn takes its place, then is answered")
+  func unreportedOverAnnouncedPermission() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    await fixture.tracker.terminalNotification(fixture.id, "permission")
+    let announced = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    #expect(announced.screenReading == .announcedForm)
+    // Not drawn yet, then drawn: its card is the screen's.
+    await fixture.screen.show("Working…")
+    let following = Task { await fixture.answer.followPermissionDialog(announced.id) }
+    await fixture.screen.show("computer: J-Method")
+    await following.value
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.count == 1)
+    let request = try #require(state.requests.first)
+    #expect(request.id.isReadOffScreen)
+    #expect(await fixture.answering(request.id) == .fromPalette([.allowOnce, .deny]))
+    #expect(await fixture.answer(.allowOnce, to: request.id) == .sent)
+    #expect(await fixture.written.bytes == [[0x79]])
+    // The review over, the status line says so: nothing else is settled.
+    await fixture.logs.write("done", at: t1, for: fixture.id)
+    #expect(await eventually(fixture.tracker, fixture.id) { $0?.activity == .working })
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.isEmpty == true)
   }
 
   @Test("Its card left behind, another app asked: nothing is typed, and the new card takes over")
