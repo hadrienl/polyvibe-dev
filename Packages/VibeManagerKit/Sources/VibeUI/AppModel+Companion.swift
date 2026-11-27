@@ -31,12 +31,20 @@ extension AppModel {
     return found
   }
 
+  /// The agents a new session can be created with, read from the registry: the window's list
+  /// stays empty until the launch has adopted the running agents and settled the usage, and a
+  /// phone asking in the meantime was offered no agent at all.
+  public func companionAgentDescriptors() async -> [AgentDescriptor] {
+    await agents?.descriptors() ?? []
+  }
+
   /// The agent a new session proposes in a folder it knows no agent for, as the New Session sheet
   /// does: the first that can run.
   public func companionDefaultAgent() async -> String? {
     guard let agents else { return nil }
     let availabilities = await agents.availabilities(forceRefresh: false)
-    return agentDescriptors.first { availabilities[$0.id]?.isUsable == true }?.id.rawValue
+    return await agents.descriptors().first { availabilities[$0.id]?.isUsable == true }?.id
+      .rawValue
   }
 
   /// A project icon's PNG, as the sessions wear it.

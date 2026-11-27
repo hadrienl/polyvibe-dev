@@ -630,7 +630,7 @@ final class CompanionRemoteServer {
   private func offerNewSession(to peer: String) async {
     guard let appModel else { return }
     var agents: [RemoteAgent] = []
-    for descriptor in appModel.agentDescriptors {
+    for descriptor in await appModel.companionAgentDescriptors() {
       let models = await appModel.companionModels(of: descriptor.id.rawValue)
       agents.append(
         RemoteAgent(

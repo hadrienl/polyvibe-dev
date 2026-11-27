@@ -85,6 +85,18 @@ struct CompanionFolderAgentTests {
     #expect(await model.companionDefaultAgent() == "codex")
   }
 
+  @Test("The agents are offered before the launch has listed them in the window")
+  func agentsBeforeTheLaunchEnds() async {
+    let model = AppModel(
+      repository: HistoryRepository(values: []),
+      agents: AvailabilityRegistry(states: ["claude-code": .notFound, "codex": .available]),
+      recentFolderStore: InMemoryRecentFolderStore())
+
+    #expect(model.agentDescriptors.isEmpty)
+    #expect(await model.companionAgentDescriptors().map(\.id.rawValue) == ["claude-code", "codex"])
+    #expect(await model.companionDefaultAgent() == "codex")
+  }
+
   @Test("Without agents, no folder proposes one")
   func noRegistry() async {
     let model = AppModel(
