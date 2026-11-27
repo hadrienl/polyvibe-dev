@@ -232,18 +232,32 @@ public struct ClaudeCodeAnswerKeymap: AgentAnswerKeymap {
   /// answer of one's own is offered.
   static func isDrawn(_ question: AgentQuestion, on screen: AgentDialogScreen?) -> Bool {
     guard let screen else { return false }
-    func reads(_ expected: String, at number: Int) -> Bool {
+    func reads(_ reported: String, at number: Int) -> Bool {
       guard var label = screen.options.first(where: { $0.number == number })?.label else {
         return false
       }
       if let box = label.range(of: #"^\[[^\]]*\] "#, options: .regularExpression) {
         label.removeSubrange(box)
       }
+      label = drawn(label)
+      let expected = drawn(reported)
       return label == expected || label.hasPrefix(expected + " ")
         || label.hasPrefix(expected + ".")
     }
     let labels = question.options.map(\.label) + (question.allowsFreeText ? ["Type something"] : [])
     return labels.enumerated().allSatisfy { reads($1, at: $0 + 1) }
+  }
+
+  /// A label as the screen reads it: without an emoji's variation selector — the label
+  /// `Breaking (⚠️)` reads `Breaking (⚠)` on screen (#650) — nor the joiner between two emoji.
+  static func drawn(_ text: String) -> String {
+    var scalars = String.UnicodeScalarView()
+    scalars.append(
+      contentsOf: text.unicodeScalars.filter {
+        !(0xFE00...0xFE0F).contains($0.value) && !(0xE0100...0xE01EF).contains($0.value)
+          && $0.value != 0x200D
+      })
+    return String(scalars)
   }
 
   /// The digit of an option read on screen.

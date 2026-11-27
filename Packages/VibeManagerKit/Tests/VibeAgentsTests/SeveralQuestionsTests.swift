@@ -192,6 +192,38 @@ struct SeveralQuestionsTests {
       keymap.keystrokesLeft(for: answer, to: both, screen: screen(drawn("☒ A  ☐ B"))) == [two, one])
   }
 
+  @Test("An emoji's variation selector, reported but not drawn, still reads as its option")
+  func emojiVariationSelector() {
+    // #650: the agent reports `Breaking (⚠️)`, the screen reads `Breaking (⚠)`.
+    let content = AgentRequestContent.questions([
+      AgentQuestion(
+        header: "Sécurité", text: "Comment on livre ?",
+        options: [.init(label: "Traiter en sécurité"), .init(label: "Livrer comme défaut")]),
+      AgentQuestion(
+        header: "Breaking", text: "Breaking change ?",
+        options: [
+          .init(label: "Non breaking (Recommandé)"), .init(label: "Breaking (\u{26A0}\u{FE0F})"),
+        ]),
+    ])
+    let drawn =
+      SeveralQuestionsScreens.tabs("☒ Sécurité  ☐ Breaking") + """
+
+        Breaking change ?
+
+        ❯ 1. Non breaking (Recommandé)
+             Le seul comportement perdu est le bug.
+          2. Breaking (\u{26A0})
+             Release note préfixée.
+          3. Type something.
+        ────────────────────────────────────────
+          4. Chat about this
+
+        Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+        """
+    let answer = AgentAnswer.answers([.option(0), .option(0)])
+    #expect(keymap.keystrokesLeft(for: answer, to: content, screen: screen(drawn)) == [one, one])
+  }
+
   @Test("One question of several choices is submitted once its review is drawn")
   func singleMultipleChoice() {
     let pets = AgentRequestContent.questions([

@@ -65,6 +65,7 @@ public struct AnswerAgentRequest: Sendable {
   private let sleep: @Sendable (Duration) async throws -> Void
   private let diagnostics: Diagnostics
   private let confirmsDelivery: Bool
+  private let unreadKeyLimit: Duration
   private let failed: @Sendable (Failure) async -> Void
 
   /// - Parameters:
@@ -82,6 +83,7 @@ public struct AnswerAgentRequest: Sendable {
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     diagnostics: Diagnostics = .disabled,
     confirmsDelivery: Bool = false,
+    unreadKeyLimit: Duration = AnswerAgentRequest.unreadKeyLimit,
     failed: @escaping @Sendable (Failure) async -> Void = { _ in }
   ) {
     self.tracker = tracker
@@ -92,6 +94,7 @@ public struct AnswerAgentRequest: Sendable {
     self.sleep = sleep
     self.diagnostics = diagnostics
     self.confirmsDelivery = confirmsDelivery
+    self.unreadKeyLimit = unreadKeyLimit
     self.failed = failed
   }
 
@@ -170,6 +173,7 @@ public struct AnswerAgentRequest: Sendable {
       return await tracker.isFirstRequest(id) ? .notOnScreen : .requestGone
     }
     var finalScreen = text
+    var typed = ContinuousClock.now
     for (index, step) in steps.enumerated() {
       if index > 0 {
         await settle(id.sessionID)
@@ -188,17 +192,42 @@ public struct AnswerAgentRequest: Sendable {
       // dialog that awaits the final key proves the whole interaction completed.
       if confirmsDelivery, index == steps.count - 1 {
         finalScreen = await screen(id.sessionID)
+        // Before the write: what the agent draws after it, however quick, answers the key.
+        typed = ContinuousClock.now
       }
       guard await write(id.sessionID, step) else { return .terminalUnavailable }
       written.append(step)
     }
     if confirmsDelivery {
       let original = finalScreen.flatMap(AgentDialogScreen.init(screen:))
-      let start = ContinuousClock.now
+      // Counted from the agent's first redraw after the last key: an agent too busy to read its
+      // input, on a loaded Mac, read that key more than fifteen seconds late, and the same answer
+      // given again from its card left its digit in the prompt (#653).
+      var firstRedraw: ContinuousClock.Instant?
+      var outputRead: ContinuousClock.Instant?
       var changedReadings = 0
       while await tracker.isFirstRequest(id) {
         await settle(id.sessionID)
-        if let current = await screen(id.sessionID) {
+        var reading: String?
+        if firstRedraw == nil, let finalScreen, let output = await lastOutput(id.sessionID) {
+          // Nothing drawn since the key, or nothing that changed the screen typed into — output
+          // read late, or drawn before it: the key is still unread. The screen is read again only
+          // once the terminal has written something new.
+          if output >= typed, output != outputRead {
+            outputRead = output
+            reading = await screen(id.sessionID)
+            if let reading, reading != finalScreen { firstRedraw = ContinuousClock.now }
+          }
+          if firstRedraw == nil {
+            guard ContinuousClock.now - typed < unreadKeyLimit, !Task.isCancelled else {
+              return .interrupted
+            }
+            continue
+          }
+        }
+        let since = firstRedraw ?? typed
+        if reading == nil { reading = await screen(id.sessionID) }
+        if let current = reading {
           let dialog = AgentDialogScreen(screen: current)
           let changed =
             original == nil
@@ -212,7 +241,9 @@ public struct AnswerAgentRequest: Sendable {
             ? changedReadings + 1 : 0
           if changedReadings >= 2 { break }
         }
-        guard ContinuousClock.now - start < .seconds(3), !Task.isCancelled else {
+        guard ContinuousClock.now - since < Self.confirmationLimit,
+          !Task.isCancelled
+        else {
           return .interrupted
         }
       }
@@ -220,6 +251,14 @@ public struct AnswerAgentRequest: Sendable {
     await tracker.answerSent(id)
     return .sent
   }
+
+  /// How long a dialog redrawn after the last key may still show what that key answers.
+  public static let confirmationLimit: Duration = .seconds(3)
+  /// How long an agent that has drawn nothing since the last key is waited for: until then, the
+  /// key is still to be read, and the dialog it answers still drawn (#653). A key a dialog takes
+  /// without drawing anything is reported only then: a card waiting costs less than a digit
+  /// typed twice, the second one left in the prompt.
+  public static let unreadKeyLimit: Duration = .seconds(60)
 
   /// Observe the real dialog after a permission hook, without typing any answer. Automatic
   /// review can finish without one; terminal input approvals may draw without an OSC notice.
