@@ -104,8 +104,9 @@ model empty keeps the CLI's default. Native resume, activity and basic conversat
 available. Settings › Agents › Antigravity offers **Manual / Automatic** approval, independently
 of Codex, applied to new and restarted sessions. Manual is the default; Automatic uses the CLI's
 native `auto` mode with its terminal sandbox and requires a personal Antigravity account.
-Answer its remaining permissions and questions in the terminal; usage totals, grouped tool
-results and Polyvibe MCP injection are not available in this first integration. An endpoint
+A command's permission is answered from the conversation or the palette — once, always for
+commands starting the same way in this conversation or everywhere, or refused; other permissions
+and its questions are answered in the terminal, and Polyvibe's MCP tools are not injected. An endpoint
 can also be driven by Antigravity (Settings › Endpoints › Driven by): `agy` then talks to the
 endpoint's model through Polyvibe's gateway, without a Google sign-in. See
 [`docs/architecture/0045-antigravity-provider.md`](docs/architecture/0045-antigravity-provider.md).

@@ -11,8 +11,8 @@ locator, bounded availability probes, login-shell environment, PTY, terminal hos
 agent-switch machinery. It is neither Gemini CLI nor an alias for Claude Code.
 
 This first build supports the account's models, initial prompts, structured activity, exact native
-resume and the numbered conversation export. Approval and question dialogs are answered in the
-terminal. Usage/cost accounting, grouped tool results, subagent conversations, dynamic command
+resume and the numbered conversation export. Approval and question dialogs were answered in the
+terminal; since #541 a command's permission is answered from outside it (below). Usage/cost accounting, grouped tool results, subagent conversations, dynamic command
 discovery, injected Vibe Manager MCP tools and auxiliary generators are not advertised as supported.
 The CLI's own existing hooks and MCP configuration still apply. Advanced integration is tracked in
 [#541](https://github.com/hadrienl/vibe-manager/issues/541).
@@ -81,7 +81,7 @@ and an initial idle snapshot also settles a previously working adopted process w
 a new answer. Working and tool use are one turn. A turn that starts from rest or after an error is
 the user's: what the failure asked is behind it. Idle after a pending confirmation ends the turn,
 since the approval and the rest of the turn can fall between two snapshots. Background work keeps the session working. A pending confirmation is signalled as
-a terminal dialog without inferred choices or external answer keys.
+a permission announced without inferred choices: its screen says which, if it is a command's (#541).
 
 ## Verified discrepancy and conversation format
 
@@ -107,9 +107,44 @@ cover delayed first exchanges, persistence retries and launch changes in the reu
 
 No terminal-ID parsing, workspace discovery, new global hook-trust flow or transcript directory
 scanning is introduced: their false-positive and ordering traps do not apply to this path.
-Palette answering, multiple/asynchronous questions, usage deduplication, subagent tool grouping,
-MCP injection and custom CLI configuration roots require separate verification before being
-enabled. They must not be inferred from the success of a launch/resume smoke test.
+Palette answering of command permissions is verified and enabled (#541, below); questions,
+file permissions, MCP injection and custom CLI configuration roots require separate verification
+before being enabled. They must not be inferred from the success of a launch/resume smoke test.
+
+## Command permissions answered from outside (#541)
+
+Verified on 1.5.18, in Manual mode, in a pty 60, 100 and 110 columns wide. agy has no hook that
+reports a request: its status line only sets `tool_confirmation_pending` (with `agent_state:
+tool_use`) while a tool waits for review. The decoder announces that as a permission
+(`AgentTerminalPrompt.Kind.permission`), and the screen is read for a while, as for Codex's
+Computer Use (#603). When it ends on the command dialog — `Requesting permission for:`, the
+command three spaces in, `Run this command?`, the options, the `↑/↓ Navigate` hint and
+`esc to cancel` last — that dialog becomes the request, `run_command` with the command as drawn.
+
+- The four options are offered: `Yes, run command`, always for commands starting with the prefix
+  agy names in this conversation, the same persisted to agy's `settings.json` (shown as
+  "everywhere"; the new `AgentAnswer.allowEverywhere`), and `No, cancel`. A digit takes its option
+  at once; each digit is read off the dialog, an "always" one only for the prefix the request
+  names. `No, cancel` refuses the call and ends the turn (`User declined the tool call`); Escape
+  would only interrupt it. `tab Amend` and `ctrl+g` stay in the terminal.
+- Before every key the screen is read twice and must still show that command; after it, the
+  dialog must change (#558). Once the dialog goes, answered in the terminal or taken away, the
+  card goes; the status line's return to work settles it too.
+- A line wrapped at the terminal's width goes on at the left edge, unindented: the request keeps
+  the lines as drawn (they `fit` the command they wrap). The title must follow a blank line, which
+  no line of the command can produce at the left edge, so a command forging the title is not read.
+- A command of many lines is folded (`⋯ (26 lines hidden)`): it is incomplete and may only be
+  refused. Options wrapped at the left edge (about 90 columns and less, by the prefix's length) are
+  not read: answered in the terminal.
+- Not read, answered in the terminal: a file's creation or edit (its path is cut at the
+  terminal's width with no mark), and `ask_question`, whose dialog the status line does not
+  report at all (`tool_use`, no pending flag). The transcript holds the pending call (with its
+  `CommandLine`) before the answer; it is not used yet.
+
+MCP injection stays unavailable on 1.5.18: `--settings` takes `settings.json` keys only, MCP
+servers live in `mcp_config.json` (global) or plugins (global or in the project), and no option
+adds one for a process. Commands/skills, attachments, shell mode and a custom data folder are
+unchanged: not verified, not offered.
 
 ## Endpoints driven by Antigravity
 
