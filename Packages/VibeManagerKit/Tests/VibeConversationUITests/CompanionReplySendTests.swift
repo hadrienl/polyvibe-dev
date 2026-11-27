@@ -84,4 +84,22 @@ struct CompanionReplySendTests {
     #expect(model.draft == "Mac draft")
   }
 
+  @Test("Phone files are sent even when the Mac's own draft is a shell command")
+  func filesBesideShellDraft() async throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let phone = folder.appendingPathComponent("phone.txt")
+    try Data("Phone".utf8).write(to: phone)
+    let model = model()
+    model.promptFormat = AgentPromptFormat(
+      queueKey: [0x09], submitDelay: .zero,
+      shellEntry: ShellEntry(switchDelay: .zero, chunkDelay: .zero))
+    model.draft = "!ls"
+    let result = await model.sendFromCompanion("Read this", files: [phone], reply: nil)
+    #expect(result.sent)
+    #expect(model.echoes.last?.attachments == [phone])
+    #expect(model.draft == "!ls")
+    #expect(model.attachments.isEmpty)
+  }
 }

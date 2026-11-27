@@ -24,22 +24,31 @@ enum CompanionRemoteReply {
       date: entry.date, sourceID: entry.id, time: quote.time)
   }
 
-  static func shown(_ entry: ConversationEntry, before entries: ArraySlice<ConversationEntry>)
-    -> (message: String, reply: RemoteReply)?
-  {
+  /// A reply as the phone shows it: the user's words apart, the passage, and the entry it
+  /// quotes, `sourceID`, found by the Mac's own links.
+  static func shown(
+    _ entry: ConversationEntry, quoting sourceID: String?,
+    before entries: ArraySlice<ConversationEntry>
+  ) -> (message: String, reply: RemoteReply)? {
     guard case .userPrompt(let text, let attachments) = entry.content,
       RelayedMessage(text, attachments: attachments) == nil
     else { return nil }
     let shown = ReplyLinks.shown(text, attachments: attachments)
     guard let quote = shown.quote else { return nil }
-    let blocks = entries.map(ConversationBlock.entry)
-    let sourceID = ReplyLinks.source(of: quote, in: blocks[...])
-    let source = entries.first { $0.id == sourceID }
+    let source = sourceID.flatMap { id in entries.last { $0.id == id } }
     return (
       shown.message,
       RemoteReply(
         excerpt: quote.excerpt, author: quote.author == .agent ? .agent : .user,
-        date: source?.date, sourceID: sourceID, time: quote.time)
+        date: source?.date, sourceID: source?.id, time: quote.time)
     )
+  }
+
+  /// The entry each reply quotes, read from the entries alone, as the model reads its blocks.
+  static func sources(of entries: [ConversationEntry]) -> [String: String] {
+    var links = ReplyLinks()
+    var places: [String: Int] = [:]
+    links.update(entries.map(ConversationBlock.entry), from: 0, places: &places)
+    return links.sources
   }
 }

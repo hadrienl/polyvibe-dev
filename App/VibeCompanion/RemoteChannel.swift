@@ -377,8 +377,10 @@ final class RemoteChannel {
       write(
         .sendReply(
           sessionID: sessionID, requestID: requestID, text: text, files: files, reply: reply))
+      // Past the Mac's own waits for the session's input, its prompt and a relayed answer: a
+      // reply said unconfirmed while still on its way would be sent twice.
       Task { [weak self] in
-        try? await Task.sleep(for: .seconds(30))
+        try? await Task.sleep(for: .seconds(60))
         self?.replySubmissions.removeValue(forKey: requestID)?.resume(returning: (false, false))
       }
     }

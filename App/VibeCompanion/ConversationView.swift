@@ -167,6 +167,20 @@ struct ConversationView: View {
   }
 
   private var conversationScroll: some View {
+    ScrollViewReader { proxy in
+      conversationRows
+        .defaultScrollAnchor(.bottom)
+        // A jump, once: a position bound both ways would hold a row in place as the agent writes,
+        // instead of following the end.
+        .onChange(of: scrollTarget) { _, target in
+          guard let target else { return }
+          withAnimation { proxy.scrollTo(target, anchor: .center) }
+          scrollTarget = nil
+        }
+    }
+  }
+
+  private var conversationRows: some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 10) {
         if conversation == nil {
@@ -179,31 +193,34 @@ struct ConversationView: View {
           EntryView(
             entry: entry, runsIn: canRun ? sessionID : nil, calendar: calendar,
             agentName: session?.agentName ?? String(localized: "The agent"),
-            reply: replyAction,
+            canReply: canReply,
+            reply: { entry, excerpt in prepareReply(entry, excerpt: excerpt) },
             showSource: { quote in showSource(quote, replyID: entry.id) }
           )
+          .equatable()
           .padding(.vertical, 2)
           .background(
             highlightedID == entry.id ? palette.accent.opacity(0.15) : .clear,
             in: .rect(cornerRadius: 10)
           )
           .id(entry.id)
+          // Scrolled back to the reply by hand: the way back is no longer needed.
+          .onScrollVisibilityChange(threshold: 0.5) { visible in
+            if visible, entry.id == returnToID { returnToID = nil }
+          }
         }
 
       }
-      .scrollTargetLayout()
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
     }
-    .defaultScrollAnchor(.bottom)
-    .scrollPosition(id: $scrollTarget, anchor: .center)
   }
 
   private var composerArea: some View {
     VStack(spacing: 8) {
       if let returnToID {
         Button("Back to Your Reply", systemImage: "arrow.down") {
-          withAnimation { scrollTarget = returnToID }
+          scrollTarget = returnToID
           self.returnToID = nil
         }.font(.footnote).buttonStyle(.bordered)
       }
@@ -239,11 +256,6 @@ struct ConversationView: View {
       .toolbar { Button("Done") { showsQuote = false } }
     }
     .presentationDetents([.medium, .large])
-  }
-
-  private var replyAction: ((RemoteEntry, String) -> Void)? {
-    guard canReply else { return nil }
-    return { entry, excerpt in prepareReply(entry, excerpt: excerpt) }
   }
 
   /// One clock per conversation, refreshed on return and calendar changes, never per row.
@@ -362,16 +374,15 @@ struct ConversationView: View {
 
   private func showSource(_ quote: RemoteReply, replyID: String) {
     guard sourceIsLoaded(quote), let id = quote.sourceID else {
+      returnToID = nil
       inspect(quote)
       return
     }
     returnToID = replyID
     let request = UUID()
     highlightRequest = request
-    withAnimation {
-      scrollTarget = id
-      highlightedID = id
-    }
+    scrollTarget = id
+    withAnimation { highlightedID = id }
     Task { @MainActor in
       try? await Task.sleep(for: .milliseconds(1_600))
       if highlightRequest == request { highlightedID = nil }
@@ -449,6 +460,7 @@ struct ConversationView: View {
         Button {
           let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
           guard canSend else { return }
+          returnToID = nil
           if let replyTarget {
             sendingReply = true
             let sentFiles = files
@@ -597,16 +609,25 @@ private struct CameraPicker: UIViewControllerRepresentable {
   }
 }
 
-private struct EntryView: View {
+private struct EntryView: View, Equatable {
   let entry: RemoteEntry
   /// The session a command written in one of the agent's code blocks is run in (#548); nil when
   /// none can be. A value, not a closure, so that an entry left unchanged is not drawn again.
-  var runsIn: String?
+  let runsIn: String?
   let calendar: Calendar
-  var agentName: String
-  var reply: ((RemoteEntry, String) -> Void)?
-  var showSource: (RemoteReply) -> Void
+  let agentName: String
+  /// Whether its passages can be replied to now (#633): `reply` is only called then.
+  let canReply: Bool
+  /// Actions, left out of the comparison: the conversation's state they reach is read when they
+  /// run, so a row drawn before keeps working, and typing in the field redraws no row.
+  let reply: (RemoteEntry, String) -> Void
+  let showSource: (RemoteReply) -> Void
   @Environment(\.conversationPalette) private var palette
+
+  nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.entry == rhs.entry && lhs.runsIn == rhs.runsIn && lhs.calendar == rhs.calendar
+      && lhs.agentName == rhs.agentName && lhs.canReply == rhs.canReply
+  }
 
   var body: some View {
     Group {
@@ -623,8 +644,8 @@ private struct EntryView: View {
   }
 
   private var replyToEntry: ((String) -> Void)? {
-    guard let reply else { return nil }
-    return { excerpt in reply(entry, excerpt) }
+    guard canReply else { return nil }
+    return { [reply, entry] excerpt in reply(entry, excerpt) }
   }
 
   @ViewBuilder
@@ -662,14 +683,14 @@ private struct EntryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
           case .code(let language, let code):
             CodeBlock(
-              language: language, code: code, runsIn: runsIn,
+              language: language, code: code, runsIn: runsIn, replies: true,
               reply: replyToEntry)
           }
         }
         HStack {
           ConversationMessageTime(date: entry.messageDate, calendar: calendar)
           Spacer()
-          if let reply {
+          if canReply {
             Button("Reply", systemImage: "arrowshape.turn.up.left") { reply(entry, text) }
               .labelStyle(.iconOnly)
               .foregroundStyle(palette.secondaryText)
@@ -800,6 +821,9 @@ private struct CodeBlock: View {
   let language: String?
   let code: String
   let runsIn: String?
+  /// An agent's block, whose passages can be replied to (#633): drawn by the same text view
+  /// whether a reply can be made now or not, so that a selection survives the change.
+  var replies = false
   var reply: ((String) -> Void)?
   @Environment(RemoteChannel.self) private var channel
   @Environment(\.conversationPalette) private var palette
@@ -836,7 +860,7 @@ private struct CodeBlock: View {
       .padding(.vertical, 8)
       Divider()
       ScrollView(.horizontal) {
-        if let reply {
+        if replies {
           ReplySelectableText(
             text: AttributedString(code), color: UIColor(palette.text), code: true, reply: reply
           )

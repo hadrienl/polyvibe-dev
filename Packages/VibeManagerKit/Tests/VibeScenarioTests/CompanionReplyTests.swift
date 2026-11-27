@@ -76,4 +76,20 @@ struct CompanionReplyTests {
     ]
     #expect(CompanionRemoteServer.entries(entries, replies: true)[2].reply?.sourceID == "b")
   }
+
+  @Test("Each push takes the model's links as they are, without searching the history again")
+  func modelLinks() {
+    let quote = ReplyQuote(excerpt: "Same words", author: .agent, date: date)
+    let entries = [
+      ConversationEntry(id: "a", date: date, content: .agentText("Same words")),
+      ConversationEntry(
+        id: "u", content: .userPrompt(ReplyQuote.compose(quote, message: "Yes"), attachments: [])),
+    ]
+    let linked = CompanionRemoteServer.entries(entries, replies: true, sources: ["u": "a"])
+    #expect(linked[1].reply?.sourceID == "a")
+    #expect(linked[1].reply?.date == date)
+    let unlinked = CompanionRemoteServer.entries(entries, replies: true, sources: [:])
+    #expect(unlinked[1].reply?.sourceID == nil)
+    #expect(unlinked[1].reply?.excerpt == "Same words")
+  }
 }

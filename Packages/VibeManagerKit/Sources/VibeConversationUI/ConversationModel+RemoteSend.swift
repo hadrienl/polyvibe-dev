@@ -12,13 +12,16 @@ extension ConversationModel {
     let keptReply = setReplyAside()
     restoreReply(reply)
     let installedReply = replyTarget
-    if !files.isEmpty { attach(files, focusing: false) }
+    // The phone's text first: files join it, never a Mac draft in shell mode that it replaces.
     draft = text
+    if !files.isEmpty { attach(files, focusing: false) }
+    let composed = draft
     let sent = await send()
     let quoted = sent && reply != nil && replyTarget == nil
     attachments.filter(files.contains).forEach(removeAttachment)
+    if draft == composed || (sent && draft.isEmpty) { draft = kept }
+    // Rejoined to the Mac's own draft, once it is back.
     if !keptFiles.isEmpty { attach(keptFiles, focusing: false) }
-    if draft == text || (sent && draft.isEmpty) { draft = kept }
     // A newly chosen Mac passage is not the temporary phone passage.
     if replyTarget == installedReply { cancelReply() }
     restoreReply(keptReply)

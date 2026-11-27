@@ -327,7 +327,7 @@ final class CompanionRemoteServer {
         entries: Self.entries(
           model.snapshot.entries,
           replies: CompanionRemote.takesReplies(peers[peer]?.protocolVersion),
-          limit: Self.entryLimit),
+          sources: model.replyLinks.sources, limit: Self.entryLimit),
         request: appModel.shownActivity(for: id)?.requests.first.flatMap(Self.request(of:)),
         theme: Self.theme(of: appModel.sessions.first { $0.id == id }, in: appModel))
     } onChange: { [weak self] in
@@ -374,10 +374,15 @@ final class CompanionRemoteServer {
     return RemoteTheme(light: light, dark: dark, fontStyle: lightTheme.fontStyle.rawValue)
   }
 
+  /// `sources` says the entry each reply quotes, by the reply's id: the model's `replyLinks`,
+  /// kept up to date as it lays out, so that no push searches the history again. Left out, they
+  /// are read from `entries` themselves.
   static func entries(
-    _ entries: some Sequence<ConversationEntry>, replies: Bool = false, limit: Int? = nil
+    _ entries: some Sequence<ConversationEntry>, replies: Bool = false,
+    sources: [String: String]? = nil, limit: Int? = nil
   ) -> [RemoteEntry] {
     let entries = Array(entries)
+    let sources = replies ? sources ?? CompanionRemoteReply.sources(of: entries) : [:]
     return entries.indices.suffix(limit ?? entries.count).compactMap { index in
       let entry = entries[index]
       let kind: RemoteEntry.Kind
@@ -424,7 +429,9 @@ final class CompanionRemoteServer {
       case .reasoning:
         return nil
       }
-      if replies, let shown = CompanionRemoteReply.shown(entry, before: entries[..<index]),
+      if replies,
+        let shown = CompanionRemoteReply.shown(
+          entry, quoting: sources[entry.id], before: entries[..<index]),
         case .user(_, let attachments) = kind
       {
         return RemoteEntry(
