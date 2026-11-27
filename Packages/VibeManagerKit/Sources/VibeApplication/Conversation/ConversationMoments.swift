@@ -166,20 +166,22 @@ public enum ConversationMoments {
   public static func shown(_ placed: [Placed], hiding hidden: Set<String>) -> [Placed] {
     let kinds =
       hidden.isEmpty ? placed : placed.filter { !hidden.contains($0.moment.kind.rawValue) }
-    let bookmarkedStarts = Set(
-      kinds.lazy.filter { $0.moment.kind == .bookmark && $0.moment.unit == 0 }
-        .map(\.moment.entryID))
-    guard !bookmarkedStarts.isEmpty else { return kinds }
+    // Called at each row measured while scrolling: nothing copied without such a bookmark.
+    func isBookmarkedStart(_ item: Placed) -> Bool {
+      item.moment.kind == .bookmark && item.moment.unit == 0
+    }
+    guard kinds.contains(where: isBookmarkedStart) else { return kinds }
+    let bookmarkedStarts = Set(kinds.lazy.filter(isBookmarkedStart).map(\.moment.entryID))
     return kinds.filter {
       $0.moment.kind != .message || !bookmarkedStarts.contains($0.moment.entryID)
     }
   }
 
-  /// The moment whose icon a group of moments drawn together shows: its first one that is not a
-  /// message (#654), a message only alone. Each turn starts with one, and would hide what the
-  /// agent did — a failed test run — behind its bubble.
-  public static func iconMoment(of group: some Collection<Placed>) -> ConversationMoment? {
-    (group.first { $0.moment.kind != .message } ?? group.first)?.moment
+  /// The moment of a group drawn together whose icon it shows, and which a click on it brings
+  /// up: its first one that is not a message (#654), a message only alone. Each turn starts with
+  /// one, and would hide what the agent did — a failed test run — behind its bubble.
+  public static func iconIndex(in placed: [Placed], group: Range<Int>) -> Int {
+    group.first { placed[$0].moment.kind != .message } ?? group.lowerBound
   }
 
   /// The blocks that show one, each once, in order: where Next and Previous go.

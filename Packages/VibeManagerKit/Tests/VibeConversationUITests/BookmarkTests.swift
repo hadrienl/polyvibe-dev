@@ -519,6 +519,23 @@ struct BookmarkTests {
         clickedAt: CGPoint(x: 5, y: icon), model: model, layout: layout, scale: 0.05) == "m1")
   }
 
+  @Test("An icon a message heads shows what came after it, and a click brings that up")
+  func iconHeadedByAMessage() {
+    let model = Self.momentsModel()
+    model.appearance.hiddenMomentKinds = []
+    let layout = Self.evenLayout(model)
+    // At a twentieth: the prompt of m0 at 0 points, the commit of m1 at 6: one icon, the commit's.
+    let clusters = ConversationOverview.clusters(
+      of: model.shownMoments, layout: layout, scale: 0.05)
+    #expect(clusters.first?.moments == 0..<2)
+    #expect(model.shownMoments[0].moment.kind == .message)
+    #expect(ConversationMoments.iconIndex(in: model.shownMoments, group: clusters[0].moments) == 1)
+    #expect(
+      ConversationOverview.blockID(
+        clickedAt: CGPoint(x: 5, y: clusters[0].y), model: model, layout: layout, scale: 0.05)
+        == "m1")
+  }
+
   @Test("A click names the moment's block as the model has it, the layout a step behind")
   func clickWithALayoutBehind() {
     let model = Self.momentsModel()

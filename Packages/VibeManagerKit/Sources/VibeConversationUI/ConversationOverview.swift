@@ -311,7 +311,7 @@ struct ConversationOverview: View {
   }
 
   /// The moments under the pointer: an icon within a few points of it, or the line of a bookmark
-  /// across the overview. `touched` is the moment a click brings up: the icon's first one, or
+  /// across the overview. `touched` is the moment a click brings up: the one the icon shows, or
   /// the bookmark whose line it is.
   static func cluster(
     near point: CGPoint, moments: [ConversationMoments.Placed],
@@ -333,8 +333,8 @@ struct ConversationOverview: View {
       let onLine = line.map { $0.distance <= 5 } ?? false
       let distance = onIcon ? iconDistance : line?.distance ?? iconDistance
       if onIcon || onLine, nearest.map({ distance < $0.distance }) ?? true {
-        let touched =
-          onIcon ? cluster.moments.lowerBound : line?.index ?? cluster.moments.lowerBound
+        let icon = ConversationMoments.iconIndex(in: moments, group: cluster.moments)
+        let touched = onIcon ? icon : line?.index ?? icon
         nearest = (cluster.moments, cluster.y, touched, distance)
       }
     }
@@ -593,9 +593,10 @@ private struct OverviewBlocks: View, Equatable {
     }
     let clusters = ConversationOverview.clusters(of: moments.placed, layout: layout, scale: scale)
     for cluster in clusters where cluster.y <= size.height + ConversationOverview.iconSize {
-      guard let shown = ConversationMoments.iconMoment(of: moments.placed[cluster.moments]),
-        let icon = context.resolveSymbol(id: Self.tag(of: shown))
-      else { continue }
+      let shown = moments.placed[
+        ConversationMoments.iconIndex(in: moments.placed, group: cluster.moments)
+      ].moment
+      guard let icon = context.resolveSymbol(id: Self.tag(of: shown)) else { continue }
       context.draw(icon, at: CGPoint(x: left / 2, y: cluster.y))
       guard cluster.moments.count > 1 else { continue }
       context.draw(

@@ -352,9 +352,9 @@ struct ConversationMomentsTests {
     let failed = ConversationMoments.Placed(
       blockIndex: 1,
       moment: ConversationMoment(.tests(TestOutcome(total: 3, failed: 1)), entryID: "t", date: nil))
-    #expect(ConversationMoments.iconMoment(of: [message, failed]) == failed.moment)
-    #expect(ConversationMoments.iconMoment(of: [message]) == message.moment)
-    #expect(ConversationMoments.iconMoment(of: []) == nil)
+    #expect(ConversationMoments.iconIndex(in: [message, failed], group: 0..<2) == 1)
+    #expect(ConversationMoments.iconIndex(in: [message, failed, message], group: 2..<3) == 2)
+    #expect(ConversationMoments.iconIndex(in: [failed, message], group: 0..<2) == 0)
   }
 
   @Test("What a sub-agent did stays inside it")

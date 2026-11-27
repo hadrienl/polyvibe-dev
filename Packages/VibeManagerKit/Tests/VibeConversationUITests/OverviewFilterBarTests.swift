@@ -51,6 +51,21 @@ struct OverviewFilterBarTests {
     #expect(filters.count(of: .tests) == 0)
   }
 
+  @Test("A message bookmarked at its start counts as its bookmark, while bookmarks are shown")
+  func bookmarkedMessageCount() {
+    let moments: [ConversationMoments.Placed] = [
+      .init(blockIndex: 0, moment: .init(.bookmark, entryID: "u", date: nil)),
+      .init(blockIndex: 0, moment: .init(.message, entryID: "u", date: nil)),
+      .init(blockIndex: 1, moment: .init(.message, entryID: "v", date: nil)),
+    ]
+    let shown = OverviewFilters(moments: moments, appearance: Self.appearance())
+    #expect(shown.count(of: .message) == 1)
+    #expect(shown.count(of: .bookmark) == 1)
+    let hidden = OverviewFilters(
+      moments: moments, appearance: Self.appearance(hiding: ["bookmark"]))
+    #expect(hidden.count(of: .message) == 2)
+  }
+
   @Test("The menu's button says how many kinds are shown, only when some are hidden")
   func counter() {
     let model = Self.model()

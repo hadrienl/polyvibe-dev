@@ -97,7 +97,10 @@ struct OverviewFilters {
   private let appearance: ConversationAppearance
 
   init(moments: [ConversationMoments.Placed], appearance: ConversationAppearance) {
-    counts = Dictionary(grouping: moments, by: \.moment.kind).mapValues(\.count)
+    // A message bookmarked at its start is drawn as its bookmark alone, while those are shown.
+    let drawn =
+      appearance.shows(.bookmark) ? ConversationMoments.shown(moments, hiding: []) : moments
+    counts = Dictionary(grouping: drawn, by: \.moment.kind).mapValues(\.count)
     self.appearance = appearance
   }
 
