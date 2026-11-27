@@ -337,10 +337,39 @@ struct AgentActivitySubagentTests {
     #expect(reduce(launching(), .signal(.interrupted)).activity == .idle)
   }
 
-  @Test("Waiting for a prompt is no rest while a sub-agent works")
-  func idlePromptBesideSubagent() {
-    let state = reduce(launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])))
-    #expect(reduce(state, .signal(.waitingForInput)).activity == .working)
+  @Test("Waiting for a prompt says no sub-agent works any more: one killed without a word is gone")
+  func idlePromptClearsSubagents() {
+    // Killed from its panel with no turn after it, or stopped by Escape in the foreground.
+    for state in [
+      reduce(launching("a1"), .signal(.turnEndedBesideSubagents(["a1"]))),
+      reduce(launching("a1"), .signal(.interrupted)),
+    ] {
+      let rested = reduce(state, .signal(.waitingForInput))
+      #expect(rested.activity == .idle)
+      #expect(rested.subagentsAtWork.isEmpty)
+    }
+  }
+
+  @Test("A sub-agent starting while the session rests makes it work only once a turn lists it")
+  func startWhileIdle() {
+    var state = reduce(structured(), .signal(.subagentStarted("a1")))
+    #expect(state.activity == .idle)
+    state = reduce(state, .signal(.subagentEnded("a1")))
+    #expect(state.activity == .idle)
+  }
+
+  @Test("The real order: its report starts a turn before its end, the answer stays unread")
+  func realOrderKeepsUnread() {
+    var state = reduce(
+      launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])), context: context(5))
+    for signal in [
+      AgentSignal.promptSubmitted(byUser: false), .subagentEnded("a1"),
+      .turnEndedBesideSubagents([]),
+    ] {
+      state = reduce(state, .signal(signal), context: context(90))
+    }
+    #expect(state.activity == .idle)
+    #expect(state.unreadSince == at(5))
   }
 
   @Test("A sub-agent's dialog still comes first, and the session works on once it is answered")

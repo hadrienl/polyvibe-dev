@@ -404,15 +404,13 @@ public enum AgentActivityMachine {
       next.resultsOwed = 0
       next.clearSubagents()
     case .waitingForInput:
-      // Claude Code waits for a prompt while its sub-agents work on (#532).
-      if next.activity == .working, next.subagentsAtWork.isEmpty { next.activity = .idle }
+      // Claude Code says so only once nothing works, sub-agents included: none comes while one
+      // runs in the background (checked on 2.1.332, #532). Any still listed was stopped without
+      // a word — killed from its panel, or in the foreground by an interruption.
+      next.clearSubagents()
+      if next.activity == .working { next.activity = .idle }
     case .subagentStarted(let id):
       next.subagentsAtWork.insert(id)
-      // Started with no turn of the main agent around it: the session works all the same.
-      if next.activity == .idle {
-        next.activity = .working
-        next.isTurnOverBesideSubagents = true
-      }
     case .subagentEnded(let id):
       next.subagentsAtWork.remove(id)
       if next.subagentsAtWork.isEmpty, next.isTurnOverBesideSubagents {
