@@ -322,6 +322,9 @@ public struct ConversationView: View {
           }
           .frame(width: overview.width)
           .modifier(OverviewBandFade())
+          // Down to the foot of the pane, under the composer's inset as the messages scroll
+          // there, rather than cut short level with it (#656). The composer keeps to the column.
+          .ignoresSafeArea(.container, edges: .bottom)
         }
       }
       .onAppear {
