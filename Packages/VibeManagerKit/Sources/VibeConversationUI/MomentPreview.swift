@@ -47,9 +47,15 @@ struct MomentPreviewContent: Equatable {
     items = moments.map { Self.item(of: $0.moment, block: $0.block, agentName: agentName) }
   }
 
-  /// An icon of the overview: the moments drawn with it, each with its own block.
+  /// An icon of the overview: the moments drawn with it, each with its own block. A message
+  /// bookmarked at its start once: the bookmark says it already.
   init(placed: some Collection<ConversationMoments.Placed>, model: ConversationModel) {
     let blocks = model.blocks
+    let bookmarkedStarts = Set(
+      placed.filter { $0.moment.kind == .bookmark && $0.moment.unit == 0 }.map(\.blockIndex))
+    let placed = placed.filter {
+      $0.moment.kind != .message || !bookmarkedStarts.contains($0.blockIndex)
+    }
     self.init(
       moments: placed.map {
         ($0.moment, blocks.indices.contains($0.blockIndex) ? blocks[$0.blockIndex] : nil)
@@ -100,7 +106,7 @@ struct MomentPreviewContent: Equatable {
     Item(
       heading: heading(of: moment, block: block, agentName: agentName),
       label: MomentPresentation.label(of: moment, block: block),
-      isExcerpt: moment.kind == .bookmark,
+      isExcerpt: moment.kind == .bookmark || moment.kind == .message,
       answer: MomentPresentation.answer(of: moment))
   }
 
@@ -111,9 +117,9 @@ struct MomentPreviewContent: Equatable {
   ) -> String? {
     let time = MomentPresentation.time(of: moment.date)
     let who: String
-    if moment.kind == .bookmark {
+    if moment.kind == .bookmark || moment.kind == .message {
       guard let block, let author = author(of: block, agent: agentName) else {
-        return MomentPresentation.name(of: .bookmark)
+        return MomentPresentation.name(of: moment.kind)
       }
       who = author
     } else {

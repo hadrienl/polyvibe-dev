@@ -6,8 +6,8 @@ import VibeApplication
 /// overview and in the margin of the messages, in every session. On, a button takes its kind's
 /// colour; off, it is grey.
 ///
-/// Never on two rows: narrower than the six buttons, a single one opens a menu of the kinds, each
-/// checked when it is shown.
+/// Never on two rows: narrower than the seven buttons, a single one opens a menu of the kinds,
+/// each checked when it is shown.
 struct OverviewFilterBar: View {
   let model: ConversationModel
   @Environment(\.conversationTheme) private var theme
@@ -107,10 +107,10 @@ struct OverviewFilters {
   var shownCount: Int { Self.kinds.count(where: shows) }
   var showsAll: Bool { shownCount == Self.kinds.count }
 
-  /// Beside the menu's icon: "5/6" while a kind is hidden, nothing when all are shown.
+  /// Beside the menu's icon: "6/7" while a kind is hidden, nothing when all are shown.
   var badge: String? { showsAll ? nil : "\(shownCount)/\(Self.kinds.count)" }
 
-  /// What VoiceOver reads of the menu: "5 of 6".
+  /// What VoiceOver reads of the menu: "6 of 7".
   var accessibilityValue: String {
     String(localized: "\(shownCount) of \(Self.kinds.count)", bundle: .module)
   }

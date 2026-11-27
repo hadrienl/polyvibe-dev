@@ -57,10 +57,11 @@ struct MarginPreviewTests {
     return MomentPreviewContent(placed: placed, model: model)
   }
 
+  /// Those with as many moments as the margin draws: a message's own is not.
   private static func blocks(
     withMoments count: Int, in model: ConversationModel
   ) -> [ConversationBlock] {
-    model.blocks.filter { model.moments(of: $0).count == count }
+    model.blocks.filter { model.moments(of: $0).count(where: { $0.kind != .message }) == count }
   }
 
   @Test("One moment: what happened and when, as the overview shows it")
@@ -122,6 +123,27 @@ struct MarginPreviewTests {
     #expect(
       MomentPreviewContent(
         margin: .bookmark, of: block, model: model, appearance: ConversationAppearance()) == nil)
+  }
+
+  @Test("A message sent: who wrote it, when, and its start; not in the margin, beside it")
+  func message() throws {
+    let model = Self.model()
+    let block = model.blocks[0]
+    #expect(model.moments(of: block).map(\.kind) == [.message])
+    #expect(
+      MomentPreviewContent(
+        margin: .moments, of: block, model: model, appearance: ConversationAppearance()) == nil)
+    let content = Self.overviewContent(of: block, in: model, bookmark: false)
+    let item = try #require(content.items.first)
+    #expect(content.items.count == 1)
+    #expect(item.heading == "You · \(MomentPresentation.time(of: Self.day)!)")
+    #expect(item.label == "Round the VAT per line")
+    #expect(item.isExcerpt)
+    // Bookmarked at its start, the overview's icon says it once.
+    model.toggleBookmark(block)
+    let both = model.shownMoments.filter { $0.blockIndex == 0 }
+    #expect(both.map(\.moment.kind) == [.bookmark, .message])
+    #expect(MomentPreviewContent(placed: both, model: model).items.count == 1)
   }
 
   @Test("An answer bookmarked is the agent's")
