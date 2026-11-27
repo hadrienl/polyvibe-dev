@@ -593,8 +593,9 @@ private struct OverviewBlocks: View, Equatable {
     }
     let clusters = ConversationOverview.clusters(of: moments.placed, layout: layout, scale: scale)
     for cluster in clusters where cluster.y <= size.height + ConversationOverview.iconSize {
-      let first = moments.placed[cluster.moments.lowerBound].moment
-      guard let icon = context.resolveSymbol(id: Self.tag(of: first)) else { continue }
+      guard let shown = ConversationMoments.iconMoment(of: moments.placed[cluster.moments]),
+        let icon = context.resolveSymbol(id: Self.tag(of: shown))
+      else { continue }
       context.draw(icon, at: CGPoint(x: left / 2, y: cluster.y))
       guard cluster.moments.count > 1 else { continue }
       context.draw(

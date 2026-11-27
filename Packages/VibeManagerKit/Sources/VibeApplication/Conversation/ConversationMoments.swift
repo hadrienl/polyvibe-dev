@@ -161,10 +161,25 @@ public enum ConversationMoments {
     }
   }
 
-  /// Those of the kinds shown.
+  /// Those of the kinds shown. A message bookmarked at its start is its bookmark alone (#654):
+  /// the same words, once.
   public static func shown(_ placed: [Placed], hiding hidden: Set<String>) -> [Placed] {
-    guard !hidden.isEmpty else { return placed }
-    return placed.filter { !hidden.contains($0.moment.kind.rawValue) }
+    let kinds =
+      hidden.isEmpty ? placed : placed.filter { !hidden.contains($0.moment.kind.rawValue) }
+    let bookmarkedStarts = Set(
+      kinds.lazy.filter { $0.moment.kind == .bookmark && $0.moment.unit == 0 }
+        .map(\.moment.entryID))
+    guard !bookmarkedStarts.isEmpty else { return kinds }
+    return kinds.filter {
+      $0.moment.kind != .message || !bookmarkedStarts.contains($0.moment.entryID)
+    }
+  }
+
+  /// The moment whose icon a group of moments drawn together shows: its first one that is not a
+  /// message (#654), a message only alone. Each turn starts with one, and would hide what the
+  /// agent did — a failed test run — behind its bubble.
+  public static func iconMoment(of group: some Collection<Placed>) -> ConversationMoment? {
+    (group.first { $0.moment.kind != .message } ?? group.first)?.moment
   }
 
   /// The blocks that show one, each once, in order: where Next and Previous go.

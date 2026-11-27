@@ -139,11 +139,13 @@ struct MarginPreviewTests {
     #expect(item.heading == "You · \(MomentPresentation.time(of: Self.day)!)")
     #expect(item.label == "Round the VAT per line")
     #expect(item.isExcerpt)
-    // Bookmarked at its start, the overview's icon says it once.
+    // Bookmarked at its start, the overview says it once: its bookmark.
     model.toggleBookmark(block)
-    let both = model.shownMoments.filter { $0.blockIndex == 0 }
-    #expect(both.map(\.moment.kind) == [.bookmark, .message])
-    #expect(MomentPreviewContent(placed: both, model: model).items.count == 1)
+    #expect(model.moments.filter { $0.blockIndex == 0 }.map(\.moment.kind) == [.bookmark, .message])
+    #expect(model.shownMoments.filter { $0.blockIndex == 0 }.map(\.moment.kind) == [.bookmark])
+    // The bookmarks hidden, the message is back.
+    model.appearance.hiddenMomentKinds = [ConversationMomentKind.bookmark.rawValue]
+    #expect(model.shownMoments.filter { $0.blockIndex == 0 }.map(\.moment.kind) == [.message])
   }
 
   @Test("An answer bookmarked is the agent's")

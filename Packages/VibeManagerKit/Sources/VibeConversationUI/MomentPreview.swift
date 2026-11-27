@@ -47,15 +47,9 @@ struct MomentPreviewContent: Equatable {
     items = moments.map { Self.item(of: $0.moment, block: $0.block, agentName: agentName) }
   }
 
-  /// An icon of the overview: the moments drawn with it, each with its own block. A message
-  /// bookmarked at its start once: the bookmark says it already.
+  /// An icon of the overview: the moments drawn with it, each with its own block.
   init(placed: some Collection<ConversationMoments.Placed>, model: ConversationModel) {
     let blocks = model.blocks
-    let bookmarkedStarts = Set(
-      placed.filter { $0.moment.kind == .bookmark && $0.moment.unit == 0 }.map(\.blockIndex))
-    let placed = placed.filter {
-      $0.moment.kind != .message || !bookmarkedStarts.contains($0.blockIndex)
-    }
     self.init(
       moments: placed.map {
         ($0.moment, blocks.indices.contains($0.blockIndex) ? blocks[$0.blockIndex] : nil)

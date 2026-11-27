@@ -337,6 +337,24 @@ struct ConversationMomentsTests {
     let placed = ConversationMoments.placed(
       in: ConversationGrouping.blocks(entries), bookmarks: [])
     #expect(ConversationMoments.shown(placed, hiding: ["message"]).isEmpty)
+    // Bookmarked at its start, the bookmark alone; at another paragraph, both.
+    let marked = ConversationMoments.placed(
+      in: ConversationGrouping.blocks(entries), bookmarks: ["u1", "u2#u1"])
+    #expect(
+      ConversationMoments.shown(marked, hiding: []).map(\.moment.kind)
+        == [.bookmark, .message, .bookmark])
+  }
+
+  @Test("A group of icons shows what happened rather than the message that asked for it")
+  func iconOfAGroup() {
+    let message = ConversationMoments.Placed(
+      blockIndex: 0, moment: ConversationMoment(.message, entryID: "u", date: nil))
+    let failed = ConversationMoments.Placed(
+      blockIndex: 1,
+      moment: ConversationMoment(.tests(TestOutcome(total: 3, failed: 1)), entryID: "t", date: nil))
+    #expect(ConversationMoments.iconMoment(of: [message, failed]) == failed.moment)
+    #expect(ConversationMoments.iconMoment(of: [message]) == message.moment)
+    #expect(ConversationMoments.iconMoment(of: []) == nil)
   }
 
   @Test("What a sub-agent did stays inside it")
