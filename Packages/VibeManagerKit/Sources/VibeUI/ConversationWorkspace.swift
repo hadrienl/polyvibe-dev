@@ -375,7 +375,7 @@ public final class ConversationWorkspace {
   }
 
   private func apply(_ state: AgentActivityState?, to model: ConversationModel) {
-    model.activity = state?.activity
+    model.activity = state?.promptActivity
     model.isAgentReady = Self.isReady(state)
     model.processStateChanged()
   }

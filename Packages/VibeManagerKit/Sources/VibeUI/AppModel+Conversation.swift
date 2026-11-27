@@ -219,7 +219,7 @@ extension AppModel {
         self?.keepSignedInAccount(of: provider)
       }
       model.resumeAfterSignIn = { [weak self] in self?.resumeAfterSignIn(id) }
-      model.activity = self?.shownActivity(for: id)?.activity
+      model.activity = self?.shownActivity(for: id)?.promptActivity
       model.isAgentReady = ConversationWorkspace.isReady(self?.activity(for: id))
     }
   }

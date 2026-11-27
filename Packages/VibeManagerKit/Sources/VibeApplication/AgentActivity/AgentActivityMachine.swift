@@ -49,6 +49,8 @@ public struct AgentActivityState: Hashable, Sendable {
   /// The main agent's turn is over, but sub-agents still work in the background: the session
   /// shows them working until the last one ends.
   var isTurnOverBesideSubagents = false
+  /// The turn that ended beside them finished an answer, said once the session rests.
+  var isAnswerHeldBySubagents = false
 
   public init(
     activity: AgentActivity = .idle,
@@ -272,6 +274,7 @@ public enum AgentActivityMachine {
       // is still up (seen in the spike of #40): what waits keeps waiting.
       next.activity = next.requests.first.map { .awaitingUser($0.kind) } ?? .working
       next.isTurnOverBesideSubagents = false
+      next.isAnswerHeldBySubagents = false
       // Writing to the agent is reading what it said last.
       if byUser { next.unreadSince = nil }
     case .questionAsked(let kind, let tool, let notice):
@@ -383,7 +386,6 @@ public enum AgentActivityMachine {
       next.resultsOwed = 0
       if next.requests.isEmpty { next.clearRequests() }
       next.activity = next.requests.first.map { .awaitingUser($0.kind) } ?? .idle
-      if !context.isVisible { next.unreadSince = next.unreadSince ?? context.now }
       // Only an end that lists the sub-agents still at work is believed to (#532): one that says
       // nothing of them leaves none, as before it — a list kept from their own hooks may hold a
       // sub-agent killed without a word, and would keep the session working for ever.
@@ -393,6 +395,12 @@ public enum AgentActivityMachine {
         next.subagentsAtWork = []
       }
       next.endTurnBesideSubagents()
+      // The answer is said once the work it leaves running is done, not before (#532).
+      if next.isTurnOverBesideSubagents {
+        next.isAnswerHeldBySubagents = true
+      } else if !context.isVisible {
+        next.unreadSince = next.unreadSince ?? context.now
+      }
     case .interrupted:
       next.activity = .idle
       next.clearRequests()
@@ -407,6 +415,7 @@ public enum AgentActivityMachine {
       // Claude Code says so only once nothing works, sub-agents included: none comes while one
       // runs in the background (checked on 2.1.332, #532). Any still listed was stopped without
       // a word — killed from its panel, or in the foreground by an interruption.
+      if next.isTurnOverBesideSubagents { next.restFromSubagents(context: context) }
       next.clearSubagents()
       if next.activity == .working { next.activity = .idle }
     case .subagentStarted(let id):
@@ -414,8 +423,7 @@ public enum AgentActivityMachine {
     case .subagentEnded(let id):
       next.subagentsAtWork.remove(id)
       if next.subagentsAtWork.isEmpty, next.isTurnOverBesideSubagents {
-        next.isTurnOverBesideSubagents = false
-        if next.activity == .working { next.activity = .idle }
+        next.restFromSubagents(context: context)
       }
     }
     return next
@@ -447,6 +455,14 @@ extension AgentActivityState {
     activity == other.activity && unreadSince == other.unreadSince && source == other.source
       && requests == other.requests && isFirstRequestUncertain == other.isFirstRequestUncertain
       && drawnCandidates == other.drawnCandidates
+      && isTurnOverBesideSubagents == other.isTurnOverBesideSubagents
+  }
+
+  /// What the main agent's prompt does (#532): at rest once its turn is over, while sub-agents
+  /// still work in the background — Claude Code takes a message then. What sends to the agent
+  /// goes by it; what shows the session goes by `activity`, which works on.
+  public var promptActivity: AgentActivity {
+    isTurnOverBesideSubagents && activity == .working ? .idle : activity
   }
 
   // MARK: - Sub-agents (#532)
@@ -458,9 +474,19 @@ extension AgentActivityState {
     if isTurnOverBesideSubagents, activity == .idle { activity = .working }
   }
 
+  /// The last sub-agent ended: the session rests, and the answer held for it is said — unread
+  /// unless the session is in front of the user.
+  mutating func restFromSubagents(context: AgentActivityContext) {
+    isTurnOverBesideSubagents = false
+    if activity == .working { activity = .idle }
+    if isAnswerHeldBySubagents, !context.isVisible { unreadSince = unreadSince ?? context.now }
+    isAnswerHeldBySubagents = false
+  }
+
   mutating func clearSubagents() {
     subagentsAtWork = []
     isTurnOverBesideSubagents = false
+    isAnswerHeldBySubagents = false
   }
 
   // MARK: - Requests (#40)

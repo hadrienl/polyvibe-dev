@@ -261,15 +261,44 @@ struct AgentActivitySubagentTests {
     }
   }
 
-  @Test("A sub-agent that outlives the turn keeps the session working, its answer unread")
+  @Test("A sub-agent that outlives the turn keeps the session working, its prompt free")
   func survivesTurnEnd() {
     let ended = reduce(
       launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])), context: context(5))
     #expect(ended.activity == .working)
-    #expect(ended.unreadSince == at(5))
+    #expect(ended.promptActivity == .idle)
+    // Said once the work it left running is done: unread then, not before.
+    #expect(ended.unreadSince == nil)
     let done = reduce(ended, .signal(.subagentEnded("a1")), context: context(60))
     #expect(done.activity == .idle)
-    #expect(done.unreadSince == at(5))
+    #expect(done.promptActivity == .idle)
+    #expect(done.unreadSince == at(60))
+  }
+
+  @Test("Its rest in front of the user is read as it comes")
+  func restWhileVisible() {
+    let ended = reduce(launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])))
+    let done = reduce(ended, .signal(.subagentEnded("a1")), context: context(60, visible: true))
+    #expect(done.unreadSince == nil)
+  }
+
+  @Test("A message written beside the sub-agents starts a turn of the main agent")
+  func promptBesideSubagents() {
+    var state = reduce(launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])))
+    state = reduce(state, .signal(.promptSubmitted(byUser: true)))
+    #expect(state.promptActivity == .working)
+    // Its own end says its answer; the sub-agent still works.
+    state = reduce(state, .signal(.turnEndedBesideSubagents(["a1"])), context: context(30))
+    #expect(state.promptActivity == .idle)
+    #expect(state.activity == .working)
+    #expect(state.unreadSince == nil)
+  }
+
+  @Test("What waits on the user still shows at the prompt")
+  func promptShowsRequests() {
+    var state = reduce(launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])))
+    state = reduce(state, .signal(.questionAsked(.approval, tool: "Bash")))
+    #expect(state.promptActivity == .awaitingUser(.approval))
   }
 
   @Test("Several in parallel: the session rests once the last one ends")
@@ -358,7 +387,7 @@ struct AgentActivitySubagentTests {
     #expect(state.activity == .idle)
   }
 
-  @Test("The real order: its report starts a turn before its end, the answer stays unread")
+  @Test("The real order: its report starts a turn before its end, whose answer is unread")
   func realOrderKeepsUnread() {
     var state = reduce(
       launching("a1"), .signal(.turnEndedBesideSubagents(["a1"])), context: context(5))
@@ -369,7 +398,7 @@ struct AgentActivitySubagentTests {
       state = reduce(state, .signal(signal), context: context(90))
     }
     #expect(state.activity == .idle)
-    #expect(state.unreadSince == at(5))
+    #expect(state.unreadSince == at(90))
   }
 
   @Test("A sub-agent's dialog still comes first, and the session works on once it is answered")
