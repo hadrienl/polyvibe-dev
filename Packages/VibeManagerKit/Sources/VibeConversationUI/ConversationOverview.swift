@@ -154,6 +154,8 @@ struct ConversationOverview: View {
   let pager: ConversationPager
   /// The width of the messages left of the overview, which a bookmark's preview lies over.
   let room: Double
+  /// What the composer covers at the overview's foot (#656): a preview stays above it.
+  var bottomInset = 0.0
   @Environment(\.conversationAppearance) private var appearance
 
   @State private var box = OverviewLayoutBox()
@@ -223,7 +225,7 @@ struct ConversationOverview: View {
             starting: moment, moments: model.shownMoments, layout: layout, scale: scale)
         {
           BookmarkPreviewPlacement(
-            lineY: cluster.y,
+            lineY: cluster.y, bottomInset: bottomInset,
             width: ConversationOverviewLayout.previewWidth(
               textSize: MomentPreviewStyle(theme: theme, appearance: appearance).textSize,
               room: room)
@@ -669,6 +671,7 @@ private struct OverviewViewport: View {
 /// measured afterwards lagged a frame behind.
 private struct BookmarkPreviewPlacement: Layout {
   let lineY: Double
+  let bottomInset: Double
   let width: Double
 
   func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -682,7 +685,7 @@ private struct BookmarkPreviewPlacement: Layout {
       let size = subview.sizeThatFits(ProposedViewSize(width: width, height: nil))
       let origin = ConversationOverviewLayout.previewOrigin(
         lineY: lineY, previewWidth: size.width, previewHeight: size.height,
-        overviewHeight: bounds.height)
+        overviewHeight: max(bounds.height - bottomInset, 0))
       subview.place(
         at: CGPoint(x: bounds.minX + origin.x, y: bounds.minY + origin.y),
         proposal: ProposedViewSize(size))

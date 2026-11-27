@@ -33,6 +33,9 @@ public struct ConversationView: View {
   @State private var window: NSWindow?
   @State private var contentFrame = CGRect.zero
   @State private var viewportHeight = 0.0
+  /// What the composer covers at the foot of the messages, which scroll under it (#359): the
+  /// overview runs under it too, its bookmarks' previews stay above it (#656).
+  @State private var composerInset = 0.0
   @State private var pager = ConversationPager()
   /// Where a page or the overview leads, in the messages: a mark that SwiftUI scrolls to (#227).
   @State private var pageMark = PageMark()
@@ -305,6 +308,11 @@ public struct ConversationView: View {
         model.scrollGeometryChanged(contentFrame: contentFrame, viewportHeight: size.height)
         trackReadablePart()
       }
+      .onGeometryChange(for: Double.self) {
+        $0.safeAreaInsets.bottom
+      } action: {
+        composerInset = $0
+      }
       .defaultScrollAnchor(.bottom)
       // The overview stands for the scroll bar (#567).
       .scrollIndicators(showsOverview ? .hidden : .automatic)
@@ -317,13 +325,14 @@ public struct ConversationView: View {
             ConversationOverview(
               model: model, theme: theme,
               metrics: overviewMetrics(paneWidth: paneWidth, overview: overview), pager: pager,
-              room: paneWidth - overview.width
+              room: paneWidth - overview.width, bottomInset: composerInset
             )
           }
           .frame(width: overview.width)
           .modifier(OverviewBandFade())
-          // Down to the foot of the pane, under the composer's inset as the messages scroll
-          // there, rather than cut short level with it (#656). The composer keeps to the column.
+          // On macOS 26, where the composer is an inset over the messages: down to the foot of the
+          // pane, under it as the messages scroll there, rather than cut short level with it
+          // (#656). The composer keeps to the column. Before, it is below them: nothing to ignore.
           .ignoresSafeArea(.container, edges: .bottom)
         }
       }
