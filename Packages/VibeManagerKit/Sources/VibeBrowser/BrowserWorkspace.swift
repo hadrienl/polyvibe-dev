@@ -431,7 +431,7 @@ public final class BrowserWorkspace {
   /// and the web view is shown as when the agent opens a page (#239).
   func bringForward(_ tab: BrowserTabModel, in id: SessionID) {
     guard let browser = browsers[id], browser.tab(tab.id) != nil else { return }
-    if browser.activeTab?.id != tab.id { browser.activate(tab.id) }
+    if browser.activeTab?.id != tab.id { browser.activate(tab.id, byUser: false) }
     // "In front" is not "on screen": whatever route the page took — a tool, a redirection, a
     // script — the row of a session not shown says so, and the web view of the one shown comes
     // in front of its terminal, as when the agent opens a page (#288).

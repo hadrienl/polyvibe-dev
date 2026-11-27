@@ -175,14 +175,16 @@ public final class SessionBrowser {
     stateDidChange?()
   }
 
-  public func activate(_ id: BrowserTabID) {
+  /// `byUser`: the user turned to the tab — a click, ⌃⇥ — and its folded group opens on it. An
+  /// agent turning to it leaves the user's folding as it was: groups are the user's (#648).
+  public func activate(_ id: BrowserTabID, byUser: Bool = true) {
     guard tab(id) != nil else { return }
     // Turning to a tab ends the run of tabs opened from the one before: the next ones line up
     // after their opener again.
     for tab in tabs { tab.openerID = nil }
     unseenTabIDs.remove(id)
-    // The tab in front is a row the sidebar shows (#648).
-    if let groupID = tab(id)?.groupID { arrange { $0.setCollapsed(groupID, false) } }
+    // The tab the user turned to is a row the sidebar shows (#648).
+    if byUser, let groupID = tab(id)?.groupID { arrange { $0.setCollapsed(groupID, false) } }
     activeTabID = ticketTab?.id == id ? nil : id
     stateDidChange?()
   }

@@ -212,9 +212,10 @@ showed, is now only in the address field and the window: the sidebar is one clic
 ### Collapsing
 
 A group header shows a chevron, a folder, its name and its count. A collapsed group hides its
-rows. Its tabs stay in ⌃⇥'s order (`allTabs`, in the sidebar's order): turning to a tab in a collapsed group — by
-⌃⇥, a click in the address field's history, or an agent's `tab_activate` — expands it, so that the
-tab in front is always a visible row when the sidebar opens.
+rows. Its tabs stay in ⌃⇥'s order (`allTabs`, in the sidebar's order): turning to a tab in a collapsed group by
+⌃⇥ or a click expands it, so that the tab the user turned to is a visible row. An agent turning to
+it (`tab_activate`, a page brought forward) leaves the group folded: folding is the user's, and an
+agent must not undo it.
 
 ### Dragging
 
@@ -275,7 +276,7 @@ tabs, order and pins: no versioning needed.
   `"pinned"` stays the ticket's only until #587 decides what a user pin means to an agent.
 - No tool creates, renames or moves groups: groups are the user's way to find their tabs, not the
   agent's. `tab_open` opens a loose tab; a popup its page opens is grouped like any.
-- `tab_activate` on a tab in a collapsed group expands the group (see Collapsing).
+- `tab_activate` on a tab in a collapsed group leaves it collapsed (see Collapsing).
 
 ### Companion
 

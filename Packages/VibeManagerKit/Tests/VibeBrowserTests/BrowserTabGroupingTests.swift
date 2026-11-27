@@ -83,6 +83,22 @@ struct BrowserTabGroupingTests {
     #expect(browser.group(of: child.id)?.isCollapsed == false)
   }
 
+  @Test("An agent turning to a tab of a folded group leaves it folded")
+  func agentLeavesFolding() async throws {
+    _ = NSApplication.shared
+    let workspace = BrowserWorkspace()
+    let a = workspace.open(page("a"), in: session, openedBy: .user)
+    let child = workspace.open(page("b"), in: session, openedBy: .user, activate: false, from: a.id)
+    let browser = workspace.browser(for: session)
+    let group = try #require(browser.group(of: a.id))
+    browser.setCollapsed(group.id, true)
+
+    _ = await workspace.run(
+      tool: "tab_activate", arguments: ["tab": .string(child.id.description)], session: session)
+    #expect(browser.activeTab?.id == child.id)
+    #expect(browser.group(of: child.id)?.isCollapsed == true)
+  }
+
   @Test("Closing a group closes each of its tabs, and the group goes with them")
   func closeGroup() throws {
     _ = NSApplication.shared

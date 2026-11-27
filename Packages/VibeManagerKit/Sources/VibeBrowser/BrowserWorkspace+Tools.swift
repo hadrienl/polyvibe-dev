@@ -103,7 +103,7 @@ extension BrowserWorkspace: BrowserToolRunning {
         succeeded: tab.failure == nil)
       return status(of: tab, in: browser)
     case "tab_activate":
-      browser.activate(tab.id)
+      browser.activate(tab.id, byUser: false)
       tab.ensureWebView()
       record(tool, in: browser, tab: tab, target: tab.displayTitle, decision: .automatic)
       return .text("Tab \(tab.id) is in front.")
