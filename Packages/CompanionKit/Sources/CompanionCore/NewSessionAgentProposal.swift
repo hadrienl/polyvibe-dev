@@ -11,14 +11,16 @@ public struct NewSessionAgentProposal: Hashable, Sendable {
     followsTheFolder = !userChose
   }
 
-  /// The agent to put for `folder`; `nil` leaves the one on the sheet. An agent the phone was not
-  /// offered is ignored, as is a folder the Mac knows no agent for.
+  /// The agent to put for `folder`, the Mac's first that can run for a folder it knows no agent
+  /// for; `nil` leaves the one on the sheet, as with a Mac that came before. An agent the phone
+  /// was not offered is ignored.
   public func agent(
     forFolder folder: String, options: RemoteNewSessionOptions,
     listings: [String: RemoteFolderListing] = [:]
   ) -> String? {
     guard followsTheFolder,
-      let id = options.folderAgents?[folder] ?? listings[folder]?.agentID,
+      let id = options.folderAgents?[folder] ?? listings[folder]?.agentID
+        ?? options.defaultAgentID,
       options.agents.contains(where: { $0.id == id })
     else { return nil }
     return id

@@ -31,6 +31,14 @@ extension AppModel {
     return found
   }
 
+  /// The agent a new session proposes in a folder it knows no agent for, as the New Session sheet
+  /// does: the first that can run.
+  public func companionDefaultAgent() async -> String? {
+    guard let agents else { return nil }
+    let availabilities = await agents.availabilities(forceRefresh: false)
+    return agentDescriptors.first { availabilities[$0.id]?.isUsable == true }?.id.rawValue
+  }
+
   /// A project icon's PNG, as the sessions wear it.
   public func companionIconPNG(_ sha256: String) async -> Data? {
     guard let id = SessionIconID(sha256: sha256) else { return nil }

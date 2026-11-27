@@ -34,6 +34,20 @@ struct NewSessionAgentProposalTests {
     #expect(proposal.agent(forFolder: "/work/api", options: older) == nil)
   }
 
+  @Test("A folder the Mac knows no agent for gets the Mac's first agent that can run")
+  func defaultAgent() {
+    var offer = options
+    offer.defaultAgentID = "claude-code"
+    let proposal = NewSessionAgentProposal()
+    let listings = ["/work/x": RemoteFolderListing(path: "/work/x", folders: [])]
+    #expect(proposal.agent(forFolder: "/work/new", options: offer) == "claude-code")
+    #expect(
+      proposal.agent(forFolder: "/work/x", options: offer, listings: listings) == "claude-code")
+    #expect(proposal.agent(forFolder: "/work/api", options: offer) == "codex")
+    offer.defaultAgentID = "gone"
+    #expect(proposal.agent(forFolder: "/work/new", options: offer) == nil)
+  }
+
   @Test("Once the user picks, and on a form that came back, the folder no longer changes it")
   func userChoiceStops() {
     var proposal = NewSessionAgentProposal()

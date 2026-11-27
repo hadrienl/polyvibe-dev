@@ -5,11 +5,19 @@ import VibeDomain
 
 @testable import VibeUI
 
-/// Agents known by their availability alone: the companion's proposal reads nothing else.
+/// Agents known by their name and availability alone, in registration order: the companion's
+/// proposal reads nothing else.
 private struct AvailabilityRegistry: AgentProviderResolving {
-  var states: [String: AgentAvailabilityState]
+  var states: KeyValuePairs<String, AgentAvailabilityState>
 
-  func descriptors() async -> [AgentDescriptor] { [] }
+  func descriptors() async -> [AgentDescriptor] {
+    states.map {
+      AgentDescriptor(
+        id: AgentProviderID($0.key), displayName: $0.key,
+        capabilities: AgentCapabilities(
+          supportsModelSelection: true, supportsInitialPrompt: true, supportsResume: true))
+    }
+  }
 
   func provider(id _: AgentProviderID) async -> (any AgentProvider)? { nil }
 
@@ -64,6 +72,19 @@ struct CompanionFolderAgentTests {
     #expect(await model.companionAgents(forFolders: ["/work/api", "/work/web"]).isEmpty)
   }
 
+  @Test("A folder without an agent gets the first that can run, in registration order")
+  func defaultAgent() async {
+    let model = AppModel(
+      repository: HistoryRepository(values: []),
+      agents: AvailabilityRegistry(states: [
+        "claude-code": .notFound, "codex": .unauthenticated, "gemini": .available,
+      ]),
+      recentFolderStore: InMemoryRecentFolderStore())
+    await model.load()
+
+    #expect(await model.companionDefaultAgent() == "codex")
+  }
+
   @Test("Without agents, no folder proposes one")
   func noRegistry() async {
     let model = AppModel(
@@ -72,5 +93,6 @@ struct CompanionFolderAgentTests {
     await model.load()
 
     #expect(await model.companionAgents(forFolders: ["/work/api"]).isEmpty)
+    #expect(await model.companionDefaultAgent() == nil)
   }
 }

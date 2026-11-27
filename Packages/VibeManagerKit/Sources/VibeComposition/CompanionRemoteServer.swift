@@ -651,12 +651,14 @@ final class CompanionRemoteServer {
     }
     let folderAgents = await appModel.companionAgents(
       forFolders: folders + templates.compactMap(\.folder))
+    let defaultAgent = await appModel.companionDefaultAgent()
     send(
       peer,
       .newSessionOffer(
         RemoteNewSessionOptions(
           folders: folders, agents: agents, symbols: palette.symbols,
-          colors: palette.swatches.map(\.hex), templates: templates, folderAgents: folderAgents)))
+          colors: palette.swatches.map(\.hex), templates: templates, folderAgents: folderAgents,
+          defaultAgentID: defaultAgent)))
   }
 
   private func create(_ request: RemoteNewSession, for peer: String) async {
@@ -696,9 +698,10 @@ final class CompanionRemoteServer {
   }
 
   /// A listing, with the agent a new session in its folder proposes (#634): read on the main
-  /// actor, once the disk was read away from it.
+  /// actor, once the disk was read away from it. From the sessions, so even for a folder that
+  /// could not be read.
   private func withFolderAgent(_ message: RemoteMessage) async -> RemoteMessage {
-    guard case .folderListing(var listing) = message, !listing.isUnreadable, let appModel else {
+    guard case .folderListing(var listing) = message, let appModel else {
       return message
     }
     listing.agentID = await appModel.companionAgents(forFolders: [listing.path])[listing.path]

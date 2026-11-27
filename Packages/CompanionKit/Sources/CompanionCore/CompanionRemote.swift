@@ -493,10 +493,13 @@ public struct RemoteNewSessionOptions: Codable, Hashable, Sendable {
   /// The agent the Mac would propose for each folder offered, recent or a template's (#634);
   /// `nil` from a Mac that came before.
   public var folderAgents: [String: String]?
+  /// The agent the Mac proposes for a folder it knows no agent for: its first that can run.
+  public var defaultAgentID: String?
 
   public init(
     folders: [String], agents: [RemoteAgent], symbols: [String] = [], colors: [String] = [],
-    templates: [RemoteTemplate] = [], folderAgents: [String: String]? = nil
+    templates: [RemoteTemplate] = [], folderAgents: [String: String]? = nil,
+    defaultAgentID: String? = nil
   ) {
     self.folders = folders
     self.agents = agents
@@ -504,6 +507,7 @@ public struct RemoteNewSessionOptions: Codable, Hashable, Sendable {
     self.colors = colors
     self.templates = templates
     self.folderAgents = folderAgents
+    self.defaultAgentID = defaultAgentID
   }
 }
 

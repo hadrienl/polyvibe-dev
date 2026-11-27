@@ -182,7 +182,7 @@ struct NewSessionSheet: View {
         if folder == nil { folder = options.folders.first }
         // A form that came back may name an agent the Mac no longer has.
         if !options.agents.contains(where: { $0.id == agentID }) {
-          agentID = options.agents.first?.id
+          agentID = options.defaultAgentID ?? options.agents.first?.id
         }
         proposeAgent()
       }
