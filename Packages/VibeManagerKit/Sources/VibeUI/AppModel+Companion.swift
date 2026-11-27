@@ -15,6 +15,38 @@ extension AppModel {
     offeredRecentFolders.map(\.path)
   }
 
+  /// The agent a new session proposes for each of these folders (#634), as the New Session sheet
+  /// does: the one remembered for the folder, unless it cannot run. A folder with no such agent
+  /// is left out.
+  public func companionAgents(forFolders paths: [String]) async -> [String: String] {
+    guard let agents else { return [:] }
+    let availabilities = await agents.availabilities(forceRefresh: false)
+    var found: [String: String] = [:]
+    for path in paths {
+      guard let agent = rememberedAgent(forFolder: path),
+        availabilities[AgentProviderID(agent)]?.isUsable == true
+      else { continue }
+      found[path] = agent
+    }
+    return found
+  }
+
+  /// The agents a new session can be created with, read from the registry: the window's list
+  /// stays empty until the launch has adopted the running agents and settled the usage, and a
+  /// phone asking in the meantime was offered no agent at all.
+  public func companionAgentDescriptors() async -> [AgentDescriptor] {
+    await agents?.descriptors() ?? []
+  }
+
+  /// The agent a new session proposes in a folder it knows no agent for, as the New Session sheet
+  /// does: the first that can run.
+  public func companionDefaultAgent() async -> String? {
+    guard let agents else { return nil }
+    let availabilities = await agents.availabilities(forceRefresh: false)
+    return await agents.descriptors().first { availabilities[$0.id]?.isUsable == true }?.id
+      .rawValue
+  }
+
   /// A project icon's PNG, as the sessions wear it.
   public func companionIconPNG(_ sha256: String) async -> Data? {
     guard let id = SessionIconID(sha256: sha256) else { return nil }

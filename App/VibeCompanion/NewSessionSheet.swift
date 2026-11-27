@@ -22,6 +22,8 @@ struct NewSessionSheet: View {
   @State private var browsing: [String] = []
   /// Why the form came back, or why it can't send.
   @State private var error: String?
+  /// The agent of the folder chosen, until the user picks an agent or a model (#634).
+  @State private var proposal = NewSessionAgentProposal()
 
   init(returned: ReturnedCreation? = nil) {
     guard let returned else { return }
@@ -36,6 +38,7 @@ struct NewSessionSheet: View {
     _appearance = State(initialValue: request.appearance)
     _extraFolders = State(initialValue: [request.folder])
     _error = State(initialValue: returned.error)
+    _proposal = State(initialValue: NewSessionAgentProposal(userChose: true))
   }
 
   private var shownFolders: [String] {
@@ -102,14 +105,14 @@ struct NewSessionSheet: View {
               .accessibilityLabel("Change the Icon")
               TextField("Name (from the message if empty)", text: $name)
             }
-            Picker("Agent", selection: $agentID) {
+            Picker("Agent", selection: chosen($agentID)) {
               ForEach(options.agents) { agent in
                 Text(verbatim: agent.name).tag(Optional(agent.id))
               }
             }
             .pickerStyle(.menu)
             if let agent, !agent.models.isEmpty {
-              Picker("Model", selection: $modelID) {
+              Picker("Model", selection: chosen($modelID)) {
                 Text("Agent’s Default").tag(String?.none)
                 ForEach(agent.models) { model in
                   Text(verbatim: model.name).tag(Optional(model.id))
@@ -179,11 +182,19 @@ struct NewSessionSheet: View {
         if folder == nil { folder = options.folders.first }
         // A form that came back may name an agent the Mac no longer has.
         if !options.agents.contains(where: { $0.id == agentID }) {
-          agentID = options.agents.first?.id
+          agentID = options.defaultAgentID ?? options.agents.first?.id
         }
+        proposeAgent()
       }
       .onChange(of: agentID) { _, _ in modelID = nil }
-      .onChange(of: folder) { _, _ in error = nil }
+      .onChange(of: folder) { _, _ in
+        error = nil
+        proposeAgent()
+      }
+      // A folder chosen in the browser before its listing came.
+      .onChange(of: folder.flatMap { channel.folderListings[$0]?.agentID }) { _, _ in
+        proposeAgent()
+      }
       .onChange(of: channel.phase) { _, phase in
         if phase == .connected { error = nil }
       }
@@ -204,6 +215,25 @@ struct NewSessionSheet: View {
     } message: {
       Text(verbatim: channel.folderFailure?.text ?? "")
     }
+  }
+
+  /// The agent the Mac proposes for the folder chosen, with the agent's default model.
+  private func proposeAgent() {
+    guard let folder, let options,
+      let proposed = proposal.agent(
+        forFolder: folder, options: options, listings: channel.folderListings)
+    else { return }
+    agentID = proposed
+  }
+
+  /// A picker's selection that, once the user sets it, keeps the folder from changing the agent.
+  private func chosen(_ selection: Binding<String?>) -> Binding<String?> {
+    Binding(
+      get: { selection.wrappedValue },
+      set: {
+        proposal.userChose()
+        selection.wrappedValue = $0
+      })
   }
 
   private func create() {
