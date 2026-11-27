@@ -44,6 +44,13 @@ public struct AgentActivityState: Hashable, Sendable {
   /// `ElicitationResult` comes after its answer took it away, and says nothing of the requests
   /// left behind it.
   var resultsOwed = 0
+  /// The sub-agents at work, by their `agent_id` (#532).
+  var subagentsAtWork: Set<String> = []
+  /// The main agent's turn is over, but sub-agents still work in the background: the session
+  /// shows them working until the last one ends.
+  var isTurnOverBesideSubagents = false
+  /// The turn that ended beside them finished an answer, said once the session rests.
+  var isAnswerHeldBySubagents = false
 
   public init(
     activity: AgentActivity = .idle,
@@ -132,12 +139,14 @@ public enum AgentActivityMachine {
       next.lastUserInputAt = nil
       next.clearRequests()
       next.resultsOwed = 0
+      next.clearSubagents()
 
     case .processEnded:
       next.activity = .idle
       next.lastOutputAt = nil
       next.clearRequests()
       next.resultsOwed = 0
+      next.clearSubagents()
 
     case .signal(let signal):
       next = apply(signal, to: next, context: context)
@@ -245,9 +254,10 @@ public enum AgentActivityMachine {
     // A tool that ran, a new turn, its end: the dialog drawn before its report, if any, is gone.
     switch signal {
     case .promptSubmitted, .questionResolved, .toolFinished, .batchResolved, .turnEnded,
-      .turnFailed, .interrupted, .agentEnded:
+      .turnEndedBesideSubagents, .turnFailed, .interrupted, .agentEnded:
       next.drawnBeforeReport = nil
-    case .channelConfirmed, .questionAsked, .dialogAnnounced, .dialogDrawn, .waitingForInput:
+    case .channelConfirmed, .questionAsked, .dialogAnnounced, .dialogDrawn, .waitingForInput,
+      .subagentStarted, .subagentEnded:
       break
     }
     switch signal {
@@ -263,6 +273,8 @@ public enum AgentActivityMachine {
       // A background task finishing starts a turn of the main agent while a sub-agent's dialog
       // is still up (seen in the spike of #40): what waits keeps waiting.
       next.activity = next.requests.first.map { .awaitingUser($0.kind) } ?? .working
+      next.isTurnOverBesideSubagents = false
+      next.isAnswerHeldBySubagents = false
       // Writing to the agent is reading what it said last.
       if byUser { next.unreadSince = nil }
     case .questionAsked(let kind, let tool, let notice):
@@ -362,7 +374,7 @@ public enum AgentActivityMachine {
           content: .inTerminal(prompt), reference: AgentToolReference(tool: nil), isShown: true),
         kind: .approval, tool: nil, context: context)
       next.activity = .awaitingUser(next.requests.first?.kind ?? .approval)
-    case .turnEnded:
+    case .turnEnded, .turnEndedBesideSubagents:
       // A sub-agent in the background can still be waiting on the user once the main turn ends —
       // on a dialog it drew. One announced by its tool and never drawn may never be: a hook of
       // the user's own can stop the tool before either. Should it be drawn after all, its
@@ -374,13 +386,45 @@ public enum AgentActivityMachine {
       next.resultsOwed = 0
       if next.requests.isEmpty { next.clearRequests() }
       next.activity = next.requests.first.map { .awaitingUser($0.kind) } ?? .idle
-      if !context.isVisible { next.unreadSince = next.unreadSince ?? context.now }
-    case .interrupted, .agentEnded:
+      // Only an end that lists the sub-agents still at work is believed to (#532): one that says
+      // nothing of them leaves none, as before it — a list kept from their own hooks may hold a
+      // sub-agent killed without a word, and would keep the session working for ever.
+      if case .turnEndedBesideSubagents(let subagents) = signal {
+        next.subagentsAtWork = subagents
+      } else {
+        next.subagentsAtWork = []
+      }
+      next.endTurnBesideSubagents()
+      // The answer is said once the work it leaves running is done, not before (#532).
+      if next.isTurnOverBesideSubagents {
+        next.isAnswerHeldBySubagents = true
+      } else if !context.isVisible {
+        next.unreadSince = next.unreadSince ?? context.now
+      }
+    case .interrupted:
       next.activity = .idle
       next.clearRequests()
       next.resultsOwed = 0
+      next.endTurnBesideSubagents()
+    case .agentEnded:
+      next.activity = .idle
+      next.clearRequests()
+      next.resultsOwed = 0
+      next.clearSubagents()
     case .waitingForInput:
+      // Claude Code says so only once nothing works, sub-agents included: none comes while one
+      // runs in the background (checked on 2.1.332, #532). Any still listed was stopped without
+      // a word — killed from its panel, or in the foreground by an interruption.
+      if next.isTurnOverBesideSubagents { next.restFromSubagents(context: context) }
+      next.clearSubagents()
       if next.activity == .working { next.activity = .idle }
+    case .subagentStarted(let id):
+      next.subagentsAtWork.insert(id)
+    case .subagentEnded(let id):
+      next.subagentsAtWork.remove(id)
+      if next.subagentsAtWork.isEmpty, next.isTurnOverBesideSubagents {
+        next.restFromSubagents(context: context)
+      }
     }
     return next
   }
@@ -411,6 +455,38 @@ extension AgentActivityState {
     activity == other.activity && unreadSince == other.unreadSince && source == other.source
       && requests == other.requests && isFirstRequestUncertain == other.isFirstRequestUncertain
       && drawnCandidates == other.drawnCandidates
+      && isTurnOverBesideSubagents == other.isTurnOverBesideSubagents
+  }
+
+  /// What the main agent's prompt does (#532): at rest once its turn is over, while sub-agents
+  /// still work in the background — Claude Code takes a message then. What sends to the agent
+  /// goes by it; what shows the session goes by `activity`, which works on.
+  public var promptActivity: AgentActivity {
+    isTurnOverBesideSubagents && activity == .working ? .idle : activity
+  }
+
+  // MARK: - Sub-agents (#532)
+
+  /// The main agent's turn is over: the sub-agents still at work keep the session working. What
+  /// waits on the user is still shown first.
+  mutating func endTurnBesideSubagents() {
+    isTurnOverBesideSubagents = !subagentsAtWork.isEmpty
+    if isTurnOverBesideSubagents, activity == .idle { activity = .working }
+  }
+
+  /// The last sub-agent ended: the session rests, and the answer held for it is said — unread
+  /// unless the session is in front of the user.
+  mutating func restFromSubagents(context: AgentActivityContext) {
+    isTurnOverBesideSubagents = false
+    if activity == .working { activity = .idle }
+    if isAnswerHeldBySubagents, !context.isVisible { unreadSince = unreadSince ?? context.now }
+    isAnswerHeldBySubagents = false
+  }
+
+  mutating func clearSubagents() {
+    subagentsAtWork = []
+    isTurnOverBesideSubagents = false
+    isAnswerHeldBySubagents = false
   }
 
   // MARK: - Requests (#40)

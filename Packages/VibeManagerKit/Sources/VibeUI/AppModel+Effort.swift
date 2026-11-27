@@ -79,7 +79,7 @@ extension AppModel {
     guard launcher?.isRunning(id) == true, effortMenu(for: id)?.isApplying == false else {
       return false
     }
-    switch activity(for: id)?.activity {
+    switch activity(for: id)?.promptActivity {
     case .working, .awaitingUser: return false
     case .idle, nil: return true
     }
@@ -162,7 +162,7 @@ extension AppModel {
     // The list of commands the CLI draws under a `/` comes before Return picks one.
     try? await Task.sleep(for: Self.effortCommandSettle)
     var isAtRest: Bool {
-      switch activity(for: id)?.activity {
+      switch activity(for: id)?.promptActivity {
       case .working, .awaitingUser: false
       case .idle, nil: true
       }

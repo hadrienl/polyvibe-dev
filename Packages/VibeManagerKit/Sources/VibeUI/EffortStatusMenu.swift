@@ -99,7 +99,7 @@ struct EffortStatusMenu: View {
   var body: some View {
     if let menu = model.effortMenu(for: session.id) {
       let isWorking: Bool =
-        switch model.activity(for: session.id)?.activity {
+        switch model.activity(for: session.id)?.promptActivity {
         case .working, .awaitingUser: true
         case .idle, nil: false
         }

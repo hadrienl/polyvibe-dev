@@ -26,6 +26,11 @@ public enum AgentActivityHookCommand {
     /// their own. Read from the first `payloadByteLimit` bytes, which hold the fields that come
     /// before a tool's output: which agent ran which tool, on which command or file (#40).
     case fields([String])
+    /// Only whether the input holds the field `key`, and what the first group of `pattern` — an
+    /// extended regular expression, without a slash — captures each time it matches: written back
+    /// as `{"key":["…","…"]}`, the captures being a JSON string's contents. The whole input is
+    /// read: the field may come after a long answer, which never reaches the disk (#532).
+    case captures(key: String, pattern: String)
   }
 
   /// The script, identical for every hook. Its input is read to the end in every case, so the CLI
@@ -53,6 +58,16 @@ public enum AgentActivityHookCommand {
     + #"[ -n "$f" ] && printf "%s\t%s\t%s\n" "$e" "$(date +%s)" "$p" >>"$f"; "#
     + #"exit 0"#
 
+  /// The script of `Payload.captures`, of its own too.
+  static let capturesScript =
+    #"f="$VIBE_AGENT_ACTIVITY_LOG"; e="$1"; k="$2"; r="$3"; "#
+    + #"i=$(tr -d "\r\n"); p=; "#
+    + #"if printf "%s" "$i" | grep -q -E -- "\"$k\": ?\["; then "#
+    + #"l=$(printf "%s" "$i" | grep -o -E -- "$r" | sed -E "s/$r/\"\\1\"/" | paste -s -d , -); "#
+    + #"p="{\"$k\":[$l]}"; fi; "#
+    + #"[ -n "$f" ] && printf "%s\t%s\t%s\n" "$e" "$(date +%s)" "$p" >>"$f"; "#
+    + #"exit 0"#
+
   public static func command(event: String, payload: Payload) -> String {
     var script = self.script
     var arguments = [event]
@@ -63,6 +78,9 @@ public enum AgentActivityHookCommand {
     case .fields(let keys):
       script = fieldsScript
       arguments += keys
+    case .captures(let key, let pattern):
+      script = capturesScript
+      arguments += [key, pattern]
     }
     return (["/bin/sh", "-c", script, "vibe-activity"] + arguments).map(shellQuoted)
       .joined(separator: " ") + " 2>/dev/null"

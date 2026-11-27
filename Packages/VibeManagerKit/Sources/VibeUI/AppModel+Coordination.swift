@@ -323,7 +323,8 @@ extension AppModel {
 
   private func findTypingBlock(of id: SessionID) async -> TypingBlock? {
     guard launcher?.isRunning(id) == true else { return .notRunning }
-    switch activity(for: id)?.activity {
+    // Sub-agents at work in the background leave the prompt free for a message (#532).
+    switch activity(for: id)?.promptActivity {
     case .working: return .working
     case .awaitingUser: return .awaitingUser
     case .idle, nil: break
@@ -384,7 +385,7 @@ extension AppModel {
   }
 
   private func typingState(of id: SessionID) -> TypingState {
-    switch activity(for: id)?.activity {
+    switch activity(for: id)?.promptActivity {
     case .working: .working
     case .awaitingUser: .awaitingUser
     case .idle, nil: .atRest
@@ -863,7 +864,7 @@ extension AppModel {
     // A child waiting for the user is refused: its request is the user's to answer.
     try CoordinationPolicy.checkSend(
       to: child, isRunning: launcher?.isRunning(child.id) == true,
-      activity: activity(for: child.id)?.activity, showsPanel: false)
+      activity: activity(for: child.id)?.promptActivity, showsPanel: false)
     let message = CoordinationPolicy.fromCoordinator(text, coordinatorName: coordinator.name)
     // Typed now only into a child at rest, and after the messages kept for it; otherwise kept,
     // and typed once it finishes its turn.

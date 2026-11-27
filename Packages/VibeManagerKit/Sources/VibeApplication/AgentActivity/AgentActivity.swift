@@ -78,8 +78,17 @@ public enum AgentSignal: Hashable, Sendable {
   /// reports a refusal with a comment, Escape on a sub-agent's dialog, a countdown run out, with
   /// this alone.
   case batchResolved(agentID: String?)
+  /// A sub-agent, known by its `agent_id`, started (#532). One launched in the background
+  /// outlives the turn that started it: the session works on until it ends.
+  case subagentStarted(String)
+  /// This sub-agent finished its work.
+  case subagentEnded(String)
   /// The agent finished its answer.
   case turnEnded
+  /// The agent finished its answer while these sub-agents, and no others, still work in the
+  /// background (#532). Said by the end of the turn itself, the list stands for every sub-agent
+  /// stopped without a word: a sub-agent killed reports no end of its own.
+  case turnEndedBesideSubagents(Set<String>)
   /// The turn ended on an error the user must act on, which `prompt` says (#273): signing in again.
   case turnFailed(AgentTerminalPrompt)
   /// The user stopped the turn. Nothing was answered, so nothing is left to read.
