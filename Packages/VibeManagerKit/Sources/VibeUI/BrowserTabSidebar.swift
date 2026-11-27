@@ -90,7 +90,9 @@ struct BrowserTabSidebarOverlay: View {
             .frame(width: Self.width(in: proxy.size.width))
             .frame(maxHeight: .infinity)
             .background(.regularMaterial)
-            .overlay(alignment: .trailing) { Divider() }
+            // Alone in an overlay, a Divider lies flat across the middle: in an HStack it
+            // stands up as the sidebar's edge.
+            .overlay(alignment: .trailing) { HStack(spacing: 0) { Divider() } }
             .shadow(color: .black.opacity(0.2), radius: 12, x: 4)
             .transition(.move(edge: .leading))
         }
