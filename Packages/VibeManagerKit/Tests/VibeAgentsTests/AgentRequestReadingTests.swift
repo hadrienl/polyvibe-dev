@@ -262,14 +262,14 @@ struct CodexQuestionWatchTests {
     try Data(#"{"type":"session_meta","payload":{"cwd":"/elsewhere"}}"#.utf8).write(to: other)
     let rollout = folder.appendingPathComponent("rollout-mine.jsonl")
     let meta = #"{"type":"session_meta","payload":{"cwd":"\#(work)"}}"# + "\n"
-    // One question answered long ago, one still waiting, asked since the session started: only
-    // the second is said.
+    // One question answered already, one still waiting, both asked since the session started:
+    // only the second is said.
+    let answered = Self.dated(RequestPayloads.codexQuestionCall, since.addingTimeInterval(0.5))
+    let answer = Self.dated(RequestPayloads.codexQuestionOutput, since.addingTimeInterval(0.6))
     let waiting = Self.dated(
       RequestPayloads.codexQuestionCall.replacingOccurrences(of: "call_1", with: "call_3"),
       since.addingTimeInterval(1))
-    let history = [
-      meta, RequestPayloads.codexQuestionCall, RequestPayloads.codexQuestionOutput, waiting,
-    ].joined(separator: "\n")
+    let history = [meta, answered, answer, waiting].joined(separator: "\n")
     try Data((history + "\n").utf8).write(to: rollout)
 
     let watch = CodexQuestionWatch(
@@ -390,13 +390,17 @@ struct CodexQuestionWatchTests {
         < 0.01)
     let rollout = try Self.dayFolder(in: sessions, for: created)
       .appendingPathComponent("rollout-2026-11-22T10-00-00-\(identifier).jsonl")
-    // The run before was stopped on a question it never had an answer to: its dialog went with it.
+    // The run before was stopped on questions it never had an answer to, one of them asked
+    // without waiting, and dated to the second: their dialogs went with it.
     let gone = Self.dated(RequestPayloads.codexQuestionCall, created.addingTimeInterval(60))
+    let goneAsync =
+      #"{"timestamp":"\#(Date.ISO8601FormatStyle().format(created.addingTimeInterval(70)))","type":"response_item","payload":{"type":"function_call","name":"request_user_input_async","arguments":"{\"questions\":[{\"title\":\"Which port?\"}]}","call_id":"call_a"}}"#
     let asked = Self.dated(
       RequestPayloads.codexQuestionCall.replacingOccurrences(of: "call_1", with: "call_2"),
       resumed.addingTimeInterval(1))
     let meta = #"{"type":"session_meta","payload":{"cwd":"\#(work)"}}"#
-    try Data(([meta, gone, asked].joined(separator: "\n") + "\n").utf8).write(to: rollout)
+    let lines = [meta, gone, goneAsync, asked]
+    try Data((lines.joined(separator: "\n") + "\n").utf8).write(to: rollout)
 
     let watch = CodexQuestionWatch(
       sessionsDirectory: sessions, workingDirectoryPath: work, since: resumed,
@@ -404,6 +408,12 @@ struct CodexQuestionWatchTests {
       discoveryTimeout: .milliseconds(500))
     var iterator = watch.signals().makeAsyncIterator()
     #expect(requestNotice(in: await iterator.next())?.key == "codex:call_2")
+    // Nor does the turn's end take away what is no longer asked.
+    let handle = try FileHandle(forWritingTo: rollout)
+    try handle.seekToEnd()
+    try handle.write(contentsOf: Data((AsyncQuestionWatchTests.failedTurn + "\n").utf8))
+    try handle.close()
+    #expect(await iterator.next() == .turnEnded)
     #expect(CodexQuestionWatch.creationDate(of: "00000000-0000-4000-8000-000000000000") == nil)
   }
 }
