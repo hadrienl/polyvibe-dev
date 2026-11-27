@@ -430,24 +430,56 @@ public enum TerminalText {
   /// indented as drawn: the dialog an agent draws now, read before an answer is typed into it
   /// (#273), whose wrapped lines are told by their indent. The history is replayed into a
   /// terminal of its own, which no view shows.
-  public static func screen(replaying history: [UInt8], size: TerminalSize) -> String {
+  /// A frame begun is waited on while `waitingOnFrame`, which the caller tells from when the session
+  /// last began one (#580): read once it has been drawn.
+  public static func screen(
+    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = false
+  ) -> String {
     let terminal = Terminal(
       delegate: SilentTerminalDelegate(),
       options: TerminalOptions(cols: size.columns, rows: size.rows, scrollback: 0))
-    terminal.feed(byteArray: history)
+    terminal.feed(buffer: history[..<drawnThrough(history[...], waiting: waitingOnFrame)])
     return visibleScreen(of: terminal, keepingIndent: true)
   }
 
   /// The screen as `screen(replaying:size:)` reads it, and the same without its dim text (#464):
   /// what an agent shows greyed in its prompt — `Try "…"`, a suggested answer — is not text typed
   /// into it. The history is replayed once for both.
-  public static func screens(replaying history: [UInt8], size: TerminalSize) -> TerminalScreens {
+  public static func screens(
+    replaying history: [UInt8], size: TerminalSize, waitingOnFrame: Bool = false
+  ) -> TerminalScreens {
     let terminal = Terminal(
       delegate: SilentTerminalDelegate(),
       options: TerminalOptions(cols: size.columns, rows: size.rows, scrollback: 0))
-    terminal.feed(byteArray: history)
+    terminal.feed(buffer: history[..<drawnThrough(history[...], waiting: waitingOnFrame)])
     return TerminalScreens(of: terminal)
   }
+
+  /// Where the output a program has finished drawing ends (#580): before the synchronized update
+  /// it began and has not ended yet, while `waiting` — `ESC[?2026h`, its `ESC[?2026l` still to
+  /// come. Claude Code draws each frame inside one, once the terminal says it knows them, as
+  /// SwiftTerm does: the screen is cleared, then written again over several reads, and a view
+  /// shows it only once the update ends. Read in between, the screen holds a frame half drawn, its
+  /// dialog gone — never what the user sees. A view stops waiting on an update a second after it
+  /// began, which the session knows: one that runs on past `longestFrame` is read as drawn too.
+  /// An escape sequence the read cut short is never fed: it draws nothing yet, and may be a begin.
+  static func drawnThrough(_ bytes: ArraySlice<UInt8>, waiting: Bool) -> Int {
+    let (marks, cutShort) = SynchronizedUpdate.marks(in: bytes)
+    let read = cutShort ?? bytes.endIndex
+    guard waiting else { return read }
+    var opened: Int?
+    for (mark, at) in marks {
+      switch mark {
+      case .begin: opened = opened ?? at
+      case .end: opened = nil
+      }
+    }
+    guard let opened, bytes.endIndex - opened <= longestFrame else { return read }
+    return opened
+  }
+
+  /// The most a frame is waited on, in bytes: a full screen, colours and all, is far less.
+  static let longestFrame = 1 << 20
 
   /// The screen's lines, trailing blanks and trailing empty lines removed — and leading blanks,
   /// unless `keepingIndent`. Dim text is read as blanks when `droppingDimText`.
@@ -552,31 +584,42 @@ public actor TerminalScreenFollower {
 
   public init() {}
 
-  public func screen(of history: TerminalHistorySnapshot, size: TerminalSize) -> String {
-    TerminalText.visibleScreen(of: follow(history, size: size), keepingIndent: true)
+  public func screen(
+    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = false
+  ) -> String {
+    TerminalText.visibleScreen(
+      of: follow(history, size: size, waitingOnFrame: waitingOnFrame), keepingIndent: true)
   }
 
   /// The screen as it shows and without its dim text (#464).
-  public func screens(of history: TerminalHistorySnapshot, size: TerminalSize) -> TerminalScreens {
-    TerminalScreens(of: follow(history, size: size))
+  public func screens(
+    of history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool = false
+  ) -> TerminalScreens {
+    TerminalScreens(of: follow(history, size: size, waitingOnFrame: waitingOnFrame))
   }
 
-  private func follow(_ history: TerminalHistorySnapshot, size: TerminalSize) -> Terminal {
+  /// A frame still being drawn is not fed (#580): it is, whole, once its update has ended.
+  private func follow(
+    _ history: TerminalHistorySnapshot, size: TerminalSize, waitingOnFrame: Bool
+  ) -> Terminal {
     let start = fedThrough - history.startOffset
     let terminal: Terminal
+    let drawn: Int
     if let followed = self.terminal, self.size == size, (0...history.bytes.count).contains(start) {
       terminal = followed
-      terminal.feed(byteArray: Array(history.bytes[start...]))
+      drawn = TerminalText.drawnThrough(history.bytes[start...], waiting: waitingOnFrame)
+      terminal.feed(buffer: history.bytes[start..<drawn])
     } else {
       // The first read, a new size, or output dropped since: the history is replayed whole.
       terminal = Terminal(
         delegate: SilentTerminalDelegate(),
         options: TerminalOptions(cols: size.columns, rows: size.rows, scrollback: 0))
-      terminal.feed(byteArray: history.bytes)
+      drawn = TerminalText.drawnThrough(history.bytes[...], waiting: waitingOnFrame)
+      terminal.feed(buffer: history.bytes[..<drawn])
       self.terminal = terminal
       self.size = size
     }
-    fedThrough = history.endOffset
+    fedThrough = history.startOffset + drawn
     return terminal
   }
 }

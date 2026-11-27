@@ -99,6 +99,10 @@ public actor PTYTerminalSession: VibeApplication.TerminalSession {
     subscribers.lastOutputAt
   }
 
+  public func synchronizedUpdateBeganAt() async -> ContinuousClock.Instant? {
+    subscribers.synchronizedUpdateBeganAt
+  }
+
   public func state() -> TerminalProcessState {
     currentState
   }

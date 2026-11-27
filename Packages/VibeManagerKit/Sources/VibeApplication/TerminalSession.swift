@@ -338,6 +338,9 @@ public protocol TerminalSession: AnyObject, Sendable {
   /// When the process last wrote something, noted by the session itself as the output arrives, so
   /// that nobody has to watch every block for it (#248).
   func lastOutputAt() async -> ContinuousClock.Instant?
+  /// When the process last began a synchronized update (#580), noted as the output arrives: a view
+  /// waits on it for `SynchronizedUpdate.wait` from then, and a reading of the screen with it.
+  func synchronizedUpdateBeganAt() async -> ContinuousClock.Instant?
   func state() async -> TerminalProcessState
   func history() async -> TerminalHistorySnapshot
   func write(_ bytes: [UInt8]) async
@@ -372,6 +375,7 @@ extension TerminalSession {
   }
 
   public func lastOutputAt() async -> ContinuousClock.Instant? { nil }
+  public func synchronizedUpdateBeganAt() async -> ContinuousClock.Instant? { nil }
 
   /// A stand-in has no program to draw again.
   public func redraw() async {}

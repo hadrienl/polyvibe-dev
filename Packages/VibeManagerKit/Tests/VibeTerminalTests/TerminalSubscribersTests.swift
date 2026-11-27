@@ -109,6 +109,22 @@ struct TerminalSubscribersTests {
     #expect(subscribers.lastOutputAt == at(40))
   }
 
+  @Test("When a synchronized update last began is noted, a begin split across two blocks too")
+  func notesSynchronizedUpdateBegins() {
+    let subscribers = TerminalSubscribers(schedule: { _, _ in })
+    subscribers.output([UInt8]("text\u{1B}[?2026lmore\u{1B}[?2004h".utf8), at: at(0))
+    #expect(subscribers.synchronizedUpdateBeganAt == nil)
+    subscribers.output([UInt8]("\u{1B}[?2026hframe".utf8), at: at(10))
+    #expect(subscribers.synchronizedUpdateBeganAt == at(10))
+    subscribers.output([UInt8]("frame\u{1B}[?1049;20".utf8), at: at(20))
+    #expect(subscribers.synchronizedUpdateBeganAt == at(10))
+    subscribers.output([UInt8]("26h".utf8), at: at(30))
+    #expect(subscribers.synchronizedUpdateBeganAt == at(30))
+    subscribers.output([UInt8]("\u{1B}[?2026l\u{1B}".utf8), at: at(40))
+    subscribers.output([UInt8]("[?2026$p".utf8), at: at(50))
+    #expect(subscribers.synchronizedUpdateBeganAt == at(30))
+  }
+
   @Test("Output a loss notice evicts is told too, with the next notice (#367)")
   func noticeEvictionIsCounted() async {
     let subscribers = TerminalSubscribers(schedule: { _, _ in })
