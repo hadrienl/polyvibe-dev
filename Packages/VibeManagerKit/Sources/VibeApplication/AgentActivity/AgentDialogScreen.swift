@@ -24,6 +24,8 @@ public struct AgentDialogScreen: Hashable, Sendable {
   /// A form of an MCP server with nothing to fill in, as Claude Code draws it: the server's words,
   /// then `❯ Accept    Decline`, no option numbered.
   public struct Confirmation: Hashable, Sendable {
+    /// The server's name as the title draws it: whole, or cut short in a narrow terminal —
+    /// `claude.ai Supa…` (#564).
     public let server: String
     /// The server's words, one line of the screen per line: wrapped to the terminal's width, or
     /// cut short there.
@@ -41,12 +43,21 @@ public struct AgentDialogScreen: Hashable, Sendable {
     /// terminal wrapped or cut them — nothing more between them and the choices, no field to fill
     /// in.
     public func asks(_ elicitation: AgentElicitation) -> Bool {
-      guard elicitation.isConfirmation, let server = elicitation.server, server == self.server,
-        let words = elicitation.message
+      guard elicitation.isConfirmation, let server = elicitation.server,
+        Self.names(server, drawnAs: self.server), let words = elicitation.message
       else { return false }
       let spacelessWords = Self.spaceless(words)
       return !spacelessWords.isEmpty
         && (spacelessWords == Self.spaceless(message) || Self.isCut(words, drawnAs: message))
+    }
+
+    /// Whether the title names `server`: whole, or cut short with `…` after a start of its name
+    /// — `claude.ai Supa…` in a pane 54 columns wide, as Claude Code 2.1 draws it (#564).
+    private static func names(_ server: String, drawnAs drawn: String) -> Bool {
+      guard drawn != server else { return true }
+      let start = drawn.dropLast()
+      return drawn.hasSuffix("…") && !start.trimmingCharacters(in: .whitespaces).isEmpty
+        && server.count > start.count && server.hasPrefix(start)
     }
 
     private static func spaceless<S: StringProtocol>(_ text: S) -> String {

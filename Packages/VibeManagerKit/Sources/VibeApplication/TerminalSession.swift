@@ -342,6 +342,9 @@ public protocol TerminalSession: AnyObject, Sendable {
   func history() async -> TerminalHistorySnapshot
   func write(_ bytes: [UInt8]) async
   func resize(to size: TerminalSize) async
+  /// Has the program draw its whole screen again, at the size it has (#367): what its history
+  /// replays may no longer be all of what it shows (#563).
+  func redraw() async
   func stop(gracePeriod: Duration) async
   func kill() async
   /// Whether the process runs in the terminal host: its outcome is unknown, then, only when the
@@ -369,6 +372,9 @@ extension TerminalSession {
   }
 
   public func lastOutputAt() async -> ContinuousClock.Instant? { nil }
+
+  /// A stand-in has no program to draw again.
+  public func redraw() async {}
 
   public func write(_ text: String) async {
     await write([UInt8](text.utf8))

@@ -110,6 +110,33 @@ func redrawChangesTheSizeTheProgramReads() async throws {
   await session.stop(gracePeriod: .seconds(2))
 }
 
+@Test("A redraw asked through the protocol, as the launcher and the host ask it, is one (#563)")
+func redrawThroughTheProtocol() async throws {
+  let session = try TerminalTestSupport.makeSession(
+    script: """
+      trap 'stty size' WINCH
+      stty size
+      while :; do sleep 0.05; done
+      """,
+    size: TerminalSize(columns: 100, rows: 30)
+  )
+  let observer = await TerminalObserver.attach(to: session)
+  #expect(await observer.waitForText("30 100"))
+
+  // Never the empty stand-in the protocol's extension offers: the program reads a shorter size,
+  // then its own again.
+  let terminal: any TerminalSession = session
+  await terminal.redraw()
+  #expect(await observer.waitForText("29 100"))
+  #expect(await observer.waitForText("30 100", occurrences: 2))
+
+  // Asked of the session itself, as the host asks it on the application's `.redraw`.
+  await session.redraw()
+  #expect(await observer.waitForText("29 100", occurrences: 2))
+  #expect(await observer.waitForText("30 100", occurrences: 3))
+  await session.stop(gracePeriod: .seconds(2))
+}
+
 @Test("A redraw gives the terminal its size back")
 func redrawRestoresTheSize() async throws {
   let session = try TerminalTestSupport.makeSession(

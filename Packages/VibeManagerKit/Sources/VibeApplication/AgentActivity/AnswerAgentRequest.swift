@@ -61,6 +61,7 @@ public struct AnswerAgentRequest: Sendable {
   private let write: @Sendable (SessionID, [UInt8]) async -> Bool
   private let lastOutput: @Sendable (SessionID) async -> ContinuousClock.Instant?
   private let screen: @Sendable (SessionID) async -> String?
+  private let redraw: @Sendable (SessionID) async -> Bool
   private let sleep: @Sendable (Duration) async throws -> Void
   private let diagnostics: Diagnostics
   private let confirmsDelivery: Bool
@@ -70,11 +71,14 @@ public struct AnswerAgentRequest: Sendable {
   ///   - write: types bytes into the session's running terminal; `false` when none runs.
   ///   - lastOutput: when the session's terminal last wrote something.
   ///   - screen: what the session's terminal shows now, as text; `nil` when it cannot be told.
+  ///   - redraw: has the session's agent draw its whole screen again, when what `screen` reads
+  ///     cannot be all of it — its history trimmed (#563); `false` when nothing was asked.
   public init(
     tracker: TrackAgentActivity,
     write: @escaping @Sendable (SessionID, [UInt8]) async -> Bool,
     lastOutput: @escaping @Sendable (SessionID) async -> ContinuousClock.Instant? = { _ in nil },
     screen: @escaping @Sendable (SessionID) async -> String? = { _ in nil },
+    redraw: @escaping @Sendable (SessionID) async -> Bool = { _ in false },
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
     diagnostics: Diagnostics = .disabled,
     confirmsDelivery: Bool = false,
@@ -84,6 +88,7 @@ public struct AnswerAgentRequest: Sendable {
     self.write = write
     self.lastOutput = lastOutput
     self.screen = screen
+    self.redraw = redraw
     self.sleep = sleep
     self.diagnostics = diagnostics
     self.confirmsDelivery = confirmsDelivery
@@ -93,12 +98,20 @@ public struct AnswerAgentRequest: Sendable {
   @discardableResult
   public func callAsFunction(_ answer: AgentAnswer, to id: AgentRequestID) async -> Outcome {
     let request = await tracker.state(for: id.sessionID)?.requests.first { $0.id == id }
-    let before = await screen(id.sessionID)
-    let keys =
+    var before = await screen(id.sessionID)
+    var keys =
       await tracker.keystrokes(
         for: answer, to: id, screen: before.flatMap(AgentDialogScreen.init(screen:))) ?? []
     var written: [[UInt8]] = []
-    let outcome = await give(answer, to: id, written: &written)
+    var redrawn: String?
+    let outcome = await give(answer, to: id, written: &written, redrawn: &redrawn)
+    // Drawn again before anything was typed: the report shows what the keys were read off.
+    if let redrawn {
+      before = redrawn
+      keys =
+        await tracker.keystrokes(
+          for: answer, to: id, screen: AgentDialogScreen(screen: redrawn)) ?? []
+    }
     if [.notOnScreen, .otherDialog, .interrupted].contains(outcome), let request {
       await failed(
         Failure(
@@ -116,13 +129,16 @@ public struct AnswerAgentRequest: Sendable {
     return outcome
   }
 
-  private func give(_ answer: AgentAnswer, to id: AgentRequestID, written: inout [[UInt8]]) async
-    -> Outcome
-  {
+  private func give(
+    _ answer: AgentAnswer, to id: AgentRequestID, written: inout [[UInt8]],
+    redrawn: inout String?
+  ) async -> Outcome {
     guard await tracker.offers(answer, to: id) else {
       return await tracker.isFirstRequest(id) ? .notAnswerable : .requestGone
     }
-    var text = await screen(id.sessionID)
+    let read = await readScreen(answering: answer, to: id)
+    if read.isRedrawn { redrawn = read.text }
+    var text = read.text
     // Whose dialog is drawn is read off the screen, against every request the agent reported
     // before drawing it (#283). The screen is read first: every dialog on it was reported by then,
     // and once the log is read up to its end, every report is known. Read again after, it must
@@ -133,6 +149,7 @@ public struct AnswerAgentRequest: Sendable {
         return await tracker.isFirstRequest(id) ? .otherDialog : .requestGone
       }
       text = await screen(id.sessionID)
+      if read.isRedrawn { redrawn = text }
       guard let text, await tracker.dialogOnScreen(text, readBefore: before, isFor: id) else {
         let isFirst = await tracker.isFirstRequest(id)
         // A dialog no hook reports may be the one drawn: its card takes this one's place, to be
@@ -279,6 +296,48 @@ public struct AnswerAgentRequest: Sendable {
   public static let startupDialogPollInterval: Duration = .seconds(1)
   /// How many times a form only announced is read for a dialog no hook reports (#603).
   static let announcedFormReadings = 10
+
+  /// How long a redraw is given before the screen is read again: the terminal is held a row
+  /// shorter for a quarter of a second, then given its size back, and the agent draws for both.
+  public static let redrawWait: Duration = .milliseconds(400)
+
+  /// How many times the screen is read again after a redraw, `redrawWait` apart, until it shows
+  /// the dialog: a hosted session's redraw is only asked of its host, and a busy Mac's agent may
+  /// draw long after its terminal was given its size back.
+  public static let redrawReadings = 3
+
+  /// What the session's terminal shows, and whether it was drawn again first: when the dialog
+  /// that takes `answer` is not read off it — none, or another's left over — and the history it
+  /// is replayed from was trimmed (#563). A dialog is drawn once; an agent that draws by
+  /// differences then sends only what changes — ten hours of a spinner later, the history kept
+  /// holds the spinner, not the dialog still drawn under it.
+  private func readScreen(answering answer: AgentAnswer, to id: AgentRequestID) async
+    -> (text: String?, isRedrawn: Bool)
+  {
+    var text = await screen(id.sessionID)
+    guard await !screen(text, answers: answer, to: id), await redraw(id.sessionID) else {
+      return (text, false)
+    }
+    for _ in 0..<Self.redrawReadings {
+      do {
+        try await sleep(Self.redrawWait)
+      } catch {
+        break
+      }
+      await settle(id.sessionID)
+      text = await screen(id.sessionID)
+      if await screen(text, answers: answer, to: id) { break }
+    }
+    return (text, true)
+  }
+
+  /// Whether `text` shows a dialog the keys of `answer` are read off.
+  private func screen(_ text: String?, answers answer: AgentAnswer, to id: AgentRequestID) async
+    -> Bool
+  {
+    let drawn = text.flatMap(AgentDialogScreen.init(screen:))
+    return await !(tracker.keystrokes(for: answer, to: id, screen: drawn) ?? []).isEmpty
+  }
 
   /// Whether the dialog, read again, asks for `keys` and nothing else — waited for up to
   /// `settleLimit`, the key before having to be read and drawn first.
