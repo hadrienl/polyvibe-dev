@@ -57,7 +57,8 @@ enum CodexDrawnDialogReading {
     if let first = toolTitles.first, other == nil {
       guard toolTitles.count == 1, let tool = toolTitle(lines[first]) else { return nil }
       if let app = computerUseApp(inTitle: lines[first]) {
-        return AgentDrawnDialog(.computerUse(server: tool.server, tool: tool.tool, app: app))
+        let server = computerUseServer(in: lines[..<first]) ?? tool.server
+        return AgentDrawnDialog(.computerUse(server: server, tool: tool.tool, app: app))
       }
       return AgentDrawnDialog(.mcpTool(server: tool.server, tool: tool.tool))
     }
@@ -135,9 +136,19 @@ enum CodexDrawnDialogReading {
     }
   }
 
-  /// The server and the tool Codex's Computer Use runs, `mcp__cua_repl__js` to the hooks.
+  /// The server and the tool Codex's Computer Use runs, `mcp__cua_repl__js` to the hooks: the
+  /// server is read off the form when it names it.
   static let computerUseServer = "cua_repl"
   static let computerUseTool = "js"
+
+  /// `Server: cua_repl (environment local)`, drawn above Computer Use's title in its form: the
+  /// server it names, or `nil` when the form names none — as in the report of #603.
+  static func computerUseServer(in lines: ArraySlice<String>) -> String? {
+    let field = lines.lastIndex(where: { $0.hasPrefix("Field ") }) ?? lines.startIndex
+    guard let line = lines[field...].last(where: { $0.hasPrefix("Server: ") }) else { return nil }
+    let named = line.dropFirst("Server: ".count).prefix { $0 != " " && $0 != "(" }
+    return named.isEmpty ? nil : String(named)
+  }
 
   /// `Allow Computer Use to use "J-Method"?`: the app.
   static func computerUseApp(inTitle line: String) -> String? {
@@ -147,16 +158,15 @@ enum CodexDrawnDialogReading {
   /// The permission Computer Use asks on screen, which no hook reports (#603): to use the app its
   /// title names, through its tool. `nil` when the screen does not end on its form, read whole.
   static func computerUse(onScreen text: String) -> AgentRequestNotice? {
-    guard case .computerUse(computerUseServer, computerUseTool, let app)? = dialog(onScreen: text)?
-      .subject
+    guard case .computerUse(let server, let tool, let app)? = dialog(onScreen: text)?.subject
     else { return nil }
     let title = #"Allow Computer Use to use "\#(app)"?"#
-    let toolName = "mcp__\(computerUseServer)__\(computerUseTool)"
+    let toolName = "mcp__\(server)__\(tool)"
     return AgentRequestNotice(
       content: .permission(
         AgentToolPermission(
-          tool: .mcp(server: computerUseServer, tool: computerUseTool), toolName: toolName,
-          subject: app, purpose: title)),
+          tool: .mcp(server: server, tool: tool), toolName: toolName, subject: app,
+          purpose: title)),
       reference: AgentToolReference(tool: toolName), isShown: true)
   }
 

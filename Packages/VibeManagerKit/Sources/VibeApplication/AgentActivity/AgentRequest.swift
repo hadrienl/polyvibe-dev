@@ -12,6 +12,16 @@ public struct AgentRequestID: Hashable, Codable, Sendable {
     self.sessionID = sessionID
     self.key = key
   }
+
+  /// A request the screen alone made, of a dialog no hook reports (#603).
+  public static func readOffScreen(in sessionID: SessionID) -> Self {
+    AgentRequestID(sessionID: sessionID, key: "\(offScreenPrefix)\(UUID().uuidString)")
+  }
+
+  /// Whether the screen alone made it: nothing but the screen tells when it is answered.
+  public var isReadOffScreen: Bool { key.hasPrefix(Self.offScreenPrefix) }
+
+  private static let offScreenPrefix = "screen:"
 }
 
 /// Something an agent stopped to ask the user (#40): a permission, questions, a plan.
@@ -35,12 +45,24 @@ public struct AgentRequest: Identifiable, Hashable, Codable, Sendable {
   public var awaitsPermissionDialog: Bool {
     !isShown && kind == .approval && AgentDrawnDialog.showsWhole(self)
   }
-  /// Whether its screen is read while it is first: a permission awaiting its dialog, or a form
-  /// only announced, which the dialog drawn may tell more of than the CLI said (#603).
-  public var awaitsScreenReading: Bool {
-    if case .inTerminal(let prompt) = content, prompt.kind == .form { return true }
-    return awaitsPermissionDialog
+  /// What its screen is read for while it is first, or `nil` when it is not (#603).
+  public enum ScreenReading: Hashable, Sendable {
+    /// A permission awaiting its dialog.
+    case permissionDialog
+    /// A form only announced, which the dialog drawn may tell more of than the CLI said.
+    case announcedForm
+    /// A dialog no hook reports, made a request off the screen: read until it goes.
+    case unreportedDialog
   }
+
+  public var screenReading: ScreenReading? {
+    if id.isReadOffScreen { return .unreportedDialog }
+    if case .inTerminal(let prompt) = content, prompt.kind == .form { return .announcedForm }
+    return awaitsPermissionDialog ? .permissionDialog : nil
+  }
+
+  /// Whether its screen is read while it is first.
+  public var awaitsScreenReading: Bool { screenReading != nil }
   /// Asked without stopping the agent, which goes on meanwhile — Codex's
   /// `request_user_input_async` (#273): it never comes before a request that holds the agent.
   public var isAsynchronous: Bool

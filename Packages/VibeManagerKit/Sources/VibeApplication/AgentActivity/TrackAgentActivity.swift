@@ -486,7 +486,11 @@ public actor TrackAgentActivity {
     // A request taken away on a guess may be the one drawn: only a command, shown whole, is the
     // same as another request's when it reads the same. Two patches of the same files are not.
     if tracked.state.isTrackLost {
-      guard case .shownCommand = dialog.subject else { return false }
+      switch dialog.subject {
+      // Computer Use names its app whole too (#603).
+      case .shownCommand, .computerUse: break
+      default: return false
+      }
     }
     let requests = tracked.state.requests
     let matching = requests.indices.filter { dialog.matches(requests[$0]) }
@@ -512,22 +516,24 @@ public actor TrackAgentActivity {
     return request.awaitsPermissionDialog
   }
 
-  /// Whether the screen is read for the request, first of its queue: a permission awaiting its
-  /// dialog, or a form only announced (#603). Nothing is typed by this reading.
-  public func readsDialogOnScreen(_ id: AgentRequestID) -> Bool {
+  /// What the screen is read for, for the request first of its queue — a permission awaiting its
+  /// dialog, a form only announced, a dialog no hook reports (#603) — or `nil` when it is not.
+  /// Nothing is typed by this reading.
+  public func screenReading(for id: AgentRequestID) -> AgentRequest.ScreenReading? {
     guard let tracked = sessions[id.sessionID],
       tracked.decoder?.answerKeymap?.readsRequestOnScreen == true,
       let request = tracked.state.requests.first, request.id == id
-    else { return false }
-    return request.awaitsScreenReading
+    else { return nil }
+    return request.screenReading
   }
 
   /// A dialog no hook reports is drawn, read whole off the screen (#603) — Codex's Computer Use
-  /// asking to use an app: it is queued, shown, in place of the form the CLI only announced. The
-  /// permissions reported before it and never drawn were settled with no dialog, as when a dialog
-  /// drawn names a later request: the CLI draws its dialogs in turn. So was one of the same tool
-  /// drawn before, which asked otherwise — another app: answered in the terminal by a key that
-  /// settles nothing, its card must not answer this dialog.
+  /// asking to use an app: it is queued, shown, in place of the form the CLI only announced, and
+  /// first — it is the dialog on screen. The permissions reported before it and never drawn are
+  /// kept behind it, hidden: it has no place in the order the CLI reported them, and one may still
+  /// be under its automatic review, to draw its own dialog once this one is answered. One of the
+  /// same tool drawn before, which asked otherwise — another app — was answered in the terminal by
+  /// a key that settles nothing: it goes, its card must not answer this dialog.
   /// `before` is read before `text`: a dialog on both, never one merely flashing by.
   @discardableResult
   public func dialogUnreportedOnScreen(
@@ -547,12 +553,39 @@ public actor TrackAgentActivity {
     }
     if state.requests.isEmpty { state.clearRequests() }
     let asked = AgentSignal.questionAsked(.approval, tool: notice.reference.tool, notice: notice)
-    let id = AgentRequestID(sessionID: session, key: "screen:\(UUID().uuidString)")
-    state = reduce(state, .signal(asked), for: session, requestID: id)
+    state = reduce(state, .signal(asked), for: session, requestID: .readOffScreen(in: session))
     guard let index = state.requests.firstIndex(where: dialog.matches) else { return false }
-    state.arm(at: index)
+    state.requests.insert(state.requests.remove(at: index), at: 0)
+    state.requests[0].isShown = true
+    state.drawnCandidates = []
+    state.isFirstRequestUncertain = false
     sessions[session]?.state = state
     changed(session, from: previous)
+    return true
+  }
+
+  /// The dialog no hook reports, which the screen made a request of, is drawn no more (#603):
+  /// answered in the terminal — a digit, Escape — or taken away. Nothing else says so: Computer
+  /// Use's tool finishes only once its whole action has run.
+  /// `before` is read before `text`: gone from both, never merely redrawn.
+  @discardableResult
+  public func unreportedDialogGone(
+    _ text: String, readBefore before: String, isFor id: AgentRequestID
+  ) -> Bool {
+    guard id.isReadOffScreen, var tracked = sessions[id.sessionID],
+      let keymap = tracked.decoder?.answerKeymap, keymap.readsRequestOnScreen,
+      tracked.state.requests.first?.id == id
+    else { return false }
+    // A screen blank for a moment, as it is redrawn, says nothing.
+    func mayAsk(_ screen: String) -> Bool {
+      screen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        || keymap.unreportedRequest(onScreen: screen) != nil
+    }
+    guard !mayAsk(text), !mayAsk(before) else { return false }
+    let previous = tracked.state
+    tracked.state.settleFirstRequest(isKnownAnswered: true)
+    sessions[id.sessionID] = tracked
+    changed(id.sessionID, from: previous)
     return true
   }
 

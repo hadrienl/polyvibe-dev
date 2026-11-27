@@ -167,6 +167,22 @@ struct CodexComputerUseTests {
     #expect(calculator.subject == "Calculator")
   }
 
+  @Test("The server its form names is the one its tool is told by, the hooks' name with it")
+  func namedServer() throws {
+    let screen = CodexComputerUseScreens.withServer.replacingOccurrences(
+      of: "Server: cua_repl (environment local)", with: "Server: computer-use (plugin)")
+    let shown = try #require(CodexDrawnDialogReading.dialog(onScreen: screen))
+    #expect(shown.subject == .computerUse(server: "computer-use", tool: "js", app: "Calculator"))
+    let notice = try #require(CodexAnswerKeymap().unreportedRequest(onScreen: screen))
+    #expect(notice.reference == AgentToolReference(tool: "mcp__computer-use__js"))
+    guard case .permission(let permission) = notice.content else {
+      Issue.record("Not a permission: \(notice.content)")
+      return
+    }
+    #expect(permission.tool == .mcp(server: "computer-use", tool: "js"))
+    #expect(permission.toolName == "mcp__computer-use__js")
+  }
+
   @Test(
     "Nothing is made of an MCP tool's form a hook reports, of a title forged, or of no form",
     arguments: [

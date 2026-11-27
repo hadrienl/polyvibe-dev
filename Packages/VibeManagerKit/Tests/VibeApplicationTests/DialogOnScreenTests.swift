@@ -581,18 +581,94 @@ struct DialogOnScreenTests {
     await fixture.screen.show("computer: J-Method\n› 1. Allow")
     await following.value
     let state = try #require(await fixture.tracker.state(for: fixture.id))
-    #expect(state.requests.count == 1)
+    // First, the dialog on screen; the command kept behind it, hidden, for it may still draw one.
+    #expect(state.requests.count == 2)
     let request = try #require(state.requests.first)
     #expect(request.isShown)
+    #expect(request.screenReading == .unreportedDialog)
     #expect(!state.isFirstRequestUncertain)
+    #expect(state.requests.last?.id == command)
+    #expect(state.requests.last?.isShown == false)
     #expect(
       request.content
         == .permission(
-          AgentToolPermission(tool: .mcp(server: "cua", tool: "js"), toolName: "js", subject: "J-Method")))
+          AgentToolPermission(
+            tool: .mcp(server: "cua", tool: "js"), toolName: "js", subject: "J-Method")))
     #expect(await fixture.answering(request.id) == .fromPalette([.allowOnce, .deny]))
     #expect(await fixture.answer(.allowOnce, to: request.id) == .sent)
     #expect(await fixture.written.bytes == [[0x79]])
-    #expect(await fixture.tracker.state(for: fixture.id)?.requests.isEmpty == true)
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [command])
+  }
+
+  @Test("A command still under review when a dialog no hook reports is drawn draws its own after")
+  func unreportedBeforeReviewedCommand() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let command = await fixture.ask("touch a")
+    let shown = "computer: J-Method"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show(shown)
+    #expect(await fixture.answer(.allowOnce, to: card.id) == .sent)
+    // The review over, Codex draws the command's dialog: its card answers it.
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [command])
+    await fixture.tracker.terminalNotification(fixture.id, "whole:touch a")
+    await fixture.screen.show("$ touch a")
+    #expect(await fixture.answer(.allowOnce, to: command) == .sent)
+    #expect(await fixture.written.bytes == [[0x79], [0x79]])
+  }
+
+  @Test("A dialog no hook reports, answered in the terminal, takes its card away as it goes")
+  func unreportedGone() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let shown = "computer: J-Method\n› 1. Allow"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    // Still drawn, or blank as it is redrawn: the card stays.
+    #expect(await !fixture.tracker.unreportedDialogGone(shown, readBefore: shown, isFor: card.id))
+    #expect(await !fixture.tracker.unreportedDialogGone("", readBefore: "Working…", isFor: card.id))
+    #expect(
+      await !fixture.tracker.unreportedDialogGone("Working…", readBefore: shown, isFor: card.id))
+    await fixture.screen.show(shown)
+    let following = Task { await fixture.answer.followPermissionDialog(card.id) }
+    // `2` typed in the terminal: Computer Use goes on with the app, its tool still running.
+    await fixture.screen.show("• Using computer · 1 action")
+    await following.value
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.isEmpty)
+    #expect(state.activity == .working)
+    #expect(await fixture.written.bytes.isEmpty)
+  }
+
+  @Test("Its track lost, a queue still answers a dialog no hook reports, which names its app whole")
+  func unreportedTrackLost() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    _ = await fixture.ask("a.txt", event: "patch")
+    _ = await fixture.ask("a.txt", event: "patch")
+    await fixture.tracker.terminalNotification(fixture.id, "file:a.txt")
+    await fixture.logs.write("done", at: t1, for: fixture.id)
+    #expect(await eventually(fixture.tracker, fixture.id) { $0?.isTrackLost == true })
+    let shown = "computer: J-Method"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show(shown)
+    #expect(await fixture.answer(.allowOnce, to: card.id) == .sent)
+  }
+
+  @Test("A form only announced, and unread as a dialog no hook reports, is read for a while only")
+  func announcedFormReadForAWhile() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    await fixture.tracker.terminalNotification(fixture.id, "form:echo")
+    let form = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show("Field 1/2\n› 1. Yes")
+    await fixture.answer.followPermissionDialog(form.id)
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [form.id])
   }
 
   @Test("A form only announced is read: the dialog no hook reports takes its place")
@@ -623,11 +699,13 @@ struct DialogOnScreenTests {
     let fixture = Fixture()
     await fixture.start()
     let shown = "computer: J-Method"
-    #expect(await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
     let old = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
     // Answered in the terminal by its digit, which settles nothing: the same call asks again.
     await fixture.screen.show("computer: Notes")
-    #expect(await fixture.answer(.allowOnce, to: old.id) == .otherDialog)
+    // Gone, as the palette says: the new card is there to answer, not the terminal.
+    #expect(await fixture.answer(.allowOnce, to: old.id) == .requestGone)
     #expect(await fixture.written.bytes.isEmpty)
     let state = try #require(await fixture.tracker.state(for: fixture.id))
     #expect(state.requests.count == 1)
