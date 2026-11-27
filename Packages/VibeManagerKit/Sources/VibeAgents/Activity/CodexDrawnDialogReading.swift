@@ -12,6 +12,10 @@ import VibeApplication
 /// An MCP tool's form names its server and its tool, but shows its arguments shortened, cut, and
 /// not all of them (`mcp_server_elicitation.rs`): it is read as the tool alone, which names a
 /// request only while no other call of it waits.
+///
+/// Computer Use asks in the same form, in its own words — `Allow Computer Use to use "Notes"?` —
+/// for its `js` tool of `cua_repl`, before it touches an app (0.171). No hook reports it, only the
+/// notification `Approval requested by cua_repl`: the screen makes a request of it (#603).
 enum CodexDrawnDialogReading {
   static let commandTitle = "Would you like to run the following command?"
   static let editsTitle = "Would you like to make the following edits?"
@@ -52,6 +56,10 @@ enum CodexDrawnDialogReading {
     let other = lines[..<options].lastIndex(where: isTitle)
     if let first = toolTitles.first, other == nil {
       guard toolTitles.count == 1, let tool = toolTitle(lines[first]) else { return nil }
+      if let app = computerUseApp(inTitle: lines[first]) {
+        let server = computerUseServer(in: lines[..<first]) ?? tool.server
+        return AgentDrawnDialog(.computerUse(server: server, tool: tool.tool, app: app))
+      }
       return AgentDrawnDialog(.mcpTool(server: tool.server, tool: tool.tool))
     }
     guard let start = other else { return nil }
@@ -118,10 +126,48 @@ enum CodexDrawnDialogReading {
   }
 
   /// `Allow the echo-box MCP server to run tool "write_note"?`: the server and the tool.
+  /// Computer Use's own title is its tool's.
   static func toolTitle(_ line: String) -> (server: String, tool: String)? {
-    line.wholeMatch(of: #/Allow the (.+) MCP server to run tool "(.+)"\?/#).map {
+    if computerUseApp(inTitle: line) != nil {
+      return (computerUseServer, computerUseTool)
+    }
+    return line.wholeMatch(of: #/Allow the (.+) MCP server to run tool "(.+)"\?/#).map {
       (String($0.1), String($0.2))
     }
+  }
+
+  /// The server and the tool Codex's Computer Use runs, `mcp__cua_repl__js` to the hooks: the
+  /// server is read off the form when it names it.
+  static let computerUseServer = "cua_repl"
+  static let computerUseTool = "js"
+
+  /// `Server: cua_repl (environment local)`, drawn above Computer Use's title in its form: the
+  /// server it names, or `nil` when the form names none — as in the report of #603.
+  static func computerUseServer(in lines: ArraySlice<String>) -> String? {
+    let field = lines.lastIndex(where: { $0.hasPrefix("Field ") }) ?? lines.startIndex
+    guard let line = lines[field...].last(where: { $0.hasPrefix("Server: ") }) else { return nil }
+    let named = line.dropFirst("Server: ".count).prefix { $0 != " " && $0 != "(" }
+    return named.isEmpty ? nil : String(named)
+  }
+
+  /// `Allow Computer Use to use "J-Method"?`: the app.
+  static func computerUseApp(inTitle line: String) -> String? {
+    line.wholeMatch(of: #/Allow Computer Use to use "(.+)"\?/#).map { String($0.1) }
+  }
+
+  /// The permission Computer Use asks on screen, which no hook reports (#603): to use the app its
+  /// title names, through its tool. `nil` when the screen does not end on its form, read whole.
+  static func computerUse(onScreen text: String) -> AgentRequestNotice? {
+    guard case .computerUse(let server, let tool, let app)? = dialog(onScreen: text)?.subject
+    else { return nil }
+    let title = #"Allow Computer Use to use "\#(app)"?"#
+    let toolName = "mcp__\(server)__\(tool)"
+    return AgentRequestNotice(
+      content: .permission(
+        AgentToolPermission(
+          tool: .mcp(server: server, tool: tool), toolName: toolName, subject: app,
+          purpose: title)),
+      reference: AgentToolReference(tool: toolName), isShown: true)
   }
 
   /// `[… 9 lines] ctrl+a view all`: the top of what the dialog asks is not drawn.

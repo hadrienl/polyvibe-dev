@@ -338,6 +338,11 @@ public struct CodexAnswerKeymap: AgentAnswerKeymap {
     CodexDrawnDialogReading.dialog(onScreen: text)
   }
 
+  /// Computer Use asking to use an app, which no hook reports (#603).
+  public func unreportedRequest(onScreen text: String) -> AgentRequestNotice? {
+    CodexDrawnDialogReading.computerUse(onScreen: text)
+  }
+
   public func startupDialog(onScreen text: String) -> AgentTerminalPrompt? {
     CodexDrawnDialogReading.update(onScreen: text).map {
       AgentTerminalPrompt(kind: .update, message: $0.isEmpty ? nil : $0)

@@ -25,6 +25,9 @@ public struct AgentDrawnDialog: Hashable, Sendable {
     /// This tool of this MCP server, as its form names them: not its arguments, which it shows
     /// cut short.
     case mcpTool(server: String, tool: String)
+    /// This tool of this MCP server asked to use this app, as Codex's Computer Use words its form
+    /// (#603): the app names the request whole.
+    case computerUse(server: String, tool: String, app: String)
     /// The CLI's own update, offered before it starts.
     case update
     case terminalInput(sessionID: String, input: String)
@@ -43,7 +46,7 @@ public struct AgentDrawnDialog: Hashable, Sendable {
     switch subject {
     case .commandStart, .file, .files, .server, .mcpTool: return false
     case .update: return true
-    case .terminalInput, .command, .shownCommand, .patch, .host: return true
+    case .terminalInput, .command, .shownCommand, .patch, .host, .computerUse: return true
     }
   }
 
@@ -91,6 +94,9 @@ public struct AgentDrawnDialog: Hashable, Sendable {
     case (.mcpTool(let name, let shown), .mcp(let server, let tool)):
       return Self.serverKey(name) == Self.serverKey(server)
         && Self.serverKey(shown) == Self.serverKey(tool)
+    case (.computerUse(let name, let shown, let app), .mcp(let server, let tool)):
+      return Self.serverKey(name) == Self.serverKey(server)
+        && Self.serverKey(shown) == Self.serverKey(tool) && permission.subject == app
     default:
       return false
     }

@@ -68,12 +68,20 @@ private struct CodexLikeDecoder: AgentSignalDecoding {
     if message.hasPrefix("file:") {
       return .dialogDrawn(AgentDrawnDialog(.file(String(message.dropFirst(5)))))
     }
+    // A server's form, which no hook reports: Codex's "Approval requested by <server>".
+    if message.hasPrefix("form:") {
+      let server = String(message.dropFirst(5))
+      return .dialogDrawn(
+        AgentDrawnDialog(.server(server)),
+        otherwise: AgentTerminalPrompt(kind: .form, message: "Approval requested by \(server)"))
+    }
     return nil
   }
 }
 
 /// Reads the command a dialog shows from its `$ ` line, a patch's paths from its `Destination: `
-/// lines, an MCP tool from a `tool: <server> <tool>` line, and allows with `y`.
+/// lines, an MCP tool from a `tool: <server> <tool>` line, Computer Use asking for an app, which
+/// no hook reports, from a `computer: <app>` line, and allows with `y`.
 private struct ScreenKeymap: AgentAnswerKeymap {
   func answers(for content: AgentRequestContent) -> Set<AgentAnswerKind> {
     [.allowOnce, .deny]
@@ -91,6 +99,9 @@ private struct ScreenKeymap: AgentAnswerKeymap {
 
   func drawnDialog(onScreen text: String) -> AgentDrawnDialog? {
     let lines = text.split(separator: "\n")
+    if let app = Self.computerUseApp(onScreen: text) {
+      return AgentDrawnDialog(.computerUse(server: "cua", tool: "js", app: app))
+    }
     if let line = lines.last(where: { $0.hasPrefix("tool: ") }) {
       let names = line.dropFirst(6).split(separator: " ")
       return AgentDrawnDialog(.mcpTool(server: String(names[0]), tool: String(names[1])))
@@ -102,6 +113,21 @@ private struct ScreenKeymap: AgentAnswerKeymap {
       String($0.dropFirst("Destination: ".count))
     }
     return paths.isEmpty ? nil : AgentDrawnDialog(.patch(Set(paths)))
+  }
+
+  func unreportedRequest(onScreen text: String) -> AgentRequestNotice? {
+    Self.computerUseApp(onScreen: text).map { app in
+      AgentRequestNotice(
+        content: .permission(
+          AgentToolPermission(tool: .mcp(server: "cua", tool: "js"), toolName: "js", subject: app)),
+        reference: AgentToolReference(tool: "mcp__cua__js"), isShown: true)
+    }
+  }
+
+  static func computerUseApp(onScreen text: String) -> String? {
+    text.split(separator: "\n").last(where: { $0.hasPrefix("computer: ") }).map {
+      String($0.dropFirst(10))
+    }
   }
 
   /// `trust: <folder>`: the folder's trust, asked as the CLI starts.
@@ -537,6 +563,174 @@ struct DialogOnScreenTests {
     #expect(await eventually(other.tracker, other.id) { $0?.requests.map(\.id) == [command] })
     await other.screen.show("$ touch a")
     #expect(await other.answer(.allowOnce, to: command) == .sent)
+  }
+
+  // MARK: - A dialog no hook reports (#603)
+
+  @Test(
+    "A command settled with no dialog is not taken for a dialog no hook reports, which is answered")
+  func unreportedOverStalePermission() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    // Reported, then settled by Codex's review with no dialog and no word of it.
+    let command = await fixture.ask("./gradlew :shared:desktopTest")
+    await fixture.screen.show("Working…")
+    let following = Task { await fixture.answer.followPermissionDialog(command) }
+    // Half an hour later, Computer Use asks: announced by its server, reported by no hook.
+    await fixture.tracker.terminalNotification(fixture.id, "form:cua")
+    await fixture.screen.show("computer: J-Method\n› 1. Allow")
+    await following.value
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    // First, the dialog on screen; the command kept behind it, hidden, for it may still draw one.
+    #expect(state.requests.count == 2)
+    let request = try #require(state.requests.first)
+    #expect(request.isShown)
+    #expect(request.screenReading == .unreportedDialog)
+    #expect(!state.isFirstRequestUncertain)
+    #expect(state.requests.last?.id == command)
+    #expect(state.requests.last?.isShown == false)
+    #expect(
+      request.content
+        == .permission(
+          AgentToolPermission(
+            tool: .mcp(server: "cua", tool: "js"), toolName: "js", subject: "J-Method")))
+    #expect(await fixture.answering(request.id) == .fromPalette([.allowOnce, .deny]))
+    #expect(await fixture.answer(.allowOnce, to: request.id) == .sent)
+    #expect(await fixture.written.bytes == [[0x79]])
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [command])
+  }
+
+  @Test("A command still under review when a dialog no hook reports is drawn draws its own after")
+  func unreportedBeforeReviewedCommand() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let command = await fixture.ask("touch a")
+    let shown = "computer: J-Method"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show(shown)
+    #expect(await fixture.answer(.allowOnce, to: card.id) == .sent)
+    // The review over, Codex draws the command's dialog: its card answers it.
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [command])
+    await fixture.tracker.terminalNotification(fixture.id, "whole:touch a")
+    await fixture.screen.show("$ touch a")
+    #expect(await fixture.answer(.allowOnce, to: command) == .sent)
+    #expect(await fixture.written.bytes == [[0x79], [0x79]])
+  }
+
+  @Test("A dialog no hook reports, answered in the terminal, takes its card away as it goes")
+  func unreportedGone() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let shown = "computer: J-Method\n› 1. Allow"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    // Still drawn, or blank as it is redrawn: the card stays.
+    #expect(await !fixture.tracker.unreportedDialogGone(shown, readBefore: shown, isFor: card.id))
+    #expect(await !fixture.tracker.unreportedDialogGone("", readBefore: "Working…", isFor: card.id))
+    #expect(
+      await !fixture.tracker.unreportedDialogGone("Working…", readBefore: shown, isFor: card.id))
+    await fixture.screen.show(shown)
+    let following = Task { await fixture.answer.followPermissionDialog(card.id) }
+    // `2` typed in the terminal: Computer Use goes on with the app, its tool still running.
+    await fixture.screen.show("• Using computer · 1 action")
+    await following.value
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.isEmpty)
+    #expect(state.activity == .working)
+    #expect(await fixture.written.bytes.isEmpty)
+  }
+
+  @Test("Its track lost, a queue still answers a dialog no hook reports, which names its app whole")
+  func unreportedTrackLost() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    _ = await fixture.ask("a.txt", event: "patch")
+    _ = await fixture.ask("a.txt", event: "patch")
+    await fixture.tracker.terminalNotification(fixture.id, "file:a.txt")
+    await fixture.logs.write("done", at: t1, for: fixture.id)
+    #expect(await eventually(fixture.tracker, fixture.id) { $0?.isTrackLost == true })
+    let shown = "computer: J-Method"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let card = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show(shown)
+    #expect(await fixture.answer(.allowOnce, to: card.id) == .sent)
+  }
+
+  @Test("A form only announced, and unread as a dialog no hook reports, is read for a while only")
+  func announcedFormReadForAWhile() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    await fixture.tracker.terminalNotification(fixture.id, "form:echo")
+    let form = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    await fixture.screen.show("Field 1/2\n› 1. Yes")
+    await fixture.answer.followPermissionDialog(form.id)
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [form.id])
+  }
+
+  @Test("A form only announced is read: the dialog no hook reports takes its place")
+  func unreportedOverAnnouncedForm() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    await fixture.tracker.terminalNotification(fixture.id, "form:cua")
+    let form = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    #expect(form.awaitsScreenReading)
+    // Some other form: still answered in the terminal, and read again.
+    await fixture.screen.show("Field 1/2\n› 1. Yes")
+    let following = Task { await fixture.answer.followPermissionDialog(form.id) }
+    await fixture.screen.show("computer: J-Method\n› 1. Allow")
+    await following.value
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.count == 1)
+    let request = try #require(state.requests.first)
+    #expect(request.id != form.id)
+    #expect(await fixture.answering(request.id) == .fromPalette([.allowOnce, .deny]))
+    // Read again, the same dialog is the request already queued.
+    await fixture.tracker.dialogUnreportedOnScreen(
+      "computer: J-Method", readBefore: "computer: J-Method", in: fixture.id)
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.map(\.id) == [request.id])
+  }
+
+  @Test("Its card left behind, another app asked: nothing is typed, and the new card takes over")
+  func unreportedOtherApp() async throws {
+    let fixture = Fixture()
+    await fixture.start()
+    let shown = "computer: J-Method"
+    #expect(
+      await fixture.tracker.dialogUnreportedOnScreen(shown, readBefore: shown, in: fixture.id))
+    let old = try #require(await fixture.tracker.state(for: fixture.id)?.requests.first)
+    // Answered in the terminal by its digit, which settles nothing: the same call asks again.
+    await fixture.screen.show("computer: Notes")
+    // Gone, as the palette says: the new card is there to answer, not the terminal.
+    #expect(await fixture.answer(.allowOnce, to: old.id) == .requestGone)
+    #expect(await fixture.written.bytes.isEmpty)
+    let state = try #require(await fixture.tracker.state(for: fixture.id))
+    #expect(state.requests.count == 1)
+    let notes = try #require(state.requests.first)
+    #expect(notes.id != old.id)
+    guard case .permission(let permission) = notes.content else {
+      Issue.record("Not a permission: \(notes.content)")
+      return
+    }
+    #expect(permission.subject == "Notes")
+    #expect(await fixture.answer(.allowOnce, to: notes.id) == .sent)
+    #expect(await fixture.written.bytes == [[0x79]])
+  }
+
+  @Test("A dialog no hook reports is made a request of only once drawn on both readings")
+  func unreportedFlashing() async {
+    let fixture = Fixture()
+    await fixture.start()
+    #expect(
+      await !fixture.tracker.dialogUnreportedOnScreen(
+        "computer: J-Method", readBefore: "Working…", in: fixture.id))
+    #expect(
+      await !fixture.tracker.dialogUnreportedOnScreen(
+        "computer: J-Method", readBefore: "computer: Finder", in: fixture.id))
+    #expect(await fixture.tracker.state(for: fixture.id)?.requests.isEmpty == true)
   }
 
   // MARK: -

@@ -134,7 +134,15 @@ public struct AnswerAgentRequest: Sendable {
       }
       text = await screen(id.sessionID)
       guard let text, await tracker.dialogOnScreen(text, readBefore: before, isFor: id) else {
-        return await tracker.isFirstRequest(id) ? .otherDialog : .requestGone
+        let isFirst = await tracker.isFirstRequest(id)
+        // A dialog no hook reports may be the one drawn: its card takes this one's place, to be
+        // answered from there (#603).
+        if let text,
+          await tracker.dialogUnreportedOnScreen(text, readBefore: before, in: id.sessionID)
+        {
+          return .requestGone
+        }
+        return isFirst ? .otherDialog : .requestGone
       }
     }
     // Which key takes the answer is read off the dialog as drawn now (#273).
@@ -198,12 +206,32 @@ public struct AnswerAgentRequest: Sendable {
 
   /// Observe the real dialog after a permission hook, without typing any answer. Automatic
   /// review can finish without one; terminal input approvals may draw without an OSC notice.
+  /// A form only announced is read too, for a while: the dialog drawn may be one no hook reports
+  /// (#603). Made a request off the screen, that dialog is read until it goes.
   public func followPermissionDialog(_ id: AgentRequestID) async {
-    while !Task.isCancelled, await tracker.awaitsPermissionDialog(id) {
+    var formReadings = 0
+    while !Task.isCancelled, let reading = await tracker.screenReading(for: id) {
+      if reading == .announcedForm {
+        // Computer Use draws its form as Codex announces it: a form still unread by then is
+        // another, filled in the terminal.
+        guard formReadings < Self.announcedFormReadings else { return }
+        formReadings += 1
+      }
       if let before = await screen(id.sessionID), await tracker.catchUp(id.sessionID),
         !Task.isCancelled, let after = await screen(id.sessionID)
       {
+        if reading == .unreportedDialog {
+          // Another app asked in its place, or its form gone.
+          if await !tracker.dialogUnreportedOnScreen(after, readBefore: before, in: id.sessionID) {
+            await tracker.unreportedDialogGone(after, readBefore: before, isFor: id)
+          }
+          do { try await sleep(Self.startupDialogPollInterval) } catch { return }
+          continue
+        }
         if await tracker.dialogOnScreen(after, readBefore: before, isFor: id) { return }
+        if await tracker.dialogUnreportedOnScreen(after, readBefore: before, in: id.sessionID) {
+          return
+        }
         // Drawn, but not to be told apart: shown to be answered in the terminal, and still read
         // until it is told apart, or settled.
         await tracker.dialogUnnamedOnScreen(after, readBefore: before, isFor: id)
@@ -249,6 +277,8 @@ public struct AnswerAgentRequest: Sendable {
 
   /// How often the screen of a start that waits is read again.
   public static let startupDialogPollInterval: Duration = .seconds(1)
+  /// How many times a form only announced is read for a dialog no hook reports (#603).
+  static let announcedFormReadings = 10
 
   /// Whether the dialog, read again, asks for `keys` and nothing else — waited for up to
   /// `settleLimit`, the key before having to be read and drawn first.
