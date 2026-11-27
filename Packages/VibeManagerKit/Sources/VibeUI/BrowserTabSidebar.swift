@@ -214,6 +214,12 @@ struct BrowserTabSidebar: View {
       return .handled
     }
     .onExitCommand { model.closeTabSidebar() }
+    // A group renamed: the keyboard comes back to the sidebar, on that group.
+    .onChange(of: renaming) { previous, current in
+      guard current == nil, let previous else { return }
+      highlighted = .group(previous)
+      hasKeyboard = true
+    }
     .clearsWhenDragEnds(dragged != nil || mark != nil) {
       dragged = nil
       mark = nil
@@ -478,6 +484,24 @@ struct BrowserTabSidebar: View {
           Text("Remove from Group", bundle: .module)
         }
       }
+      // What the list of #536 offered: kept beside dragging.
+      Button {
+        browser.setPinned(tab.id, !tab.isPinned)
+      } label: {
+        tab.isPinned ? Text("Unpin Tab", bundle: .module) : Text("Pin Tab", bundle: .module)
+      }
+      Button {
+        browser.moveTab(tab.id, by: -1)
+      } label: {
+        Text("Move Up", bundle: .module)
+      }
+      .disabled(!browser.canMoveTab(tab.id, by: -1))
+      Button {
+        browser.moveTab(tab.id, by: 1)
+      } label: {
+        Text("Move Down", bundle: .module)
+      }
+      .disabled(!browser.canMoveTab(tab.id, by: 1))
       Divider()
       Button {
         close(tab.id)
@@ -741,7 +765,7 @@ private struct BrowserTabGroupHeader: View {
           .onSubmit(commit)
           .onExitCommand { isRenaming = false }
           .onAppear {
-            draft = group.name.isEmpty ? name : group.name
+            draft = name
             isEditing = true
           }
           .onChange(of: isEditing) { _, editing in
@@ -792,7 +816,12 @@ private struct BrowserTabGroupHeader: View {
     .accessibilityAction(.default, toggle)
   }
 
+  /// The made-up name, left as it was, stays made up: it follows the language.
   private func commit() {
+    if group.name.isEmpty, draft == name {
+      isRenaming = false
+      return
+    }
     rename(draft)
     isRenaming = false
   }

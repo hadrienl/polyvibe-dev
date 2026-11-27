@@ -207,4 +207,14 @@ struct BrowserTabArrangementTests {
     let before648 = Data(#"{"tabs":[],"isVisible":true}"#.utf8)
     #expect(try JSONDecoder().decode(SessionBrowserState.self, from: before648).groups.isEmpty)
   }
+
+  @Test("A group's only tab dropped on its own group stays where it was")
+  func onlyTabOnItsGroup() throws {
+    var (arrangement, t) = make(3)
+    let made = arrangement.newGroup(with: t[2], name: "Mine")
+    let group = try #require(made)
+    arrangement.move(t[2], to: .group(group, .end))
+    #expect(arrangement.ids == t)
+    #expect(arrangement.group(of: t[2])?.id == group)
+  }
 }

@@ -101,7 +101,8 @@ extension AppModel {
   /// ⇧⌘S and the button left of the address bar (#648): the sidebar of tabs opens over the page,
   /// the view shown first if it was not, or closes.
   public func toggleTabSidebar() {
-    if isTabSidebarShown {
+    // Open over a view that is not on screen counts as closed: ⇧⌘S shows it.
+    if isTabSidebarShown, isWebViewOpen {
       closeTabSidebar()
     } else {
       guard isWebViewAvailable else { return }

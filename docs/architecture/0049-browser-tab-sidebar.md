@@ -251,8 +251,8 @@ anywhere clears the indicator (`clearsWhenDragEnds`, as #536).
 ### Context menus
 
 - Tab: Recharger · Ouvrir dans le navigateur · Copier l'adresse · Définir comme ticket ─
-  Déplacer vers ▸ (Épinglés, each group, Nouveau groupe, Aucun groupe) · Retirer du groupe ─
-  Fermer l'onglet. The ticket's tab keeps only the first three.
+  Déplacer vers ▸ (Épinglés, each group, Nouveau groupe, Aucun groupe) · Retirer du groupe ·
+  Épingler / Détacher · Monter / Descendre (kept from #536) ─ Fermer l'onglet. The ticket's tab keeps only the first three.
 - Group: Renommer… · Replier / Déplier ─ Dissoudre le groupe · Fermer le groupe (closes each
   member through `BrowserWorkspace.close`, so that #241's download refusal applies to each).
 - « Close All » of #536 (`closeUnpinnedTabs`) moves to the address bar's « … » menu as « Close

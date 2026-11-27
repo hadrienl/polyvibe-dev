@@ -174,7 +174,8 @@ public struct BrowserTabArrangement: Equatable, Sendable {
       if let first = members.first, let last = members.last {
         index = self.index(of: place, within: first..<(last + 1), item: false) ?? last + 1
       } else {
-        index = pinnedCount
+        // Its only tab, dropped on it: where it was.
+        index = min(max(from, pinnedCount), entries.count)
       }
     case .loose(let place):
       entry.isPinned = false

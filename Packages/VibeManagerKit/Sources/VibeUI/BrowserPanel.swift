@@ -34,6 +34,9 @@ struct BrowserPanel: View {
     }
     // Another session's tabs: the sidebar of the previous one goes.
     .onChange(of: browser.sessionID) { model.closeTabSidebar(returningFocus: false) }
+    // The web view hidden, or the terminal's turn: the sidebar goes with it, rather than come back
+    // open over another session's page.
+    .onDisappear { model.closeTabSidebar(returningFocus: false) }
     // Not under the toolbar: there, the session's backdrop goes on from the conversation's.
     .background(.background, ignoresSafeAreaEdges: [])
     .accessibilityElement(children: .contain)
