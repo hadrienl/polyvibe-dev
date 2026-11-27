@@ -136,6 +136,19 @@ private actor Redraws {
   }
 }
 
+/// When a terminal last wrote something, which a test moves on as its agent draws.
+private actor LastOutput {
+  var value: ContinuousClock.Instant
+
+  init(_ value: ContinuousClock.Instant) {
+    self.value = value
+  }
+
+  func drew() {
+    value = .now
+  }
+}
+
 /// What a terminal shows, which a test changes.
 private actor LiveScreen {
   var text: String?
@@ -235,6 +248,34 @@ struct AnswerAgentRequestTests {
     #expect(reports.first?.before == text)
     #expect(reports.first?.after == text)
     #expect(reports.first?.writtenKeys == [[49]])
+  }
+
+  @Test("An agent silent since the key is waited for past the limit of a redrawn dialog")
+  func lateReader() async {
+    // #653: on a loaded Mac, Claude Code read the digit long after it was typed; reported as
+    // failed, the request was answered again from its card, and the second digit left in its
+    // prompt.
+    let live = LiveScreen("❯ 1. Yes\n  2. No")
+    let fixture = Fixture(live: live, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let output = LastOutput(ContinuousClock.now - .seconds(1))
+    await fixture.terminals.setOnWrite { _ in
+      Task {
+        try? await Task.sleep(for: AnswerAgentRequest.confirmationLimit + .milliseconds(500))
+        await live.show("Working…")
+        await output.drew()
+      }
+    }
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      lastOutput: { _ in await output.value },
+      screen: { _ in await live.text }, confirmsDelivery: true,
+      failed: { await failures.append($0) })
+    #expect(await answer(.allowOnce, to: request) == .sent)
+    #expect(await fixture.terminals.written[id] == [[49]])
+    #expect(await failures.values.isEmpty)
   }
 
   @Test("A confirmed dialog closing completes the request without a failure report")

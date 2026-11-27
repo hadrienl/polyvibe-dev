@@ -184,7 +184,7 @@ actor InteractionFailureReporter {
       - Outcome: \(failure.outcome.rawValue)
       - Request: \(failure.requestID)
       - Expected: selecting the answer in the interaction card completes this request in its own terminal.
-      - Actual: the dialog could not be safely answered, changed during input, or stayed open after input (3 second confirmation limit).
+      - Actual: the dialog could not be safely answered, changed during input, or stayed open after input (3 seconds after its redraw, 60 while the agent drew nothing).
       - Recovery: automatically open this session in terminal view. No automatic input retry.
 
       Reproduction: present the request below in the agent CLI, with the terminal layout shown in “Before”, then submit the recorded answer from the conversation card or request palette.
