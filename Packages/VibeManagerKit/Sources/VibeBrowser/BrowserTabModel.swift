@@ -51,6 +51,8 @@ public final class BrowserTabModel: NSObject, Identifiable {
   public let isPinnedTicket: Bool
   /// The user pinned the tab (#536): its browser keeps it among the first, after the ticket's.
   public internal(set) var isPinned: Bool
+  /// The sidebar's group the tab is in (#648); its browser keeps it.
+  public internal(set) var groupID: BrowserTabGroupID?
 
   public private(set) var url: URL
   /// The address of the document the page actually holds: set when a navigation commits, and only
@@ -141,6 +143,7 @@ public final class BrowserTabModel: NSObject, Identifiable {
     isOpenedByAgentPage: Bool = false,
     isPinnedTicket: Bool = false,
     isPinned: Bool = false,
+    groupID: BrowserTabGroupID? = nil,
     configuration: BrowserWebConfiguration
   ) {
     self.id = id
@@ -149,6 +152,7 @@ public final class BrowserTabModel: NSObject, Identifiable {
     self.openedBy = openedBy
     self.isPinnedTicket = isPinnedTicket
     self.isPinned = isPinned
+    self.groupID = groupID
     self.configuration = configuration
     self.isAgentDriven = (isAgentDriven ?? (openedBy == .agent)) || isOpenedByAgentPage
     self.isOpenedByAgentPage = isOpenedByAgentPage
@@ -159,7 +163,7 @@ public final class BrowserTabModel: NSObject, Identifiable {
   public var persisted: BrowserTab {
     BrowserTab(
       id: id, url: url, title: title, openedBy: openedBy, isAgentDriven: asksBeforeEffects,
-      isPinned: isPinned)
+      isPinned: isPinned, groupID: groupID)
   }
 
   public var isLoaded: Bool {

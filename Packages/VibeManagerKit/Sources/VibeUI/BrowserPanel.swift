@@ -16,9 +16,7 @@ struct BrowserPanel: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      BrowserTabStrip(model: model, workspace: workspace, browser: browser)
-      Divider()
-      BrowserAddressBar(model: model, browser: browser, tab: browser.activeTab)
+      BrowserAddressBar(model: model, workspace: workspace, browser: browser, tab: browser.activeTab)
       Divider()
       ZStack(alignment: .top) {
         content
@@ -29,9 +27,16 @@ struct BrowserPanel: View {
           .padding(10)
           .transition(.move(edge: .top).combined(with: .opacity))
         }
+        // Over the page and its banner (#648).
+        BrowserTabSidebarOverlay(model: model, workspace: workspace, browser: browser)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+    // Another session's tabs: the sidebar of the previous one goes.
+    .onChange(of: browser.sessionID) { model.closeTabSidebar(returningFocus: false) }
+    // The web view hidden, or the terminal's turn: the sidebar goes with it, rather than come back
+    // open over another session's page.
+    .onDisappear { model.closeTabSidebar(returningFocus: false) }
     // Not under the toolbar: there, the session's backdrop goes on from the conversation's.
     .background(.background, ignoresSafeAreaEdges: [])
     .accessibilityElement(children: .contain)
@@ -97,29 +102,15 @@ struct BrowserPanel: View {
 
 // MARK: - Tabs
 
-/// The session's tabs, behind one button that shows the one in front whole (#536), beside a new
-/// tab and what agents did.
-private struct BrowserTabStrip: View {
+/// Beside the address field: a new tab, and what agents did.
+private struct BrowserTabTools: View {
   let model: AppModel
   let workspace: BrowserWorkspace
   let browser: SessionBrowser
   @State private var isShowingTrace = false
-  @State private var isShowingTabs = false
 
   var body: some View {
-    HStack(spacing: 4) {
-      BrowserTabPickerButton(browser: browser, isShowingTabs: $isShowingTabs)
-        .background(
-          BrowserTabListPopover(isPresented: $isShowingTabs) { width in
-            BrowserTabList(
-              model: model, workspace: workspace, browser: browser,
-              dismiss: { isShowingTabs = false }
-            )
-            // As wide as the button, so that titles read whole: known from the first time it opens.
-            .frame(width: max(width, 280))
-          }
-        )
-
+    HStack(spacing: 2) {
       Button {
         model.newWebTab()
       } label: {
@@ -148,7 +139,6 @@ private struct BrowserTabStrip: View {
         .frame(height: 24)
       }
       .buttonStyle(.borderless)
-      .padding(.trailing, 8)
       .instantTooltip(Text("Agent Actions", bundle: .module))
       .accessibilityLabel(Text("Agent Actions", bundle: .module))
       .accessibilityValue(
@@ -163,13 +153,6 @@ private struct BrowserTabStrip: View {
           forget: { workspace.forgetReading($0, in: browser.sessionID) })
       }
     }
-    .padding(.leading, 6)
-    .frame(height: 36)
-    .background(.bar)
-    // Another session's tabs in the same strip: the list of the previous one goes.
-    .onChange(of: browser.sessionID) { isShowingTabs = false }
-    .accessibilityElement(children: .contain)
-    .accessibilityLabel(Text("Web tabs", bundle: .module))
   }
 }
 
@@ -177,6 +160,7 @@ private struct BrowserTabStrip: View {
 
 private struct BrowserAddressBar: View {
   let model: AppModel
+  let workspace: BrowserWorkspace
   let browser: SessionBrowser
   let tab: BrowserTabModel?
   @State private var text = ""
@@ -186,6 +170,10 @@ private struct BrowserAddressBar: View {
 
   var body: some View {
     HStack(spacing: 2) {
+      // The tabs, left of everything (#648).
+      BrowserTabSidebarButton(model: model, browser: browser)
+        .padding(.trailing, 4)
+
       Button {
         tab?.goBack()
       } label: {
@@ -252,6 +240,8 @@ private struct BrowserAddressBar: View {
       .disabled(tab.map { !model.opensOutside($0.url) } ?? true)
       .instantTooltip(Text("Open in Browser", bundle: .module))
       .accessibilityLabel(Text("Open in Browser", bundle: .module))
+
+      BrowserTabTools(model: model, workspace: workspace, browser: browser)
 
       Menu {
         ticketMenu
@@ -346,6 +336,13 @@ private struct BrowserAddressBar: View {
       Text("Copy Address", bundle: .module)
     }
     .disabled(tab == nil)
+    // The pinned tabs and the ticket's stay (#536).
+    Button {
+      workspace.closeUnpinnedTabs(in: browser.sessionID)
+    } label: {
+      Text("Close Unpinned Tabs", bundle: .module)
+    }
+    .disabled(browser.tabs.count == browser.pinnedCount)
     Divider()
     if let id = model.selectedSessionID {
       if let tab, !tab.isPinnedTicket {

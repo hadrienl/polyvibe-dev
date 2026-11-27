@@ -68,7 +68,8 @@ enum DropReader {
     // here: nothing to type, and nothing to warn about. Read as an address as well as text, since
     // its prefix looks like a scheme.
     if case .text(let text) = item,
-      BrowserTabDrag.tabID(in: text) != nil || DrawerTabDrag.terminalID(in: text) != nil
+      BrowserTabDrag.tabID(in: text) != nil || BrowserTabGroupDrag.isGroup(text)
+        || DrawerTabDrag.terminalID(in: text) != nil
     {
       return .ignored
     }

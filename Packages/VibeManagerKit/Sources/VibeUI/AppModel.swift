@@ -692,6 +692,8 @@ public final class AppModel {
   /// Asks the web view's panel to take the keyboard, or its address bar.
   public internal(set) var webViewFocusRequest = 0
   public internal(set) var addressBarFocusRequest = 0
+  /// The web view's sidebar of tabs is open over the page (#648). Closed when the session changes.
+  public internal(set) var isTabSidebarShown = false
   /// Whether the web view's address bar holds the keyboard: ⌘W then closes its tab.
   public var isAddressBarFocused = false
   var webPageFocus = false

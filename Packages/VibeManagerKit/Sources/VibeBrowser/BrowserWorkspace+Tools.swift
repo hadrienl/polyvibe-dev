@@ -103,7 +103,7 @@ extension BrowserWorkspace: BrowserToolRunning {
         succeeded: tab.failure == nil)
       return status(of: tab, in: browser)
     case "tab_activate":
-      browser.activate(tab.id)
+      browser.activate(tab.id, byUser: false)
       tab.ensureWebView()
       record(tool, in: browser, tab: tab, target: tab.displayTitle, decision: .automatic)
       return .text("Tab \(tab.id) is in front.")
@@ -422,6 +422,11 @@ extension BrowserWorkspace: BrowserToolRunning {
         "loaded": .bool(tab.isLoaded),
         "loading": .bool(tab.isLoading),
         "openedBy": .string(tab.isPinnedTicket ? "ticket" : tab.openedBy.rawValue),
+        // The user's group in the sidebar (#648), in the order the user sees: never the agent's to
+        // change.
+        "group": browser.group(of: tab.id).map { group in
+          .object(["name": .string(group.name)])
+        } ?? .null,
         "error": tab.failure.map { .string($0.agentDescription) } ?? .null,
       ]
     }
