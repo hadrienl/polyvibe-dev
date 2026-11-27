@@ -261,6 +261,9 @@ struct AnswerAgentRequestTests {
     let output = LastOutput(ContinuousClock.now - .seconds(1))
     await fixture.terminals.setOnWrite { _ in
       Task {
+        // Output read after the key, but that leaves the screen as it was: not its redraw.
+        try? await Task.sleep(for: .milliseconds(500))
+        await output.drew()
         try? await Task.sleep(for: AnswerAgentRequest.confirmationLimit + .milliseconds(500))
         await live.show("Working…")
         await output.drew()
@@ -276,6 +279,25 @@ struct AnswerAgentRequestTests {
     #expect(await answer(.allowOnce, to: request) == .sent)
     #expect(await fixture.terminals.written[id] == [[49]])
     #expect(await failures.values.isEmpty)
+  }
+
+  @Test("An agent that never draws after the key fails once its limit is over, typed once")
+  func silentAgent() async {
+    let text = "❯ 1. Yes\n  2. No"
+    let fixture = Fixture(screen: text, keymap: ScreenKeymap())
+    let (id, request) = await fixture.asking("touch a")
+    let output = LastOutput(ContinuousClock.now - .seconds(1))
+    let failures = RecordedInteractionFailures()
+    let answer = AnswerAgentRequest(
+      tracker: fixture.tracker,
+      write: { id, bytes in await fixture.terminals.write(bytes, to: id) },
+      lastOutput: { _ in await output.value },
+      screen: { _ in text }, confirmsDelivery: true, unreadKeyLimit: .milliseconds(500),
+      failed: { await failures.append($0) })
+    #expect(await answer(.allowOnce, to: request) == .interrupted)
+    #expect(await fixture.tracker.isFirstRequest(request))
+    #expect(await fixture.terminals.written[id] == [[49]])
+    #expect(await failures.values.count == 1)
   }
 
   @Test("A confirmed dialog closing completes the request without a failure report")
