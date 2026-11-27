@@ -39,12 +39,14 @@ public struct BrowserTab: Identifiable, Hashable, Codable, Sendable {
   /// opened it from one of its pages, and the user has not taken it back. Kept between launches:
   /// a page the agent sent the user's tab to stays the agent's once the application relaunches.
   public var isAgentDriven: Bool
-  /// The user pinned the tab (#536): it stays among the first, after the ticket's.
+  /// The user pinned the tab (#536): it is in the « Pinned » group, after the ticket's.
   public var isPinned: Bool
+  /// The group of the sidebar the tab is in (#648), `nil` when it is in none or pinned.
+  public var groupID: BrowserTabGroupID?
 
   public init(
     id: BrowserTabID = BrowserTabID(), url: URL, title: String = "", openedBy: Opener,
-    isAgentDriven: Bool? = nil, isPinned: Bool = false
+    isAgentDriven: Bool? = nil, isPinned: Bool = false, groupID: BrowserTabGroupID? = nil
   ) {
     self.id = id
     self.url = url
@@ -52,10 +54,11 @@ public struct BrowserTab: Identifiable, Hashable, Codable, Sendable {
     self.openedBy = openedBy
     self.isAgentDriven = isAgentDriven ?? (openedBy == .agent)
     self.isPinned = isPinned
+    self.groupID = groupID
   }
 
   private enum CodingKeys: String, CodingKey {
-    case id, url, title, openedBy, isAgentDriven, isPinned
+    case id, url, title, openedBy, isAgentDriven, isPinned, groupID
   }
 
   /// An opener written by a later build reads as the agent's, and a tab kept before the agent's
@@ -70,6 +73,7 @@ public struct BrowserTab: Identifiable, Hashable, Codable, Sendable {
       ?? .agent
     isAgentDriven = (try? container.decodeIfPresent(Bool.self, forKey: .isAgentDriven)) ?? true
     isPinned = (try? container.decodeIfPresent(Bool.self, forKey: .isPinned)) ?? false
+    groupID = try? container.decodeIfPresent(BrowserTabGroupID.self, forKey: .groupID)
   }
 }
 
@@ -80,15 +84,21 @@ public struct SessionBrowserState: Hashable, Codable, Sendable {
   /// `nil` puts the ticket's tab in front, or nothing when there is no ticket.
   public var activeTabID: BrowserTabID?
   public var isVisible: Bool
+  /// The groups of the sidebar (#648). A tab naming a group that is not here is in none.
+  public var groups: [BrowserTabGroup]
 
-  public init(tabs: [BrowserTab] = [], activeTabID: BrowserTabID? = nil, isVisible: Bool = false) {
+  public init(
+    tabs: [BrowserTab] = [], activeTabID: BrowserTabID? = nil, isVisible: Bool = false,
+    groups: [BrowserTabGroup] = []
+  ) {
     self.tabs = tabs
     self.activeTabID = activeTabID
     self.isVisible = isVisible
+    self.groups = groups
   }
 
   private enum CodingKeys: String, CodingKey {
-    case tabs, activeTabID, isVisible
+    case tabs, activeTabID, isVisible, groups
   }
 
   /// A tab that cannot be read is dropped, not the whole view: one bad entry must not cost the
@@ -101,6 +111,9 @@ public struct SessionBrowserState: Hashable, Codable, Sendable {
     let active = try? container.decodeIfPresent(BrowserTabID.self, forKey: .activeTabID)
     activeTabID = active.flatMap { id in read.contains { $0.id == id } ? id : nil }
     isVisible = (try? container.decodeIfPresent(Bool.self, forKey: .isVisible)) ?? false
+    let groups =
+      (try? container.decodeIfPresent([Lenient<BrowserTabGroup>].self, forKey: .groups)) ?? []
+    self.groups = groups.compactMap(\.value)
   }
 }
 
