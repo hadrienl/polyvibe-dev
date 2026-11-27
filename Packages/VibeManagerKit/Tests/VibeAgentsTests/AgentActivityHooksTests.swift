@@ -105,6 +105,25 @@ struct AgentActivityHookCommandTests {
     #expect(object["command"] == #"echo "tool_name":"x""#)
   }
 
+  @Test("Captures write back only what the pattern captures, past the byte limit too (#532)")
+  func captures() throws {
+    let log = try temporaryLog()
+    let command = AgentActivityHookCommand.command(
+      event: "Stop",
+      payload: .captures(
+        key: "background_tasks", pattern: ClaudeCodeActivityHooks.runningSubagentPattern))
+    let long = String(repeating: "x", count: 2 * AgentActivityHookCommand.payloadByteLimit)
+    // Claude Code 2.1.332's own, the answer made long, quoting a task in its words.
+    let input =
+      #"{"session_id":"s","stop_hook_active":false,"last_assistant_message":"\#(long) {\"id\":\"q\",\"type\":\"subagent\",\"status\":\"running\"}","background_tasks":[{"id":"a1","type":"subagent","status":"running","description":"Fix [it]","agent_type":"general-purpose"},{"id":"b2","type":"shell","status":"running"},{"id":"c3","type":"subagent","status":"completed"},{"id":"d4","type":"subagent","status":"running","description":"Two"}],"session_crons":[]}"#
+    _ = try runHook(command, input: input, log: log)
+    _ = try runHook(command, input: #"{"background_tasks":[],"session_crons":[]}"#, log: log)
+    _ = try runHook(command, input: #"{"last_assistant_message":"done"}"#, log: log)
+    #expect(
+      lines(of: log).map(\.last)
+        == [#"{"background_tasks":["a1","d4"]}"#, #"{"background_tasks":[]}"#, ""])
+  }
+
   @Test("Without a log to write to, or with one it cannot write, it still succeeds silently")
   func neverFails() throws {
     let command = AgentActivityHookCommand.command(event: "Stop", payload: .keep)
@@ -221,6 +240,18 @@ struct ClaudeCodeSignalDecoderTests {
       #expect(decoder.signal(for: event(name, #"{"tool_name":"Bash"}"#)) == .toolFinished("Bash"))
     }
     #expect(decoder.signal(for: event("Stop")) == .turnEnded)
+    #expect(
+      decoder.signal(for: event("Stop", #"{"background_tasks":["a1","d4"]}"#))
+        == .turnEndedBesideSubagents(["a1", "d4"]))
+    #expect(
+      decoder.signal(for: event("Stop", #"{"background_tasks":[]}"#))
+        == .turnEndedBesideSubagents([]))
+    #expect(
+      decoder.signal(
+        for: event("SubagentStart", #"{"agent_id":"a1","agent_type":"general-purpose"}"#))
+        == .subagentStarted("a1"))
+    #expect(
+      decoder.signal(for: event("SubagentStop", #"{"agent_id":"a1"}"#)) == .subagentEnded("a1"))
     #expect(decoder.signal(for: event("StopFailure")) == .turnEnded)
     #expect(decoder.signal(for: event("SessionEnd")) == .agentEnded)
     #expect(decoder.signal(for: event("Notification", ClaudePayloads.idle)) == .waitingForInput)

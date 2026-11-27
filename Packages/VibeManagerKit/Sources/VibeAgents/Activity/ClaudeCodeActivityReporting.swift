@@ -12,6 +12,12 @@ public enum ClaudeCodeActivityHooks {
   /// The only tools that stop to ask the user something. Hooking every tool would put a shell on
   /// the path of each command the agent runs, for nothing.
   static let questionTools = "AskUserQuestion|ExitPlanMode"
+  /// A sub-agent still at work in the `background_tasks` of a `Stop`, its `agent_id` captured —
+  /// `{"id":"a1…","type":"subagent","status":"running",…}`, in that order (checked against
+  /// 2.1.332). A background shell is no sub-agent: a server left running is no work going on.
+  /// Should the order change, no sub-agent is read, and the turn ends as it did before #532.
+  static let runningSubagentPattern =
+    #"\{"id": ?"([^"]*)", ?"type": ?"subagent", ?"status": ?"running""#
 
   struct Hook {
     let event: String
@@ -41,7 +47,13 @@ public enum ClaudeCodeActivityHooks {
       payload: .fields(AgentRequestReading.resolutionFields)),
     // Every call of a batch resolved, refused ones included (#273): only which agent's batch.
     Hook(event: "PostToolBatch", matcher: nil, payload: .fields(["agent_id"])),
-    Hook(event: "Stop", matcher: nil, payload: .drop),
+    // Which sub-agent starts and ends (#532): one in the background outlives the main turn.
+    Hook(event: "SubagentStart", matcher: nil, payload: .fields(["agent_id", "agent_type"])),
+    Hook(event: "SubagentStop", matcher: nil, payload: .fields(["agent_id"])),
+    // Which sub-agents still work as the turn ends, never the answer it ends on (#532).
+    Hook(
+      event: "Stop", matcher: nil,
+      payload: .captures(key: "background_tasks", pattern: runningSubagentPattern)),
     // Which error ended the turn, and the API's words for it (#273).
     Hook(
       event: "StopFailure", matcher: nil,
@@ -162,8 +174,15 @@ public struct ClaudeCodeSignalDecoder: AgentSignalDecoding {
       return .toolFinished(tool, agentID: reference.agentID, subject: reference.subject)
     case "PostToolBatch":
       return .batchResolved(agentID: event.string("agent_id"))
+    case "SubagentStart", "SubagentStop":
+      guard let id = event.string("agent_id"), !id.isEmpty else { return nil }
+      return event.name == "SubagentStart" ? .subagentStarted(id) : .subagentEnded(id)
     case "Stop":
-      return .turnEnded
+      // A Claude Code that lists no background task says nothing of its sub-agents.
+      guard let tasks = event.jsonObject?["background_tasks"] as? [String] else {
+        return .turnEnded
+      }
+      return .turnEndedBesideSubagents(Set(tasks))
     case "StopFailure":
       guard let error = event.string("error"), Self.accountErrors.contains(error) else {
         return .turnEnded
