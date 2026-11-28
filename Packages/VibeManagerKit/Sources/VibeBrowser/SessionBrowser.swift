@@ -36,6 +36,12 @@ public final class SessionBrowser {
   public private(set) var refusedSites: Set<String> = []
   /// The groups of the sidebar (#648), kept with the tabs.
   public private(set) var groups: [BrowserTabGroup] = []
+  /// The N of the next « Group N » (#666).
+  private(set) var nextGroupNumber = 1
+  /// Names groups from their tabs, on this Mac (#666); `nil`: they stay « Group N ».
+  @ObservationIgnored var titler: (any BrowserTabGroupTitler)?
+  /// The names asked for and not answered yet, by group.
+  @ObservationIgnored private var titling: [BrowserTabGroupID: Task<Void, Never>] = [:]
 
   @ObservationIgnored var stateDidChange: (@MainActor () -> Void)?
   @ObservationIgnored var logDidChange: (@MainActor () -> Void)?
@@ -76,7 +82,7 @@ public final class SessionBrowser {
     SessionBrowserState(
       tabs: tabs.map(\.persisted),
       activeTabID: activeTabID.flatMap { id in tabs.contains { $0.id == id } ? id : nil },
-      isVisible: isVisible, groups: groups)
+      isVisible: isVisible, groups: groups, nextGroupNumber: nextGroupNumber)
   }
 
   // MARK: - Arrangement (#648)
@@ -111,7 +117,51 @@ public final class SessionBrowser {
       if tab.groupID != entry.groupID { tab.groupID = entry.groupID }
       return tab
     }
-    if groups != arrangement.groups { groups = arrangement.groups }
+    var arranged = arrangement.groups
+    // A group made by this change takes the session's next number, kept for good (#666).
+    for index in arranged.indices where arranged[index].number == 0 {
+      arranged[index].number = nextGroupNumber
+      nextGroupNumber += 1
+    }
+    if groups != arranged { groups = arranged }
+    titleGroupsIfDue()
+  }
+
+  // MARK: - Names (#666)
+
+  /// Asks a name for each group that is due one — made with two tabs, grown to four — and that the
+  /// user did not name. The sidebar shows « Group N » meanwhile.
+  private func titleGroupsIfDue() {
+    guard let titler else { return }
+    for index in groups.indices where titling[groups[index].id] == nil {
+      let id = groups[index].id
+      let members = tabs.filter { $0.groupID == id }
+      guard groups[index].needsTitle(count: members.count) else { continue }
+      groups[index].titledAtCount = members.count
+      let pages = members.map(BrowserTabGroupTitlePage.init(tab:))
+      let titles = members.map(\.displayTitle)
+      titling[id] = Task { [weak self] in
+        let answer = await titler.title(for: pages)
+        self?.applyTitle(answer, to: id, tabTitles: titles)
+      }
+    }
+  }
+
+  private func applyTitle(_ answer: String?, to id: BrowserTabGroupID, tabTitles: [String]) {
+    // Renamed meanwhile, the user's name stands, even an empty one.
+    guard titling.removeValue(forKey: id) != nil,
+      let index = groups.firstIndex(where: { $0.id == id }),
+      groups[index].nameSource != .user,
+      let title = BrowserTabGroup.acceptedTitle(answer, tabTitles: tabTitles)
+    else { return }
+    groups[index].name = title
+    groups[index].nameSource = .generated
+    stateDidChange?()
+  }
+
+  /// Once every name asked for has come back: for tests.
+  func titlesSettled() async {
+    while let pending = titling.values.first { await pending.value }
   }
 
   // MARK: - Changes
@@ -124,6 +174,9 @@ public final class SessionBrowser {
     let opened = tabs
     tabs = state.tabs.map(make) + opened
     groups = state.groups + groups
+    // Past every number kept, a file written before #666 having none.
+    nextGroupNumber = max(
+      nextGroupNumber, state.nextGroupNumber, (groups.map(\.number).max() ?? 0) + 1)
     // Pinned first and groups whole, whatever the file said (#536, #648).
     arrange { _ in }
     if activeTabID == nil { activeTabID = state.activeTabID }
@@ -152,8 +205,8 @@ public final class SessionBrowser {
       position = pinnedCount
     }
     arrange(adding: tab) { arrangement in
-      if let opener, let from = self.tab(opener) {
-        arrangement.insertOpened(tab.id, at: position, from: opener, name: from.displayTitle)
+      if let opener, self.tab(opener) != nil {
+        arrangement.insertOpened(tab.id, at: position, from: opener)
       } else {
         arrangement.insert(tab.id, at: position)
       }
@@ -250,10 +303,18 @@ public final class SessionBrowser {
     arrangement.canMoveGroup(id, by: offset)
   }
 
-  /// A group of the user's with the tab, named after it.
+  /// A group of the user's with the tab: « Group N » until it is named (#666).
   public func newGroup(with id: BrowserTabID) {
-    guard let tab = tabs.first(where: { $0.id == id }) else { return }
-    arrange { $0.newGroup(with: id, name: tab.displayTitle) }
+    guard tabs.contains(where: { $0.id == id }) else { return }
+    arrange { $0.newGroup(with: id) }
+    stateDidChange?()
+  }
+
+  /// The user's name, never replaced by one made from the tabs (#666). Empty: « Group N » again.
+  public func renameGroup(_ id: BrowserTabGroupID, to name: String) {
+    titling[id]?.cancel()
+    titling[id] = nil
+    arrange { $0.rename(id, to: name) }
     stateDidChange?()
   }
 

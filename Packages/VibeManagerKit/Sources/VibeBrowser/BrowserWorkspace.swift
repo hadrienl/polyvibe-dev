@@ -84,6 +84,9 @@ public final class BrowserWorkspace {
   @ObservationIgnored private var renderingProbe: (any PageRenderingProbe)?
   @ObservationIgnored private var renderingCheck: Task<Void, Never>?
   @ObservationIgnored private var renderingCheckAgain = false
+  /// Names the sidebar's groups from their tabs, on this Mac (#666). `nil` — tests, a Mac without
+  /// Apple Intelligence — leaves them « Group N ».
+  @ObservationIgnored public var groupTitler: (any BrowserTabGroupTitler)?
 
   public init(
     stateStore: any BrowserStateStore = InMemoryBrowserStateStore(),
@@ -185,6 +188,7 @@ public final class BrowserWorkspace {
   public func browser(for id: SessionID) -> SessionBrowser {
     if let browser = browsers[id] { return browser }
     let browser = SessionBrowser(sessionID: id)
+    browser.titler = groupTitler
     browser.stateDidChange = { [weak self] in self?.scheduleSave(id) }
     browser.logDidChange = { [weak self] in self?.scheduleLogSave(id) }
     browsers[id] = browser

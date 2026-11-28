@@ -117,11 +117,12 @@ public struct BrowserTabArrangement: Equatable, Sendable {
   }
 
   /// A tab a page opened (#648): in its opener's group, at `position` — after the opener and the
-  /// tabs it opened before (#186). An opener in no group makes one with it, named `name`; a pinned
+  /// tabs it opened before (#186). An opener in no group makes one with it, named `name` — none
+  /// since #666: « Group N » until a name is made from its tabs; a pinned
   /// opener, or the ticket's tab, gathers its links in a group of their own, after which they line
   /// up in the order they were opened.
   public mutating func insertOpened(
-    _ id: BrowserTabID, at position: Int, from opener: BrowserTabID, name: String
+    _ id: BrowserTabID, at position: Int, from opener: BrowserTabID, name: String = ""
   ) {
     let position = min(max(position, pinnedCount), entries.count)
     if let index = entries.firstIndex(where: { $0.id == opener }), !entries[index].isPinned {
@@ -231,7 +232,7 @@ public struct BrowserTabArrangement: Equatable, Sendable {
 
   /// A group of the user's with the tab, where the tab was — after the pinned tabs if it was one.
   @discardableResult
-  public mutating func newGroup(with id: BrowserTabID, name: String) -> BrowserTabGroupID? {
+  public mutating func newGroup(with id: BrowserTabID, name: String = "") -> BrowserTabGroupID? {
     guard let index = entries.firstIndex(where: { $0.id == id }) else { return nil }
     let group = BrowserTabGroup(name: name, origin: .user)
     groups.append(group)
@@ -249,6 +250,16 @@ public struct BrowserTabArrangement: Equatable, Sendable {
     }
     normalize()
     return group.id
+  }
+
+  /// The user's name (#666): never replaced by one made from the tabs. Emptied, the group shows
+  /// « Group N » again, and no name is made for it any more.
+  public mutating func rename(_ id: BrowserTabGroupID, to name: String) {
+    guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
+    let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    groups[index].name = name
+    groups[index].nameSource = name.isEmpty ? .placeholder : .user
+    groups[index].titledAtCount = .max
   }
 
   public mutating func setCollapsed(_ id: BrowserTabGroupID, _ isCollapsed: Bool) {
