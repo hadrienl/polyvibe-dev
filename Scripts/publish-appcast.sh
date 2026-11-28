@@ -16,7 +16,7 @@
 #
 # The feed is recomputed in full every time. A draft never enters it: its assets are not even
 # downloaded. No secret is needed: each release carries its EdDSA signature in its
-# `VibeManager-<version>.appcast.json`, written by Scripts/release.sh.
+# `Polyvibe-<version>.appcast.json`, written by Scripts/release.sh.
 
 set -euo pipefail
 
@@ -49,14 +49,14 @@ node "$repository_root/site/build.mjs" "$site" "$work/releases.json"
 tags=("${(@f)$(
   gh api --paginate "repos/$repository/releases" \
     --jq '.[] | select(.draft == false)
-      | select(any(.assets[]; .name | test("^VibeManager-.*\\.appcast\\.json$")))
+      | select(any(.assets[]; .name | test("^Polyvibe-.*\\.appcast\\.json$")))
       | .tag_name'
 )}")
 for tag in "${tags[@]}"; do
   [[ -n "$tag" ]] || continue
   echo "Downloading the appcast item of $tag"
   gh release download "$tag" --repo "$repository" \
-    --pattern 'VibeManager-*.appcast.json' --output "$work/items/$tag.json"
+    --pattern 'Polyvibe-*.appcast.json' --output "$work/items/$tag.json"
 done
 
 echo "Generating the feed"
