@@ -4,7 +4,7 @@ import VibeDomain
 /// Endpoints keep their own definition.
 ///
 /// None by default: the CLI's own setting — Codex's `config.toml`, Antigravity's `agentMode` —
-/// then applies, untouched. Vibe Manager imposes Manual or Automatic only once the user chose it.
+/// then applies, untouched. Polyvibe imposes Manual or Automatic only once the user chose it.
 @MainActor
 public protocol AgentApprovalPreferences: AnyObject, Sendable {
   func mode(for provider: AgentProviderID) -> AgentApprovalMode?

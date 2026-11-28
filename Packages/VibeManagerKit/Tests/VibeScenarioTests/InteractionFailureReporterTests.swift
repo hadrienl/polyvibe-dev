@@ -347,7 +347,7 @@ struct InteractionFailureReporterTests {
       try await Task.sleep(for: .milliseconds(10))
     }
     let report = try #require(reports(in: directory).first)
-    #expect(report["issueURL"] as? String == "https://github.com/hadrienl/vibe-manager/issues/123")
+    #expect(report["issueURL"] as? String == "https://github.com/hadrienl/polyvibe-dev/issues/123")
     #expect(report["abandoned"] == nil)
     #expect(report["attempts"] == nil)
   }

@@ -3,8 +3,8 @@ import VibeDomain
 
 /// Shared by native agents and endpoints that offer their CLI's automatic permission review.
 ///
-/// A native agent also offers its CLI's own setting, the default: Vibe Manager then leaves the
-/// CLI's configuration as the user made it. An endpoint's harness is Vibe Manager's to set.
+/// A native agent also offers its CLI's own setting, the default: Polyvibe then leaves the
+/// CLI's configuration as the user made it. An endpoint's harness is Polyvibe's to set.
 struct AgentApprovalModePicker: View {
   @Binding var selection: AgentApprovalMode?
   var offersCLISetting = true

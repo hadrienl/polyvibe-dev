@@ -42,7 +42,7 @@ struct SignallingSettings: View {
           Toggle(isOn: $model.reportsInteractionFailures) {
             Text("Report failed answers on GitHub", bundle: .module)
             Text(
-              "When an answer given from Vibe Manager cannot be confirmed, a public issue is opened in hadrienl/vibe-manager under your GitHub account, with gh. It contains the request and the text of the terminal; known secrets and your user name are masked.",
+              "When an answer given from Polyvibe cannot be confirmed, a public issue is opened in hadrienl/polyvibe-dev under your GitHub account, with gh. It contains the request and the text of the terminal; known secrets and your user name are masked.",
               bundle: .module)
           }
           .accessibilityIdentifier("interaction-failure-reports-toggle")
