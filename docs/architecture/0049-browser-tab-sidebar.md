@@ -147,9 +147,10 @@ Rules in `insertOpened`:
   `open` and `adoptPopup` pass the real origin to `insertOpened` separately, so the ticket's links
   are grouped too.
 
-**Name.** The opener's `displayTitle` at creation, else its host, else « Groupe ». It is frozen:
-the opener navigating away does not rename the group. Double-click or « Renommer… » changes it; an
-empty name restores the default.
+**Name.** Revised by #666 (see *Revision #666*): no longer the opener's title, which the opener's
+row already shows, but « Groupe N » until Apple Intelligence names the group from its tabs, on
+this Mac. Double-click or « Renommer… » gives it the user's name, never replaced; an empty name
+gives back « Groupe N ».
 
 ### « Épinglés » is a static group made of `isPinned`
 
@@ -211,7 +212,8 @@ showed, is now only in the address field and the window: the sidebar is one clic
 
 ### Collapsing
 
-A group header shows a chevron, a folder, its name and its count. A collapsed group hides its
+A group header shows a chevron, its name and its count (#666: no folder; Close All under the
+pointer). A collapsed group hides its
 rows. Its tabs stay in ⌃⇥'s order (`allTabs`, in the sidebar's order): turning to a tab in a collapsed group by
 ⌃⇥ or a click expands it, so that the tab the user turned to is a visible row. An agent turning to
 it (`tab_activate`, a page brought forward) leaves the group folded: folding is the user's, and an
@@ -336,6 +338,54 @@ Each step is a commit of the same pull request; 1 can land alone if the PR grows
 
 - Shortcut: ⇧⌘S.
 - « Open in Browser » stays in the address bar; to revisit if the field is too narrow at ~340 pt.
-- A group's name is frozen at creation, the user renames it.
+- A group's name is frozen at creation, the user renames it. (#666: « Groupe N », then a name made on this Mac, until the user gives one.)
 - Tabs an agent opens with `tab_open` stay loose.
 - The width is a fixed 80 % of the web view.
+
+## Revision #666 — groups as blocks, named on this Mac
+
+[#666](https://github.com/hadrienl/polyvibe-dev/issues/666), from a mockup validated by the user
+(Dia's sidebar as the reference), then revised with them: the header stays, the name changes.
+It **replaces** how a group is drawn (*Collapsing*, *Keyboard and accessibility*) and how it is
+named (*Grouping follows the opener*, « Name »); the rest of this document stands.
+
+### A group is a block, with its header
+
+- A rounded block (10 pt) on a ground a little lighter than the sidebar (`primary` at 5 %), with
+  a thin edge. 10 pt between blocks, « Épinglés » included, and between a block and the loose tab
+  after it. Its tabs sit inside, without the vertical line nor the indent of #648.
+- The header comes first: chevron, name, count, and **Close All** under the pointer (or the
+  keyboard's highlight), right of the name. A click folds or unfolds the group, a double click
+  renames it; it is what drags the group, and holds its context menu. Collapsed, the block is its
+  header alone.
+- Close All is `closeGroup`, without asking, as « Fermer le groupe » of the menu was. After it,
+  or a click that folds or unfolds, the sidebar takes the keyboard back: on the group, or on the
+  row after it (else the one before) once the group is gone.
+- VoiceOver: the block is a plain container. The header is the heading: its name as label, « 3
+  onglets » (and « Replié ») as value, the header trait, folding as its default action, and
+  #648's actions (Replier / Déplier said once, Renommer, Déplacer, Dissoudre, Fermer le groupe).
+
+### « Groupe N », then a name made on this Mac
+
+- **Where the name comes from** (`BrowserTabGroup.NameSource`): `placeholder` (none yet: the
+  sidebar shows « Groupe N »), `generated`, or `user` — never replaced. A group written before
+  #666 keeps its name as the user's.
+- **N** is given when the group is made, from a count kept per session
+  (`SessionBrowserState.nextGroupNumber`), and saved with the group: closing a group does not
+  renumber the others, a relaunch keeps them. Groups read from an older file take the next ones.
+- **Made by Apple Intelligence**, never a remote service: `FoundationModels`, behind
+  `#if canImport(FoundationModels)` and `@available(macOS 26, *)` (the application runs on macOS
+  14). A `LanguageModelSession` is told to give the subject the tabs share in one to four words,
+  in the application's language, without copying a tab's title, as a `@Generable` answer. It reads
+  each tab's title, host and path — never the query. It runs off the main actor and gives up after
+  five seconds; `SystemLanguageModel.default.availability` other than `.available` means no name.
+- **When**: when the group is made (two tabs), once more when it reaches four
+  (`BrowserTabGroup.needsTitle`, `titledAtCount` saved), never once the user named it — an answer
+  arriving after a rename is dropped. « Groupe N » shows meanwhile, without a spinner.
+- **Checked** (`BrowserTabGroup.acceptedTitle`): trimmed of quotes, 1 to 32 characters, not one
+  of the tabs' titles (case aside), first letter a capital; otherwise the group keeps its name.
+- **Agents** read `displayName` in `tabs_list`: the name, else « Group N ».
+- `BrowserTabGroupTitler` is the seam: `BrowserWorkspace.groupTitler` is `nil` by default (tests,
+  CI, which has no Apple Intelligence), and set by the application to
+  `AppleIntelligenceGroupTitler`. The tests use a fake: asked at 2 and 4 tabs, never after a
+  rename, a duplicate or an empty answer refused, numbers stable across closing and relaunch.

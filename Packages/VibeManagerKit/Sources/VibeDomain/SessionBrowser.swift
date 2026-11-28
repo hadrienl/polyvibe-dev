@@ -86,19 +86,23 @@ public struct SessionBrowserState: Hashable, Codable, Sendable {
   public var isVisible: Bool
   /// The groups of the sidebar (#648). A tab naming a group that is not here is in none.
   public var groups: [BrowserTabGroup]
+  /// The N the session's next group gets in « Group N » (#666): counted, never reused while the
+  /// session lives, so that a group keeps its number whatever closes around it.
+  public var nextGroupNumber: Int
 
   public init(
     tabs: [BrowserTab] = [], activeTabID: BrowserTabID? = nil, isVisible: Bool = false,
-    groups: [BrowserTabGroup] = []
+    groups: [BrowserTabGroup] = [], nextGroupNumber: Int = 1
   ) {
     self.tabs = tabs
     self.activeTabID = activeTabID
     self.isVisible = isVisible
     self.groups = groups
+    self.nextGroupNumber = nextGroupNumber
   }
 
   private enum CodingKeys: String, CodingKey {
-    case tabs, activeTabID, isVisible, groups
+    case tabs, activeTabID, isVisible, groups, nextGroupNumber
   }
 
   /// A tab that cannot be read is dropped, not the whole view: one bad entry must not cost the
@@ -114,6 +118,7 @@ public struct SessionBrowserState: Hashable, Codable, Sendable {
     let groups =
       (try? container.decodeIfPresent([Lenient<BrowserTabGroup>].self, forKey: .groups)) ?? []
     self.groups = groups.compactMap(\.value)
+    nextGroupNumber = (try? container.decodeIfPresent(Int.self, forKey: .nextGroupNumber)) ?? 1
   }
 }
 

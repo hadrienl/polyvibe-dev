@@ -128,8 +128,12 @@ struct BrowserTabGroupingTests {
     let workspace = BrowserWorkspace(stateStore: store)
     let browser = await workspace.restoredBrowser(for: session)
     #expect(browser.tabs.map(\.id) == [one.id, two.id, loose.id])
-    #expect(browser.groups == [group])
-    #expect(browser.persisted.groups == [group])
+    // Written before #666, the group had no number: it takes the session's first one.
+    var numbered = group
+    numbered.number = 1
+    #expect(browser.groups == [numbered])
+    #expect(browser.persisted.groups == [numbered])
+    #expect(browser.persisted.nextGroupNumber == 2)
     #expect(browser.persisted.tabs.map(\.groupID) == [group.id, group.id, nil])
   }
 
@@ -142,6 +146,8 @@ struct BrowserTabGroupingTests {
       URL(string: "about:blank#b")!, in: session, openedBy: .user, activate: false, from: a.id)
     let browser = workspace.browser(for: session)
     let group = try #require(browser.group(of: a.id))
+    // Not named yet, the agent reads « Group N », as the sidebar shows it (#666).
+    #expect(group.displayName == "Group 1")
     browser.renameGroup(group.id, to: "Review")
 
     let result = await workspace.run(tool: "tabs_list", arguments: [:], session: session)

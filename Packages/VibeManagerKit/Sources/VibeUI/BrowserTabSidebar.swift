@@ -164,12 +164,15 @@ struct BrowserTabSidebar: View {
         ScrollView {
           VStack(alignment: .leading, spacing: 2) {
             pinnedGroup
+            let spaced = tabsAfterBlocks
             ForEach(browser.sidebarItems) { item in
               switch item {
               case .group(let group, let ids):
                 groupSection(group, tabs: ids.compactMap { browser.tab($0) })
               case .tab(let id):
-                if let tab = browser.tab(id) { row(tab) }
+                if let tab = browser.tab(id) {
+                  row(tab).padding(.top, spaced.contains(id) ? sidebarBlockGap : 0)
+                }
               }
             }
             endDropZone
@@ -278,22 +281,49 @@ struct BrowserTabSidebar: View {
       ForEach(pinned) { row($0) }
     }
     .padding(6)
-    .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
-    .padding(.bottom, 6)
+    .background(BrowserTabBlockBackground(isLit: false))
+  }
+
+  /// The loose tabs that come right after a block — the pinned group, or a group.
+  private var tabsAfterBlocks: Set<BrowserTabID> {
+    var spaced: Set<BrowserTabID> = []
+    var afterBlock = true
+    for item in browser.sidebarItems {
+      switch item {
+      case .group:
+        afterBlock = true
+      case .tab(let id):
+        if afterBlock { spaced.insert(id) }
+        afterBlock = false
+      }
+    }
+    return spaced
   }
 
   // MARK: - Groups
 
+  /// A block (#666): its header — chevron, name, count, Close All under the pointer — then its
+  /// tabs unless it is collapsed.
   private func groupSection(_ group: BrowserTabGroup, tabs: [BrowserTabModel]) -> some View {
     VStack(alignment: .leading, spacing: 2) {
       BrowserTabGroupHeader(
-        group: group, name: name(of: group), count: tabs.count,
+        group: group, name: BrowserTabGroupName.shown(group), count: tabs.count,
         isHighlighted: highlighted == .group(group.id),
         isRenaming: Binding(
           get: { renaming == group.id },
           set: { renaming = $0 ? group.id : nil }),
         mark: mark?.target == .group(group.id) ? mark?.place : nil,
-        toggle: { browser.setCollapsed(group.id, !group.isCollapsed) },
+        // A click on the header or on Close All: the sidebar takes the keyboard back, on the
+        // group or the row after it, the button it might have been on gone.
+        toggle: {
+          browser.setCollapsed(group.id, !group.isCollapsed)
+          highlighted = .group(group.id)
+          hasKeyboard = true
+        },
+        closeAll: {
+          closeGroup(group.id, movingHighlight: true)
+          hasKeyboard = true
+        },
         rename: { browser.renameGroup(group.id, to: $0) }
       )
       .id(SidebarRow.group(group.id))
@@ -313,23 +343,13 @@ struct BrowserTabSidebar: View {
 
       if !group.isCollapsed {
         ForEach(tabs) { row($0) }
-          .padding(.leading, 14)
-          .overlay(alignment: .leading) {
-            Rectangle()
-              .fill(Color.secondary.opacity(0.25))
-              .frame(width: 1)
-              .padding(.leading, 9)
-              .accessibilityHidden(true)
-          }
       }
     }
-  }
-
-  /// The name the user gave, or the one made up for a group that has none.
-  private func name(of group: BrowserTabGroup) -> String {
-    group.name.isEmpty
-      ? String(localized: "Group", bundle: .module, comment: "A group of web tabs with no name.")
-      : group.name
+    .padding(6)
+    .background(BrowserTabBlockBackground(isLit: highlighted == .group(group.id)))
+    // A plain container: its header is the heading VoiceOver reads (#666).
+    .accessibilityElement(children: .contain)
+    .padding(.top, sidebarBlockGap)
   }
 
   @ViewBuilder
@@ -351,7 +371,7 @@ struct BrowserTabSidebar: View {
       Text("Ungroup", bundle: .module, comment: "Dissolves a group of web tabs; its tabs stay.")
     }
     Button {
-      workspace.closeGroup(group.id, in: browser.sessionID)
+      closeGroup(group.id)
     } label: {
       Text("Close Group", bundle: .module)
     }
@@ -371,9 +391,7 @@ struct BrowserTabSidebar: View {
       Button(String(localized: "Move Down", bundle: .module)) { browser.moveGroup(group.id, by: 1) }
     }
     Button(String(localized: "Ungroup", bundle: .module)) { browser.dissolveGroup(group.id) }
-    Button(String(localized: "Close Group", bundle: .module)) {
-      workspace.closeGroup(group.id, in: browser.sessionID)
-    }
+    Button(String(localized: "Close Group", bundle: .module)) { closeGroup(group.id) }
   }
 
   private var expandTitle: String { String(localized: "Expand", bundle: .module) }
@@ -460,7 +478,7 @@ struct BrowserTabSidebar: View {
           Button {
             browser.move(tab.id, to: .group(group.id, .end))
           } label: {
-            Text(verbatim: name(of: group))
+            Text(verbatim: BrowserTabGroupName.shown(group))
           }
           .disabled(tab.groupID == group.id)
         }
@@ -539,7 +557,7 @@ struct BrowserTabSidebar: View {
         }
       }
       ForEach(browser.groups.filter { $0.id != tab.groupID }) { group in
-        Button(String(localized: "Move to \(name(of: group))", bundle: .module)) {
+        Button(String(localized: "Move to \(BrowserTabGroupName.shown(group))", bundle: .module)) {
           browser.move(tab.id, to: .group(group.id, .end))
         }
       }
@@ -561,6 +579,21 @@ struct BrowserTabSidebar: View {
       }
     }
     workspace.close(id, in: browser.sessionID)
+  }
+
+  /// Every tab of the group, each as its close button would (#241). The keyboard, if it was on
+  /// the group — or always, from the group's own Close All — goes on to the row after the group,
+  /// else the one before.
+  private func closeGroup(_ id: BrowserTabGroupID, movingHighlight: Bool = false) {
+    let members = Set(browser.members(of: id).map { SidebarRow.tab($0.id) } + [.group(id)])
+    if movingHighlight || highlighted.map(members.contains) == true {
+      let rows = visibleRows
+      let first = rows.firstIndex { members.contains($0) }
+      let last = rows.lastIndex { members.contains($0) }
+      highlighted =
+        last.flatMap { rows[safe: $0 + 1] } ?? first.flatMap { rows[safe: $0 - 1] }
+    }
+    workspace.closeGroup(id, in: browser.sessionID)
   }
 
   // MARK: - Keyboard
@@ -730,7 +763,24 @@ private struct BrowserTabSidebarRowDrag: ViewModifier {
   }
 }
 
-/// A group's header: its chevron, name and count. A double click renames it.
+/// The ground of a block of the sidebar — a group, or the pinned ones (#666): lighter than the
+/// sidebar, as Dia draws them, its edge brighter under the pointer or the keyboard.
+private struct BrowserTabBlockBackground: View {
+  let isLit: Bool
+
+  var body: some View {
+    RoundedRectangle(cornerRadius: 10)
+      .fill(Color.primary.opacity(0.05))
+      .strokeBorder(Color.primary.opacity(isLit ? 0.2 : 0.08), lineWidth: 1)
+  }
+}
+
+/// Above a group's block, and above the loose tab after a block (#666): with the rows' own 2
+/// points, the 10 of the mockup between blocks.
+private let sidebarBlockGap: CGFloat = 8
+
+/// A group's header (#648, #666): its chevron, name and count, and Close All under the pointer.
+/// A click folds or unfolds the group, a double click renames it; it is what drags the group.
 private struct BrowserTabGroupHeader: View {
   let group: BrowserTabGroup
   let name: String
@@ -739,6 +789,7 @@ private struct BrowserTabGroupHeader: View {
   @Binding var isRenaming: Bool
   let mark: SidebarMark.Place?
   let toggle: () -> Void
+  let closeAll: () -> Void
   let rename: (String) -> Void
   @State private var draft = ""
   @State private var isHovering = false
@@ -750,16 +801,12 @@ private struct BrowserTabGroupHeader: View {
         Image(systemName: "chevron.right")
           .font(.system(size: 9, weight: .bold))
           .rotationEffect(.degrees(group.isCollapsed ? 0 : 90))
-          .frame(width: 18, height: 18)
+          .frame(width: 20, height: 20)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .foregroundStyle(.secondary)
       .accessibilityHidden(true)
-      Image(systemName: group.isCollapsed ? "folder" : "folder.fill")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .accessibilityHidden(true)
       if isRenaming {
         TextField(text: $draft) { Text("Group Name", bundle: .module) }
           .textFieldStyle(.plain)
@@ -767,7 +814,7 @@ private struct BrowserTabGroupHeader: View {
           .onSubmit(commit)
           .onExitCommand { isRenaming = false }
           .onAppear {
-            draft = name
+            draft = group.nameSource == .user ? group.name : name
             isEditing = true
           }
           .onChange(of: isEditing) { _, editing in
@@ -779,6 +826,21 @@ private struct BrowserTabGroupHeader: View {
           .truncationMode(.tail)
       }
       Spacer(minLength: 4)
+      if isHovering || isHighlighted, !isRenaming {
+        Button(action: closeAll) {
+          HStack(spacing: 4) {
+            Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+            Text("Close All", bundle: .module, comment: "Closes every tab of a group of web tabs.")
+          }
+          .font(.caption.weight(.semibold))
+          .padding(.horizontal, 7)
+          .frame(height: 20)
+          .background(Capsule().fill(Color.primary.opacity(0.08)))
+          .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+      }
       Text(verbatim: "\(count)")
         .font(.caption2.weight(.semibold))
         .monospacedDigit()
@@ -788,7 +850,7 @@ private struct BrowserTabGroupHeader: View {
         .accessibilityHidden(true)
     }
     .font(.callout.weight(.semibold))
-    .padding(.horizontal, 6)
+    .padding(.horizontal, 4)
     .frame(height: 28)
     .background(
       RoundedRectangle(cornerRadius: 6)
@@ -806,21 +868,22 @@ private struct BrowserTabGroupHeader: View {
     .onTapGesture(count: 2) { isRenaming = true }
     .onTapGesture(perform: toggle)
     .onHover { isHovering = $0 }
+    // The group's heading to VoiceOver: its name, how many tabs, folded or not. Expand and
+    // Collapse are among its actions, said once.
     .accessibilityElement(children: isRenaming ? .contain : .ignore)
-    .accessibilityLabel(
+    .accessibilityLabel(Text(verbatim: name))
+    .accessibilityValue(
       group.isCollapsed
-        ? Text(
-          "Group \(name), collapsed", bundle: .module,
-          comment: "VoiceOver's name of a folded group of web tabs.")
-        : Text("Group \(name)", bundle: .module, comment: "VoiceOver's name of a group of web tabs."))
-    .accessibilityValue(Text(verbatim: "\(count)"))
+        ? Text(verbatim: BrowserTabGroupName.count(count) + ", ")
+          + Text("Collapsed", bundle: .module)
+        : Text(verbatim: BrowserTabGroupName.count(count)))
     .accessibilityAddTraits([.isHeader, .isButton])
     .accessibilityAction(.default, toggle)
   }
 
-  /// The made-up name, left as it was, stays made up: it follows the language.
+  /// An empty name gives the group back « Group N »; « Group N » left as it was stays it.
   private func commit() {
-    if group.name.isEmpty, draft == name {
+    if group.nameSource != .user, draft == name {
       isRenaming = false
       return
     }

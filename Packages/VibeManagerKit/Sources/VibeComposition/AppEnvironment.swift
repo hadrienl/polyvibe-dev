@@ -300,6 +300,9 @@ public final class AppEnvironment {
       configuration: BrowserWebConfiguration(
         storeIdentifierFile: dataFolder.appendingPathComponent("browser-store-identifier")))
     browser.watchPageRendering()
+    // Groups named from their tabs by Apple Intelligence, on this Mac only (#666).
+    browser.groupTitler = AppleIntelligenceGroupTitler.onThisMac(
+      language: AppleIntelligenceGroupTitler.applicationLanguage())
     self.browser = browser
     let commandDirectory = Self.installCommand(
       at: hostLocation, executable: configuration.browserBridgeExecutable)
