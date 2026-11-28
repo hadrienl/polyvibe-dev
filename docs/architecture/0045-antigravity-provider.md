@@ -24,14 +24,18 @@ leading dash is literal; `--prompt` would instead choose noninteractive mode. Ar
 pass through a shell. The shared limits reject NUL and prompts above 16 KiB, without typing a
 partial multiline prompt into the terminal. Slash commands use the common ready-to-type path.
 The model default is left to the CLI. Approval is chosen in Settings › Agents › Antigravity,
-through the same translated Manual / Automatic picker as #543. A namespaced, per-provider
-preference is read again on every launch and native resume; old configurations are Manual.
+through the same translated picker as #543: As Set in the CLI, Manual or Automatic. A
+namespaced, per-provider preference is read again on every launch and native resume. **As Set in
+the CLI** is the default and what a configuration with no choice saved gets (#570): Polyvibe then
+passes no approval setting at all, neither `--mode`, `--sandbox` nor an `agentMode` /
+`toolPermission` key in `--settings`, and the user's own `/config` applies as they made it (Auto
+by agy's default). A choice saved before keeps its value.
 One store keeps every agent's mode under its identifier, with #543's `codex.approvalMode.<id>.v1`
 keys and raw values, and one `approvalMode` field of the launch request carries it to Codex and
 Antigravity alike.
 
-Manual sets `agentMode: ""` and `toolPermission: "request-review"` for this process, so a global
-automatic setting cannot override the user's Manual choice. `--mode` has no value for the default
+Manual, once chosen, sets `agentMode: ""` and `toolPermission: "request-review"` for this process,
+so a global automatic setting cannot override the user's Manual choice. `--mode` has no value for the default
 mode; `""` is the CLI's explicit Default (what `/config` saves since Auto became the default), not
 an absent value. On 1.5.6, with a global `agentMode: "auto"`, a headless write ran unasked without
 the override and was held for review — refused, headless — with it. Automatic sets `--mode auto`,

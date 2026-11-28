@@ -70,9 +70,12 @@ additions. No API keys, credential files or keychain queries are introduced by P
 
 Interactive `agy` runs in the existing PTY/terminal host, with argv as an array. Its initial prompt
 is the value of `--prompt-interactive`; native resume is an explicitly validated conversation UUID.
-Remote control and permission bypass are never enabled. The user's Manual / Automatic preference
-is read for each launch and resume. Manual explicitly overrides global automatic defaults with
-`agentMode: ""` and `toolPermission: "request-review"`. Automatic uses native `--mode auto`,
+Remote control and permission bypass are never enabled. The user's approval preference is read for
+each launch and resume, and has three states. **As Set in the CLI**, the default and what a
+configuration with no choice saved gets, imposes nothing: no `--mode`, no `--sandbox`, and no
+approval key in `--settings`, so the CLI's own configuration decides (agy's default is Auto). Manual
+explicitly overrides global automatic defaults with `agentMode: ""` and
+`toolPermission: "request-review"`. Automatic uses native `--mode auto`,
 `--sandbox` and `toolPermission: "proceed-in-sandbox"`; commands outside the sandbox still go
 through the CLI's own review. Existing allow/ask/deny rules apply in either mode. Settings are
 merged with the activity override into one JSON object, never interpolated through a shell and
