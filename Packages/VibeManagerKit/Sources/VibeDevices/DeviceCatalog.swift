@@ -126,7 +126,8 @@ public enum DeviceCatalog {
     else { return }
     let request = BoundedProcessRequest(
       executablePath: "/usr/bin/xcode-select", arguments: ["-p"],
-      environment: environment(from: ProcessInfo.processInfo.environment, selectedDeveloperDirectory: nil),
+      environment: environment(
+        from: ProcessInfo.processInfo.environment, selectedDeveloperDirectory: nil),
       timeout: .seconds(5), outputByteLimit: 4096)
     guard let result = try? await BoundedProcess.run(request), result.exitCode == 0,
       let path = developerDirectory(selectedIn: result.standardOutput)

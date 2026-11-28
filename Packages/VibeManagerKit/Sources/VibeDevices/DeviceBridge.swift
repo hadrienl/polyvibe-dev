@@ -9,7 +9,8 @@ public final class DeviceBridge: Sendable {
 
   /// The bridge to `id`, once the Xcode a simulator's bridge loads is known.
   /// - Parameter folder: where the bridges are, the application's `Contents/MacOS`.
-  public static func opening(device id: String, bridgesIn folder: URL) async throws -> DeviceBridge {
+  public static func opening(device id: String, bridgesIn folder: URL) async throws -> DeviceBridge
+  {
     await DeviceCatalog.resolveDeveloperDirectory()
     return try DeviceBridge(device: id, bridgesIn: folder)
   }
