@@ -257,12 +257,6 @@ public final class SessionBrowser {
     stateDidChange?()
   }
 
-  /// An empty name gives the group back the one the sidebar makes up.
-  public func renameGroup(_ id: BrowserTabGroupID, to name: String) {
-    arrange { $0.rename(id, to: name) }
-    stateDidChange?()
-  }
-
   public func setCollapsed(_ id: BrowserTabGroupID, _ isCollapsed: Bool) {
     arrange { $0.setCollapsed(id, isCollapsed) }
     stateDidChange?()

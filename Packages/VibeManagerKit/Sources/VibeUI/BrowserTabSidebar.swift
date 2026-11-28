@@ -155,7 +155,6 @@ struct BrowserTabSidebar: View {
   @State private var highlighted: SidebarRow?
   @State private var dragged: SidebarDragged?
   @State private var mark: SidebarMark?
-  @State private var renaming: BrowserTabGroupID?
   @FocusState private var hasKeyboard: Bool
 
   var body: some View {
@@ -216,12 +215,6 @@ struct BrowserTabSidebar: View {
       return .handled
     }
     .onExitCommand { model.closeTabSidebar() }
-    // A group renamed: the keyboard comes back to the sidebar, on that group.
-    .onChange(of: renaming) { previous, current in
-      guard current == nil, let previous else { return }
-      highlighted = .group(previous)
-      hasKeyboard = true
-    }
     .clearsWhenDragEnds(dragged != nil || mark != nil) {
       dragged = nil
       mark = nil
@@ -278,51 +271,35 @@ struct BrowserTabSidebar: View {
       ForEach(pinned) { row($0) }
     }
     .padding(6)
-    .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.04)))
+    .background(BrowserTabBlockBackground(isLit: false))
     .padding(.bottom, 6)
   }
 
   // MARK: - Groups
 
+  /// A block with no title (#666): its tabs, or one line once collapsed; on hover, Collapse and
+  /// Close All on its top edge.
   private func groupSection(_ group: BrowserTabGroup, tabs: [BrowserTabModel]) -> some View {
-    VStack(alignment: .leading, spacing: 2) {
-      BrowserTabGroupHeader(
-        group: group, name: name(of: group), count: tabs.count,
-        isHighlighted: highlighted == .group(group.id),
-        isRenaming: Binding(
-          get: { renaming == group.id },
-          set: { renaming = $0 ? group.id : nil }),
-        mark: mark?.target == .group(group.id) ? mark?.place : nil,
-        toggle: { browser.setCollapsed(group.id, !group.isCollapsed) },
-        rename: { browser.renameGroup(group.id, to: $0) }
-      )
-      .id(SidebarRow.group(group.id))
-      .onDrag {
-        dragged = .group(group.id)
-        return NSItemProvider(object: BrowserTabGroupDrag.text(for: group.id) as NSString)
-      }
-      .onDrop(
-        of: [.text],
-        delegate: dropDelegate(.group(group.id)) { y in
-          if case .group = dragged { return y > 14 ? .after : .before }
-          return .into
-        }
-      )
-      .contextMenu { groupMenu(group) }
-      .accessibilityActions { groupActions(group) }
-
-      if !group.isCollapsed {
-        ForEach(tabs) { row($0) }
-          .padding(.leading, 14)
-          .overlay(alignment: .leading) {
-            Rectangle()
-              .fill(Color.secondary.opacity(0.25))
-              .frame(width: 1)
-              .padding(.leading, 9)
-              .accessibilityHidden(true)
-          }
-      }
+    BrowserTabGroupBlock(
+      group: group, tabs: tabs,
+      isHighlighted: highlighted == .group(group.id),
+      mark: mark?.target == .group(group.id) ? mark?.place : nil,
+      isDraggingGroup: { if case .group = dragged { true } else { false } }(),
+      toggle: { browser.setCollapsed(group.id, !group.isCollapsed) },
+      closeAll: { closeGroup(group.id) },
+      drop: { place in dropDelegate(.group(group.id), place: place) }
+    ) {
+      ForEach(tabs) { row($0) }
     }
+    .id(SidebarRow.group(group.id))
+    .onDrag {
+      dragged = .group(group.id)
+      return NSItemProvider(object: BrowserTabGroupDrag.text(for: group.id) as NSString)
+    }
+    .contextMenu { groupMenu(group) }
+    .accessibilityActions { groupActions(group) }
+    .padding(.top, 10)
+    .padding(.bottom, 4)
   }
 
   /// The name the user gave, or the one made up for a group that has none.
@@ -335,11 +312,6 @@ struct BrowserTabSidebar: View {
   @ViewBuilder
   private func groupMenu(_ group: BrowserTabGroup) -> some View {
     Button {
-      renaming = group.id
-    } label: {
-      Text("Rename…", bundle: .module)
-    }
-    Button {
       browser.setCollapsed(group.id, !group.isCollapsed)
     } label: {
       group.isCollapsed ? Text("Expand", bundle: .module) : Text("Collapse", bundle: .module)
@@ -351,7 +323,7 @@ struct BrowserTabSidebar: View {
       Text("Ungroup", bundle: .module, comment: "Dissolves a group of web tabs; its tabs stay.")
     }
     Button {
-      workspace.closeGroup(group.id, in: browser.sessionID)
+      closeGroup(group.id)
     } label: {
       Text("Close Group", bundle: .module)
     }
@@ -363,7 +335,6 @@ struct BrowserTabSidebar: View {
     Button(group.isCollapsed ? expandTitle : collapseTitle) {
       browser.setCollapsed(group.id, !group.isCollapsed)
     }
-    Button(String(localized: "Rename…", bundle: .module)) { renaming = group.id }
     if browser.canMoveGroup(group.id, by: -1) {
       Button(String(localized: "Move Up", bundle: .module)) { browser.moveGroup(group.id, by: -1) }
     }
@@ -371,9 +342,7 @@ struct BrowserTabSidebar: View {
       Button(String(localized: "Move Down", bundle: .module)) { browser.moveGroup(group.id, by: 1) }
     }
     Button(String(localized: "Ungroup", bundle: .module)) { browser.dissolveGroup(group.id) }
-    Button(String(localized: "Close Group", bundle: .module)) {
-      workspace.closeGroup(group.id, in: browser.sessionID)
-    }
+    Button(String(localized: "Close Group", bundle: .module)) { closeGroup(group.id) }
   }
 
   private var expandTitle: String { String(localized: "Expand", bundle: .module) }
@@ -563,6 +532,20 @@ struct BrowserTabSidebar: View {
     workspace.close(id, in: browser.sessionID)
   }
 
+  /// Every tab of the group, each as its close button would (#241); the keyboard goes on to the
+  /// row after the group, else the one before.
+  private func closeGroup(_ id: BrowserTabGroupID) {
+    let members = Set(browser.members(of: id).map { SidebarRow.tab($0.id) } + [.group(id)])
+    if let current = highlighted, members.contains(current) {
+      let rows = visibleRows
+      let first = rows.firstIndex { members.contains($0) }
+      let last = rows.lastIndex { members.contains($0) }
+      highlighted =
+        last.flatMap { rows[safe: $0 + 1] } ?? first.flatMap { rows[safe: $0 - 1] }
+    }
+    workspace.closeGroup(id, in: browser.sessionID)
+  }
+
   // MARK: - Keyboard
 
   /// The rows the arrows go through: tabs and group headers, not the tabs of a collapsed group.
@@ -583,9 +566,9 @@ struct BrowserTabSidebar: View {
   }
 
   /// Only while the sidebar itself has the keyboard: with Full Keyboard Access on a row's button,
-  /// or a group being renamed, the keys are theirs.
+  /// the keys are its own.
   private func keyboard(_ action: () -> Void) -> KeyPress.Result {
-    guard hasKeyboard, renaming == nil else { return .ignored }
+    guard hasKeyboard else { return .ignored }
     action()
     return .handled
   }
@@ -730,102 +713,154 @@ private struct BrowserTabSidebarRowDrag: ViewModifier {
   }
 }
 
-/// A group's header: its chevron, name and count. A double click renames it.
-private struct BrowserTabGroupHeader: View {
-  let group: BrowserTabGroup
-  let name: String
-  let count: Int
-  let isHighlighted: Bool
-  @Binding var isRenaming: Bool
-  let mark: SidebarMark.Place?
-  let toggle: () -> Void
-  let rename: (String) -> Void
-  @State private var draft = ""
-  @State private var isHovering = false
-  @FocusState private var isEditing: Bool
+/// The ground of a block of the sidebar — a group, or the pinned ones (#666): lighter than the
+/// sidebar, as Dia draws them, its edge brighter under the pointer or the keyboard.
+private struct BrowserTabBlockBackground: View {
+  let isLit: Bool
+  var isDropTarget = false
 
   var body: some View {
-    HStack(spacing: 6) {
+    RoundedRectangle(cornerRadius: 10)
+      .fill(isDropTarget ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.05))
+      .strokeBorder(Color.primary.opacity(isLit ? 0.2 : 0.08), lineWidth: 1)
+  }
+}
+
+/// A group of the sidebar, without a title (#666): its tabs, or, collapsed, one line of their
+/// icons, count and site. Collapse and Close All show on its top edge under the pointer, the
+/// keyboard, or Full Keyboard Access.
+private struct BrowserTabGroupBlock<Rows: View>: View {
+  let group: BrowserTabGroup
+  let tabs: [BrowserTabModel]
+  let isHighlighted: Bool
+  let mark: SidebarMark.Place?
+  let isDraggingGroup: Bool
+  let toggle: () -> Void
+  let closeAll: () -> Void
+  let drop: (@escaping (CGFloat) -> SidebarMark.Place) -> BrowserTabSidebarDropDelegate
+  @ViewBuilder let rows: () -> Rows
+  @State private var isHovering = false
+  @State private var isHoveringActions = false
+  @State private var height: CGFloat = 0
+  @FocusState private var focusedAction: Action?
+
+  private enum Action: Hashable {
+    case toggle
+    case closeAll
+  }
+
+  private var site: String? { BrowserTabGroupSummary.site(of: tabs.map(\.url)) }
+
+  private var showsActions: Bool {
+    isHovering || isHoveringActions || isHighlighted || focusedAction != nil
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      if group.isCollapsed {
+        collapsedLine
+      } else {
+        rows()
+      }
+    }
+    .padding(6)
+    .background(
+      BrowserTabBlockBackground(isLit: showsActions || mark == .into, isDropTarget: mark == .into))
+    .overlay(alignment: mark == .after ? .bottom : .top) {
+      if mark == .before || mark == .after {
+        Capsule()
+          .fill(Color.accentColor)
+          .frame(height: 2)
+          .padding(.horizontal, 6)
+          .offset(y: mark == .after ? 6 : -6)
+      }
+    }
+    .overlay(alignment: .topTrailing) { actions }
+    .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+    .contentShape(Rectangle())
+    .onHover { isHovering = $0 }
+    // A group dragged over the upper half goes before this one, over the lower half after it; a
+    // tab joins it, last.
+    .onDrop(of: [.text], delegate: drop { [height] y in
+      isDraggingGroup ? (y > height / 2 ? .after : .before) : .into
+    })
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel(
+      Text(verbatim: BrowserTabGroupSummary.accessibilityLabel(count: tabs.count, site: site)))
+    .accessibilityValue(group.isCollapsed ? Text("Collapsed", bundle: .module) : Text(verbatim: ""))
+    .accessibilityAddTraits(.isHeader)
+  }
+
+  /// A collapsed group: up to three of its tabs' icons, stacked, how many, and the site.
+  private var collapsedLine: some View {
+    Button(action: toggle) {
+      HStack(spacing: 10) {
+        HStack(spacing: -7) {
+          ForEach(tabs.prefix(3)) { tab in
+            BrowserTabIcon(tab: tab)
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .frame(width: 20, height: 20)
+              .background(Circle().fill(.background))
+              .overlay(Circle().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+          }
+        }
+        Text(verbatim: BrowserTabGroupSummary.count(tabs.count))
+          .font(.callout.weight(.semibold))
+        if let site {
+          Text(verbatim: site)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, 8)
+      .padding(.vertical, 6)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text("Expand", bundle: .module))
+  }
+
+  /// On the block's top edge: Collapse or Expand, and Close All.
+  private var actions: some View {
+    HStack(spacing: 0) {
       Button(action: toggle) {
-        Image(systemName: "chevron.right")
+        Image(systemName: group.isCollapsed ? "chevron.down" : "chevron.up")
           .font(.system(size: 9, weight: .bold))
-          .rotationEffect(.degrees(group.isCollapsed ? 0 : 90))
-          .frame(width: 18, height: 18)
+          .frame(width: 28, height: 22)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .foregroundStyle(.secondary)
-      .accessibilityHidden(true)
-      Image(systemName: group.isCollapsed ? "folder" : "folder.fill")
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .accessibilityHidden(true)
-      if isRenaming {
-        TextField(text: $draft) { Text("Group Name", bundle: .module) }
-          .textFieldStyle(.plain)
-          .focused($isEditing)
-          .onSubmit(commit)
-          .onExitCommand { isRenaming = false }
-          .onAppear {
-            draft = name
-            isEditing = true
-          }
-          .onChange(of: isEditing) { _, editing in
-            if !editing, isRenaming { commit() }
-          }
-      } else {
-        Text(verbatim: name)
-          .lineLimit(1)
-          .truncationMode(.tail)
+      .focused($focusedAction, equals: .toggle)
+      .instantTooltip(
+        group.isCollapsed ? Text("Expand", bundle: .module) : Text("Collapse", bundle: .module))
+      .accessibilityLabel(
+        group.isCollapsed ? Text("Expand", bundle: .module) : Text("Collapse", bundle: .module))
+      Divider().frame(height: 12)
+      Button(action: closeAll) {
+        HStack(spacing: 4) {
+          Image(systemName: "xmark").font(.system(size: 8, weight: .bold))
+          Text("Close All", bundle: .module, comment: "Closes every tab of a group of web tabs.")
+        }
+        .font(.caption.weight(.semibold))
+        .padding(.leading, 7)
+        .padding(.trailing, 9)
+        .frame(height: 22)
+        .contentShape(Rectangle())
       }
-      Spacer(minLength: 4)
-      Text(verbatim: "\(count)")
-        .font(.caption2.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 5)
-        .background(Capsule().fill(Color.primary.opacity(0.07)))
-        .accessibilityHidden(true)
+      .buttonStyle(.plain)
+      .focused($focusedAction, equals: .closeAll)
     }
-    .font(.callout.weight(.semibold))
-    .padding(.horizontal, 6)
-    .frame(height: 28)
-    .background(
-      RoundedRectangle(cornerRadius: 6)
-        .fill(
-          mark == .into
-            ? Color.accentColor.opacity(0.2)
-            : isHovering || isHighlighted ? Color.primary.opacity(0.06) : .clear)
-    )
-    .overlay(alignment: mark == .after ? .bottom : .top) {
-      if mark == .before || mark == .after {
-        Capsule().fill(Color.accentColor).frame(height: 2).padding(.horizontal, 6)
-      }
-    }
-    .contentShape(Rectangle())
-    .onTapGesture(count: 2) { isRenaming = true }
-    .onTapGesture(perform: toggle)
-    .onHover { isHovering = $0 }
-    .accessibilityElement(children: isRenaming ? .contain : .ignore)
-    .accessibilityLabel(
-      group.isCollapsed
-        ? Text(
-          "Group \(name), collapsed", bundle: .module,
-          comment: "VoiceOver's name of a folded group of web tabs.")
-        : Text("Group \(name)", bundle: .module, comment: "VoiceOver's name of a group of web tabs."))
-    .accessibilityValue(Text(verbatim: "\(count)"))
-    .accessibilityAddTraits([.isHeader, .isButton])
-    .accessibilityAction(.default, toggle)
-  }
-
-  /// The made-up name, left as it was, stays made up: it follows the language.
-  private func commit() {
-    if group.name.isEmpty, draft == name {
-      isRenaming = false
-      return
-    }
-    rename(draft)
-    isRenaming = false
+    .background(Capsule().fill(.bar))
+    .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
+    .shadow(color: .black.opacity(0.18), radius: 4, y: 1)
+    .offset(x: -8, y: -9)
+    .onHover { isHoveringActions = $0 }
+    .opacity(showsActions ? 1 : 0)
+    .allowsHitTesting(showsActions)
   }
 }
 

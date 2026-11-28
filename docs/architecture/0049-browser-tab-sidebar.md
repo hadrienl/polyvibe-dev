@@ -339,3 +339,29 @@ Each step is a commit of the same pull request; 1 can land alone if the PR grows
 - A group's name is frozen at creation, the user renames it.
 - Tabs an agent opens with `tab_open` stay loose.
 - The width is a fixed 80 % of the web view.
+
+## Revision #666 — groups as blocks, without a title
+
+[#666](https://github.com/hadrienl/polyvibe-dev/issues/666), from a mockup validated by the user
+(Dia's sidebar as the reference). It replaces, for the sidebar's drawing, what *Collapsing*,
+*Keyboard and accessibility* and *Context menus* say of a group's header.
+
+- **A group is a block.** Rounded (10 pt), on a ground a little lighter than the sidebar
+  (`primary` at 5 %) with a thin edge, 10 pt above it. Its tabs sit inside, without the vertical
+  line nor the indent. « Épinglés » takes the same ground and keeps its header.
+- **No title.** The header (chevron, folder, name, count) goes, and renaming with it: the double
+  click, « Renommer… » in the menu and VoiceOver's action, `SessionBrowser.renameGroup` and
+  `BrowserTabArrangement.rename`. The name stays in the model: it is made when the group is
+  (opener's title), the agent reads it in `tabs_list`, and « Déplacer vers ▸ » lists groups by it.
+- **Under the pointer, the keyboard or Full Keyboard Access**, a capsule shows on the block's top
+  edge: Replier / Déplier and « Tout fermer ». « Tout fermer » is `closeGroup`, without asking, as
+  « Fermer le groupe » of the menu was; the keyboard goes on to the row after the group.
+- **Collapsed**, a group is one line: up to three of its tabs' icons, stacked, « N onglets » and
+  the site of its first tab that has one. A click on it expands the group; ← → on the highlighted
+  group still fold and unfold it.
+- **Dragging a group** takes the block itself (its edge, or the collapsed line), the rows inside
+  keeping their own drag. Over a block, a group goes before it in the upper half, after it in the
+  lower; a tab joins it, last.
+- **VoiceOver** reads the block as a header container, « Groupe de 3 onglets, github.com », with
+  « Replié » as its value when it is; its actions are the header's of #648, rename aside.
+  `BrowserTabGroupSummary` makes the label and the site, and is tested without WebKit.

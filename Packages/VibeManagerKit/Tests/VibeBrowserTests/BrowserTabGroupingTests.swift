@@ -141,8 +141,9 @@ struct BrowserTabGroupingTests {
     workspace.open(
       URL(string: "about:blank#b")!, in: session, openedBy: .user, activate: false, from: a.id)
     let browser = workspace.browser(for: session)
+    // The name the group was given when the link opened: the sidebar no longer shows it (#666),
+    // the agent still reads it.
     let group = try #require(browser.group(of: a.id))
-    browser.renameGroup(group.id, to: "Review")
 
     let result = await workspace.run(tool: "tabs_list", arguments: [:], session: session)
     guard case .text(let text) = try #require(result.content.first) else {
@@ -152,7 +153,7 @@ struct BrowserTabGroupingTests {
     let tabs = try #require(
       JSONSerialization.jsonObject(with: Data(text.utf8)) as? [[String: Any]])
     #expect(tabs.compactMap { ($0["group"] as? [String: Any])?["name"] as? String } == [
-      "Review", "Review",
+      group.name, group.name,
     ])
   }
 

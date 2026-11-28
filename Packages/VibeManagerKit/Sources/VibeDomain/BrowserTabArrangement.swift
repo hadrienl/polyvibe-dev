@@ -251,11 +251,6 @@ public struct BrowserTabArrangement: Equatable, Sendable {
     return group.id
   }
 
-  public mutating func rename(_ id: BrowserTabGroupID, to name: String) {
-    guard let index = groups.firstIndex(where: { $0.id == id }) else { return }
-    groups[index].name = name.trimmingCharacters(in: .whitespacesAndNewlines)
-  }
-
   public mutating func setCollapsed(_ id: BrowserTabGroupID, _ isCollapsed: Bool) {
     guard let index = groups.firstIndex(where: { $0.id == id }),
       groups[index].isCollapsed != isCollapsed
