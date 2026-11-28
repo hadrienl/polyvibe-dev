@@ -67,6 +67,15 @@ extension BrowserWorkspace: BrowserToolRunning {
     _ tool: BrowserToolCatalog.Tool, on tab: BrowserTabModel, arguments: JSONValue,
     browser: SessionBrowser
   ) async throws -> BrowserToolResult {
+    // A device's tab holds no page: its web view would be read blank, after asking the user,
+    // and would fail to load the device's address or put a page in its place.
+    if tab.deviceUDID != nil,
+      tool.name.hasPrefix("page_") || tool.name == "tab_navigate" || tool.name == "tab_reload"
+    {
+      throw BrowserToolFailure(
+        "Tab \(tab.id) shows a device, not a page: \(tool.name) does not work on it."
+          + " Open an address in a new tab with tab_open.")
+    }
     switch tool.name {
     case "tab_navigate":
       let url = try Self.address(arguments["url"]?.stringValue)
@@ -104,7 +113,7 @@ extension BrowserWorkspace: BrowserToolRunning {
       return status(of: tab, in: browser)
     case "tab_activate":
       browser.activate(tab.id, byUser: false)
-      tab.ensureWebView()
+      if tab.deviceUDID == nil { tab.ensureWebView() }
       record(tool, in: browser, tab: tab, target: tab.displayTitle, decision: .automatic)
       return .text("Tab \(tab.id) is in front.")
     case "tab_close":
@@ -440,6 +449,9 @@ extension BrowserWorkspace: BrowserToolRunning {
   func presented(_ tab: BrowserTabModel, in browser: SessionBrowser, given: URL? = nil)
     -> (url: String, title: String, isReadable: Bool)
   {
+    // A device's tab, which device_open names, holds nothing of the user's web: the agent finds
+    // it again by its address.
+    if tab.deviceUDID != nil { return (tab.url.absoluteString, tab.displayTitle, false) }
     let isReadable =
       mayRead(tab.committedURL ?? tab.url, in: browser) && mayRead(tab.url, in: browser)
     guard !isReadable else { return (tab.url.absoluteString, tab.displayTitle, true) }
@@ -462,7 +474,8 @@ extension BrowserWorkspace: BrowserToolRunning {
       "url": .string(shown.url),
       "loading": .bool(tab.isLoading),
     ]
-    if !shown.isReadable {
+    // A device's title is shown, and page_read refuses its tab: nothing is withheld.
+    if !shown.isReadable, tab.deviceUDID == nil {
       fields["readable"] = false
       fields["note"] =
         "The title is withheld: page_read asks the user before anything of this site is read."
@@ -471,7 +484,8 @@ extension BrowserWorkspace: BrowserToolRunning {
       fields["inFront"] = true
       fields["note"] = .string(
         "Brought to the front: a page away from this Mac never loads in the background."
-          + (shown.isReadable ? "" : " The title is withheld: page_read asks the user first."))
+          + (shown.isReadable || tab.deviceUDID != nil
+            ? "" : " The title is withheld: page_read asks the user first."))
     }
     if let failure = tab.failure {
       fields["error"] = .string(failure.agentDescription)

@@ -82,10 +82,11 @@ final class DeviceMirrorNSView: NSView {
 
 /// The bridge and the thread that reads it.
 private final class DeviceMirrorSession: @unchecked Sendable {
-  private let bridge: DeviceBridge?
   private let video: AVSampleBufferDisplayLayer
   private let lock = NSLock()
   private var size: CGSize?
+  private var bridge: DeviceBridge?
+  private var isStopped = false
 
   var videoSize: CGSize? {
     lock.withLock { size }
@@ -94,19 +95,31 @@ private final class DeviceMirrorSession: @unchecked Sendable {
   init(udid: String, video: AVSampleBufferDisplayLayer) {
     self.video = video
     video.sampleBufferRenderer.flush()
-    bridge = Bundle.main.executableURL.flatMap {
-      try? DeviceBridge(device: udid, bridgesIn: $0.deletingLastPathComponent())
+    guard let folder = Bundle.main.executableURL?.deletingLastPathComponent() else { return }
+    // Opened once the Xcode a simulator's bridge loads is known, off the main thread.
+    Task.detached { [self] in
+      guard let opened = try? await DeviceBridge.opening(device: udid, bridgesIn: folder) else {
+        return
+      }
+      let kept = lock.withLock {
+        guard !isStopped else { return false }
+        bridge = opened
+        return true
+      }
+      guard kept else { return opened.stop() }
+      Thread.detachNewThread { [self] in read(opened) }
     }
-    guard let bridge else { return }
-    Thread.detachNewThread { [self] in read(bridge) }
   }
 
   func stop() {
-    bridge?.stop()
+    lock.withLock {
+      isStopped = true
+      return bridge
+    }?.stop()
   }
 
   func send(_ line: String) {
-    bridge?.send(line)
+    lock.withLock { bridge }?.send(line)
   }
 
   private func read(_ bridge: DeviceBridge) {

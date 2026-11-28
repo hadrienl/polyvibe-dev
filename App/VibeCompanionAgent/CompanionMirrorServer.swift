@@ -48,7 +48,7 @@ enum CompanionMirrorServer {
       .appendingPathComponent("MacOS")
     let bridge: DeviceBridge
     do {
-      bridge = try DeviceBridge(device: udid, bridgesIn: folder)
+      bridge = try await DeviceBridge.opening(device: udid, bridgesIn: folder)
     } catch {
       CompanionIroh.logger.error(
         "mirror: no bridge in \(folder.path, privacy: .public): \(String(describing: error), privacy: .public)"

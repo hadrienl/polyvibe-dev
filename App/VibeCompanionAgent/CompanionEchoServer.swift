@@ -37,6 +37,12 @@ actor CompanionEchoServer {
   private var remotes: [String: SendStream] = [:]
   private var remoteConnections: [String: Connection] = [:]
   private var remoteEndpoints: [String: String] = [:]
+  /// Each phone's mirror (#520), by peer, with its endpoint: closed with the remote channel when
+  /// the phone is removed, or its screens would go on being shown, and touched, there.
+  private var mirrorConnections: [String: (connection: Connection, endpointID: String)] = [:]
+  /// How many times each phone was removed: one removed while it was being admitted, the
+  /// question asked before, is refused all the same once admitted.
+  private var removals: [String: Int] = [:]
   private var nextPeer = 0
   private var relayLoop: Task<Void, Never>?
   private var acceptLoop: Task<Void, Never>?
@@ -124,11 +130,17 @@ actor CompanionEchoServer {
     }
     if connection.alpn() == CompanionIroh.mirrorALPN {
       // The same admission as the direct channel's.
-      guard await authorize(connection.remoteId().description) else {
+      let endpointID = connection.remoteId().description
+      let removal = removals[endpointID, default: 0]
+      guard await authorize(endpointID), removals[endpointID, default: 0] == removal else {
         try? connection.close(errorCode: 2, reason: Data("not paired".utf8))
         return
       }
+      nextPeer += 1
+      let peer = "mirror-\(nextPeer)"
+      mirrorConnections[peer] = (connection, endpointID)
       await CompanionMirrorServer.serve(connection)
+      mirrorConnections[peer] = nil
       return
     }
     guard connection.alpn() == CompanionIroh.alpn else {
@@ -186,6 +198,7 @@ actor CompanionEchoServer {
   private func serveRemote(_ connection: Connection) async {
     let endpointID = connection.remoteId().description
     let short = connection.remoteId().fmtShort()
+    let removal = removals[endpointID, default: 0]
     guard await authorize(endpointID) else {
       CompanionIroh.logger.error(
         "remote: \(short, privacy: .public) is not a paired phone: refused")
@@ -199,6 +212,11 @@ actor CompanionEchoServer {
       CompanionIroh.logger.notice(
         "remote: \(short, privacy: .public) gone before a stream: \(CompanionIroh.describe(error), privacy: .public)"
       )
+      return
+    }
+    // Removed while it was admitted: refused, as it would have been a moment later.
+    guard removals[endpointID, default: 0] == removal else {
+      try? connection.close(errorCode: 2, reason: Data("removed".utf8))
       return
     }
     nextPeer += 1
@@ -251,8 +269,12 @@ actor CompanionEchoServer {
 
   /// Every connection of a phone no longer admitted.
   func drop(endpoint endpointID: String) {
+    removals[endpointID, default: 0] += 1
     for (peer, endpoint) in remoteEndpoints where endpoint == endpointID {
       try? remoteConnections[peer]?.close(errorCode: 2, reason: Data("removed".utf8))
+    }
+    for mirror in mirrorConnections.values where mirror.endpointID == endpointID {
+      try? mirror.connection.close(errorCode: 2, reason: Data("removed".utf8))
     }
   }
 

@@ -198,14 +198,45 @@ static void readTouches(void) {
   exit(0);
 }
 
+// The Xcode `simctl` lists the simulators of, which the application resolves with `xcode-select -p`
+// and passes as DEVELOPER_DIR (security review A3: the bridge starts no process): `Xcode-beta.app`,
+// `Xcode-26.0.app` as xcodes names them. A CoreSimulator of one Xcode and a SimulatorKit of
+// another do not go together.
+/// `Contents/Developer` of an Xcode named by its application, `/Applications/Xcode-beta.app`,
+/// as `DEVELOPER_DIR` takes it.
+static NSString *withinApplication(NSString *path) {
+  NSString *trimmed = [path stringByStandardizingPath];
+  return [trimmed.pathExtension isEqual:@"app"]
+      ? [trimmed stringByAppendingPathComponent:@"Contents/Developer"] : trimmed;
+}
+
+static NSString *developerDirectory(void) {
+  const char *given = getenv("DEVELOPER_DIR");
+  if (given && *given) return withinApplication(@(given));
+  return @"/Applications/Xcode.app/Contents/Developer";
+}
+
+static void *loadSimulatorKit(NSString *developer) {
+  NSString *kit = [[developer stringByDeletingLastPathComponent]
+      stringByAppendingPathComponent:@"SharedFrameworks/SimulatorKit.framework/Versions/A/SimulatorKit"];
+  return dlopen(kit.fileSystemRepresentation, RTLD_NOW);
+}
+
 int main(int argc, char **argv) {
   @autoreleasepool {
     if (argc < 2) return 2;
     udid = @(argv[1]);
     signal(SIGPIPE, SIG_DFL);
     dlopen("/Library/Developer/PrivateFrameworks/CoreSimulator.framework/CoreSimulator", RTLD_NOW);
-    simulatorKit = dlopen("/Applications/Xcode.app/Contents/SharedFrameworks/"
-                          "SimulatorKit.framework/Versions/A/SimulatorKit", RTLD_NOW);
+    NSString *developer = developerDirectory();
+    simulatorKit = loadSimulatorKit(developer);
+    if (!simulatorKit) {
+      // The Command Line Tools chosen, say: the Xcode of always.
+      fprintf(stderr, "sim-bridge: no SimulatorKit beside %s, trying /Applications/Xcode.app\n",
+          developer.fileSystemRepresentation);
+      developer = @"/Applications/Xcode.app/Contents/Developer";
+      simulatorKit = loadSimulatorKit(developer);
+    }
     void *iokit = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW);
     if (!simulatorKit || !iokit) {
       fprintf(stderr, "sim-bridge: %s\n", dlerror());
@@ -219,7 +250,7 @@ int main(int argc, char **argv) {
     id context = ((id(*)(id, SEL, id, id *))objc_msgSend)(
         objc_getClass("SimServiceContext"),
         NSSelectorFromString(@"sharedServiceContextForDeveloperDir:error:"),
-        @"/Applications/Xcode.app/Contents/Developer", nil);
+        developer, nil);
     id set = ((id(*)(id, SEL, id *))objc_msgSend)(
         context, NSSelectorFromString(@"defaultDeviceSetWithError:"), nil);
     for (id candidate in [set valueForKey:@"devices"])

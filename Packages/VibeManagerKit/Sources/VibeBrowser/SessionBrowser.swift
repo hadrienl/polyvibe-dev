@@ -126,7 +126,11 @@ public final class SessionBrowser {
     groups = state.groups + groups
     // Pinned first and groups whole, whatever the file said (#536, #648).
     arrange { _ in }
-    if activeTabID == nil { activeTabID = state.activeTabID }
+    if activeTabID == nil {
+      activeTabID = state.activeTabID
+      // In front only because no tab was: sent behind by the one kept, it has not been seen.
+      for tab in opened where tab.id != activeTab?.id { unseenTabIDs.insert(tab.id) }
+    }
     if !isVisible { isVisible = state.isVisible }
     actionLog = BrowserActionLog(records: records + actionLog.records)
     isRestored = true
@@ -158,7 +162,12 @@ public final class SessionBrowser {
         arrangement.insert(tab.id, at: position)
       }
     }
-    if activate { activeTabID = tab.id } else { unseenTabIDs.insert(tab.id) }
+    if activate {
+      activeTabID = tab.id
+    } else if activeTab?.id != tab.id {
+      // The first of a web view with no tab in front is shown all the same.
+      unseenTabIDs.insert(tab.id)
+    }
     stateDidChange?()
   }
 
@@ -172,6 +181,8 @@ public final class SessionBrowser {
       // The neighbour on the right, as browsers do, else the one on the left, else the ticket.
       activeTabID = tabs.indices.contains(index) ? tabs[index].id : tabs.last?.id
     }
+    // The tab brought forward is seen.
+    if let shown = activeTab?.id { unseenTabIDs.remove(shown) }
     stateDidChange?()
   }
 

@@ -152,7 +152,8 @@ for reading only: without it, Claude Code in its default mode and Antigravity in
 for every file read there. Claude Code gets a `Read(//<folder>/**)` rule through `--allowedTools`,
 not `--add-dir`, which makes the folder a working directory that Accept Edits writes in unasked.
 Antigravity in Manual mode gets `--add-dir`: a folder of its workspace is read freely and written
-only once reviewed. Its sandbox and Codex's get nothing: both already read there, and their
+only once reviewed. Under the CLI's own setting (#570), whose default is Auto, it gets nothing.
+Its sandbox and Codex's get nothing: both already read there, and their
 `--add-dir` would let the agent write in the copy unasked. Verified on Claude Code 2.1.332,
 Antigravity 1.5.17 and Codex 0.171.
 

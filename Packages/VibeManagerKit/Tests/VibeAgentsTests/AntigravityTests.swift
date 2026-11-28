@@ -100,8 +100,8 @@ struct AntigravityTests {
     #expect(!args.contains("--continue"))
   }
 
-  @Test("A folder to read joins the workspace in Manual mode only, never the sandbox's")
-  func readableDirectories() async throws {
+  @Test("A folder to read joins the workspace in Manual only: not in the sandbox, nor by default")
+  func readableDirectoriesInManualOnly() async throws {
     let manual = try await base().launchPlan(
       for: AgentLaunchRequest(
         workingDirectoryPath: "/tmp/project", initialPrompt: "Continue", approvalMode: .manual,
@@ -117,6 +117,14 @@ struct AntigravityTests {
         approvalMode: .autoReview, readableDirectoryPaths: ["/handover/x"]))
     #expect(automatic.arguments.contains("--sandbox"))
     #expect(!automatic.arguments.contains("--add-dir"))
+
+    // No mode chosen: agy's own setting, Auto by default, would write in it unasked too.
+    let unchosen = try await base().launchPlan(
+      for: AgentLaunchRequest(
+        workingDirectoryPath: "/tmp/project", initialPrompt: "Continue",
+        readableDirectoryPaths: ["/handover/x"]))
+    #expect(!unchosen.arguments.contains("--add-dir"))
+    #expect(!unchosen.arguments.contains("--sandbox"))
 
     // A folder named like an option is a value, never mistaken for one when settings are merged.
     let named = AgentLaunchPlan(
@@ -176,7 +184,9 @@ struct AntigravityTests {
     let defaultArgs = try AntigravityArgumentBuilder().arguments(
       for: AgentLaunchRequest(workingDirectoryPath: "/tmp"), promptDelivery: .none,
       descriptor: AntigravityAgentProvider.descriptor)
-    #expect(try settings(in: defaultArgs)["toolPermission"] as? String == "request-review")
+    // No mode chosen: the user's own `/config` is left as it is.
+    #expect(!defaultArgs.contains("--settings"))
+    #expect(!defaultArgs.contains("--sandbox"))
   }
 
   @MainActor
@@ -194,6 +204,9 @@ struct AntigravityTests {
         availability: availability, probe: StubProcessProbe(), environment: [:]),
       approvalPreferences: preferences)
     let request = AgentLaunchRequest(workingDirectoryPath: "/tmp", resume: .identifier(identifier))
+    let unset = try await provider.launchPlan(for: request)
+    #expect(!unset.arguments.contains("--settings"))
+    preferences.setMode(.manual, for: AntigravityAgentProvider.id)
     let manual = try await provider.launchPlan(for: request)
     #expect(try settings(in: manual.arguments)["agentMode"] as? String == "")
     preferences.setMode(.autoReview, for: AntigravityAgentProvider.id)

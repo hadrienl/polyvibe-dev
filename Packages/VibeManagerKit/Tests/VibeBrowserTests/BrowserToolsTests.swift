@@ -266,6 +266,37 @@ struct BrowserWorkspaceToolsTests {
     #expect(workspace.browser(for: first).tabs.count == 1)
   }
 
+  @Test("A device's tab is listed by its address and name, and page tools refuse it at once")
+  func deviceTab() async throws {
+    let workspace = BrowserWorkspace()
+    let session = SessionID()
+    let tab = workspace.open(
+      URL(string: "vibe-device://SIM-1")!, in: session, openedBy: .agent, activate: false)
+    tab.nameDevice("iPhone 17")
+    let list = try object(await workspace.run(tool: "tabs_list", arguments: [:], session: session))
+    guard case .array(let tabs) = list, let listed = tabs.first else {
+      Issue.record("No tab listed: \(list)")
+      return
+    }
+    #expect(listed["url"] == "vibe-device://SIM-1")
+    #expect(listed["title"] == "iPhone 17")
+    for tool in ["page_read", "page_screenshot", "page_console", "tab_reload", "tab_navigate"] {
+      let result = await workspace.run(
+        tool: tool,
+        arguments: ["tab": .string(tab.id.description), "url": "https://example.com"],
+        session: session)
+      #expect(result.isError, "\(tool)")
+      #expect(text(result).contains("shows a device"), "\(tool)")
+    }
+    #expect(tab.url.absoluteString == "vibe-device://SIM-1")
+    // Brought forward, it makes no web view of the device's address.
+    let activated = await workspace.run(
+      tool: "tab_activate", arguments: ["tab": .string(tab.id.description)], session: session)
+    #expect(!activated.isError)
+    #expect(tab.webView == nil)
+    #expect(workspace.pendingRequests.isEmpty)
+  }
+
   @Test("Addresses an agent may not open are refused before any tab exists")
   func refusedAddresses() async {
     let workspace = BrowserWorkspace()
