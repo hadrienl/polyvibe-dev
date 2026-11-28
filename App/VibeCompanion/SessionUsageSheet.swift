@@ -89,6 +89,8 @@ struct SessionUsageHeader: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
+    // The heading the native title was: the rotor's headings still land on it.
+    .accessibilityAddTraits(.isHeader)
     .accessibilityLabel(Text(verbatim: title + ", " + state))
     .accessibilityValue(
       usage.map {
