@@ -112,10 +112,11 @@ public struct AntigravityArgumentBuilder: CommandLineAgentArgumentBuilder {
         ]),
       ]
     }
-    // Outside Automatic a file read outside the workspace waits for review (#583); a folder of the
+    // In Manual a file read outside the workspace waits for review (#583); a folder of the
     // workspace is read freely, and written only once reviewed. The sandbox reads it already, and
-    // would let a folder of the workspace be written unasked (both verified on 1.5.17).
-    if request.approvalMode != .autoReview {
+    // would let a folder of the workspace be written unasked (both verified on 1.5.17). Under the
+    // CLI's own setting, agy's default is Auto: the folder is not added either.
+    if request.approvalMode == .manual {
       for path in request.readableDirectoryPaths {
         arguments += ["--add-dir", path]
       }
