@@ -16,8 +16,8 @@ private actor ReportingCLI {
   var offlineCallsLeft: Int
   init(
     existing: Bool = false, failuresLeft: Int = 0,
-    created: String = "https://github.com/hadrienl/polyvibe-dev/issues/123", isMissing: Bool = false,
-    offlineCalls: Int = 0
+    created: String = "https://github.com/hadrienl/polyvibe-dev/issues/123",
+    isMissing: Bool = false, offlineCalls: Int = 0
   ) {
     self.existing = existing
     self.failuresLeft = failuresLeft
