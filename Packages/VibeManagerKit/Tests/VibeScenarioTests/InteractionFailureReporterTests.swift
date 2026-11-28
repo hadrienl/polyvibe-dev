@@ -25,6 +25,14 @@ private actor ReportingCLI {
     self.isMissing = isMissing
     self.offlineCallsLeft = offlineCalls
   }
+  /// How many calls were `gh issue <action>`.
+  func count(_ action: String) -> Int {
+    calls.count { $0.arguments.starts(with: ["gh", "issue", action]) }
+  }
+  /// Whether `limit` issues were opened, and one more report looked for after them.
+  func lookedPast(_ limit: Int) -> Bool {
+    count("create") >= limit && count("list") > limit
+  }
   func run(_ request: BoundedProcessRequest) -> BoundedProcessResult {
     calls.append(request)
     if isMissing { return BoundedProcessResult(termination: .exited(127)) }
@@ -412,7 +420,8 @@ struct InteractionFailureReporterTests {
     #expect(await cli.calls.isEmpty)
   }
 
-  @Test("Few issues are opened a day, the others go out the next day (#558)")
+  @Test(
+    "Few issues are opened a day, the others go out the next day (#558)", .timeLimit(.minutes(2)))
   func dailyLimit() async throws {
     let directory = try outbox()
     defer { try? FileManager.default.removeItem(at: directory) }
@@ -427,12 +436,12 @@ struct InteractionFailureReporterTests {
           requestID: "request-\(index)", outcome: .notOnScreen, request: "question",
           answer: "option 1", before: "screen", after: "screen", keys: [], writtenKeys: []))
     }
-    for _ in 0..<200 {
-      let sent = reports(in: directory).count { $0["issueURL"] != nil }
-      if sent == InteractionFailureReporter.dailyIssueLimit { break }
+    // A state waited for, never a deadline: a runner that stalls only makes it longer. The
+    // reports within the limit are opened, then the next one is looked for and kept waiting.
+    let limit = InteractionFailureReporter.dailyIssueLimit
+    while await !cli.lookedPast(limit) {
       try await Task.sleep(for: .milliseconds(10))
     }
-    try await Task.sleep(for: .milliseconds(50))
     let all = reports(in: directory)
     #expect(all.count == InteractionFailureReporter.dailyIssueLimit + 2)
     #expect(all.count { $0["issueURL"] != nil } == InteractionFailureReporter.dailyIssueLimit)
@@ -442,10 +451,9 @@ struct InteractionFailureReporterTests {
     #expect(all.allSatisfy { $0["attempts"] == nil })
     // A day later, with the application still open, the others go out.
     clock.advance(by: 25 * 3600)
-    for _ in 0..<500 {
-      if reports(in: directory).count(where: { $0["issueURL"] != nil }) == all.count { break }
+    while reports(in: directory).count(where: { $0["issueURL"] != nil }) < all.count {
       try await Task.sleep(for: .milliseconds(10))
     }
-    #expect(reports(in: directory).count { $0["issueURL"] != nil } == all.count)
+    #expect(await cli.count("create") == all.count)
   }
 }
