@@ -81,10 +81,10 @@ readonly exported="$work/export"
 readonly app="$exported/Polyvibe.app"
 # No space in the name: GitHub turns spaces of a release asset into dots, and the checksum file
 # would name a file nobody downloads.
-readonly dmg="$work/VibeManager-$version.dmg"
+readonly dmg="$work/Polyvibe-$version.dmg"
 # What Sparkle downloads and installs (#92, ADR 0033), and what the feed says of it.
-readonly update_archive="$work/VibeManager-$version.zip"
-readonly appcast_item="$work/VibeManager-$version.appcast.json"
+readonly update_archive="$work/Polyvibe-$version.zip"
+readonly appcast_item="$work/Polyvibe-$version.appcast.json"
 
 # The workflow's signing material: a keychain of its own, and the notarization key in a file, both
 # removed on the way out. On the maintainer's Mac, the login keychain and the stored profile.

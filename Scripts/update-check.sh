@@ -165,14 +165,14 @@ build() {
   rm -rf "$work/DerivedData"
 
   ditto -c -k --sequesterRsrc --keepParent "$work/builds/$new_version/Polyvibe.app" \
-    "$work/builds/VibeManager-$new_version.zip"
+    "$work/builds/Polyvibe-$new_version.zip"
   print "\nBuilt. Next: Scripts/update-check.sh serve good"
 }
 
 serve() {
   local scenario="$1"
   [[ -d "$work/builds/$old_version" ]] || fail "nothing built: Scripts/update-check.sh build"
-  local archive="$work/builds/VibeManager-$new_version.zip"
+  local archive="$work/builds/Polyvibe-$new_version.zip"
   local key="release" prerelease=false host_protocol=1
   case "$scenario" in
     good) ;;

@@ -1,8 +1,8 @@
 import Foundation
 
 /// What `Scripts/release.sh` knows about an update archive when it builds it, attached to the
-/// release as `VibeManager-<version>.appcast.json`. The feed takes the signature from here: it
-/// never downloads an archive, and holds no key.
+/// release as `Polyvibe-<version>.appcast.json`. The feed takes the signature from here: it never
+/// downloads an archive, and holds no key.
 public struct AppcastItem: Decodable, Equatable, Sendable {
   public var version: String
   /// `CFBundleVersion`: the number of commits of `main`.

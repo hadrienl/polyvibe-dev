@@ -43,11 +43,11 @@ GitHub.
     `SUPublicEDKey`;
   - `mock-agent.sh` sealed in the bundle, no `Local.xcconfig`;
   - the application notarized and stapled, Gatekeeper accepting it;
-  - the update archive `VibeManager-<version>.zip`, signed with the EdDSA key and verified with
-    the key the application carries, and its entry `VibeManager-<version>.appcast.json`;
+  - the update archive `Polyvibe-<version>.zip`, signed with the EdDSA key and verified with
+    the key the application carries, and its entry `Polyvibe-<version>.appcast.json`;
   - the disk image built by `hdiutil`, signed, notarized, stapled, accepted by Gatekeeper;
   - the SHA-256 of the image, and a **draft** release with the four files.
-- [ ] `Scripts/clean-install-check.sh VibeManager-<version>.dmg`, on the image downloaded from the
+- [ ] `Scripts/clean-install-check.sh Polyvibe-<version>.dmg`, on the image downloaded from the
       draft, passed:
       Gatekeeper and staples, installation in a folder of its own, TCC reset for the bundle, the
       interface smoke test against the installed binary, and its terminal host refusing an ad hoc

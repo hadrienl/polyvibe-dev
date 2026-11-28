@@ -20,7 +20,8 @@ companion's names (`Polyvibe Companion` on the Mac and on the iPhone), the icon
 (`Design/AppIcon.svg` and `AppIcon-small.svg` for the site, `AppIcon-iOS.svg` without transparency,
 `AppIcon-macOS.svg` edge to edge as the layer of `App/VibeManagerApp/AppIcon.icon`: macOS 26 and later
 draw the tile's shape themselves, and put a tile of its own in a white frame; Xcode makes the icon
-of macOS 14 and 15 from it), the site at `https://polyvibe.dev/`, the documentation and the release titles. The
+of macOS 14 and 15 from it), the site at `https://polyvibe.dev/`, the documentation, the release titles
+and their files (`Polyvibe-<version>.dmg`, `.zip`, `.appcast.json`). The
 former name is not mentioned on the site: few people know it.
 
 The repository becomes `hadrienl/polyvibe-dev`, under the same account: `polyvibe` is taken on
@@ -42,7 +43,6 @@ A rename must not cost a user their data, their permissions or their updates.
 | `[Vibe Manager]`, the mark of the application's former messages to agents | Still in the conversations of the sessions created before: recognized beside `[Polyvibe]`, never written |
 | `~/Library/Logs/Vibe Manager` | Where the diagnostics of every copy already are, and what the troubleshooting pages tell users to send |
 | Keychain item labels, `TERM_PROGRAM=VibeManager`, the `VIBE_*` variables, the MCP servers' names | Identifiers that items, agents and scripts already rely on |
-| `VibeManager-<version>.*` release assets | `Scripts/publish-appcast.sh` reads every release, older ones included |
 | Module and target names (`VibeManagerKit`…) | Not read by users; renaming them only rewrites history |
 | `https://github.com/hadrienl/vibe-manager/issues/…`, accepted for an issue created | GitHub redirects the former repository's addresses, and `gh` may answer with either while it does |
 | The `Vibe Manager Companion Developer ID` provisioning profile | Its name in the developer portal |
