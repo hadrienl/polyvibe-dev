@@ -41,6 +41,7 @@ public protocol BrowserGrantVault: Sendable {
 /// the same path — a local build in place of a release, or the reverse — passes the look at the
 /// access list, then is refused the read. That refusal is taken as a foreign item, not shown as a
 /// keychain password dialog.
+///
 /// A keychain reference is a thread-safe Core Foundation object: the vault is used from any thread.
 public struct KeychainBrowserGrantVault: BrowserGrantVault, @unchecked Sendable {
   public let service: String
