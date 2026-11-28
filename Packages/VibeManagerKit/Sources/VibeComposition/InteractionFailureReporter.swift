@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SystemConfiguration
 import VibeApplication
 import VibeProcess
 
@@ -215,8 +216,28 @@ actor InteractionFailureReporter {
   }
 
   /// The names of the user on this Mac, short and full: what a prompt, `~alice` or a commit's
-  /// author shows of them.
-  static let userNames = [NSUserName(), NSFullUserName()]
+  /// author shows of them. And the Mac's own, which a prompt shows as `alice@Alices-MacBook-Pro`.
+  static let userNames =
+    [NSUserName(), NSFullUserName()]
+    + machineNames(
+      computerName: SCDynamicStoreCopyComputerName(nil, nil) as String?,
+      localHostName: SCDynamicStoreCopyLocalHostName(nil) as String?,
+      hostName: ProcessInfo.processInfo.hostName)
+
+  /// The Mac's name as the user gave it (`Alice's MacBook Pro`, `scutil --get ComputerName`), and
+  /// its host names without `.local` (`Alices-MacBook-Pro`). Read from the dynamic store, which
+  /// answers at once, where `Host.current()` may wait on the network.
+  static func machineNames(computerName: String?, localHostName: String?, hostName: String)
+    -> [String]
+  {
+    let short = hostName.hasSuffix(".local") ? String(hostName.dropLast(6)) : hostName
+    var names: [String] = []
+    for name in [computerName, localHostName, short].compactMap({ $0 })
+    where !name.isEmpty && name != "localhost" && !names.contains(name) {
+      names.append(name)
+    }
+    return names
+  }
 
   /// Shared by new reports and the durable outbox, so upgrades also protect queued text.
   nonisolated static func redact(_ text: String, userNames: [String] = userNames) -> String {

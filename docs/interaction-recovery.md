@@ -30,8 +30,8 @@ request content, selected answer, planned and successfully written key groups, t
 before/after, timestamp, app build, OS and recovery behavior. Common credential forms (including
 AWS environment variables, Basic/Bearer authorization, `*_TOKEN` variables, passwords in URLs,
 GitHub, GitLab, Slack and Google keys, JWTs and private keys), the user name in `/Users/<name>`
-and the user's short and full names wherever they show as a word (a prompt, `~name`, an author
-line) are masked; a typed or pasted text is reported by its length only, in the selected answer
+and the user's short and full names and the Mac's own (`Alice's MacBook Pro`, `Alices-MacBook-Pro`)
+wherever they show as a word (a prompt, `~name`, an author line) are masked; a typed or pasted text is reported by its length only, in the selected answer
 and in key traces, and taken out of the terminal text where it shows whole, from three
 characters (a `y` taken out would take every `y` of the screen with it). The terminal text and request content are included so a maintainer can reproduce the
 case without an image. Each block is cut at 9,000 characters and the body at 60,000, within

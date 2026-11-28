@@ -153,6 +153,21 @@ struct InteractionFailureReporterTests {
         == "[REDACTED]@[REDACTED]-mbp ~/clients % git log\nAuthor: [REDACTED]\nmalice ~[REDACTED]")
   }
 
+  @Test("The Mac's names are masked too: alice@Alices-MacBook-Pro (#558)")
+  func machineNames() {
+    let names = InteractionFailureReporter.machineNames(
+      computerName: "Alice’s MacBook Pro", localHostName: "Alices-MacBook-Pro",
+      hostName: "Alices-MacBook-Pro.local")
+    #expect(names == ["Alice’s MacBook Pro", "Alices-MacBook-Pro"])
+    #expect(
+      InteractionFailureReporter.machineNames(
+        computerName: nil, localHostName: nil, hostName: "localhost"
+      ).isEmpty)
+    let screen = "alice@Alices-MacBook-Pro ~ % scutil --get ComputerName\nAlice’s MacBook Pro"
+    let scrubbed = InteractionFailureReporter.redact(screen, userNames: ["alice"] + names)
+    #expect(scrubbed == "[REDACTED]@[REDACTED] ~ % scutil --get ComputerName\n[REDACTED]")
+  }
+
   @Test("Whose home a path is, tokens of common services and keys are masked too")
   func personalPathsAndTokens() {
     let text = """
