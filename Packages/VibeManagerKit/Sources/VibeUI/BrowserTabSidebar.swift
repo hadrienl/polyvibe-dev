@@ -163,12 +163,15 @@ struct BrowserTabSidebar: View {
         ScrollView {
           VStack(alignment: .leading, spacing: 2) {
             pinnedGroup
+            let spaced = tabsAfterBlocks
             ForEach(browser.sidebarItems) { item in
               switch item {
               case .group(let group, let ids):
                 groupSection(group, tabs: ids.compactMap { browser.tab($0) })
               case .tab(let id):
-                if let tab = browser.tab(id) { row(tab) }
+                if let tab = browser.tab(id) {
+                  row(tab).padding(.top, spaced.contains(id) ? sidebarBlockGap : 0)
+                }
               }
             }
             endDropZone
@@ -272,7 +275,22 @@ struct BrowserTabSidebar: View {
     }
     .padding(6)
     .background(BrowserTabBlockBackground(isLit: false))
-    .padding(.bottom, 6)
+  }
+
+  /// The loose tabs that come right after a block — the pinned group, or a group.
+  private var tabsAfterBlocks: Set<BrowserTabID> {
+    var spaced: Set<BrowserTabID> = []
+    var afterBlock = true
+    for item in browser.sidebarItems {
+      switch item {
+      case .group:
+        afterBlock = true
+      case .tab(let id):
+        if afterBlock { spaced.insert(id) }
+        afterBlock = false
+      }
+    }
+    return spaced
   }
 
   // MARK: - Groups
@@ -285,11 +303,22 @@ struct BrowserTabSidebar: View {
       isHighlighted: highlighted == .group(group.id),
       mark: mark?.target == .group(group.id) ? mark?.place : nil,
       isDraggingGroup: { if case .group = dragged { true } else { false } }(),
-      toggle: { browser.setCollapsed(group.id, !group.isCollapsed) },
-      closeAll: { closeGroup(group.id) },
+      // The button the keyboard was on goes with the line or the group: the sidebar takes the
+      // keyboard back, on the group or the row after it.
+      toggle: {
+        browser.setCollapsed(group.id, !group.isCollapsed)
+        highlighted = .group(group.id)
+        hasKeyboard = true
+      },
+      closeAll: {
+        closeGroup(group.id, movingHighlight: true)
+        hasKeyboard = true
+      },
       drop: { place in dropDelegate(.group(group.id), place: place) }
     ) {
       ForEach(tabs) { row($0) }
+    } actions: {
+      groupActions(group)
     }
     .id(SidebarRow.group(group.id))
     .onDrag {
@@ -297,9 +326,6 @@ struct BrowserTabSidebar: View {
       return NSItemProvider(object: BrowserTabGroupDrag.text(for: group.id) as NSString)
     }
     .contextMenu { groupMenu(group) }
-    .accessibilityActions { groupActions(group) }
-    .padding(.top, 10)
-    .padding(.bottom, 4)
   }
 
   /// The name the user gave, or the one made up for a group that has none.
@@ -532,11 +558,12 @@ struct BrowserTabSidebar: View {
     workspace.close(id, in: browser.sessionID)
   }
 
-  /// Every tab of the group, each as its close button would (#241); the keyboard goes on to the
-  /// row after the group, else the one before.
-  private func closeGroup(_ id: BrowserTabGroupID) {
+  /// Every tab of the group, each as its close button would (#241). The keyboard, if it was on
+  /// the group — or always, from the group's own Close All — goes on to the row after the group,
+  /// else the one before.
+  private func closeGroup(_ id: BrowserTabGroupID, movingHighlight: Bool = false) {
     let members = Set(browser.members(of: id).map { SidebarRow.tab($0.id) } + [.group(id)])
-    if let current = highlighted, members.contains(current) {
+    if movingHighlight || highlighted.map(members.contains) == true {
       let rows = visibleRows
       let first = rows.firstIndex { members.contains($0) }
       let last = rows.lastIndex { members.contains($0) }
@@ -726,10 +753,15 @@ private struct BrowserTabBlockBackground: View {
   }
 }
 
+/// Above a block of the sidebar — a group, or the loose tab after a block (#666): with the rows'
+/// own 2 points, the 10 of the mockup. A group's is part of it: the capsule of its actions sits in
+/// it, so that the pointer on the capsule is still on the group, and its clicks land.
+private let sidebarBlockGap: CGFloat = 8
+
 /// A group of the sidebar, without a title (#666): its tabs, or, collapsed, one line of their
 /// icons, count and site. Collapse and Close All show on its top edge under the pointer, the
 /// keyboard, or Full Keyboard Access.
-private struct BrowserTabGroupBlock<Rows: View>: View {
+private struct BrowserTabGroupBlock<Rows: View, Actions: View>: View {
   let group: BrowserTabGroup
   let tabs: [BrowserTabModel]
   let isHighlighted: Bool
@@ -739,8 +771,9 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
   let closeAll: () -> Void
   let drop: (@escaping (CGFloat) -> SidebarMark.Place) -> BrowserTabSidebarDropDelegate
   @ViewBuilder let rows: () -> Rows
+  /// VoiceOver's and Full Keyboard Access's, on the group's heading.
+  @ViewBuilder let actions: () -> Actions
   @State private var isHovering = false
-  @State private var isHoveringActions = false
   @State private var height: CGFloat = 0
   @FocusState private var focusedAction: Action?
 
@@ -751,8 +784,12 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
 
   private var site: String? { BrowserTabGroupSummary.site(of: tabs.map(\.url)) }
 
+  private var label: String {
+    BrowserTabGroupSummary.accessibilityLabel(count: tabs.count, site: site)
+  }
+
   private var showsActions: Bool {
-    isHovering || isHoveringActions || isHighlighted || focusedAction != nil
+    isHovering || isHighlighted || focusedAction != nil
   }
 
   var body: some View {
@@ -764,6 +801,18 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
       }
     }
     .padding(6)
+    // The heading VoiceOver reads before the tabs of an expanded group: the block has no title.
+    .overlay(alignment: .top) {
+      if !group.isCollapsed {
+        Color.clear
+          .frame(maxWidth: .infinity)
+          .frame(height: 6)
+          .accessibilityElement()
+          .accessibilityLabel(Text(verbatim: label))
+          .accessibilityAddTraits(.isHeader)
+          .accessibilityActions(actions)
+      }
+    }
     .background(
       BrowserTabBlockBackground(isLit: showsActions || mark == .into, isDropTarget: mark == .into))
     .overlay(alignment: mark == .after ? .bottom : .top) {
@@ -775,23 +824,22 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
           .offset(y: mark == .after ? 6 : -6)
       }
     }
-    .overlay(alignment: .topTrailing) { actions }
-    .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+    .overlay(alignment: .topTrailing) { capsule.offset(x: -8, y: -sidebarBlockGap) }
+    .padding(.top, sidebarBlockGap)
+    // After the gap and the capsule: the pointer over either is over the group.
     .contentShape(Rectangle())
     .onHover { isHovering = $0 }
+    .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
     // A group dragged over the upper half goes before this one, over the lower half after it; a
     // tab joins it, last.
     .onDrop(of: [.text], delegate: drop { [height] y in
       isDraggingGroup ? (y > height / 2 ? .after : .before) : .into
     })
     .accessibilityElement(children: .contain)
-    .accessibilityLabel(
-      Text(verbatim: BrowserTabGroupSummary.accessibilityLabel(count: tabs.count, site: site)))
-    .accessibilityValue(group.isCollapsed ? Text("Collapsed", bundle: .module) : Text(verbatim: ""))
-    .accessibilityAddTraits(.isHeader)
   }
 
-  /// A collapsed group: up to three of its tabs' icons, stacked, how many, and the site.
+  /// A collapsed group: up to three of its tabs' icons, stacked, how many, and the site. To
+  /// VoiceOver, the group's heading: a press expands it.
   private var collapsedLine: some View {
     Button(action: toggle) {
       HStack(spacing: 10) {
@@ -820,11 +868,15 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text("Expand", bundle: .module))
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: label))
+    .accessibilityValue(Text("Collapsed", bundle: .module))
+    .accessibilityAddTraits([.isHeader, .isButton])
+    .accessibilityActions(actions)
   }
 
-  /// On the block's top edge: Collapse or Expand, and Close All.
-  private var actions: some View {
+  /// Collapse or Expand, and Close All, half over the block's top edge.
+  private var capsule: some View {
     HStack(spacing: 0) {
       Button(action: toggle) {
         Image(systemName: group.isCollapsed ? "chevron.down" : "chevron.up")
@@ -857,8 +909,6 @@ private struct BrowserTabGroupBlock<Rows: View>: View {
     .background(Capsule().fill(.bar))
     .overlay(Capsule().strokeBorder(Color.primary.opacity(0.12), lineWidth: 1))
     .shadow(color: .black.opacity(0.18), radius: 4, y: 1)
-    .offset(x: -8, y: -9)
-    .onHover { isHoveringActions = $0 }
     .opacity(showsActions ? 1 : 0)
     .allowsHitTesting(showsActions)
   }

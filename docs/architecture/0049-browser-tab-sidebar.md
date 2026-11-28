@@ -101,7 +101,7 @@ public struct BrowserTabArrangement: Equatable, Sendable {
   public mutating func moveGroup(_ id: BrowserTabGroupID, to: Place)
   public mutating func moveGroup(_ id: BrowserTabGroupID, by offset: Int)
   public mutating func newGroup(with id: BrowserTabID, name: String) -> BrowserTabGroupID?
-  public mutating func rename(_:to:), setCollapsed(_:_:), dissolve(_:), remove(_:), normalize()
+  public mutating func setCollapsed(_:_:), dissolve(_:), remove(_:), normalize()   // rename(_:to:) until #666
   public var items: [Item] { get }                                                 // what the sidebar draws
 }
 ```
@@ -148,8 +148,9 @@ Rules in `insertOpened`:
   are grouped too.
 
 **Name.** The opener's `displayTitle` at creation, else its host, else « Groupe ». It is frozen:
-the opener navigating away does not rename the group. Double-click or « Renommer… » changes it; an
-empty name restores the default.
+the opener navigating away does not rename the group. Since #666 the sidebar shows no name and
+nothing renames a group (the double click and « Renommer… » of #648 are gone, see *Revision #666*):
+the name is what the agent reads in `tabs_list` and what « Déplacer vers ▸ » lists.
 
 ### « Épinglés » is a static group made of `isPinned`
 
@@ -246,7 +247,7 @@ anywhere clears the indicator (`clearsWhenDragEnds`, as #536).
 - VoiceOver: headers are headers (« Groupe X, 4 onglets, replié »); rows keep the labels of #536
   (`BrowserTabTitle.accessibilityLabel`). Custom actions replace dragging: « Déplacer vers le
   haut / bas » within the container, « Déplacer vers ▸ … », « Retirer du groupe », « Épingler » /
-  « Détacher »; on a header: « Replier / Déplier », « Renommer », « Déplacer le groupe vers le
+  « Détacher »; on a header: « Replier / Déplier », « Renommer » (gone in #666), « Déplacer le groupe vers le
   haut / bas », « Dissoudre », « Fermer le groupe ».
 
 ### Context menus
@@ -254,7 +255,7 @@ anywhere clears the indicator (`clearsWhenDragEnds`, as #536).
 - Tab: Recharger · Ouvrir dans le navigateur · Copier l'adresse · Définir comme ticket ─
   Déplacer vers ▸ (Épinglés, each group, Nouveau groupe, Aucun groupe) · Retirer du groupe ·
   Épingler / Détacher · Monter / Descendre (kept from #536) ─ Fermer l'onglet. The ticket's tab keeps only the first three.
-- Group: Renommer… · Replier / Déplier ─ Dissoudre le groupe · Fermer le groupe (closes each
+- Group: Renommer… (gone in #666) · Replier / Déplier ─ Dissoudre le groupe · Fermer le groupe (closes each
   member through `BrowserWorkspace.close`, so that #241's download refusal applies to each).
 - « Close All » of #536 (`closeUnpinnedTabs`) moves to the address bar's « … » menu as « Close
   Unpinned Tabs ».
@@ -336,18 +337,22 @@ Each step is a commit of the same pull request; 1 can land alone if the PR grows
 
 - Shortcut: ⇧⌘S.
 - « Open in Browser » stays in the address bar; to revisit if the field is too narrow at ~340 pt.
-- A group's name is frozen at creation, the user renames it.
+- A group's name is frozen at creation. (#648: the user renamed it; since #666 nothing does.)
 - Tabs an agent opens with `tab_open` stay loose.
 - The width is a fixed 80 % of the web view.
 
 ## Revision #666 — groups as blocks, without a title
 
 [#666](https://github.com/hadrienl/polyvibe-dev/issues/666), from a mockup validated by the user
-(Dia's sidebar as the reference). It replaces, for the sidebar's drawing, what *Collapsing*,
-*Keyboard and accessibility* and *Context menus* say of a group's header.
+(Dia's sidebar as the reference). It **replaces**: the header of a group in *Collapsing*
+(chevron, folder, name, count), *Keyboard and accessibility* and *Context menus*; renaming in
+*Grouping follows the opener* (« Name »), in the arrangement's API and in *Answered with the
+user*; the pinned group's own ground in *« Épinglés » is a static group*. The rest of this
+document stands.
 
 - **A group is a block.** Rounded (10 pt), on a ground a little lighter than the sidebar
-  (`primary` at 5 %) with a thin edge, 10 pt above it. Its tabs sit inside, without the vertical
+  (`primary` at 5 %) with a thin edge. 10 pt between blocks, « Épinglés » included, and between a
+  block and the loose tab after it. Its tabs sit inside, without the vertical
   line nor the indent. « Épinglés » takes the same ground and keeps its header.
 - **No title.** The header (chevron, folder, name, count) goes, and renaming with it: the double
   click, « Renommer… » in the menu and VoiceOver's action, `SessionBrowser.renameGroup` and
@@ -362,6 +367,11 @@ Each step is a commit of the same pull request; 1 can land alone if the PR grows
 - **Dragging a group** takes the block itself (its edge, or the collapsed line), the rows inside
   keeping their own drag. Over a block, a group goes before it in the upper half, after it in the
   lower; a tab joins it, last.
-- **VoiceOver** reads the block as a header container, « Groupe de 3 onglets, github.com », with
-  « Replié » as its value when it is; its actions are the header's of #648, rename aside.
+- **VoiceOver**: the block is a plain container. Its heading is an element of its own — the
+  collapsed line, a button whose press expands, with « Replié » as its value; above the tabs of
+  an expanded group, an element along its top edge — read « Groupe de 3 onglets, github.com »,
+  with the header trait and the actions of #648's header, rename aside.
+- **The keyboard after a click in the capsule or on the collapsed line**: the button it was on
+  goes, so the sidebar takes the keyboard back, on the group (Collapse, Expand) or on the row after
+  it, else the one before (Close All).
   `BrowserTabGroupSummary` makes the label and the site, and is tested without WebKit.
