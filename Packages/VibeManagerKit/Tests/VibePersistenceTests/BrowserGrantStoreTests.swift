@@ -152,4 +152,49 @@ struct KeychainBrowserGrantVaultTests {
       #expect(try vault.open() == .sites(Data("[]".utf8)))
     }
   }
+
+  @Test("A copy signed otherwise at the same path is refused the read: no question, the item is replaced (#662)")
+  func copySignedOtherwise() async throws {
+    try await withKeychain { path in
+      let own = try #require(
+        KeychainBrowserGrantVault(service: Self.service, account: "resigned", keychainPath: path))
+      _ = try own.open()
+      try own.save(Data(#"["https://github.com"]"#.utf8))
+      let access = ResignedCopyAccess()
+      let resigned = try #require(
+        KeychainBrowserGrantVault(
+          service: Self.service, account: "resigned", keychainPath: path, access: access))
+      #expect(try resigned.open() == .replacedForeignItem)
+      // Read once, while every keychain dialog of the process was refused.
+      #expect(access.reads == [false])
+      #expect(try own.open() == .sites(Data("[]".utf8)))
+    }
+  }
+}
+
+/// The keychain as a copy signed otherwise at the same path sees it (#662): the item's access list
+/// names the application's path, and macOS refuses the read for the signature recorded with it.
+private final class ResignedCopyAccess: KeychainAccessReading {
+  private let keychain = LegacyKeychainAccess.current
+  private var interactionAllowed = true
+  /// Whether a dialog could have been shown, at each read.
+  private(set) var reads: [Bool] = []
+
+  func keychain(at path: String) -> SecKeychain? { keychain.keychain(at: path) }
+  func item(_ reference: CFTypeRef) -> SecKeychainItem? { keychain.item(reference) }
+  func trustsThisApplicationAlone(_ item: SecKeychainItem) -> Bool {
+    keychain.trustsThisApplicationAlone(item)
+  }
+  func delete(_ item: SecKeychainItem) -> OSStatus { keychain.delete(item) }
+
+  func withoutUserInteraction<T>(_ body: () throws -> T) rethrows -> T {
+    interactionAllowed = false
+    defer { interactionAllowed = true }
+    return try keychain.withoutUserInteraction(body)
+  }
+
+  func copyMatching(_ query: [String: Any]) -> (OSStatus, CFTypeRef?) {
+    reads.append(interactionAllowed)
+    return (errSecAuthFailed, nil)
+  }
 }

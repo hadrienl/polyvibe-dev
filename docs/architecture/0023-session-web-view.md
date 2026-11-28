@@ -189,7 +189,12 @@ The sites always allowed are an item of the user's login keychain (`VaultBrowser
 The application makes it at its first launch, and reads one it finds only when its access list
 trusts this application alone: an item another program made first — open to every program with
 `security add-generic-password -A`, or naming another program — is not read, is replaced by the
-application's own, empty, and the replacement is logged (`browser.grants.foreignItem`). The keychain
+application's own, empty, and the replacement is logged (`browser.grants.foreignItem`). The access
+list names the application by its path, and macOS also checks the code signature recorded with it:
+a copy signed otherwise at the same path (a local build in place of a release) is refused the read.
+The vault is opened with the keychain's user interaction turned off (`SecKeychainSetUserInteractionAllowed`),
+so that refusal never shows a dialog asking for the keychain's password: the item is taken as
+another program's and replaced in the same way (#662). The keychain
 is read away from the main thread; until then, and whenever it cannot be read, no site is allowed,
 and a keychain that could not be read is never written over. The list the user defaults held before
 #239 is erased at launch, not carried over: a site written there by a script cannot be told from

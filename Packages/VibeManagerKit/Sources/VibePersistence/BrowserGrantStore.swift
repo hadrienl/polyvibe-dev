@@ -35,6 +35,13 @@ public protocol BrowserGrantVault: Sendable {
 /// such window stays open. What the keychain cannot tell apart — an item made by another program
 /// that names this application alone — is a limit written in ADR 0023: a process of the user's
 /// reaches the web view's cookies too, and is out of what this guards.
+///
+/// Opening the vault never asks the user anything (#662). The access list names the application by
+/// its path, and macOS also checks the code signature recorded with it: a copy signed otherwise at
+/// the same path — a local build in place of a release, or the reverse — passes the look at the
+/// access list, then is refused the read. That refusal is taken as a foreign item, not shown as a
+/// keychain password dialog.
+///
 /// A keychain reference is a thread-safe Core Foundation object: the vault is used from any thread.
 public struct KeychainBrowserGrantVault: BrowserGrantVault, @unchecked Sendable {
   public let service: String
@@ -42,21 +49,28 @@ public struct KeychainBrowserGrantVault: BrowserGrantVault, @unchecked Sendable 
   public let account: String
   /// `nil`: the default keychain, the user's login keychain. A test gives one of its own.
   private let keychain: SecKeychain?
+  private let access: any KeychainAccessReading
 
   public init(service: String, account: String) {
-    self.init(service: service, account: account, keychain: nil)
+    self.init(service: service, account: account, keychain: nil, access: LegacyKeychainAccess.current)
   }
 
   /// The item in the keychain file at `keychainPath`, already unlocked: a test's own.
-  init?(service: String, account: String, keychainPath: String) {
-    guard let keychain = LegacyKeychainAccess.current.keychain(at: keychainPath) else { return nil }
-    self.init(service: service, account: account, keychain: keychain)
+  init?(
+    service: String, account: String, keychainPath: String,
+    access: any KeychainAccessReading = LegacyKeychainAccess.current
+  ) {
+    guard let keychain = access.keychain(at: keychainPath) else { return nil }
+    self.init(service: service, account: account, keychain: keychain, access: access)
   }
 
-  private init(service: String, account: String, keychain: SecKeychain?) {
+  private init(
+    service: String, account: String, keychain: SecKeychain?, access: any KeychainAccessReading
+  ) {
     self.service = service
     self.account = account
     self.keychain = keychain
+    self.access = access
   }
 
   private var query: [String: Any] {
@@ -70,8 +84,12 @@ public struct KeychainBrowserGrantVault: BrowserGrantVault, @unchecked Sendable 
   }
 
   public func open() throws -> BrowserGrantVaultContent {
-    // The item is looked at before anything is read from it: reading an item that does not trust
-    // this application would make macOS ask the user.
+    try access.withoutUserInteraction { try openWithoutAsking() }
+  }
+
+  private func openWithoutAsking() throws -> BrowserGrantVaultContent {
+    // The item is looked at before anything is read from it: an item that does not trust this
+    // application is not read at all.
     var lookup = query
     lookup[kSecReturnRef as String] = true
     lookup[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -86,24 +104,33 @@ public struct KeychainBrowserGrantVault: BrowserGrantVault, @unchecked Sendable 
     default:
       throw KeychainError(status: status)
     }
-    let access = LegacyKeychainAccess.current
     guard let found, let item = access.item(found) else {
       throw KeychainError(status: errSecInvalidItemRef)
     }
-    guard access.trustsThisApplicationAlone(item) else {
-      guard access.delete(item) == errSecSuccess else { return .foreignItem }
-      try add(Data("[]".utf8))
-      return .replacedForeignItem
-    }
+    guard access.trustsThisApplicationAlone(item) else { return try replace(item) }
     var read = query
     read[kSecReturnData as String] = true
     read[kSecMatchLimit as String] = kSecMatchLimitOne
-    var data: CFTypeRef?
-    let readStatus = SecItemCopyMatching(read as CFDictionary, &data)
-    guard readStatus == errSecSuccess, let data = data as? Data else {
+    let (readStatus, data) = access.copyMatching(read)
+    switch readStatus {
+    case errSecSuccess:
+      guard let data = data as? Data else { throw KeychainError(status: errSecDecode) }
+      return .sites(data)
+    // Its access list names this application's path, but not its signature: macOS would have
+    // asked the user for the keychain's password.
+    case errSecAuthFailed, errSecInteractionNotAllowed:
+      return try replace(item)
+    default:
       throw KeychainError(status: readStatus)
     }
-    return .sites(data)
+  }
+
+  /// An item that is not the application's own, never read: removed, and replaced by an empty one
+  /// of the application's — or left as it is when it cannot be removed.
+  private func replace(_ item: SecKeychainItem) throws -> BrowserGrantVaultContent {
+    guard access.delete(item) == errSecSuccess else { return .foreignItem }
+    try add(Data("[]".utf8))
+    return .replacedForeignItem
   }
 
   public func save(_ data: Data) throws {
@@ -148,6 +175,9 @@ protocol KeychainAccessReading {
   func item(_ reference: CFTypeRef) -> SecKeychainItem?
   func trustsThisApplicationAlone(_ item: SecKeychainItem) -> Bool
   func delete(_ item: SecKeychainItem) -> OSStatus
+  /// `body` run with every keychain dialog of this process refused, an error returned instead.
+  func withoutUserInteraction<T>(_ body: () throws -> T) rethrows -> T
+  func copyMatching(_ query: [String: Any]) -> (OSStatus, CFTypeRef?)
 }
 
 enum LegacyKeychainAccess {
@@ -203,6 +233,25 @@ private struct FileKeychainAccess: KeychainAccessReading {
   @available(macOS, deprecated: 10.10)
   func delete(_ item: SecKeychainItem) -> OSStatus {
     SecKeychainItemDelete(item)
+  }
+
+  /// The switch of the whole process: `kSecUseAuthenticationUIFail` is deprecated, and its
+  /// replacement, `LAContext.interactionNotAllowed`, holds for the data protection keychain only.
+  /// Put back as it was, it covers the few milliseconds the vault is opened, once per launch;
+  /// another keychain call of the application made meanwhile gets an error instead of a dialog.
+  @available(macOS, deprecated: 10.10)
+  func withoutUserInteraction<T>(_ body: () throws -> T) rethrows -> T {
+    var allowed = DarwinBoolean(true)
+    let previous = SecKeychainGetUserInteractionAllowed(&allowed) == errSecSuccess ? allowed : true
+    SecKeychainSetUserInteractionAllowed(false)
+    defer { SecKeychainSetUserInteractionAllowed(previous.boolValue) }
+    return try body()
+  }
+
+  func copyMatching(_ query: [String: Any]) -> (OSStatus, CFTypeRef?) {
+    var result: CFTypeRef?
+    let status = SecItemCopyMatching(query as CFDictionary, &result)
+    return (status, result)
   }
 
   @available(macOS, deprecated: 10.10)
