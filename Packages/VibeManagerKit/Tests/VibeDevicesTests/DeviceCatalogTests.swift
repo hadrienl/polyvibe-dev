@@ -12,6 +12,22 @@ struct DeviceCatalogTests {
     #expect(device == .init(id: "android-8554", name: "Pixel_10_Pro", token: "secret"))
   }
 
+  @Test("The bridges get the Xcode xcode-select chose, unless the user named one (A3)")
+  func developerDirectory() {
+    let selected = "/Applications/Xcode-beta.app/Contents/Developer"
+    let chosen = DeviceCatalog.environment(
+      from: ["HOME": "/Users/alice", "SECRET": "x"], selectedDeveloperDirectory: selected)
+    #expect(chosen == ["HOME": "/Users/alice", "DEVELOPER_DIR": selected])
+    let named = DeviceCatalog.environment(
+      from: ["DEVELOPER_DIR": "/Applications/Xcode.app"], selectedDeveloperDirectory: selected)
+    #expect(named["DEVELOPER_DIR"] == "/Applications/Xcode.app")
+    #expect(
+      DeviceCatalog.environment(from: [:], selectedDeveloperDirectory: nil)["DEVELOPER_DIR"]
+        == nil)
+    #expect(DeviceCatalog.developerDirectory(selectedIn: Data("\(selected)\n".utf8)) == selected)
+    #expect(DeviceCatalog.developerDirectory(selectedIn: Data("xcode-select: error\n".utf8)) == nil)
+  }
+
   @Test("An emulator that serves no gRPC cannot be shown")
   func emulatorWithoutGRPC() {
     #expect(DeviceCatalog.emulator(described: "avd.name=Pixel\nport.serial=5554\n") == nil)

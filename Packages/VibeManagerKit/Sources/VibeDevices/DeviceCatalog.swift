@@ -1,6 +1,7 @@
 import Darwin
 import Foundation
 import VibeProcess
+import os
 
 /// The simulators and emulators running on this Mac (#480), and the Android phones connected to it
 /// (#526), which a tab or the phone can show.
@@ -92,10 +93,52 @@ public enum DeviceCatalog {
 
   /// What the bridges and `simctl` are given: enough to find the user's devices, nothing more.
   static var environment: [String: String] {
-    ProcessInfo.processInfo.environment.filter {
+    environment(
+      from: ProcessInfo.processInfo.environment,
+      selectedDeveloperDirectory: selectedDeveloperDirectory.withLock { $0 })
+  }
+
+  /// The allowed variables of `process`, and `DEVELOPER_DIR` set to the Xcode `xcode-select`
+  /// chose when the user set none: `sim-bridge` loads that Xcode's SimulatorKit (#480).
+  static func environment(
+    from process: [String: String], selectedDeveloperDirectory selected: String?
+  ) -> [String: String] {
+    var environment = process.filter {
       ["HOME", "USER", "LOGNAME", "TMPDIR", "PATH", "DEVELOPER_DIR", "ANDROID_ADB_SERVER_PORT"]
         .contains($0.key)
     }
+    if environment["DEVELOPER_DIR"]?.isEmpty ?? true, let selected {
+      environment["DEVELOPER_DIR"] = selected
+    }
+    return environment
+  }
+
+  /// The developer folder `xcode-select -p` gives, once known.
+  private static let selectedDeveloperDirectory = OSAllocatedUnfairLock<String?>(initialState: nil)
+
+  /// Asks `xcode-select` once where Xcode is, so that a bridge started next loads the SimulatorKit
+  /// of the Xcode `simctl` lists from. The bridge itself starts no process (security review A3).
+  /// `xcode-select -p` answers at once, from a file; five seconds is for a Mac under load. No
+  /// answer leaves it unknown, asked again next time, and the bridge on `/Applications/Xcode.app`.
+  public static func resolveDeveloperDirectory() async {
+    guard ProcessInfo.processInfo.environment["DEVELOPER_DIR"]?.isEmpty ?? true,
+      selectedDeveloperDirectory.withLock({ $0 }) == nil
+    else { return }
+    let request = BoundedProcessRequest(
+      executablePath: "/usr/bin/xcode-select", arguments: ["-p"],
+      environment: environment(from: ProcessInfo.processInfo.environment, selectedDeveloperDirectory: nil),
+      timeout: .seconds(5), outputByteLimit: 4096)
+    guard let result = try? await BoundedProcess.run(request), result.exitCode == 0,
+      let path = developerDirectory(selectedIn: result.standardOutput)
+    else { return }
+    selectedDeveloperDirectory.withLock { $0 = path }
+  }
+
+  /// The folder `xcode-select -p` printed, `nil` for anything but an absolute path.
+  static func developerDirectory(selectedIn output: Data) -> String? {
+    let path = String(decoding: output, as: UTF8.self)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    return path.hasPrefix("/") && !path.contains("\n") ? path : nil
   }
 
   static let androidPrefix = "android-"
@@ -109,6 +152,7 @@ public enum DeviceCatalog {
   }
 
   private static func probeSimulators() async -> [Device]? {
+    await resolveDeveloperDirectory()
     let request = simctl(["list", "devices", "booted", "-j"], timeout: .seconds(20))
     guard let result = try? await BoundedProcess.run(request), result.exitCode == 0 else {
       return nil

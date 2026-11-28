@@ -198,11 +198,12 @@ static void readTouches(void) {
   exit(0);
 }
 
-// The Xcode `simctl` lists the simulators of: DEVELOPER_DIR, else the one xcode-select chose —
-// `Xcode-beta.app`, `Xcode-26.0.app` as xcodes names them. A CoreSimulator of one Xcode and
-// a SimulatorKit of another do not go together.
+// The Xcode `simctl` lists the simulators of, which the application resolves with `xcode-select -p`
+// and passes as DEVELOPER_DIR (security review A3: the bridge starts no process): `Xcode-beta.app`,
+// `Xcode-26.0.app` as xcodes names them. A CoreSimulator of one Xcode and a SimulatorKit of
+// another do not go together.
 /// `Contents/Developer` of an Xcode named by its application, `/Applications/Xcode-beta.app`,
-/// as `DEVELOPER_DIR` and `xcode-select` both take it.
+/// as `DEVELOPER_DIR` takes it.
 static NSString *withinApplication(NSString *path) {
   NSString *trimmed = [path stringByStandardizingPath];
   return [trimmed.pathExtension isEqual:@"app"]
@@ -212,15 +213,7 @@ static NSString *withinApplication(NSString *path) {
 static NSString *developerDirectory(void) {
   const char *given = getenv("DEVELOPER_DIR");
   if (given && *given) return withinApplication(@(given));
-  char path[PATH_MAX] = {0};
-  FILE *selected = popen("/usr/bin/xcode-select -p 2>/dev/null", "r");
-  if (selected) {
-    if (!fgets(path, sizeof path, selected)) path[0] = 0;
-    pclose(selected);
-  }
-  size_t length = strlen(path);
-  while (length > 0 && (path[length - 1] == '\n' || path[length - 1] == '/')) path[--length] = 0;
-  return length > 0 ? withinApplication(@(path)) : @"/Applications/Xcode.app/Contents/Developer";
+  return @"/Applications/Xcode.app/Contents/Developer";
 }
 
 static void *loadSimulatorKit(NSString *developer) {
