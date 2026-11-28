@@ -237,4 +237,12 @@ struct ShellModeTests {
     #expect(ShellCommandBlock.prompt(in: longest) == longest)
     #expect(ShellCommandBlock.prompt(in: longest + "x") == nil)
   }
+
+  @Test("A block that can be run wraps, whatever the preference: it is read whole (#549)")
+  func runnableBlockWraps() {
+    #expect(CodeBlockView.wraps(runnable: true, preference: false))
+    #expect(CodeBlockView.wraps(runnable: true, preference: true))
+    #expect(CodeBlockView.wraps(runnable: false, preference: true))
+    #expect(!CodeBlockView.wraps(runnable: false, preference: false))
+  }
 }

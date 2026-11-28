@@ -214,9 +214,7 @@ struct CodeBlockView: View {
           .font(theme.interfaceFont(size: appearance.textSize.scaled(11)))
           .foregroundStyle(theme.secondaryText.color)
         Spacer()
-        if let runner, runner.promptFormat.shellEntry != nil,
-          let prompt = ShellCommandBlock.prompt(in: code)
-        {
+        if let runner, let prompt = runnable {
           Button {
             Task { await runner.runShellCommand(prompt) }
           } label: {
@@ -255,7 +253,7 @@ struct CodeBlockView: View {
       .padding(.vertical, 6)
       Rectangle().fill(theme.border.color).frame(height: 1)
       Group {
-        if appearance.wrapsCode {
+        if Self.wraps(runnable: runnable != nil, preference: appearance.wrapsCode) {
           highlighted().fixedSize(horizontal: false, vertical: true)
         } else {
           ScrollView(.horizontal, showsIndicators: true) {
@@ -269,6 +267,18 @@ struct CodeBlockView: View {
     .clipShape(RoundedRectangle(cornerRadius: theme.layout.blockRadius))
     .overlay(RoundedRectangle(cornerRadius: theme.layout.blockRadius).stroke(theme.border.color))
     .onChange(of: code) { copied = false }
+  }
+
+  /// The command the Run button would type, for an agent that has a shell mode.
+  private var runnable: String? {
+    guard runner?.promptFormat.shellEntry != nil else { return nil }
+    return ShellCommandBlock.prompt(in: code)
+  }
+
+  /// A block that can be run wraps whatever the preference: a command of 100 characters is read
+  /// whole before it is run, never cut by the block's edge (#549).
+  static func wraps(runnable: Bool, preference: Bool) -> Bool {
+    preference || runnable
   }
 
   private func highlighted() -> some View {
