@@ -94,11 +94,11 @@ struct ConversationView: View {
           .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
       }
       .safeAreaInset(edge: .bottom, spacing: 0) { composerArea }
+      // Still the back button's label of the views pushed on top: the bar shows the header.
       .navigationTitle(session?.name ?? "")
-      .navigationSubtitle(usage == nil ? subtitle : "")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        if let usage, let session {
+        if let session {
           ToolbarItem(placement: .principal) {
             SessionUsageHeader(title: session.name, state: activitySubtitle(session), usage: usage)
           }
@@ -273,10 +273,6 @@ struct ConversationView: View {
     guard let session, session.hasShellMode != false, conversation?.request == nil
     else { return false }
     return session.activity != .stopped && session.activity != .needsAttention
-  }
-
-  private var subtitle: String {
-    session.map(activitySubtitle) ?? ""
   }
 
   private func activitySubtitle(_ session: RemoteSession) -> String {
