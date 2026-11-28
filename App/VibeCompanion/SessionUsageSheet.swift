@@ -58,34 +58,49 @@ struct SessionUsageRing: View {
   }
 }
 
-/// The native subtitle flattens attachments. This keeps the ring visible, drops the family total
-/// first and the cost next; at the narrowest width the agent's state yields to the context share.
+/// The conversation's title and the line under it, aligned on the leading edge after the back
+/// button (#663): in the principal place, a centered header sat in the middle of what the trailing
+/// buttons leave, off the screen's center. The native subtitle flattens attachments: this keeps the
+/// ring visible, drops the family total first and the cost next; at the narrowest width the agent's
+/// state yields to the context share. Without usage, the line is the agent's state alone.
 struct SessionUsageHeader: View {
   let title: String
   let state: String
-  let usage: RemoteSessionUsage
+  let usage: RemoteSessionUsage?
   @Environment(\.locale) private var locale
 
   var body: some View {
-    VStack(spacing: 2) {
+    VStack(alignment: .leading, spacing: 2) {
       Text(verbatim: title).font(.headline).lineLimit(1)
-      ViewThatFits(in: .horizontal) {
-        line(SessionUsageWords.summary(usage, locale: locale)).fixedSize()
-        line(SessionUsageWords.summary(usage, locale: locale, family: false)).fixedSize()
-        line(RemoteUsageFormat.contextOrTime(usage, locale: locale))
+      Group {
+        if let usage {
+          ViewThatFits(in: .horizontal) {
+            line(usage, SessionUsageWords.summary(usage, locale: locale)).fixedSize()
+            line(usage, SessionUsageWords.summary(usage, locale: locale, family: false))
+              .fixedSize()
+            line(usage, RemoteUsageFormat.contextOrTime(usage, locale: locale))
+          }
+        } else {
+          Text(verbatim: state).lineLimit(1).truncationMode(.tail)
+        }
       }
       .font(.caption2)
       .foregroundStyle(.secondary)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
+    // The heading the native title was: the rotor's headings still land on it.
+    .accessibilityAddTraits(.isHeader)
     .accessibilityLabel(Text(verbatim: title + ", " + state))
     .accessibilityValue(
-      Text(
-        verbatim: String(localized: "Usage") + ": "
-          + SessionUsageWords.summary(usage, locale: locale)))
+      usage.map {
+        Text(
+          verbatim: String(localized: "Usage") + ": "
+            + SessionUsageWords.summary($0, locale: locale))
+      } ?? Text(verbatim: ""))
   }
 
-  private func line(_ figures: String) -> some View {
+  private func line(_ usage: RemoteSessionUsage, _ figures: String) -> some View {
     HStack(spacing: 3) {
       Text(verbatim: state).lineLimit(1).truncationMode(.tail)
       Text(verbatim: "·")
